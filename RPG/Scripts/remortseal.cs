@@ -7,12 +7,58 @@
 //$SealEnemy[%i,3]: The enemy used for the final wave. Use the bot's spawnIndex value.
 $SealBattleActive = false;
 %i=0;
+
+// Centralized TotalSealValue management functions
+function GetTotalSealValue()
+{
+    // Ensure TotalSealValue is always initialized and valid
+    if($TotalSealValue == "" || $TotalSealValue < 20)
+    {
+        $TotalSealValue = 20;
+        echo("WARNING: TotalSealValue was invalid, reset to 20");
+    }
+    return $TotalSealValue;
+}
+
+function IncrementTotalSealValue()
+{
+    // Get current value (ensures it's valid)
+    %current = GetTotalSealValue();
+    
+    // Increment by 20
+    $TotalSealValue = %current + 20;
+    
+    // Save to separate file immediately
+    File::delete("temp\\SealValue.cs");
+    export("TotalSealValue", "temp\\SealValue.cs", false);
+    
+    echo("TotalSealValue incremented to " @ $TotalSealValue);
+    return $TotalSealValue;
+}
+
+function SetTotalSealValue(%value)
+{
+    // Ensure value is at least 20
+    if(%value < 20)
+        %value = 20;
+    
+    $TotalSealValue = %value;
+    
+    // Save to file immediately
+    File::delete("temp\\SealValue.cs");
+    export("TotalSealValue", "temp\\SealValue.cs", false);
+    
+    echo("TotalSealValue set to " @ $TotalSealValue);
+    return $TotalSealValue;
+}
+
 //multiplier for each additional seal that needs to be broken to dynamically scale
 function SealBattle::GetEnemyStrengthMultiplier()
 {
     %baseMultiplier = 1;
     %increment = 0.1;
-    %steps = $TotalSealValue / 20;
+    %sealValue = GetTotalSealValue();
+    %steps = %sealValue / 20;
     %multiplier = %baseMultiplier + (%steps * %increment);
     return %multiplier;
 }
@@ -76,7 +122,8 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 
 		%round++;
 		messageall(2,"" @ %name @ " has begun to break the seal. Type #helpseal to help.");
-		messageall(2,"The current seal value is " @ $TotalSealValue @ "");
+		%sealValue = GetTotalSealValue();
+		messageall(2,"The current seal value is " @ %sealValue @ "");
 	}
 	else if(%round == 2 && NEWgetClientByName("SealFighter1") == -1
 	&& NEWgetClientByName("SealMage1") == -1 && NEWgetClientByName("SealGuardian1") == -1)
@@ -187,11 +234,14 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 		%round++;
 	}
 	else if(%round == 5 && NEWgetClientByName("SealFighter4") == -1
-	&& NEWgetClientByName("SealMage4") == -1 && NEWgetClientByName("SealGuardian4") == -1)
+		&& NEWgetClientByName("SealMage4") == -1 && NEWgetClientByName("SealGuardian4") == -1)
 	{
 		Client::sendMessage(%clientId,$MsgBeige,"The final wave has been beaten! The seal has been shattered...for now.~wflag_capture.wav");
-		$TotalSealValue = $TotalSealValue + 20;
-		messageall(2,"The remort cap is now " @ $TotalSealValue @ "!");
+		
+		// Increment and save seal value using centralized function
+		%newSealValue = IncrementTotalSealValue();
+		messageall(2,"The remort cap is now " @ %newSealValue @ "!");
+		
 		Saveworld();
 		SealBattle::Conclude(%clientId);
 		return;

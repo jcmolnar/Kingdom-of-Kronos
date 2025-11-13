@@ -1644,7 +1644,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 		if(%w1 == "#challenge")
 		{
 			%id = NEWgetClientByName(%cropped);
-			if(Player::getItemCount(%TrueClientId, DuelCard) >= 1)
+			if(Belt::HasThisStuff(%TrueClientId, DuelCard) >= 1)
 			{
 				if(%cropped == "")
 	                		 	Client::sendMessage(%TrueClientId, 0, "Please specify player name.");
@@ -1675,7 +1675,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 									{
 										RefreshAll(%TrueClientId);
 										RefreshAll(%id);
-										Player::setItemCount(%TrueClientId,DuelCard,Player::getItemCount(%TrueClientId, DuelCard) - 1);
+										Belt::TakeThisStuff(%TrueClientId, DuelCard, 1);
 										for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
 											Client::sendMessage(%cl, $MsgRed, %TCsenderName @ " has forced " @ %cropped @ " into a duel! Type #observe if you wish to view the duel.");
 										for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
@@ -2951,9 +2951,17 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 					Client::sendMessage(%TrueClientId, 0, "Could not process command: Target admin clearance level too high.");
 				else if(%id != -1)
 				{
-					Player::setItemCount(%id, GetWord(%cropped, 1), GetWord(%cropped, 2));
+					// Check if it's a Belt item first
+					if(isBeltItem(%item))
+					{
+						Belt::GiveThisStuff(%id, %item, %count, true);
+					}
+					else
+					{
+						Player::setItemCount(%id, %item, %count);
+					}
 					RefreshAll(%id);
-					if(!%echoOff) Client::sendMessage(%TrueClientId, 0, "Set " @ %name @ " (" @ %id @ ") " @ GetWord(%cropped, 1) @ " count to " @ GetWord(%cropped, 2));
+					if(!%echoOff) Client::sendMessage(%TrueClientId, 0, "Set " @ %name @ " (" @ %id @ ") " @ %item @ " count to " @ %count);
 					echo("[ADMIN]: " @ %TCsenderName @ " set item " @ %item @ " count to " @ %count);
 				}
 	                  else
@@ -3005,9 +3013,9 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 		{
 	            if(%clientToServerAdminLevel >= 10)
 	            {
-			messageall(1,""@%TCsenderName@" has set the seal to "@%cropped@""); //$AImoveChance = 99999;
 			%count = GetWord(%cropped, 0);
-	                  $TotalSealValue = %count;
+			%newValue = SetTotalSealValue(%count);
+			messageall(1,""@%TCsenderName@" has set the seal to "@%newValue@"");
 	                 saveworld();
 	            }
 			return;

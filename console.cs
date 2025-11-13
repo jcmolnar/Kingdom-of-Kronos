@@ -177,6 +177,7 @@ exec("banlist.cs");
 exec("missionList.cs");
 exec("gui.cs");
 exec("sae.cs");
+exec("RPG\\rpghud.cs");
 exec("client.cs");
 exec("server.cs");
 exec("tsDefaultMatProps.cs");
@@ -186,7 +187,8 @@ exec("chatmenu.cs");
 exec("menu.cs");
 exec("observer.cs");
 exec("PlayerSetup.cs");
-exec("players.cs");
+if(isFile("players.cs"))
+   exec("players.cs");
 
 newObject("", IRCClient);
 exec("IRCClient.cs");
@@ -212,8 +214,10 @@ exec("serverDefaults.cs");
 exec("clientPrefs.cs");
 exec("serverPrefs.cs");
 exec("config.cs");
-exec("badwords.cs");
-exec("autoexec.cs");
+if(isFile("badwords.cs"))
+   exec("badwords.cs");
+if(isFile("autoexec.cs"))
+   exec("autoexec.cs");
 
 for(%i = 0; %i < $numExecFiles; %i++)
    exec($execFile[%i]);

@@ -357,6 +357,10 @@ function SaveCharacter(%clientId)
 	$funk::var["[\"" @ %name @ "\", 0, 30]"] = GetHouseNumber(fetchData(%clientId, "MyHouse"));
 	$funk::var["[\"" @ %name @ "\", 0, 31]"] = fetchData(%clientId, "RankPoints");
 	$funk::var["[\"" @ %name @ "\", 0, 32]"] = fetchData(%clientId, "TournyRank");
+	$funk::var["[\"" @ %name @ "\", 0, 35]"] = fetchData(%clientId, "QuestItems");
+	$funk::var["[\"" @ %name @ "\", 0, 36]"] = fetchData(%clientId, "KeyItems");
+	$funk::var["[\"" @ %name @ "\", 0, 38]"] = fetchData(%clientId, "StoredQuestItems");
+	$funk::var["[\"" @ %name @ "\", 0, 39]"] = fetchData(%clientId, "StoredKeyItems");
 
 	//skill variables
 	%cnt = 0;
@@ -476,6 +480,10 @@ function LoadCharacter(%clientId)
 		storeData(%clientId, "MyHouse", $HouseName[$funk::var[%name, 0, 30]]);
 		storeData(%clientId, "RankPoints", $funk::var[%name, 0, 31]);
 		storeData(%clientId, "TournyRank", $funk::var[%name, 0, 32]);
+		storeData(%clientId, "QuestItems", $funk::var[%name, 0, 35]);
+		storeData(%clientId, "KeyItems", $funk::var[%name, 0, 36]);
+		storeData(%clientId, "StoredQuestItems", $funk::var[%name, 0, 38]);
+		storeData(%clientId, "StoredKeyItems", $funk::var[%name, 0, 39]);
 		storeData(%clientId, "BankGemItems", $funk::var[%name, 0, 33]);
 		storeData(%clientId, "BankRareItems", $funk::var[%name, 0, 34]);
 		storeData(%clientId, "BankKeysItems", $funk::var[%name, 0, 35]);
@@ -757,7 +765,16 @@ function SaveWorld() {
     echo("Deleting old file before save for '" @ $missionName @ "_worldsave_.cs'...");
     File::delete("temp\\" @ $missionName @ "_worldsave_.cs");
     export("world::*", "temp\\" @ $missionName @ "_worldsave_.cs", true);
-    export("TotalSealValue", "temp\\" @ $missionName @ "_worldsave_.cs", true);
+    
+    // Don't save TotalSealValue to worldsave - it causes AI initialization issues
+    // Instead, save it to separate SealValue.cs file
+    if($TotalSealValue == "" || $TotalSealValue < 20)
+        $TotalSealValue = 20;
+    
+    File::delete("temp\\SealValue.cs");
+    export("TotalSealValue", "temp\\SealValue.cs", false);
+    echo("TotalSealValue saved: " @ $TotalSealValue);
+    
     //export("world::flag*", "temp\\" @ $missionName @ "_worldsave_.cs", true);
     //export("world::control*", "temp\\" @ $missionName @ "_worldsave_.cs", true);
     //export("world::baseControl*", "temp\\" @ $missionName @ "_worldsave_.cs", true);
@@ -774,8 +791,9 @@ function LoadWorld() {
         echo("Loading world '" @ $missionName @ "_worldsave_.cs'...");
         messageAll(2, "LoadWorld in progress...");
         $ConsoleWorld::DefaultSearchPath = $ConsoleWorld::DefaultSearchPath;
+        $LoadingWorldSave = true;
         exec(%filename);
-        $TotalSealValue = $TotalSealValue * 1;
+        $LoadingWorldSave = false;
 
         for (%i = 1; $world::object[%i] != ""; %i++) {
             echo("Loading (spawning) object #" @ %i @ " : " @ $world::object[%i]);

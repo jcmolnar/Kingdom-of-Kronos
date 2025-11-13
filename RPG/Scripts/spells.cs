@@ -1833,7 +1833,8 @@ if (%index == 21)
     {
         if (%level > %remortStep * 4 + 99)
         {
-            if (%remortStep <= $TotalSealValue)
+            %sealValue = GetTotalSealValue();
+            if (%remortStep <= %sealValue)
             {
                 %castPos = DoRemort(%clientId);
                 %extraDelay = 0.22;
