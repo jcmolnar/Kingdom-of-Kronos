@@ -1,6 +1,211 @@
+echo("@@@@@ LOADING DEVELOPMENT SERVER.CS FROM RPG/SCRIPTS @@@@@");
 // putting a global variable in the argument list means:
 // if an argument is passed for that parameter it gets
 // assigned to the global scope, not the scope of the function
+
+// GatherBotInfo helper function - needed by InitTownBots
+function GatherBotInfo(%group)
+{
+	dbecho($dbechoMode, "GatherBotInfo(" @ %group @ ")");
+
+	%biggestn = 0;
+	%aiName = Object::getName(%group);
+
+	%count = Group::objectCount(%group);
+	for(%i = 0; %i <= %count-1; %i++)
+	{
+		%object = Group::getObject(%group, %i);
+		if(getObjectType(%object) == "SimGroup")
+		{
+			%system = Object::getName(%object);
+			%type = GetWord(%system, 0);
+			%info = String::getSubStr(%system, String::len(%type)+1, 9999);
+
+			%type2 = clipTrailingNumbers(%type);
+			%n = floor(String::getSubStr(%type, String::len(%type2), 9999));
+
+			if(%type == "NAME")
+				$BotInfo[%aiName, NAME] = %info;
+			else if(%type == "LVL" || %type == "LEVEL")
+				$BotInfo[%aiName, LVL] = %info;
+			else if(%type == "RACE")
+				$BotInfo[%aiName, RACE] = %info;
+			else if(%type == "NEED")
+				$BotInfo[%aiName, NEED] = %info;
+			else if(%type == "TAKE")
+				$BotInfo[%aiName, TAKE] = %info;
+			else if(%type == "GIVE")
+				$BotInfo[%aiName, GIVE] = %info;
+			else if(%type == "SHOP")
+				$BotInfo[%aiName, SHOP] = %info;
+			else if(%type == "ITEMS")
+				$BotInfo[%aiName, ITEMS] = %info;
+			else if(%type == "CSAY")
+				$BotInfo[%aiName, CSAY] = %info;
+			else if(%type == "LSAY")
+				$BotInfo[%aiName, LSAY] = %info;
+			else if(%type == "BOT")
+				$BotInfo[%aiName, BOT] = %info;
+			else if(%type == "POS")
+				$BotInfo[%aiName, POS] = %info;
+			else if(%type == "LCK")
+				$BotInfo[%aiName, LCK] = %info;
+			else if(%type == "SIMGROUP")
+				$BotInfo[%aiName, SIMGROUP] = %info;
+
+			if(%type2 == "SAY")
+				$BotInfo[%aiName, SAY, %n] = %info;
+			else if(%type2 == "CUE")
+				$BotInfo[%aiName, CUE, %n] = %info;
+			else if(%type2 == "NSAY")
+				$BotInfo[%aiName, NSAY, %n] = %info;
+			else if(%type2 == "NCUE")
+				$BotInfo[%aiName, NCUE, %n] = %info;
+
+			if(%n > %biggestn)
+				%biggestn = %n;
+		}
+		else
+			%marker = %object;
+	}
+	$BotInfo[%aiName, SAY, %biggestn+1] = "";
+	$BotInfo[%aiName, NSAY, %biggestn+1] = "";
+	$BotInfo[%aiName, CUE, %biggestn+1] = "";
+	$BotInfo[%aiName, NCUE, %biggestn+1] = "";
+
+	if($BotInfo[%aiName, SIMGROUP] != "")
+	{
+		%g = nameToId("MissionGroup\\" @ $BotInfo[%aiName, SIMGROUP]);
+
+		%count = Group::objectCount(%g);
+		for(%i = 0; %i <= %count-1; %i++)
+		{
+			%object = Group::getObject(%g, %i);
+			if(getObjectType(%object) == "SimGroup")
+			{
+				%system = Object::getName(%object);
+				%type = GetWord(%system, 0);
+				%info = String::getSubStr(%system, String::len(%type)+1, 9999);
+
+				if(%type == "NAMES")
+					$BotInfo[%aiName, NAMES] = %info;
+				else if(%type == "DEFAULTS")
+				{
+					%class = GetWord(%info, 0);
+					%stuff = String::getSubStr(%info, String::len(%class)+1, 9999);
+
+					$BotInfo[%aiName, DEFAULTS, %class] = %stuff;
+				}
+			}
+			else if(getObjectType(%object) == "Marker")
+			{
+				$BotInfo[%aiName, DESTSPAWN] = %object;
+			}
+		}
+	}
+
+	return %marker;
+}
+
+// AI::sayLater - NPC dialogue function
+function AI::sayLater(%clientId, %guardId, %message, %look)
+{
+	dbecho($dbechoMode, "AI::sayLater(" @ %clientId @ ", " @ %guardId @ ", " @ %message @ ", " @ %look @ ")");
+
+	%name = Client::getName(%clientId);
+
+	Client::sendMessage(%clientId, $MsgBeige, $BotInfo[%guardId.name, NAME] @ " tells you, \"" @ %message @ "\"");
+
+	if(%look)
+		AI::lookAtPlayer(%clientId, %guardId);
+}
+
+// AI::lookAtPlayer - Makes NPC face the player
+function AI::lookAtPlayer(%clientId, %guardId)
+{
+	dbecho($dbechoMode, "AI::lookAtPlayer(" @ %clientId @ ", " @ %guardId @ ")");
+
+	%clpos = GameBase::getPosition(%clientId);
+	%gupos = GameBase::getPosition(%guardId);
+
+	%v1 = Vector::sub(%clpos, %gupos);
+
+	%norm = Vector::normalize(%v1);
+	%rot = Vector::getRotation(%norm);
+
+	GameBase::setRotation(%guardId, %rot);
+
+	%gurot = GameBase::getRotation(%guardId);
+	%temp = Vector::sub(%rot, %gurot);
+	%temp2 = GetWord(%temp, 2);
+
+	if(floor(%temp2) != 0)
+		%rot = GetWord(%rot, 0) @ " " @ GetWord(%rot, 1) @ " " @ (GetWord(%rot, 2) + 3.141592654);
+
+	RotateTownBot(%guardId, %rot);
+}
+
+// RotateTownBot - Rotates an NPC to face a direction
+function RotateTownBot(%id, %rot)
+{
+	dbecho($dbechoMode, "RotateTownBot(" @ %id @ ", " @ %rot @ ")");
+
+	%pos = GameBase::getPosition(%id);
+	%name = %id.name;
+
+	//delete the bot
+	$TownBotList = String::replace($TownBotList, %id @ " ", "");
+	deleteObject(%id);
+
+	//re-create the bot
+	%townbot = newObject("", "Item", $BotInfo[%name, RACE] @ "TownBot", 1, false);
+	GameBase::setRotation(%townbot, %rot);
+
+	addToSet("MissionCleanup", %townbot);
+	GameBase::setMapName(%townbot, $BotInfo[%name, NAME]);
+	GameBase::setPosition(%townbot, %pos);
+	GameBase::setTeam(%townbot, $BotInfo[%name, TEAM]);
+	GameBase::playSequence(%townbot, 0, "root");
+	%townbot.name = %name;
+
+	$TownBotList = $TownBotList @ %townbot @ " ";
+}
+
+// InitTownBots function - defined here since Ai.cs from base\scripts.vol loads instead of ours
+function InitTownBots()
+{
+	dbecho($dbechoMode, "InitTownBots()");
+
+	$TownBotList = "";
+
+	%group = nameToId("MissionGroup/TownBots");
+
+	if(%group != -1)
+	{
+		%cnt = Group::objectCount(%group);
+		for(%i = 0; %i <= %cnt - 1; %i++)
+		{
+			%object = Group::getObject(%group, %i);
+			%name = Object::getName(%object);
+			if(getObjectType(%object) == "SimGroup")
+			{
+				%marker = GatherBotInfo(%object);
+			}
+
+			%townbot = newObject("", "Item", $BotInfo[%name, RACE] @ "TownBot", 1, false);
+
+			addToSet("MissionCleanup", %townbot);
+			GameBase::setMapName(%townbot, $BotInfo[%name, NAME]);
+			GameBase::setPosition(%townbot, GameBase::getPosition(%marker));
+			GameBase::setRotation(%townbot, GameBase::getRotation(%marker));
+			GameBase::setTeam(%townbot, $BotInfo[%name, TEAM]);
+			GameBase::playSequence(%townbot, 0, "root");
+			%townbot.name = %name;
+
+			$TownBotList = $TownBotList @ %townbot @ " ";
+		}
+	}
+}
 
 function createTrainingServer()
 {
@@ -112,6 +317,8 @@ function createServer(%mission, %dedicated)
 		newObject(serverDelegate, FearCSDelegate, true, "IP", $Server::Port, "IPX", 	$Server::Port, "LOOPBACK", $Server::Port);
    
 	exec(globals);
+	// Load Ai.cs (from base\scripts.vol - we can't override it easily)
+	exec(Ai);
 	exec(rpgfunk);
 	exec(skills);
 	exec(house);
@@ -145,9 +352,11 @@ function createServer(%mission, %dedicated)
 	exec(mana);
 	exec(hp);
 	exec(rpgstats);
+	exec(rpghud);
 	exec(playerdamage);
 	exec(playerspawn);
 	exec(itemevents);
+	exec(Belt);
 	exec(economy);
 	exec(remote);
 	exec(weaponHandling);
@@ -172,8 +381,8 @@ function createServer(%mission, %dedicated)
 	exec(advertisements);
 	exec(TaurikAdmins);
 	exec(remortseal);
-	exec(backpack);
-	exec(AI);
+	//exec(backpack);
+	
 	$Server::Info = "Running RPG Mod ver " @ $rpgver @ "\nThis version of RPGMod created by Asnabel,\n Resurrected by Superfat/Jobo.";
 
 	Server::storeData();
@@ -190,11 +399,21 @@ function createServer(%mission, %dedicated)
 	CreateWeaponCyclingTables();
 
 	LoadWorld();
-	$TotalSealValue = $TotalSealValue * 1;
+	
+	// Load TotalSealValue from separate file (not from worldsave to avoid AI conflicts)
+	if(isFile("temp\\SealValue.cs"))
+		exec("SealValue.cs");
+	
+	// Initialize TotalSealValue using centralized getter (handles validation and defaults)
+	%sealValue = GetTotalSealValue();
+	echo("TotalSealValue loaded: " @ %sealValue);
+	
 	InitCrystals();
 	InitZones();
 	InitFerry();
+	echo("===== Calling InitTownBots() =====");
 	InitTownBots();
+	echo("===== InitTownBots() completed, TownBotList: " @ $TownBotList @ " =====");
 	if(!$NoSpawn)
 		InitSpawnPoints();
 
@@ -212,6 +431,13 @@ function createServer(%mission, %dedicated)
 
 	//permanent banlist
 	//**
+	
+	// Start double-execution warning spam with persistent heartbeat
+	if($ServerPrefs::DoubleExecuted)
+	{
+		newObject(DoubleExecWarning, SimSet);
+		DoubleExecWarning.schedule(500, "checkDouble");
+	}
 
 	if(!%dedicated)
 	{
