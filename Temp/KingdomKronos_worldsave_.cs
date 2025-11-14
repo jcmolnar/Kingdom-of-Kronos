@@ -1,1 +1,0 @@
-$TotalSealValue = "20";
