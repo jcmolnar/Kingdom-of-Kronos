@@ -694,7 +694,7 @@ function SaveWorld() {
         %i++;
         %ID = 8361 + %i;
         %obj = GameBase::getDataName(%ID);
-        if (String::findSubStr($WorldSaveList, "\n" @ %obj @ "\n") != -1) {
+        if (String::findSubStr($WorldSaveList, "|" @ %obj @ "|") != -1) {
             %ii++;
             echo("Saving object #" @ %ii @ " : " @ %obj);
             $world::object[%ii] = %obj;
@@ -764,7 +764,16 @@ function SaveWorld() {
 
     echo("Deleting old file before save for '" @ $missionName @ "_worldsave_.cs'...");
     File::delete("temp\\" @ $missionName @ "_worldsave_.cs");
-    export("world::*", "temp\\" @ $missionName @ "_worldsave_.cs", true);
+    
+    // Always create the worldsave file, even if no deployables found
+    if(%ii == 0) {
+        echo("No deployables found to save, creating empty worldsave file.");
+        $world::objectCount = 0;
+        export("world::objectCount", "temp\\" @ $missionName @ "_worldsave_.cs", false);
+    } else {
+        echo("Saving " @ %ii @ " deployable objects to worldsave file.");
+        export("world::*", "temp\\" @ $missionName @ "_worldsave_.cs", false);
+    }
     
     // Don't save TotalSealValue to worldsave - it causes AI initialization issues
     // Instead, save it to separate SealValue.cs file
@@ -774,6 +783,10 @@ function SaveWorld() {
     File::delete("temp\\SealValue.cs");
     export("TotalSealValue", "temp\\SealValue.cs", false);
     echo("TotalSealValue saved: " @ $TotalSealValue);
+    
+    // Save house objective captures (base control and flag commands)
+    SaveHouseObjectives();
+    echo("House objectives saved.");
     
     //export("world::flag*", "temp\\" @ $missionName @ "_worldsave_.cs", true);
     //export("world::control*", "temp\\" @ $missionName @ "_worldsave_.cs", true);
@@ -794,6 +807,10 @@ function LoadWorld() {
         $LoadingWorldSave = true;
         exec(%filename);
         $LoadingWorldSave = false;
+
+        // Restore house objective captures (base control and flag commands)
+        LoadHouseObjectives();
+        echo("House objectives restored.");
 
         for (%i = 1; $world::object[%i] != ""; %i++) {
             echo("Loading (spawning) object #" @ %i @ " : " @ $world::object[%i]);
@@ -1875,9 +1892,9 @@ function HasThisStuff(%clientId, %list, %multiplier)
 			else
 				return False;
 		}
-		else if(isBackpackItem(%w))
+		else if(isBeltItem(%w))
 		{
-			%amnt = Backpack::HasThisStuff(%clientid,%w);
+			%amnt = Belt::HasThisStuff(%clientid,%w);
 			if(%amnt >= %w2)
 				%flag = True;
 			else
@@ -1928,11 +1945,11 @@ function TakeThisStuff(%clientId, %list, %multiplier)
 		{
 			//ignore
 		}
-		else if(isBackpackItem(%w))
+		else if(isBeltItem(%w))
 		{
-			%amount = Backpack::HasThisStuff(%clientid,%w);
+			%amount = Belt::HasThisStuff(%clientid,%w);
 			if(%amount >= %w2)
-				Backpack::TakeThisStuff(%clientid,%w,%w2);
+				Belt::TakeThisStuff(%clientid,%w,%w2);
 			else
 				return False;
 		}
@@ -2956,4 +2973,158 @@ function InitObjectives()
 		Team::setObjective(%i, 10, "<f7><jc>KILL ALL HUMAN PLAYERS");
 		Team::setObjective(%i, 11, "<f7><jc>KILL ALL HUMAN PLAYERS");
 	}
+}
+
+function SaveHouseObjectives()
+{
+	// Save house objective captures to separate file
+	File::delete("temp\\HouseObjectives.cs");
+	
+	// Save base control (towerswitch captures) for each house
+	export("$BaseControl[HouseKronos]", "temp\\HouseObjectives.cs", false);
+	export("$BaseControl[HouseArbal]", "temp\\HouseObjectives.cs", true);
+	export("$BaseControl[HouseCurama]", "temp\\HouseObjectives.cs", true);
+	export("$BaseControl[HouseYuliple]", "temp\\HouseObjectives.cs", true);
+	
+	// Save flag commands (artifact captures) for each house
+	export("$FlagCommand[HouseKronos]", "temp\\HouseObjectives.cs", true);
+	export("$FlagCommand[HouseArbal]", "temp\\HouseObjectives.cs", true);
+	export("$FlagCommand[HouseCurama]", "temp\\HouseObjectives.cs", true);
+	export("$FlagCommand[HouseYuliple]", "temp\\HouseObjectives.cs", true);
+	
+	// Save flag positions and team ownership
+	// Flags are direct children of MissionGroup, TowerSwitches are inside Tower0-Tower3 SimGroups
+	%tempSet = nameToID("MissionGroup");
+	echo("DEBUG: Searching MissionGroup for flags, ID = " @ %tempSet);
+	%flagCount = 0;
+	
+	for(%i = 0; %i < Group::objectCount(%tempSet); %i++)
+	{
+		%obj = Group::getObject(%tempSet, %i);
+		%dataName = GameBase::getDataName(%obj);
+		
+		if(%dataName == "flag")
+		{
+			// Found a flag - save its data
+			%objName = %obj.objectiveName;
+			%pos = GameBase::getPosition(%obj);
+			%team = GameBase::getTeam(%obj);
+			
+			// Store the data for export using numeric index
+			$SavedFlag[%flagCount, "name"] = %objName;
+			$SavedFlag[%flagCount, "position"] = %pos;
+			$SavedFlag[%flagCount, "team"] = %team;
+			
+			echo("DEBUG: Saving flag [" @ %flagCount @ "] '" @ %objName @ "' at position " @ %pos @ " for team " @ %team);
+			
+			%flagCount++;
+		}
+	}
+	
+	// Save Tower SimGroup teams (Tower0 through Tower3)
+	// TowerSwitches are inside these SimGroups, not direct children of MissionGroup
+	%switchCount = 0;
+	for(%t = 0; %t <= 3; %t++)
+	{
+		%towerGroup = nameToID("MissionGroup/Tower" @ %t);
+		if(%towerGroup != -1)
+		{
+			// Find the TowerSwitch in this group to get the team and objectiveName
+			for(%j = 0; %j < Group::objectCount(%towerGroup); %j++)
+			{
+				%obj = Group::getObject(%towerGroup, %j);
+				%dataName = GameBase::getDataName(%obj);
+				if(%dataName == "TowerSwitch")
+				{
+					%team = GameBase::getTeam(%obj);
+					%objName = %obj.objectiveName;
+					
+					// Save to both Tower array (for bulk team setting) and Switch array (for individual restoration)
+					$SavedTower[%t, "team"] = %team;
+					$SavedSwitch[%switchCount, "name"] = %objName;
+					$SavedSwitch[%switchCount, "team"] = %team;
+					
+					echo("DEBUG: Saving Tower" @ %t @ " ('" @ %objName @ "') team = " @ %team);
+					%switchCount++;
+					break;
+				}
+			}
+		}
+	}
+	
+	echo("DEBUG: Found " @ %flagCount @ " flags and " @ %switchCount @ " towerswitches");
+	
+	if(%flagCount > 0)
+		export("SavedFlag*", "temp\\HouseObjectives.cs", true);
+	if(%switchCount > 0)
+		export("SavedSwitch*", "temp\\HouseObjectives.cs", true);
+	export("SavedTower*", "temp\\HouseObjectives.cs", true);
+	
+	echo("Saved " @ %flagCount @ " flag positions and " @ %switchCount @ " towerswitch teams.");
+}
+
+function LoadHouseObjectives()
+{
+	// Restore house objective captures from file
+	exec("temp\\HouseObjectives.cs");
+	
+	// Restore flag positions and team ownership using numeric indices
+	%tempSet = nameToID("MissionGroup");
+	echo("DEBUG LoadHouseObjectives: Searching MissionGroup, ID = " @ %tempSet);
+	echo("DEBUG LoadHouseObjectives: MissionGroup object count = " @ Group::objectCount(%tempSet));
+	%flagsRestored = 0;
+	%switchesRestored = 0;
+	
+	// Restore flags by matching objectiveName with saved data
+	for(%savedIdx = 0; $SavedFlag[%savedIdx, "name"] != ""; %savedIdx++)
+	{
+		%savedName = $SavedFlag[%savedIdx, "name"];
+		%savedPos = $SavedFlag[%savedIdx, "position"];
+		%savedTeam = $SavedFlag[%savedIdx, "team"];
+		
+		echo("DEBUG: Looking for flag '" @ %savedName @ "' to restore");
+		
+		// Find this flag in MissionGroup
+		for(%i = 0; %i < Group::objectCount(%tempSet); %i++)
+		{
+			%obj = Group::getObject(%tempSet, %i);
+			if(GameBase::getDataName(%obj) == "flag" && %obj.objectiveName == %savedName)
+			{
+				GameBase::setPosition(%obj, %savedPos);
+				GameBase::setTeam(%obj, %savedTeam);
+				echo("Restored flag '" @ %savedName @ "' to position " @ %savedPos @ " for team " @ %savedTeam);
+				%flagsRestored++;
+				break;
+			}
+		}
+	}
+	
+	// Restore Tower SimGroup teams (Tower0 through Tower3)
+	// TowerSwitches are inside these groups, so they'll be restored when we set the team for all objects
+	for(%t = 0; %t <= 3; %t++)
+	{
+		if($SavedTower[%t, "team"] != "")
+		{
+			%towerGroup = nameToID("MissionGroup/Tower" @ %t);
+			if(%towerGroup != -1)
+			{
+				%team = $SavedTower[%t, "team"];
+				
+				// Get the switch name for logging
+				%switchName = $SavedSwitch[%t, "name"];
+				echo("DEBUG: Restoring Tower" @ %t @ " ('" @ %switchName @ "') to team " @ %team);
+				
+				// Set team for all objects in the tower group (TowerSwitch, Turrets, Generator)
+				for(%j = 0; %j < Group::objectCount(%towerGroup); %j++)
+				{
+					%obj = Group::getObject(%towerGroup, %j);
+					GameBase::setTeam(%obj, %team);
+					echo("DEBUG: Set team " @ %team @ " for " @ GameBase::getDataName(%obj) @ " in Tower" @ %t);
+				}
+				%switchesRestored++;
+			}
+		}
+	}
+	
+	echo("Restored " @ %flagsRestored @ " flags and " @ %switchesRestored @ " towerswitches.");
 }
