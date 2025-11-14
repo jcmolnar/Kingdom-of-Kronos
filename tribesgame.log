@@ -1,0 +1,16 @@
+========================================================================
+FATAL:   code\filstrm.cpp @ 119
+Attempted write to file: temp\\KingdomKronos_worldsave_.cs.
+File is not in a writable directory.
+========================================================================
+FATAL:   code\filstrm.cpp @ 119
+Attempted write to file: temp\\KingdomKronos_worldsave_.cs.
+File is not in a writable directory.
+========================================================================
+FATAL:   code\filstrm.cpp @ 119
+Attempted write to file: temp\\KingdomKronos_worldsave_.cs.
+File is not in a writable directory.
+========================================================================
+FATAL:   code\filstrm.cpp @ 119
+Attempted write to file: tempKingdomKronos_worldsave_.cs.
+File is not in a writable directory.

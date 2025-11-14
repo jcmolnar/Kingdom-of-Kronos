@@ -1,0 +1,5230 @@
+//--- export object begin ---//
+instant SimGroup "MissionGroup" {
+	instant SimGroup "Volumes" {
+		instant SimVolume "InterfaceVol" {
+			fileName = "Interface.vol";
+		};
+		instant SimVolume "entities" {
+			fileName = "Entities.vol";
+		};
+		instant SimVolume "World" {
+			fileName = "lushWorld.vol";
+		};
+		instant SimVolume "WorldTerrain" {
+			fileName = "lushTerrain.vol";
+		};
+		instant SimVolume "lushDML" {
+			fileName = "lushDML.vol";
+		};
+		instant SimVolume "savanaDML" {
+			fileName = "savanaDML.vol";
+		};
+		instant SimVolume "human1DML" {
+			fileName = "human1DML.vol";
+		};
+		instant SimVolume "TedFile" {
+			fileName = "missions\\rpgbutch5.ted";
+		};
+		instant SimVolume "hosedfrt" {
+			fileName = "hosedfrt.vol";
+		};
+		instant SimVolume "RPGtextures" {
+			fileName = "RPGtextures.vol";
+		};
+		instant SimVolume "RPGshapes" {
+			fileName = "RPGshapes.vol";
+		};
+		instant SimVolume "Hosed1" {
+			fileName = "hosed1.vol";
+		};
+		instant SimVolume "Hosed2" {
+			fileName = "hosed2.vol";
+		};
+		instant SimVolume "Speeder1" {
+			fileName = "speeder1.vol";
+		};
+		instant SimVolume "HosedHut" {
+			fileName = "hosedhut.vol";
+		};
+		instant SimVolume "FightClub" {
+			fileName = "fclub.vol";
+		};
+		instant SimVolume "Laby" {
+			fileName = "jlaby.vol";
+		};
+		instant SimVolume "titanDML" {
+			fileName = "titanDML.vol";
+		};
+		instant SimVolume "3Bridges" {
+			fileName = "jibridge.vol";
+		};
+		instant SimVolume "RemorterHall" {
+			fileName = "remorterhall.vol";
+		};
+		instant SimVolume "MageTower" {
+			fileName = "magetower.vol";
+		};
+		instant SimVolume "bridge1" {
+			fileName = "bridge.vol";
+		};
+		instant SimVolume "wharf" {
+			fileName = "wharf.vol";
+		};
+		instant SimVolume "beachwharf" {
+			fileName = "beachwharf.vol";
+		};
+		instant SimVolume "towerf" {
+			fileName = "towerf.vol";
+		};
+		instant SimVolume "Wood" {
+			fileName = "wood.vol";
+		};
+		instant SimVolume "woodfire" {
+			fileName = "woodfire.vol";
+		};
+		instant SimVolume "Tent" {
+			fileName = "tent.vol";
+		};
+		instant SimVolume "NewMines" {
+			fileName = "jimines.vol";
+		};
+		instant SimVolume "Fountain" {
+			fileName = "jfnt.vol";
+		};
+		instant SimVolume "JHosed" {
+			fileName = "jhosed.vol";
+		};
+		instant SimVolume "upc2" {
+			fileName = "upc2.vol";
+		};
+		instant SimVolume "Yol2" {
+			fileName = "yol2.vol";
+		};
+		instant SimVolume "m1" {
+			fileName = "m1.vol";
+		};
+		instant SimVolume "m2" {
+			fileName = "m2.vol";
+		};
+		instant SimVolume "m3" {
+			fileName = "m3.vol";
+		};
+		instant SimVolume "m4" {
+			fileName = "m4.vol";
+		};
+		instant SimVolume "ncity" {
+			fileName = "ncity.vol";
+		};
+		instant SimVolume "anvil" {
+			fileName = "anvil.vol";
+		};
+		instant SimVolume "bssign" {
+			fileName = "bssign.vol";
+		};
+		instant SimVolume "bbridge" {
+			fileName = "bbridge.vol";
+		};
+		instant SimVolume "ffort" {
+			fileName = "ffort.vol";
+		};
+		instant SimVolume "dockcity" {
+			fileName = "dcty.vol";
+		};
+		instant SimVolume "well" {
+			fileName = "well.vol";
+		};
+		instant SimVolume "miscobj" {
+			fileName = "miscobj.vol";
+		};
+		instant SimVolume "newarena" {
+			fileName = "jring.vol";
+		};
+		instant SimVolume "bigrock" {
+			fileName = "jrock.vol";
+		};
+		instant SimVolume "newcrypt" {
+			fileName = "crypt0.vol";
+		};
+		instant SimVolume "1caven" {
+			fileName = "1caven.vol";
+		};
+		instant SimVolume "2caven" {
+			fileName = "2caven.vol";
+		};
+		instant SimVolume "newcrypt" {
+			fileName = "crypt0.vol";
+		};
+		instant SimVolume "MissionLighting" {
+			fileName = "rpgmap5.vol";
+		};
+	};
+	instant SimGroup "World" {
+		instant SimPalette "Palette" {
+			fileName = "lush.night.ppl";
+		};
+		instant MissionCenterPos "MissionCenter" {
+			x = "-2531";
+			y = "-296";
+			w = "200";
+			h = "200";
+		};
+	};
+	instant SimGroup "Landscape" {
+		instant SimTerrain "Terrain" {
+			tedFileName = "rpgbutch5.dtf";
+			visibleDistance = "800";
+			hazeDistance = "817.5";
+			hazeVerticalMin = "-NAN";
+			hazeVerticalMax = "2.19193e-39";
+			perspectiveDistance = "100";
+			screenSize = "30";
+			contGravity = "0 0 -20";
+			contDrag = "0";
+			contHeight = "10000";
+			position = "-5120 -3072 0";
+			rotation = "0 0 0";
+			terrainType = "flat";
+		};
+		instant Planet "Sun" {
+			fileName = "";
+			azimuth = "26";
+			incidence = "76";
+			castShadows = "True";
+			useLensFlare = "True";
+			intensity = "0.399933 0.399933 0.399933";
+			ambient = "0.159933 0.159933 0.159933";
+			size = "2000";
+			distance = "11000";
+		};
+		instant Sky "Sky" {
+			dmlName = "lushsky_night.dml";
+			skyColor = "0 0 0";
+			hazeColor = "0 0 0";
+			featurePosition = "0";
+			size = "600";
+			textures[0] = "0";
+			textures[1] = "1";
+			textures[2] = "2";
+			textures[3] = "3";
+			textures[4] = "4";
+			textures[5] = "5";
+			textures[6] = "6";
+			textures[7] = "7";
+			textures[8] = "8";
+			textures[9] = "9";
+			textures[10] = "10";
+			textures[11] = "11";
+			textures[12] = "12";
+			textures[13] = "13";
+			textures[14] = "14";
+			textures[15] = "15";
+		};
+	};
+	instant SimGroup "Teams" {
+		instant TeamGroup "team0" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-398.9 -2324.5 78";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-398.462 -2333.38 77.5";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-394.226 -2329.87 78";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-388.878 -2325.75 78";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-396.608 -2317.75 78";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "base" {
+				instant SimGroup "pad1" {
+					instant StaticShape "VehicleStation1" {
+						dataBlock = "VehicleStation";
+						name = "";
+						position = "-2869 854 1204.5";
+						rotation = "0 -0 0";
+						destroyable = "True";
+						deleteOnDestroy = "False";
+						vehiclePad = "3102";
+					};
+					instant StaticShape "vehiclePad1" {
+						dataBlock = "vehiclePad";
+						name = "";
+						position = "-2845 854 1204";
+						rotation = "0 -0 0";
+						destroyable = "True";
+						deleteOnDestroy = "False";
+					};
+					instant InteriorShape "tank1" {
+						fileName = "tank.0.dis";
+						isContainer = "1";
+						position = "-2845 844 1204";
+						rotation = "0 0 0";
+						lightParams = "0 ";
+						locked = "1";
+					};
+				};
+				instant StaticShape "Generator1" {
+					dataBlock = "Generator";
+					name = "";
+					position = "-2845 845 1204";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "InventoryStation1" {
+					dataBlock = "InventoryStation";
+					name = "Inventory Station 3";
+					position = "-2826 834 1204";
+					rotation = "0 -0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					lastDamageObject = "8259";
+					lastDamageTeam = "0";
+					lastPlayer = "8437";
+				};
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Kronos1";
+				position = "-3226.61 1714.51 1584.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseKronos";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Kronos2";
+				position = "-3225.61 1711.81 1584.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseKronos";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Kronos3";
+				position = "-3229.61 1711.11 1584.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseKronos";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Kronos4";
+				position = "-3230.11 1714.01 1584.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseKronos";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Arbal1";
+				position = "-2043.81 -3010.75 394.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseArbal";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Arbal2";
+				position = "-2047 -3011.11 394.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseArbal";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Arbal3";
+				position = "-2047.81 -3007.5 394.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseArbal";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Arbal4";
+				position = "-2045 -3006.75 394.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseArbal";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Curama1";
+				position = "-4637.11 -127.591 179.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseCurama";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Curama2";
+				position = "-4635.51 -124.791 179.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseCurama";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Curama3";
+				position = "-4631.81 -126.391 179.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseCurama";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Curama4";
+				position = "-4632.75 -129.5 179.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseCurama";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Yuliple1";
+				position = "-196.891 -2225.61 164.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseYuliple";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Yuliple2";
+				position = "-194.891 -2228.25 164.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseYuliple";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Yuliple3";
+				position = "-198.091 -2231.11 164.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseYuliple";
+			};
+			instant StaticShape "stand1" {
+				dataBlock = "FlagStand";
+				name = "Yuliple4";
+				position = "-200.391 -2228.61 164.5";
+				rotation = "0 -0 -0.919975";
+				destroyable = "True";
+				deleteOnDestroy = "False";
+				TEAM = "HouseYuliple";
+			};
+		};
+		instant TeamGroup "team1" {
+			instant SimGroup "AI";
+			instant SimGroup "Turrets" {
+				instant Turret "GuardianTurret1" {
+					dataBlock = "GuardianTurret";
+					name = "Murch Temple";
+					position = "-4688 -2113 146.791";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "GuardianTurret1" {
+					dataBlock = "GuardianTurret";
+					name = "Crosion Temple";
+					position = "-837 -1189 701";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "GuardianTurret1" {
+					dataBlock = "GuardianTurret";
+					name = "Gratigud Temple";
+					position = "897 -640 138";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "GuardianTurret1" {
+					dataBlock = "GuardianTurret";
+					name = "Gratigud Temple";
+					position = "899 -588.5 145.391";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "GuardianTurret1" {
+					dataBlock = "GuardianTurret";
+					name = "Belaguard Temple";
+					position = "420.5 577 400";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "TempleIndoorTurret1" {
+					dataBlock = "TempleIndoorTurret";
+					name = "Belaguard Temple";
+					position = "426 606 420";
+					rotation = "0 4.70991 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "TempleIndoorTurret1" {
+					dataBlock = "TempleIndoorTurret";
+					name = "Crosion Temple";
+					position = "-790 -1190 722.291";
+					rotation = "0 5.27991 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "TempleIndoorTurret1" {
+					dataBlock = "TempleIndoorTurret";
+					name = "Crosion Temple";
+					position = "-794 -1194.5 713.391";
+					rotation = "0 5.27991 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "TempleIndoorTurret1" {
+					dataBlock = "TempleIndoorTurret";
+					name = "Murch Temple2";
+					position = "-4684.81 -2136 136.391";
+					rotation = "4.70991 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "woop";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "TempleIndoorTurret1" {
+					dataBlock = "TempleIndoorTurret";
+					name = "Yuliple";
+					position = "-194 -2227 172.291";
+					rotation = "4.70991 0 2.09991";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "HouseYuliple";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "TempleIndoorTurret1" {
+					dataBlock = "TempleIndoorTurret";
+					name = "Curama";
+					position = "-4637 -125 187.391";
+					rotation = "4.70991 0 4.09991";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "HouseCurama";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "TempleIndoorTurret1" {
+					dataBlock = "TempleIndoorTurret";
+					name = "Arbal";
+					position = "-2046 -3013 402.5";
+					rotation = "4.70991 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "HouseArbal";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant Turret "TempleIndoorTurret1" {
+					dataBlock = "TempleIndoorTurret";
+					name = "Kronos";
+					position = "-3224 1713 1592.5";
+					rotation = "0 4.70991 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+					TEAM = "HouseKronos";
+					shieldStrength = "0.0299999";
+					lastDamageTeam = "-1";
+					lastDamageObject = "0";
+					locked = "1";
+				};
+				instant StaticShape "Generator1" {
+					dataBlock = "Generator";
+					name = "";
+					position = "-2433 1820 1200";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+		};
+		instant TeamGroup "team2" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team3" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team4" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team5" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team6" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team7" {
+			instant SimGroup "AI";
+		};
+	};
+	instant Item "flag1" {
+		dataBlock = "flag";
+		name = "";
+		position = "911.891 -587.691 193.972";
+		rotation = "0 -0 -0.859975";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+		rotates = "False";
+		collideable = "False";
+		count = "1";
+		objectiveLine = "13";
+		caps7 = "0";
+		caps6 = "0";
+		caps5 = "0";
+		caps4 = "0";
+		caps3 = "0";
+		caps2 = "0";
+		caps1 = "0";
+		caps0 = "0";
+		enemyCaps = "0";
+		holdingTeam = "-1";
+		carrier = "-1";
+		pickupSequence = "0";
+		atHome = "true";
+		originalPosition = "911.9 -587.7 193.9";
+		objectiveName = "the Gratigud Artifact";
+		scoreValue = "3";
+	};
+	instant Item "flag1" {
+		dataBlock = "flag";
+		name = "";
+		position = "419.791 613.691 418.136";
+		rotation = "0 -0 -0.859975";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+		rotates = "False";
+		collideable = "False";
+		count = "1";
+		objectiveLine = "14";
+		caps7 = "0";
+		caps6 = "0";
+		caps5 = "0";
+		caps4 = "0";
+		caps3 = "0";
+		caps2 = "0";
+		caps1 = "0";
+		caps0 = "0";
+		enemyCaps = "0";
+		holdingTeam = "-1";
+		carrier = "-1";
+		pickupSequence = "0";
+		atHome = "true";
+		originalPosition = "419.8 613.7 418.1";
+		objectiveName = "the Belaguard Artifact";
+		scoreValue = "3";
+	};
+	instant Item "flag1" {
+		dataBlock = "flag";
+		name = "";
+		position = "-795.273 -1189.91 713.729";
+		rotation = "0 -0 -0.859975";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+		rotates = "False";
+		collideable = "False";
+		count = "1";
+		objectiveLine = "15";
+		caps7 = "0";
+		caps6 = "0";
+		caps5 = "0";
+		caps4 = "0";
+		caps3 = "0";
+		caps2 = "0";
+		caps1 = "0";
+		caps0 = "0";
+		enemyCaps = "0";
+		holdingTeam = "-1";
+		carrier = "-1";
+		pickupSequence = "0";
+		atHome = "true";
+		originalPosition = "-795.3 -1190 713.7";
+		objectiveName = "the Crosion Artifact";
+		scoreValue = "3";
+	};
+	instant Item "flag1" {
+		dataBlock = "flag";
+		name = "";
+		position = "-4686.11 -2133.5 139.545";
+		rotation = "0 -0 -0.859975";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+		rotates = "False";
+		collideable = "False";
+		count = "1";
+		objectiveLine = "16";
+		caps7 = "0";
+		caps6 = "0";
+		caps5 = "0";
+		caps4 = "0";
+		caps3 = "0";
+		caps2 = "0";
+		caps1 = "0";
+		caps0 = "0";
+		enemyCaps = "0";
+		holdingTeam = "-1";
+		carrier = "-1";
+		pickupSequence = "0";
+		atHome = "true";
+		originalPosition = "-4686.2 -2133.5 139.5";
+		objectiveName = "the Murch Artifact";
+		scoreValue = "3";
+	};
+	instant SimGroup "Tower0" {
+		instant StaticShape "Switch" {
+			dataBlock = "TowerSwitch";
+			name = "Control Point Thaliel";
+			position = "-2450.11 1799.31 73";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			numSwitchTeams = "0";
+			objectiveName = "Thaliel Control Point";
+			deltaTeamScore = "12";
+			count = "0";
+			collideable = "False";
+			rotates = "False";
+			objectiveLine = "13";
+		};
+		instant Turret "PlasmaTurret1" {
+			dataBlock = "PlasmaTurret";
+			name = "Door Fireball Spitter";
+			position = "-2433 1820 85";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant Turret "PlasmaTurret2" {
+			dataBlock = "PlasmaTurret";
+			name = "Door Fireball Spitter";
+			position = "-2465 1780 85";
+			rotation = "0 0 3.13991";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant Turret "IndoorTurret1" {
+			dataBlock = "IndoorTurret";
+			name = "Door Fireball Spitter";
+			position = "-2450 1800 81.5";
+			rotation = "3.13991 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant StaticShape "Generator1" {
+			dataBlock = "Generator";
+			name = "";
+			position = "-2433 1820 1000";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+		};
+	};
+	instant SimGroup "Tower1" {
+		instant StaticShape "Switch" {
+			dataBlock = "TowerSwitch";
+			name = "Control Point Bruin";
+			position = "-2843 2903.25 691";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			numSwitchTeams = "0";
+			objectiveName = "Bruin Control Point";
+			deltaTeamScore = "12";
+			count = "0";
+			collideable = "False";
+			rotates = "False";
+			objectiveLine = "13";
+		};
+		instant Turret "PlasmaTurret1" {
+			dataBlock = "PlasmaTurret";
+			name = "Door Fireball Spitter";
+			position = "-2849 2885 708";
+			rotation = "0 0 3.13991";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant Turret "IndoorTurret2" {
+			dataBlock = "IndoorTurret";
+			name = "Door Fireball Spitter";
+			position = "-2854.5 2907 707";
+			rotation = "3.13991 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant Turret "IndoorTurret1" {
+			dataBlock = "IndoorTurret";
+			name = "Door Fireball Spitter";
+			position = "-2853 2893 699.891";
+			rotation = "3.13991 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant StaticShape "Generator1" {
+			dataBlock = "Generator";
+			name = "";
+			position = "-2853 2893 1200";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+		};
+	};
+	instant SimGroup "Tower2" {
+		instant StaticShape "Switch" {
+			dataBlock = "TowerSwitch";
+			name = "Control Point Delern";
+			position = "-397 1811 95";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			numSwitchTeams = "0";
+			objectiveName = "Delern Control Point";
+			deltaTeamScore = "12";
+			count = "0";
+			collideable = "False";
+			rotates = "False";
+			objectiveLine = "13";
+		};
+		instant Turret "PlasmaTurret1" {
+			dataBlock = "PlasmaTurret";
+			name = "Door Fireball Spitter";
+			position = "-395 1803 151";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant Turret "PlasmaTurret2" {
+			dataBlock = "PlasmaTurret";
+			name = "Door Fireball Spitter";
+			position = "-396 1802 81";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant Turret "IndoorTurret1" {
+			dataBlock = "IndoorTurret";
+			name = "Door Fireball Spitter";
+			position = "-395 1805 109";
+			rotation = "3.13991 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant StaticShape "Generator1" {
+			dataBlock = "Generator";
+			name = "";
+			position = "-395 1805 1000";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+		};
+	};
+	instant SimGroup "Tower3" {
+		instant StaticShape "Switch" {
+			dataBlock = "TowerSwitch";
+			name = "Control Point Projao";
+			position = "-412.5 -235 48.5";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			numSwitchTeams = "0";
+			objectiveName = "Projao Control Point";
+			deltaTeamScore = "12";
+			count = "0";
+			collideable = "False";
+			rotates = "False";
+			objectiveLine = "13";
+		};
+		instant Turret "PlasmaTurret1" {
+			dataBlock = "PlasmaTurret";
+			name = "Door Fireball Spitter";
+			position = "-396 -234 67.5";
+			rotation = "0 0 3.13991";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant Turret "IndoorTurret2" {
+			dataBlock = "IndoorTurret";
+			name = "Door Fireball Spitter";
+			position = "-399 -235 66.5";
+			rotation = "3.13991 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant Turret "IndoorTurret1" {
+			dataBlock = "IndoorTurret";
+			name = "Door Fireball Spitter";
+			position = "-399 -235 57.5";
+			rotation = "3.13991 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			shieldStrength = "0.0299999";
+			lastDamageTeam = "-1";
+			lastDamageObject = "0";
+			locked = "1";
+		};
+		instant StaticShape "Generator1" {
+			dataBlock = "Generator";
+			name = "";
+			position = "-399 -235 1000";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+		};
+	};
+	instant SimGroup "ObserverDropPoints" {
+		instant Marker "Drop Point1" {
+			dataBlock = "DropPointMarker";
+			name = "";
+			position = "-2548.25 -262.375 120";
+			rotation = "0 -0 -0.939741";
+		};
+	};
+	instant SimGroup "DuelingArena" {
+		instant SimGroup "TeleportEntranceMarks" {
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1202.5 1499.5 73.2761";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "ObserverSpawn" {
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1215.83 1499 54.7761";
+				rotation = "0 0 0";
+			};
+		};
+	};
+	instant SimGroup "TheArena" {
+		instant SimGroup "ArenaSpawnMarkers" {
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1210.25 1501.56 62.0261";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1214.25 1507.25 61.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1227.58 1505.25 62.2761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1229.82 1499.1 62.2761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1213.75 1495.76 61.2761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1215.33 1511.75 61.2761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1228.5 1509.78 61.2761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1228.25 1493.79 61.2761";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "TeleportExitMarkers" {
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-398.9 -2324.5 78";
+				rotation = "0 -0 0.89982";
+			};
+		};
+		instant SimGroup "TeleportEntranceMarkers" {
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1202.5 1499.5 73.2761";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "WaitingRoomMarkers" {
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1215.83 1499 54.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1213.5 1504.75 54.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1224.75 1502.5 54.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1221.36 1506 54.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1221.61 1498.1 54.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1224.33 1509.5 54.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1215.29 1509.31 54.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1220.75 1511.25 54.7761";
+				rotation = "0 0 0";
+			};
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1227.57 1506.5 54.7761";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "stuff1" {
+			locked = "0";
+		};
+		instant InteriorShape "jring1" {
+			fileName = "jring.0.dis";
+			isContainer = "1";
+			position = "-1221.25 1502.75 56.7761";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Water" {
+		instant SimGroup "linker4" {
+			instant InteriorShape "watersurface10A3" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4940.75 -1663 40.7625";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10A1" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4940.75 2433 40.7617";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10A2" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4940.75 385 40.7623";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+		};
+		instant SimGroup "layer3" {
+			instant InteriorShape "watersurfaceTownC" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4144.75 -2559.75 40.7698";
+				rotation = "0 0 1.56913";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9b" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4044.75 511.875 40.7695";
+				rotation = "0 0 1.56913";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurfaceTownB" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4144.5 -512 40.7642";
+				rotation = "0 0 1.56961";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9a" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4044.75 2559.75 40.7697";
+				rotation = "0 0 1.56913";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurfaceTownA" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4144.75 1535.75 40.7711";
+				rotation = "0 0 1.56913";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9c" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-4044.75 -1534.75 40.7684";
+				rotation = "0 0 1.56913";
+				lightParams = "0 ";
+			};
+		};
+		instant SimGroup "linker1" {
+			instant InteriorShape "watersurface10B3" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "820.75 -1662 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10B2" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "820.75 386 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10B1" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "820.75 2434 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+		};
+		instant SimGroup "layer1" {
+			instant InteriorShape "watersurfaceTownC" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-48.75 -2559.75 40.77";
+				rotation = "0 -0 1.56912";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9b" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "52.75 511.875 40.7697";
+				rotation = "0 -0 1.56912";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurfaceTownB" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-48.75 -511.875 40.7707";
+				rotation = "0 -0 1.56912";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9a" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "52.75 2559.75 40.7699";
+				rotation = "0 -0 1.56912";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurfaceTownA" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-48.75 1535.75 40.7713";
+				rotation = "0 -0 1.56912";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9c" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "52.75 -1536 40.7691";
+				rotation = "0 0 1.56913";
+				lightParams = "0 ";
+			};
+		};
+		instant SimGroup "layer2" {
+			instant InteriorShape "watersurfaceTownC" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-2096.75 -2559.75 40.7699";
+				rotation = "0 -0 1.56913";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9c" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-1996.5 -1535.5 40.7672";
+				rotation = "0 0 1.57038";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurfaceTownA" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-2096.75 1535.75 40.7712";
+				rotation = "0 -0 1.56913";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9a" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-1996.75 2560 40.7697";
+				rotation = "0 0 1.56913";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurfaceTownB" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-2096.75 -511.875 40.7706";
+				rotation = "0 -0 1.56913";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface9b" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-1996.75 512 40.7695";
+				rotation = "0 0 1.56913";
+				lightParams = "0 ";
+			};
+		};
+		instant SimGroup "linker2" {
+			instant InteriorShape "watersurface10A3" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-588.75 -1663 40.7629";
+				rotation = "0 -0 1.56914";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10B3" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-1228.75 -1662 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10A2" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-588.75 385 40.7627";
+				rotation = "0 -0 1.56914";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10B2" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-1228.75 386 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10A1" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-588.75 2433 40.7626";
+				rotation = "0 -0 1.56914";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10B1" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-1228.75 2434 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+		};
+		instant SimGroup "linker3" {
+			instant InteriorShape "watersurface10A3" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-2634.75 -1663 40.7627";
+				rotation = "0 0 1.56921";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10B3" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-3276.75 -1662 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10A2" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-2634.75 385 40.7621";
+				rotation = "0 0 1.56921";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10B2" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-3276.75 386 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10A1" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-2634.75 2433 40.7624";
+				rotation = "0 0 1.56921";
+				lightParams = "0 ";
+			};
+			instant InteriorShape "watersurface10B1" {
+				fileName = "water1.dis";
+				isContainer = "1";
+				position = "-3276.75 2434 40.75";
+				rotation = "0 0 0";
+				lightParams = "0 ";
+			};
+		};
+	};
+	instant SimGroup "Zones" {
+		instant SimGroup "PROTECTED Yuliple City" {
+			instant SimGroup "MUSIC KeldrinTown.wav 55";
+			instant SimGroup "MUSIC keldrinmusic2.wav 28";
+			instant SimGroup "ENTERSOUND object_harp.wav";
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-398.9 -2324.5 78";
+					rotation = "0 -0 0.719862";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-398.462 -2333.38 77.5";
+					rotation = "0 -0 0.719862";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-394.226 -2329.87 78";
+					rotation = "0 -0 0.719862";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-388.878 -2325.75 78";
+					rotation = "0 -0 0.719862";
+				};
+			};
+			instant SimGroup "AMBIENTSOUND area_plains.wav 10";
+			instant Marker "320 350 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-365 -2334 65";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Pig Den" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "408.266 -2691.31 306.687";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "423 -2709 321.5";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "MUSIC elvenmusic2.wav 27";
+			instant Marker "200 300 800 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "375 -2665 330";
+				rotation = "0 0 0";
+			};
+		};
+//		instant SimGroup "PROTECTED Las Vegas" {
+//			instant SimGroup "DropPoints" {
+//				instant Marker "Marker1" {
+//					dataBlock = "PathMarker";
+//					name = "";
+//					position = "-4899.98 862 701.499";
+//					rotation = "0 -0 -0.939825";
+//				};
+//				instant Marker "Marker1" {
+//					dataBlock = "PathMarker";
+//					name = "";
+//					position = "-4900.04 867.261 701.499";
+//					rotation = "0 -0 -0.939824";
+//				};
+//			};
+//			instant SimGroup "MUSIC ethrenmusic.wav 29";
+//			instant SimGroup "MUSIC ethrenmusic2.wav 30";
+//			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
+//			instant SimGroup "ENTERSOUND ActivateAM.wav";
+//			instant Marker "300 300 150 0" {
+//				dataBlock = "PathMarker";
+//				name = "";
+//				position = "-4900 862 701";
+//				rotation = "0 0 0";
+//			};
+//		};
+		instant SimGroup "PROTECTED Empress Sanctuary" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2860.56 -1287.6 702";
+					rotation = "0 -0 -0.939825";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2863.56 -1285.6 702";
+					rotation = "0 -0 -0.939824";
+				};
+			};
+			instant SimGroup "MUSIC ethrenmusic.wav 29";
+			instant SimGroup "MUSIC ethrenmusic2.wav 30";
+			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
+			instant SimGroup "ENTERSOUND ActivateAM.wav";
+			instant Marker "100 100 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2857.54 -1300 703";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Ogre Skybase" {
+			instant SimGroup "MUSIC minemusic.wav 24";
+			instant SimGroup "MUSIC minemusic2.wav 24";
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2406.29 -1192.86 683";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2408.29 -1190.86 683";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "AMBIENTSOUND ambient_cleardrop.wav 10";
+			instant Marker "110 300 100 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2357 -1080 680";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Ogre Stronghold" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3753.75 -1002.14 266.958";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3748.75 -1002.14 266.958";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "MUSIC travmusic2.wav 30";
+			instant Marker "300 300 500 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3748.4 -1091.31 261";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "PROTECTED Curama Outpost" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4518.13 -240.021 65";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4518.13 -245.021 65";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "MUSIC jatenmusic.wav 25";
+			instant SimGroup "MUSIC jatenmusic2.wav 18";
+			instant Marker "80 80 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4488 -240 65";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Ghost Town" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2508 -2331 65";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2508 -2335 65";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "MUSIC cryptmusic2.wav 18";
+			instant Marker "150 150 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2437.53 -2329.83 65";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "PROTECTED Arbal Research Center" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2026 -2875 344";
+					rotation = "0 -0 -0.939825";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2026 -2871 344";
+					rotation = "0 -0 -0.939824";
+				};
+			};
+			instant SimGroup "MUSIC ethrenmusic.wav 29";
+			instant SimGroup "MUSIC ethrenmusic2.wav 30";
+			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
+			instant SimGroup "ENTERSOUND ActivateAM.wav";
+			instant Marker "250 200 300 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1972 -2860 304";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "PROTECTED Black Market" {
+			instant SimGroup "MUSIC jatenmusic.wav 25";
+			instant SimGroup "MUSIC jatenmusic2.wav 18";
+			instant Marker "150 150 200 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2582.76 -1159.5 194";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "PROTECTED Kingdom of Kronos" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3364 1723 1559";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3364 1721 1559";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "MUSIC delkinmusic2.wav 48";
+			instant Marker "100 100 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3371 1720 1560";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Minotaur Tomb" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3866.62 1690 1584";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "ENTERSOUND lairenter.wav";
+			instant SimGroup "MUSIC minomusic.wav 47";
+			instant SimGroup "MUSIC minomusic2.wav 34";
+			instant Marker "165 200 200 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3865 1690 1563";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON God's Paradox" {
+			instant SimGroup "MUSIC yolandamusic2.wav 21";
+			instant Marker "300 300 300 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "308.85 -947 97";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Admin's Demise" {
+			instant SimGroup "MUSIC yolandamusic2.wav 21";
+			instant Marker "300 300 300 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1769 2239 -84";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Angels Enigma" {
+			instant SimGroup "MUSIC yolandamusic2.wav 21";
+			instant Marker "300 300 300 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3123 2322 -410";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "PROTECTED Gian Echos" {
+			instant SimGroup "MUSIC ethrenmusic.wav 29";
+			instant SimGroup "MUSIC ethrenmusic2.wav 30";
+			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
+			instant SimGroup "ENTERSOUND ActivateAM.wav";
+			instant Marker "150 150 200 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "893.104 1396 -398";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Contaminated Well" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-804.288 847.71 700.991";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "ENTERSOUND lairenter.wav";
+			instant SimGroup "MUSIC minomusic.wav 47";
+			instant SimGroup "MUSIC minomusic2.wav 34";
+			instant Marker "165 200 300 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-813.087 859.904 701.99";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Stone Henge" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2386 -250 65";
+					rotation = "0 0 0";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2386 -253 65";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "MUSIC ubermusic.wav 21";
+			instant Marker "300 300 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2452 -236 29";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "FREEFORALL DuelingArena" {
+			instant Marker "100 100 200 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3500 1200 1504";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "PROTECTED Lamisor" {
+			instant SimGroup "MUSIC ethrenmusic.wav 29";
+			instant SimGroup "MUSIC ethrenmusic2.wav 30";
+			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
+			instant SimGroup "ENTERSOUND ActivateAM.wav";
+			instant Marker "100 200 105 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2852 910 600";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Demon Incubus" {
+			instant SimGroup "MUSIC yolandamusic2.wav 21";
+			instant Marker "100 200 45 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2852 953 514";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "PROTECTED Asna's Pad" {
+			instant SimGroup "MUSIC ethrenmusic.wav 29";
+			instant SimGroup "MUSIC ethrenmusic2.wav 30";
+			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
+			instant SimGroup "ENTERSOUND ActivateAM.wav";
+			instant Marker "60 60 30 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-950 -1969 468.5";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "PROTECTED Porellis" {
+			instant SimGroup "MUSIC KeldrinTown.wav 55";
+			instant SimGroup "MUSIC keldrinmusic2.wav 28";
+			instant SimGroup "ENTERSOUND object_harp.wav";
+			instant SimGroup "AMBIENTSOUND area_plains.wav 10";
+			instant Marker "200 190 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4479 1827 86";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "FREEFORALL Colloseum" {
+			instant SimGroup "MUSIC ubermusic.wav 21";
+			instant Marker "150 150 100 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3606 -2365 365";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "FREEFORALL Thaliel" {
+			instant SimGroup "MUSIC jatenmusic.wav 25";
+			instant SimGroup "MUSIC jatenmusic2.wav 18";
+			instant Marker "75 75 50 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2450 1799 73";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "FREEFORALL Bruin" {
+			instant SimGroup "MUSIC jatenmusic.wav 25";
+			instant SimGroup "MUSIC jatenmusic2.wav 18";
+			instant Marker "75 75 100 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2849 2900 699";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "FREEFORALL Delern" {
+			instant SimGroup "MUSIC jatenmusic.wav 25";
+			instant SimGroup "MUSIC jatenmusic2.wav 18";
+			instant Marker "75 75 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-394 1807 95";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "FREEFORALL Projao" {
+			instant SimGroup "MUSIC jatenmusic.wav 25";
+			instant SimGroup "MUSIC jatenmusic2.wav 18";
+			instant Marker "75 75 100 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-399 -235 57.5";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON Starsiege" {
+			instant Marker "165 200 200 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-808.017 2910.25 489.375";
+				rotation = "0 0 0";
+			};
+		};
+	};
+	instant SimGroup "SpawnPoints" {
+		instant Marker "2 1 2 10 25 19" {
+			dataBlock = "PathMarker";
+			name = "pigman hog";
+			position = "373.361 -2665 330";
+			rotation = "0 0 0";
+		};
+		instant Marker "1.3 1 3 10 25 21" {
+			dataBlock = "PathMarker";
+			name = "pigman warrior";
+			position = "378.897 -2632.38 325.5";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 22" {
+			dataBlock = "PathMarker";
+			name = "pigman Devourer";
+			position = "365.819 -2686.01 322";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 15" {
+			dataBlock = "PathMarker";
+			name = "ogre wimp";
+			position = "-2357 -1161.61 681";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 16" {
+			dataBlock = "PathMarker";
+			name = "ogre guardian";
+			position = "-2357 -1080 681";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 18" {
+			dataBlock = "PathMarker";
+			name = "ogre destroyer";
+			position = "-2357 -1000 681";
+			rotation = "0 0 0";
+		};
+		instant Marker "1.4 1 3 10 25 27" {
+			dataBlock = "PathMarker";
+			name = "ogre ruffian";
+			position = "-3703.25 -1073 261";
+			rotation = "0 0 0";
+		};
+		instant Marker "1.4 1 3 10 25 29" {
+			dataBlock = "PathMarker";
+			name = "ogre eliminator";
+			position = "-3791.25 -1073 261";
+			rotation = "0 0 0";
+		};
+		instant Marker "1.4 1 3 10 25 30" {
+			dataBlock = "PathMarker";
+			name = "ogre dreadnaught";
+			position = "-3747.03 -1131.75 255";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 31" {
+			dataBlock = "PathMarker";
+			name = "zombie villager";
+			position = "-2442.25 -2328.6 65";
+			rotation = "0 0 0";
+		};
+		instant Marker "2 1 3 10 25 32" {
+			dataBlock = "PathMarker";
+			name = "zombie guard";
+			position = "-2465.28 -2332 82";
+			rotation = "0 0 0";
+		};
+		instant Marker "1.4 1 2 10 25 33" {
+			dataBlock = "PathMarker";
+			name = "zombie eliteguard";
+			position = "-2431 -2341 103";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 34" {
+			dataBlock = "PathMarker";
+			name = "undead king";
+			position = "-2423 -2332 83";
+			rotation = "0 0 0";
+		};
+		instant Marker "1.8 1 3 10 25 47" {
+			dataBlock = "PathMarker";
+			name = "mino eradicator";
+			position = "-3865 1691 1563";
+			rotation = "0 0 0";
+		};
+		instant Marker "1.4 1 3 10 25 48" {
+			dataBlock = "PathMarker";
+			name = "mino deathstar";
+			position = "-3866 1689 1552";
+			rotation = "0 0 0";
+		};
+		instant Marker "1.7 1 3 10 25 49" {
+			dataBlock = "PathMarker";
+			name = "alien invader";
+			position = "-2468 -236 14.75";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 50" {
+			dataBlock = "PathMarker";
+			name = "alien holocaust";
+			position = "-2375 -236 19.75";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 15 25 50" {
+			dataBlock = "PathMarker";
+			name = "alien holocaust Contam 1";
+			position = "-784.085 794.475 599.989";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 50" {
+			dataBlock = "PathMarker";
+			name = "alien holocaust contam 2";
+			position = "-816.677 805.241 599.989";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 54" {
+			dataBlock = "PathMarker";
+			name = "alien moonbreaker";
+			position = "-2367 -236 8";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 59" {
+			dataBlock = "PathMarker";
+			name = "angels flux";
+			position = "-3120 2271 -434";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 15 25 60" {
+			dataBlock = "PathMarker";
+			name = "angels protector";
+			position = "-3129.28 2405 -398.532";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 20 25 61" {
+			dataBlock = "PathMarker";
+			name = "angels hybrid";
+			position = "-2997 2415 -362";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 25 25 62" {
+			dataBlock = "PathMarker";
+			name = "angels crucifier";
+			position = "-2984 2283 -326";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 35" {
+			dataBlock = "PathMarker";
+			name = "demon corrupter";
+			position = "-2851 969 528";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 36" {
+			dataBlock = "PathMarker";
+			name = "demon banisher";
+			position = "-2853 950 514";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 37" {
+			dataBlock = "PathMarker";
+			name = "demon incarnate";
+			position = "-2851 963 500";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 5 63" {
+			dataBlock = "PathMarker";
+			name = "God Purifier";
+			position = "300.03 -955.519 97.51";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 15 10 64" {
+			dataBlock = "PathMarker";
+			name = "God Vaporizer";
+			position = "301.701 -953.41 133.303";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 20 15 65" {
+			dataBlock = "PathMarker";
+			name = "God Insurrector";
+			position = "309.101 -945.542 169.104";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 5 78" {
+			dataBlock = "PathMarker";
+			name = "Admin Liquifier";
+			position = "-1775.39 2267.95 -86.2579";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 15 10 79" {
+			dataBlock = "PathMarker";
+			name = "Admin Obliterator";
+			position = "-1765.81 2213.65 -86.2568";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 20 15 80" {
+			dataBlock = "PathMarker";
+			name = "Admin Abolisher";
+			position = "-1769.37 2191.41 -77.2578";
+			rotation = "0 0 0";
+		};
+	};
+	instant SimGroup "TeleportBoxes" {
+		instant SimGroup "Yuliple to Sanctuary" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-386.223 -2271.25 72";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-386.223 -2271.25 72";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2860.56 -1287.6 702";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to the Empress Sanctuary.~wPortal6.wav";
+		};
+		instant SimGroup "Sanctuary to Yuliple" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2830.77 -1302 702";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-2830.77 -1302 702";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-398.9 -2324.5 78";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Yuliple City.~wPortal6.wav";
+		};
+		instant SimGroup "tower to Ogre Stronghold" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-3572.25 -1134.08 631.542";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-3572.25 -1134.08 631.542";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3747.5 -1000.25 266.567";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to the Ogre Stronghold.~wPortal6.wav";
+		};
+		instant SimGroup "Ogre Stronghold to tower" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-3732.5 -992.209 263.816";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-3732.5 -992.209 263.816";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3569.75 -1146.32 608.817";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to the tower.~wPortal6.wav";
+		};
+		instant SimGroup "Yuliple to admins" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-380.924 -2339.48 74.25";
+					rotation = "0 -0 -0.87995";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-380.924 -2339.48 74.25";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-1796.75 2270.69 -86.2579";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false TOURNYRANK 9";
+			instant SimGroup "GSAY You have been teleported to the Admin's Demise.~wPortal6.wav";
+			instant SimGroup "NSAY You are much too weak to enter this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Admins To Yuliple" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-1742.97 2270.51 -86.2579";
+					rotation = "0 -0 -0.87995";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-1742.97 2270.51 -86.2579";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-398.9 -2324.5 78";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Yuliple City.~wPortal6.wav";
+		};
+		instant SimGroup "Porellis to Gods" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-4479 1835.08 101.495";
+					rotation = "0 -0 -0.87995";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "285 -970 97.5";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to God's Paradox.~wPortal6.wav";
+		};
+		instant SimGroup "Gods to second floor" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "330.103 -922.965 97.5101";
+					rotation = "0 -0 -0.87995";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "286 -970 133.5";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to the second level of God's Paradox.~wPortal6.wav";
+		};
+		instant SimGroup "Gods to third floor" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "330.463 -922.58 133.304";
+					rotation = "0 -0 -0.87995";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "286 -970 169.5";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to the third level of God's Paradox.~wPortal6.wav";
+		};
+		instant SimGroup "Gods to Porellis" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "329.485 -923.274 169.105";
+					rotation = "0 -0 -0.87995";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4461 1819 101";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Porellis.~wPortal6.wav";
+		};
+		instant SimGroup "Angel to Gian Echos" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2985 2283 -276";
+					rotation = "0 -0 -0.87995";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "892.975 1381.84 -384.503";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Gian Echos.~wPortal6.wav";
+		};
+		instant SimGroup "Admins to Gian" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-1769.95 2210.91 -68.7578";
+					rotation = "0 -0 -0.87995";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-1769.95 2210.91 -68.7578";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "892.975 1381.84 -384.503";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Gian Echos.~wPortal6.wav";
+		};
+		instant SimGroup "Stone to angel" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2443.36 -228.935 47.9992";
+					rotation = "0 0 0";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3123 2322 -410";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false REMORT 50";
+			instant SimGroup "GSAY You have been teleported to the Angels Enigma.~wPortal6.wav";
+			instant SimGroup "NSAY You need to be Remort 50+ to use this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Curama to Arbal" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-4501.01 -225.037 72.1018";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-4501.01 -225.037 72.1018";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2010 -2884 344";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Arbal Reseach Center.~wPortal6.wav";
+		};
+		instant SimGroup "Arbal to Curama" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2015 -2840 330";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-2015 -2840 330";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4471 -240 65";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Curama Outpost.~wPortal6.wav";
+		};
+		instant SimGroup "Ghost to Kronos" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2437 -2325 92.25";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-2437 -2325 92.25";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3237 1559 1504";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to ???.~wPortal6.wav";
+		};
+		instant SimGroup "Kronos to Ghost" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-3211 1532 1504";
+					rotation = "0 0 0";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-3211 1532 1504";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2508 -2332 65";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Ghost Town.~wPortal6.wav";
+		};
+		instant SimGroup "Market to Sanctuary" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2523 -1162 209";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-2523 -1162 209";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2860.56 -1287.6 702";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to the Empress Sanctuary.~wPortal6.wav";
+		};
+		instant SimGroup "Duel to Yuliple" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-3461 -1199 1527";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-3461 -1199 1527";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-335 -2339 65.5";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to the Empress Sanctuary.~wPortal6.wav";
+		};
+		instant SimGroup "Yuliple to Kronos" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-354 -2309 83";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-354 -2309 83";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-3363 1720 1559";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false LVLG 69";
+			instant SimGroup "GSAY You have been teleported to the Kingdom of Kronos.~wPortal6.wav";
+			instant SimGroup "NSAY You need to be level 70+ to use this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Kronos to Yuliple" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-3385 1719 1569";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-3385 1719 1569";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-335 -2339 65.5";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false LVLG 59";
+			instant SimGroup "GSAY You have been teleported to Yuliple City.~wPortal6.wav";
+			instant SimGroup "NSAY You need to be level 60+ to use this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Henge to Lamisor" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2481 -236 25.75";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-2481 -236 25.75";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2852 854 617.5";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false AlienSpine 1";
+			instant SimGroup "GSAY You have been teleported to Lamisor.~wPortal6.wav";
+			instant SimGroup "NSAY You must have the spine of an alien to enter this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Lamisor to Henge" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2852 852 625.5";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-2852 852 625.5";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2452 -276 65";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Stone Henge.~wPortal6.wav";
+			instant SimGroup "NSAY You need to be level 70+ to use this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Demon to Porellis" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2852 977 503";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4479 1850 105";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false DemonBreath 1";
+			instant SimGroup "GSAY You have been teleported to Porellis.~wPortal6.wav";
+			instant SimGroup "NSAY You need to have Demon Breath to use this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Porellis to Demon" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-4493 1852 105";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-4493 1852 105";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2867 959 544";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Demon Incubus.~wPortal6.wav";
+			instant SimGroup "NSAY You need to have Demon Breath to use this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Queen to Lamisor" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2826 878 374";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-2826 878 374";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2852 935 553.291";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to Lamisor.~wPortal6.wav";
+			instant SimGroup "NSAY You must have the spine of an alien to enter this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "Lamisor to Queen" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-2852 870 549";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				instant StaticShape "BigElectroBeam1" {
+					dataBlock = "ElectricalBeamBig";
+					name = "";
+					position = "-2852 870 549";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-2874 878 374";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been teleported to ???.~wPortal6.wav";
+			instant SimGroup "NSAY You need to be level 70+ to use this teleport.~wDeActivateDG.wav";
+		};
+	};
+	instant SimGroup "Yuliple" {
+		locked = "0";
+		instant InteriorShape "ncity1" {
+			fileName = "ncity.0.dis";
+			isContainer = "1";
+			position = "-365 -2334 65";
+			rotation = "0 -0 0.719929";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bridge" {
+			fileName = "BBRIDGE.0.dis";
+			isContainer = "1";
+			position = "-181 -2586 38";
+			rotation = "0 0 2.09991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "small walls" {
+			fileName = "outpost.dis";
+			isContainer = "1";
+			position = "-625 -2105 135";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-600 -2105 130";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "blocker" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-567 -2104 103";
+			rotation = "0 1.56991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Pig Den" {
+		locked = "0";
+		instant InteriorShape "Pig Den" {
+			fileName = "YOL2.dis";
+			isContainer = "1";
+			position = "375 -2665 330";
+			rotation = "0 -0 0.719929";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Empress Sanctuary" {
+		locked = "0";
+		instant InteriorShape "sanc keep" {
+			fileName = "keep.0.dis";
+			isContainer = "1";
+			position = "-2857.54 -1300 703";
+			rotation = "0 0 5";
+			lightParams = "2 1.000000 1 1.000000 1 ";
+			locked = "1";
+		};
+		instant InteriorShape "bottom platform" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2857.54 -1275 698";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Ogre Skybase" {
+		locked = "0";
+		instant InteriorShape "ogre base easy" {
+			fileName = "FFORT.0.dis";
+			isContainer = "1";
+			position = "-2357 -1161.61 680";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "ogre base med" {
+			fileName = "FFORT.0.dis";
+			isContainer = "1";
+			position = "-2357 -1080 680";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "ogre base hard" {
+			fileName = "FFORT.0.dis";
+			isContainer = "1";
+			position = "-2357 -1000 680";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "platform into sky" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2430 -1170 679";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Ogre Stronghold" {
+		instant InteriorShape "MageTower1" {
+			fileName = "magetower.0.dis";
+			isContainer = "1";
+			position = "-3579.78 -1131.8 616";
+			rotation = "0 -0 0.279098";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Ogre Stronghold" {
+			fileName = "M4.0.dis";
+			isContainer = "1";
+			position = "-3760 -1055 293";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Curama Outpost" {
+		instant InteriorShape "outpost" {
+			fileName = "fort.0.dis";
+			isContainer = "1";
+			position = "-4488 -240 65";
+			rotation = "0 -0 3.13827";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "ground" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-4488 -240 61";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "stair1" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-4900 -1174 698";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "stair2" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-4900 -1176 699";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "stair3" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-4900 -1178 700";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "stair4" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-4900 -1180 701";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "MageTower1" {
+			fileName = "magetower.0.dis";
+			isContainer = "1";
+			position = "-4900 -1180 711";
+			rotation = "0 0 3.13991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-4900 -1135 723";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bot boundrys" {
+			fileName = "outpost.dis";
+			isContainer = "1";
+			position = "-4925 -1135 719";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Ghost Town" {
+		instant InteriorShape "walls" {
+			fileName = "bigfort.0.dis";
+			isContainer = "1";
+			position = "-2470 -2330 65";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "secondfloor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2458 -2332 78";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "castle" {
+			fileName = "keep.0.dis";
+			isContainer = "1";
+			position = "-2458 -2332 83";
+			rotation = "0 0 0";
+			lightParams = "2 1.000000 1 1.000000 1 ";
+			locked = "1";
+		};
+		instant InteriorShape "house1" {
+			fileName = "house1.0.dis";
+			isContainer = "1";
+			position = "-2450 -2310 65";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "barrack1" {
+			fileName = "barrack.0.dis";
+			isContainer = "1";
+			position = "-2470 -2330 65";
+			rotation = "0 0 0";
+			lightParams = "1 1.000000 1 ";
+			locked = "1";
+		};
+		instant InteriorShape "questfloor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2428 -2332 1000";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Arbal Research Center" {
+		locked = "0";
+		instant InteriorShape "base" {
+			fileName = "base2.dis";
+			isContainer = "1";
+			position = "-2000 -2850 320";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "platform1" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2000 -2900 340";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "ramp" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2006 -2918 300";
+			rotation = "0 1 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-1854 -2443 135";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "fclub" {
+			fileName = "fclub.dis";
+			isContainer = "1";
+			position = "-1865 -2443 155";
+			rotation = "3.13991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-1853 -2432 125";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Merchant Town" {
+		locked = "0";
+		instant InteriorShape "tunnel" {
+			fileName = "tunnel.dis";
+			isContainer = "1";
+			position = "-2578 -1146 191";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "platform1" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2590 -1175 188";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "platform2" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2534 -1175 188";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "walls" {
+			fileName = "bigfort.0.dis";
+			isContainer = "1";
+			position = "-2582.76 -1159.5 192";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Kingdom of Kronos" {
+		locked = "0";
+		instant InteriorShape "telefloor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3237 1559 1500";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "thinbridge" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3237 1650 1500";
+			rotation = "0 1.59991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "near tower plat" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3272 1720 1528";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "MageTower Connect" {
+			fileName = "magetower.0.dis";
+			isContainer = "1";
+			position = "-3240 1720 1545";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "front town floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3272 1720 1555";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor town" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3336 1720 1555";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "walls" {
+			fileName = "bigfort.0.dis";
+			isContainer = "1";
+			position = "-3345 1720 1559";
+			rotation = "0 -0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "castle" {
+			fileName = "keep.0.dis";
+			isContainer = "1";
+			position = "-3371 1720 1560";
+			rotation = "0 0 3.19991";
+			lightParams = "2 1.000000 1 1.000000 1 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor way" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3646 1850 1553";
+			rotation = "1.56991 0 1.56991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3646 1900 1530";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "small walls" {
+			fileName = "outpost.dis";
+			isContainer = "1";
+			position = "-3670 1900 1529";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "small walls2" {
+			fileName = "outpost.dis";
+			isContainer = "1";
+			position = "-3670 1900 1538";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Minotaur Tomb" {
+		locked = "0";
+		instant InteriorShape "bridge1" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3500 1718 1555";
+			rotation = "1.59991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bridge2" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3650 1718 1555";
+			rotation = "1.79991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bridge3" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3800 1718 1555";
+			rotation = "2 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3865 1718 1580";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "crypt" {
+			fileName = "crypt0.0.dis";
+			isContainer = "1";
+			position = "-3865 1670 1580";
+			rotation = "0 0 0";
+			lightParams = "9 2.000000 1 1.000000 1 1.000000 1 1.000000 1 1.000000 1 2.000000 1 2.000000 1 1.000000 1 2.000000 1 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "StoneHenge" {
+		locked = "0";
+		instant InteriorShape "temple" {
+			fileName = "ETruintop.0.dis";
+			isContainer = "1";
+			position = "-2435 -236 65";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "wall1" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2435 -260 95";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "wall2" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2435 -210 95";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "wall3" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2400 -234 95";
+			rotation = "0 1.56991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "wall4" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2470 -234 95";
+			rotation = "0 1.56991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Dueling Area" {
+		locked = "0";
+		instant InteriorShape "floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3500 1200 1504";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "small walls" {
+			fileName = "outpost.dis";
+			isContainer = "1";
+			position = "-3530 1200 1504";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "stands" {
+			fileName = "bigfort.0.dis";
+			isContainer = "1";
+			position = "-3520 1200 1510";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "tournyfloor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3491 400 1527";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "tourny walls" {
+			fileName = "outpost.dis";
+			isContainer = "1";
+			position = "-3518 400 1527";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "tournyfloor2" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2600 400 1527";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "tourny walls2" {
+			fileName = "outpost.dis";
+			isContainer = "1";
+			position = "-2628 400 1527";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "tournyfloor3" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-1500 400 1527";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "tourny walls3" {
+			fileName = "outpost.dis";
+			isContainer = "1";
+			position = "-1528 400 1527";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Lamisor" {
+		locked = "0";
+		instant InteriorShape "floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2852 854 697";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor" {
+			fileName = "ampipecon.dis";
+			isContainer = "1";
+			position = "-2852 854 600";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bridge" {
+			fileName = "bridge.dis";
+			isContainer = "1";
+			position = "-2852 960 606";
+			rotation = "0 0 1.56991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bridge2" {
+			fileName = "bridge.dis";
+			isContainer = "1";
+			position = "-2852 960 550";
+			rotation = "0 0 1.56991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bigbase" {
+			fileName = "acommand.dis";
+			isContainer = "1";
+			position = "-2852 960 500";
+			rotation = "0 0 0";
+			lightParams = "39 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 1.000000 0 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2850 854 1200";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller1" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2890 863 1173";
+			rotation = "0 1.69991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller2" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2898.5 863 1130";
+			rotation = "0 1.84991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller3" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2920.5 863 1070";
+			rotation = "0 2 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller4" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2951 863 1015";
+			rotation = "0 2.14991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller5" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2986 863 970";
+			rotation = "0 2.29991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller6" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3031.5 863 926";
+			rotation = "0 2.44991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller7" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3060 863 910";
+			rotation = "0 2.64991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller8" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3080 863 905";
+			rotation = "0 2.89991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "roller9" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3080 863 905";
+			rotation = "0 3.29991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Incarnate_Block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2852 984 475";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Asna's Pad" {
+		locked = "0";
+		instant InteriorShape "floor" {
+			fileName = "barrack.0.dis";
+			isContainer = "1";
+			position = "-980 -1960 469";
+			rotation = "0 0 0";
+			lightParams = "1 1.000000 1 ";
+			locked = "1";
+		};
+		instant InteriorShape "floor" {
+			fileName = "npchut.0.dis";
+			isContainer = "1";
+			position = "-941 -2008 470";
+			rotation = "0 0 1.56991";
+			lightParams = "1 1.000000 1 ";
+			locked = "1";
+		};
+		instant StaticShape "TreeOne1" {
+			dataBlock = "TreeShape";
+			name = "";
+			position = "-939 -1958 470";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			locked = "0";
+		};
+		instant StaticShape "TreeTwo1" {
+			dataBlock = "TreeShapeTwo";
+			name = "";
+			position = "-955 -1950 472";
+			rotation = "0 0 0";
+			destroyable = "True";
+			deleteOnDestroy = "False";
+			locked = "0";
+		};
+	};
+	instant SimGroup "Porellis" {
+		locked = "0";
+		instant InteriorShape "base" {
+			fileName = "base7.dis";
+			isContainer = "1";
+			position = "-4479 1828 63";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "top_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-4473 1859 105";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bottom_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-4480 1795 77";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Colloseum" {
+		locked = "0";
+		instant InteriorShape "bottom_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3609 -2364 350";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "top_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3609 -2364 420";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "left_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3609 -2335 385";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "right_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3609 -2395 385";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "front_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3640 -2364 385";
+			rotation = "0 1.56991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "back_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-3575 -2364 385";
+			rotation = "0 1.56991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Queen_Square" {
+		locked = "0";
+		instant InteriorShape "bottom_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2850 878 370";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "top_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2850 878 430";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "left_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2850 910 395";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "right_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2850 845 395";
+			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "front_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2815 875 395";
+			rotation = "0 1.56991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "back_block" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-2885 875 395";
+			rotation = "0 1.56991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "House_Bases" {
+		locked = "0";
+		instant InteriorShape "Thaliel" {
+			fileName = "bunker8.dis";
+			isContainer = "1";
+			position = "-2450 1800 58";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Bruin" {
+			fileName = "bunker2.dis";
+			isContainer = "1";
+			position = "-2850 2900 696";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Delern" {
+			fileName = "betower5.dis";
+			isContainer = "1";
+			position = "-395 1803 65";
+			rotation = "0 0 0";
+			lightParams = "1 1.700000 1 ";
+			locked = "1";
+		};
+		instant InteriorShape "Delern" {
+			fileName = "ampipecon.dis";
+			isContainer = "1";
+			position = "-398 -235 42";
+			rotation = "0 0 1.56991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Delern safety" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "-393 -235 33.6991";
+			rotation = "0 2 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Relic_Temples" {
+		locked = "0";
+		instant InteriorShape "Crosion" {
+			fileName = "keep.dis";
+			isContainer = "1";
+			position = "-815 -1190 704";
+			rotation = "3.13991 1 0";
+			lightParams = "2 1.000000 1 1.000000 1 ";
+			locked = "1";
+		};
+		instant InteriorShape "Belaguard" {
+			fileName = "magetower.dis";
+			isContainer = "1";
+			position = "413 617 407";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Belaguard" {
+			fileName = "iblock.dis";
+			isContainer = "1";
+			position = "413 617 428";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Gratigud" {
+			fileName = "well.dis";
+			isContainer = "1";
+			position = "897 -651 100";
+			rotation = "3.13991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Murch" {
+			fileName = "etruin1.dis";
+			isContainer = "1";
+			position = "-4685 -2127 139";
+			rotation = "3.13991 0 3.13991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Relic_Houses" {
+		locked = "0";
+		instant InteriorShape "Yuliple House" {
+			fileName = "etruin1.dis";
+			isContainer = "1";
+			position = "-202 -2231 170";
+			rotation = "0 0 2.09991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Curama House" {
+			fileName = "etruin1.dis";
+			isContainer = "1";
+			position = "-4630 -130 185";
+			rotation = "0 0 4.09991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Arbal House" {
+			fileName = "etruin1.dis";
+			isContainer = "1";
+			position = "-2046 -3004 400";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "Kronos House" {
+			fileName = "etruin1.dis";
+			isContainer = "1";
+			position = "-3233 1713 1590";
+			rotation = "0 0 1.56991";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "jail" {
+		instant Marker "1" {
+			dataBlock = "PathMarker";
+			name = "";
+			position = "-2833 -1330 694";
+			rotation = "0 0 0";
+		};
+		instant Marker "2" {
+			dataBlock = "PathMarker";
+			name = "";
+			position = "-2837 -1331 694";
+			rotation = "0 0 0";
+		};
+	};
+	instant SimGroup "TownBots" {
+		instant SimGroup "merchant1" {
+			instant Marker "Yuliple melee merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-364.274 -2355.33 65.5";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Melee Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 134 135 136 139 140 141 143 144 145";
+		};
+		instant SimGroup "banker1" {
+			instant Marker "Yuliple banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-384.182 -2351.25 65.5";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "merchant2" {
+			instant Marker "Yuliple armor merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-353.439 -2343 65.5";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Armor Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 137";
+		};
+		instant SimGroup "porter1" {
+			instant Marker "Yuliple porter" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-393.094 -2364.78 72";
+				rotation = "0 -0 2.23815";
+			};
+			instant SimGroup "NAME porter";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+		};
+		instant SimGroup "manager1" {
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1198.5 1503.25 72.7761";
+				rotation = "0 -0 1.75986";
+			};
+			instant SimGroup "NAME manager";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+		};
+		instant SimGroup "merchant3" {
+			instant Marker "Yuliple Misc merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-391.417 -2283.01 72";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Miscellaneous Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 1 2 3 4 146 151 99";
+		};
+		instant SimGroup "quest1" {
+			instant SimGroup "NAME George";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED BlackStatue 5";
+			instant SimGroup "TAKE BlackStatue 5";
+			instant SimGroup "GIVE COINS 1000 EXP 400";
+			instant SimGroup "SAY1 Hey there, want to make some money?";
+			instant SimGroup "CUE1 sure";
+			instant SimGroup "SAY2 If you bring me five Black Statues, I'll pay you handsomely!";
+			instant SimGroup "NSAY1 I see you have the statues I need. Give them and I'll pay you.";
+			instant SimGroup "NCUE1 ok";
+			instant SimGroup "NSAY2 Excellent.  Here is your pay.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-395.307 -2302.25 78";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "quest2" {
+			instant SimGroup "NAME Simon";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED EXP 1000 CNT <1 CNTAFFECTS quest2 LVLS 4";
+			instant SimGroup "GIVE COINS 400 CNT +1 CNTAFFECTS quest2";
+			instant SimGroup "SAY1 Yo, welcome to Yuliple City. You look like you have potential.";
+			instant SimGroup "CUE1 really?";
+			instant SimGroup "SAY2 These are troubled times. If you goto the Pigs Den and kill Pigmen I'll reward you.";
+			instant SimGroup "NSAY1 I can tell you've killed many Pigmen. Want your reward?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Ok, here is some coins.";
+			instant SimGroup "CSAY Thank you for all that you've done!";
+			instant SimGroup "GSAY Wow! You're really strong! See ya!";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-389.516 -2313.25 78";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "merchant4" {
+			instant Marker "Sanctuary weapon merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2844.1 -1323.25 694";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Melee Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 148 149 150 153 154 155 158 159 160";
+		};
+		instant SimGroup "merchant5" {
+			instant Marker "Sanctuary armor merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2854.75 -1326.6 694";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Armor Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 147 152 157 204";
+		};
+		instant SimGroup "banker2" {
+			instant Marker "Sanctuary banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2850.75 -1324.01 723";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "merchant6" {
+			instant Marker "Sanctuary misc merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2843.08 -1317.37 723";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Miscellaneous Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 33 2 4 156 161 98 99";
+		};
+		instant SimGroup "quest4" {
+			instant SimGroup "NAME Empress Theodora";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED EnchantedStone 5";
+			instant SimGroup "TAKE EnchantedStone 5";
+			instant SimGroup "GIVE COINS 3000 EXP 400";
+			instant SimGroup "SAY1 Hello there adventurer, welcome to my Sanctuary. Would you perhaps, be looking for work?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 Excellent! Bring me five enchanted stones and I shall pay you well.";
+			instant SimGroup "NSAY1 I see you have the stones, will you give them to me?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Good job, here is your pay.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2847.03 -1335.39 703.5";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "merchant7" {
+			instant Marker "Curama melee merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4502 -222.5 65.25";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Melee Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 163 164 165 167 168 169";
+		};
+		instant SimGroup "merchant8" {
+			instant Marker "Curama armor merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4475.61 -256.439 65.25";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Armor Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 162 166 170";
+		};
+		instant SimGroup "banker3" {
+			instant Marker "Curama banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4498.76 -256.848 65.25";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "quest5" {
+			instant SimGroup "NAME Gonzol";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED SkeletonBone 5";
+			instant SimGroup "TAKE SkeletonBone 5";
+			instant SimGroup "GIVE COINS 10000 EXP 400";
+			instant SimGroup "SAY1 Hi there travellers, I love to collect bones but I'm too weak to get them myself. Would you help me, there's a big reward in it?";
+			instant SimGroup "CUE1 sure";
+			instant SimGroup "SAY2 Thanks! The Ogre Dreadnaughts in the Ogre Stronghold have bones. Bring five bones to me. Good Luck!";
+			instant SimGroup "NSAY1 Are those bones that I smell, do you have the bones to give to me?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Thanks! Here is some coins.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4468.8 -224.18 73";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "merchant9" {
+			instant Marker "Arbal melee merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2034 -2870 302";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Melee Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 171 172 173 175 176 177";
+		};
+		instant SimGroup "merchant10" {
+			instant Marker "Arbal armor merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2034 -2852 302";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Armor Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 174 178 180 205";
+		};
+		instant SimGroup "merchant11" {
+			instant Marker "Arbal misc merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1973 -2861 299";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Miscellaneous Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 2 4 34 35 179 99";
+		};
+		instant SimGroup "banker4" {
+			instant Marker "Arbal banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2035 -2862 291.5";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "quest10" {
+			instant SimGroup "NAME Rufus";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "SAY1 I take it your gonna go through these gates. Want some advice?";
+			instant SimGroup "CUE1 sure";
+			instant SimGroup "SAY2 If your looking to get stronger, I suggest you travel to that spiked building off in the distance. That's the Pig Den.";
+			instant SimGroup "NSAY1 I take it your gonna go through these gates. Want some advice?";
+			instant SimGroup "NCUE1 sure";
+			instant SimGroup "NSAY2 If your looking to get stronger, I suggest you travel to that spiked building off in the distance. That's the Pig Den.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-322 -2346 65";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "quest9" {
+			instant SimGroup "NAME Ronda";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "SAY1 Looking for some action? I know where you can find it.";
+			instant SimGroup "CUE1 where";
+			instant SimGroup "SAY2 When you leave the Sanctuary, head east and you'll find the Ogre's Skybase.";
+			instant SimGroup "NSAY1 Looking for some action? I know where you can find it.";
+			instant SimGroup "NCUE1 where";
+			instant SimGroup "NSAY2 When you leave the Sanctuary, head east and you'll find the Ogre's Skybase.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2855 -1321 703";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "quest8" {
+			instant SimGroup "NAME Kelly";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "SAY1 There's been some rumors going around. Want to hear them?";
+			instant SimGroup "CUE1 ok";
+			instant SimGroup "SAY2 People have been saying that if you head west from the Sanctuary you should see a tower off in the distance. I wonder what it's for?";
+			instant SimGroup "NSAY1 There's been some rumors going around. Want to hear them?";
+			instant SimGroup "NCUE1 ok";
+			instant SimGroup "NSAY2 People have been saying that if you head west from the Sanctuary you should see a tower off in the distance. I wonder what it's for?";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2845 -1318 712";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "quest7" {
+			instant SimGroup "NAME Bob";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "SAY1 Hello there, welcome to the Arbal Research Center. We have high-tech weapons and armor that you should check out.";
+			instant SimGroup "CUE1 ok";
+			instant SimGroup "SAY2 And when your done with that you can check out the ghost city down in the valley. See ya!";
+			instant SimGroup "NSAY1 Hello there, welcome to the Arbal Research Center. We have high-tech weapons and armor that you should check out.";
+			instant SimGroup "NCUE1 ok";
+			instant SimGroup "NSAY2 And when your done with that you can check out the ghost city down in the valley. See ya!";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2045 -2866 329";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "quest6" {
+			instant SimGroup "NAME Albert";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED AncientScroll 5";
+			instant SimGroup "TAKE AncientScroll 5";
+			instant SimGroup "GIVE COINS 50000 EXP 400";
+			instant SimGroup "SAY1 Hello adventurer, I have heard of your reputation and I think your worthy of some work.";
+			instant SimGroup "CUE1 ok";
+			instant SimGroup "SAY2 Goto the Ghost Town, destroy the King and bring me five ancient scrolls.";
+			instant SimGroup "NSAY1 You have the scrolls? Excellent! Will you give them to me?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Thank you!";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2016 -2846 320";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "merchant12" {
+			instant Marker "Kronos weap merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3397 1712 1551";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Melee Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 181 182 183";
+		};
+		instant SimGroup "merchant13" {
+			instant Marker "Kronos armor merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3397 1724 1551";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Armor Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 184 185 186";
+		};
+		instant SimGroup "banker5" {
+			instant Marker "Kronos banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3395 1719 1580";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "assassin1" {
+			instant Marker "sanctuary lck" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2837 -1331 694";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME assassin";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+		};
+		instant SimGroup "sealnpc" {
+			instant Marker "sealnpc" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3370.82 1680.5 1575.5";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME Tedelos";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+		};
+		instant SimGroup "quest11" {
+			instant SimGroup "NAME Kronos";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED KronoStone 5";
+			instant SimGroup "TAKE KronoStone 5";
+			instant SimGroup "GIVE COINS 200000 EXP 400";
+			instant SimGroup "SAY1 Hello adventurer, I see that you've travelled very far to get here. Would you perhaps, be looking for work?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 Goto the Minotaur Tomb, destroy the DeathStar and give me five Krono Stones. I will pay you very well.";
+			instant SimGroup "NSAY1 You've got the stones. I knew you would. Will you give them to me?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Thank you! Here's you payment.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3408 1718 1560.5";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "merchant14" {
+			instant Marker "Market melee merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2583 -1133 191";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Melee Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 187 188 189";
+		};
+		instant SimGroup "merchant15" {
+			instant Marker "Market armor merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2574 -1154 191";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Armor Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 190 191 192 194 206 208";
+		};
+		instant SimGroup "merchant16" {
+			instant Marker "Market misc merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2594 -1123 208.5";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Miscellaneous Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 2 4 33 34 35 98 179 193 195";
+		};
+		instant SimGroup "duelmanager1" {
+			instant Marker "kronos duel" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3458 1198 1527";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME Duel Manager";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+		};
+		instant SimGroup "hunt1" {
+			instant Marker "pigman killing" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-407 -2353 72";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME Deloris";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED RubyNecklace 1";
+			instant SimGroup "TAKE RubyNecklace 1";
+			instant SimGroup "GIVE COINS 1400 EXP 300";
+			instant SimGroup "SAY1 *GASP* Hello there adventurer, I have just been raided by a very powerful Pigman. Could you help me get my stuff back?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 Thanks! There's a small Pigman outpost northwest of Yuliple. Please go there, kill the pig and retrieve my necklace! But be careful, for this Pigman is much stronger than others.";
+			instant SimGroup "NSAY1 I see you have my necklace, will you give it to me?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Thanks so much for returning my necklace to me! Here's your reward.";
+			instant SimGroup "BOT Chief";
+			instant SimGroup "POS -588 -2105 134";
+		};
+		instant SimGroup "hunt2" {
+			instant Marker "ogre killing" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4471 -226 65";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME Peter";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED OgreTooth 1";
+			instant SimGroup "TAKE OgreTooth 1";
+			instant SimGroup "GIVE COINS 15000 EXP 400";
+			instant SimGroup "SAY1 Adventurer! I have just heard news that an extremely powerful Ogre is poised to attack Curama soon! Maybe you can stop him before he strikes! Will you help?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 The Ogre is south from Curama, kill it and bring me it's tooth. Be careful this Ogre is VERY powerful!";
+			instant SimGroup "NSAY1 Is that the Ogre's Tooth in your hand?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Whew, Curama is safe from the Ogres. For now... Here's your reward.";
+			instant SimGroup "BOT DeathKnight";
+			instant SimGroup "POS -4896 -1125 727";
+		};
+		instant SimGroup "guildmaster1" {
+			instant Marker "guildmaster" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3411 1704 1551";
+				rotation = "0 -0 -0.95994";
+			};
+			instant SimGroup "NAME GuildMaster";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "merchant17" {
+			instant Marker "Lamisor General merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2852 854 606";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME General Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 196 197 198 199 200 201 202 203 207 209";
+		};
+		instant SimGroup "banker6" {
+			instant Marker "Lamisor banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2852 861 617.5";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "quest12" {
+			instant SimGroup "NAME Stranger";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SAY1 Looking for equipment that this place just can't get you?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 I know of an outpost that has great weapons and armor. Its called Curama and it's north-west of the Ogre Stronghold.";
+			instant SimGroup "NSAY1 Looking for equipment that this place just can't get you?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 I know of an outpost that has great weapons and armor. Its called Curama and it's north-west of the Ogre Stronghold.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2843 -1327 703";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "quest13" {
+			instant SimGroup "NAME Ronald";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SAY1 Hmmm, do you see that teleport up there?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 I heard that it leads to some high-tech place. You should check it out!";
+			instant SimGroup "NSAY1 Hmmm, do you see that teleport up there?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 I heard that it leads to some high-tech place. You should check it out!";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4489 -228 65";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "quest14" {
+			instant SimGroup "NAME Jordan";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED AlienSpine 5";
+			instant SimGroup "TAKE AlienSpine 5";
+			instant SimGroup "GIVE COINS 1000000 EXP 600";
+			instant SimGroup "SAY1 Well, isn't this rare, visitors at Lamisor. Would you perhaps, be looking for work?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 I assume you already know where to get Alien Spines, bring me five of them and you shall be rewarded greatly!";
+			instant SimGroup "NSAY1 So you brought me the the five Alien Spines, GIVE THEM TO ME!!!";
+			instant SimGroup "NCUE1 ok";
+			instant SimGroup "NSAY2 Woohoo! Here's your pay!";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2862 850 606";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "quest15" {
+			instant SimGroup "NAME Lisa";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "SAY1 Hi there adventurers, welcome to Lamisor! Is this your first time here?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 This place is great, it has really powerful weapons and armor! But you should really beware Demons that dwell beneath Lamisor.";
+			instant SimGroup "NSAY1 Hi there adventurers, welcome to Lamisor! Is this your first time here?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 This place is great, it has really powerful weapons and armor! But you should really beware Demons that dwell beneath Lamisor.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2851 849 618";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "hunt3" {
+			instant Marker "king killing" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2013 -2863 295";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME Tod";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED Crown 1";
+			instant SimGroup "TAKE Crown 1";
+			instant SimGroup "GIVE COINS 60000 EXP 450";
+			instant SimGroup "SAY1 Hey, you know what I heard lately? There has been talk of an old Undead King that was forced out of Ghost City for being too destructive with its uncontrollable power. We may need to stop it, will you help?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 The banished King is north of Arbal. Good luck! Your going to need it!";
+			instant SimGroup "NSAY1 Is that the crown of the Banished King?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Good job, now we can all rest a little easier knowing that were safer than we were.";
+			instant SimGroup "BOT BanishedKing";
+			instant SimGroup "POS -1849 -2450 148.5";
+		};
+		instant SimGroup "quest16" {
+			instant SimGroup "NAME Mona";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "SAY1 Adventures! Wanna hear a secret?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 I was wandering though Ghost Town a little while ago and I happened to come across a teleport inside of the castle! You should definitely check that out.";
+			instant SimGroup "NSAY1 Adventures! Wanna hear a secret?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 I was wandering though Ghost Town a little while ago and I happened to come across a teleport inside of the castle! You should definitely check that out.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-1974 -2895 296";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "quest17" {
+			instant SimGroup "NAME Lara";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "SAY1 Hey there, welcome to Asnabel's Pad, the greatest place in Kronos!";
+			instant SimGroup "CUE1 woot";
+			instant SimGroup "SAY2 This place has got its own banker, assassin and merchant, so have fun.";
+			instant SimGroup "NSAY1 Hey there, welcome to Asnabel's Pad, the greatest place in Kronos!";
+			instant SimGroup "NCUE1 woot";
+			instant SimGroup "NSAY2 This place has got its own banker, assassin and merchant, so have fun.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-952 -1972 471";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "quest19" {
+			instant SimGroup "NAME Repus";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED DemonBreath 5";
+			instant SimGroup "TAKE DemonBreath 5";
+			instant SimGroup "GIVE COINS 2100000 EXP 1000";
+			instant SimGroup "SAY1 Well howdy partner! Ya'll know what I make with DemonBreath eh? No? PIE!! Want something to do?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 I'm sure you know where to go to get Demon Breaths. Get me five so I can make Demon Breath Pie..MMMMM yummy!";
+			instant SimGroup "NSAY1 Holy shit...you did it...Coolio!!! Ya'll wanna hang out for some pie?";
+			instant SimGroup "NCUE1 no";
+			instant SimGroup "NSAY2 Oh...=( well..Ok heres your pay...";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4478.88 1822 92.4981";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "quest20" {
+			instant SimGroup "NAME Jeff";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED AngelsTear 5";
+			instant SimGroup "TAKE AngelsTear 5";
+			instant SimGroup "GIVE COINS 21000000 EXP 2000";
+			instant SimGroup "SAY1 I need your help, my daughter has fallen ill, and the only thing that can save her are 5 Angel Tears";
+			instant SimGroup "CUE1 tears";
+			instant SimGroup "SAY2 I've heard that one of the angels, once slain, will give you a tear, but that is all I've heard, please help!";
+			instant SimGroup "NSAY1 Thank you, you have saved my daughters life, now here is your reward, you've earned it.";
+			instant SimGroup "NCUE1 reward";
+			instant SimGroup "NSAY2 Now my daughter will live, Thankyou.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "893.281 1343.88 -384.503";
+				rotation = "0 0 0";
+				locked = "0";
+			};
+		};
+		instant SimGroup "banker7" {
+			instant Marker "Asna's banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-961 -1966 471";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "assassin2" {
+			instant Marker "asna's lck" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-946 -1979 474";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME assassin";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+		};
+		instant SimGroup "merchant18" {
+			instant Marker "Asna's merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-942 -1976 470";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Asna's Favorites";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 203 200 99 207 5 39 47 55";
+		};
+		instant SimGroup "hometele1" {
+			instant Marker "Asna's tele" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-962 -1961 471";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME Michelle";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE FemaleHuman";
+		};
+		instant SimGroup "quest18" {
+			instant SimGroup "NAME Dranzor";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SAY1 Hey there adventurers, have you heard about the Minotaurs that dwell nearby?";
+			instant SimGroup "CUE1 maybe";
+			instant SimGroup "SAY2 There are located West of Kronos, you will need to be able to fly to get to them.";
+			instant SimGroup "NSAY1 Hey there adventurers, have you heard about the Minotaurs that dwell nearby?";
+			instant SimGroup "NCUE1 no";
+			instant SimGroup "NSAY2 There are located West of Kronos, you will need to be able to fly to get to them.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3393 1710 1580";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "hunt4" {
+			instant Marker "mino killing" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3391 1713 1569.25";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME John";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED MinotaurHorn 1";
+			instant SimGroup "TAKE MinotaurHorn 1";
+			instant SimGroup "GIVE COINS 250000 EXP 500";
+			instant SimGroup "SAY1 Yo, did you know that there is a mage Minotaur? His very existance is a threat to our lives! Could u help us?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 The Minotaur is located Northwest of Kronos. Good Luck!";
+			instant SimGroup "NSAY1 Is that the horn of the Mage Minotaur?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Woohoo! Now Kronos will undoubtably reign supreme for all eternity.";
+			instant SimGroup "BOT BattleOx";
+			instant SimGroup "POS -3646 1900 1534";
+		};
+		instant SimGroup "banker8" {
+			instant Marker "Porellis banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4477 1819 99";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+//		instant SimGroup "banker9" {
+//			instant Marker "Las Vegas banker" {
+//				dataBlock = "PathMarker";
+//				name = "";
+//				position = "-4897.13 837.895 701.499";
+//				rotation = "0 0 0";
+//			};
+//			instant SimGroup "NAME banker";
+//			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+//			instant SimGroup "RACE MaleHuman";
+//		};
+		instant SimGroup "banker10" {
+			instant Marker "Gian Echo banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "877.016 1373.5 -380.003";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "merchant19" {
+			instant Marker "Porellis merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4479 1845 84";
+				rotation = "0 -0 0.559947";
+			};
+			instant SimGroup "NAME General Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 210 211 212 213 214 215 216";
+		};
+		instant SimGroup "merchant20" {
+			instant Marker "Gian Echos merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "894.275 1423.62 -372.753";
+				rotation = "0 -0 -2.59989";
+			};
+			instant SimGroup "NAME General Merchant";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 214 217 218 219 220 221 222 223";
+		};
+		instant SimGroup "tournyquest1" {
+			instant Marker "Yuliple colloseum" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-408 -2355 65.5";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME Troy";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+//		instant SimGroup "gambler" {
+//			instant Marker "Las Vegas Gambler" {
+//				dataBlock = "PathMarker";
+//				name = "";
+//				position = "-4882.55 850.314 701.498";
+//				rotation = "0 -0 1.45708";
+//			};
+//			instant SimGroup "NAME Honest Jim";
+//			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+//			instant SimGroup "RACE MaleHuman";
+//		};
+		instant SimGroup "hunt5" {
+			instant Marker "alien killing" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2842 850 606";
+				rotation = "0 -0 -0.99981";
+			};
+			instant SimGroup "NAME Okema";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 2 LCK 0 Dagger 1";
+			instant SimGroup "NEED AlienEye 1";
+			instant SimGroup "TAKE AlienEye 1";
+			instant SimGroup "GIVE COINS 1200000 EXP 600";
+			instant SimGroup "SAY1 Hi there, there is an Alien Queen threatening to destroy the planet! We need your help, will you help?";
+			instant SimGroup "CUE1 hell ya";
+			instant SimGroup "SAY2 The Queen is located through a teleport below Lamisor. Good luck!";
+			instant SimGroup "NSAY1 Is that the eye of the Alien Queen?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 Great! We're safe for now...";
+			instant SimGroup "BOT Queen";
+			instant SimGroup "POS -2850 878 374";
+		};
+	};
+	instant InteriorShape "base41" {
+		fileName = "Base4.dis";
+		isContainer = "1";
+		position = "894.002 1398.31 -357.003";
+		rotation = "0 0 0";
+		lightParams = "1 2.699999 1 ";
+		locked = "1";
+	};
+	instant InteriorShape "logo11" {
+		fileName = "logo1.dis";
+		isContainer = "1";
+		position = "901.973 1454.5 -350.178";
+		rotation = "-9.56447e-07 -1.57985 -8.7954e-09";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "logo11" {
+		fileName = "logo1.dis";
+		isContainer = "1";
+		position = "901.453 1336.3 -352.161";
+		rotation = "0 -1.55985 -0";
+		lightParams = "0 ";
+	};
+	instant Marker "Marker1" {
+		dataBlock = "PathMarker";
+		name = "";
+		position = "876.528 1372.62 -380.003";
+		rotation = "0 0 0";
+	};
+	instant Marker "Marker1" {
+		dataBlock = "PathMarker";
+		name = "";
+		position = "893.281 1343.88 -384.503";
+		rotation = "0 0 0";
+	};
+	instant InteriorShape "well1" {
+		fileName = "well.dis";
+		isContainer = "1";
+		position = "-804.95 858.963 699.99";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant Marker "Marker1" {
+		dataBlock = "PathMarker";
+		name = "";
+		position = "-804.288 847.71 700.991";
+		rotation = "0 0 0";
+	};
+	instant InteriorShape "bunker101" {
+		fileName = "bunker10.dis";
+		isContainer = "1";
+		position = "-3118.75 2272.3 -446.33";
+		rotation = "0.00012509 -3.1399 -3.06312";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "bunker101" {
+		fileName = "bunker10.dis";
+		isContainer = "1";
+		position = "-3118.82 2272.25 -446.319";
+		rotation = "0 -0 -3.0599";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "bunker101" {
+		fileName = "bunker10.dis";
+		isContainer = "1";
+		position = "-3129.55 2405.28 -410.319";
+		rotation = "0.000128534 3.13991 0.0800012";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "bunker101" {
+		fileName = "bunker10.dis";
+		isContainer = "1";
+		position = "-3128.9 2404.86 -410.533";
+		rotation = "2.03797e-08 1.03406e-08 1.63991";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "bunker101" {
+		fileName = "bunker10.dis";
+		isContainer = "1";
+		position = "-2996.34 2414.25 -374.654";
+		rotation = "0.00160725 -3.14141 -1.5";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "bunker101" {
+		fileName = "bunker10.dis";
+		isContainer = "1";
+		position = "-2996.83 2414.53 -374.687";
+		rotation = "0 -0 0.0799978";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "bunker101" {
+		fileName = "bunker10.dis";
+		isContainer = "1";
+		position = "-2986.25 2283 -338.721";
+		rotation = "0 -3.1399 -3.0599";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "bunker101" {
+		fileName = "bunker10.dis";
+		isContainer = "1";
+		position = "-2985.79 2283.5 -338.791";
+		rotation = "0 -0 -1.47991";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant StaticShape "BigElectroBeam1" {
+		dataBlock = "ElectricalBeamBig";
+		name = "";
+		position = "-2985.75 2283.54 -276.912";
+		rotation = "0 0 0";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+	};
+	instant InteriorShape "lrock61" {
+		fileName = "lrock6.dis";
+		isContainer = "0";
+		position = "-3750.52 -1012.19 271.814";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock51" {
+		fileName = "lrock5.dis";
+		isContainer = "0";
+		position = "-3746 -1010.94 273";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock41" {
+		fileName = "lrock4.dis";
+		isContainer = "1";
+		position = "-3747.38 -1014.05 273.084";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock31" {
+		fileName = "lrock3.dis";
+		isContainer = "1";
+		position = "-3749.59 -1015.61 275.114";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock11" {
+		fileName = "lrock1.dis";
+		isContainer = "0";
+		position = "-3744.5 -1015 280.776";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock61" {
+		fileName = "lrock6.dis";
+		isContainer = "0";
+		position = "-3747.8 -1011.79 272.571";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock61" {
+		fileName = "lrock6.dis";
+		isContainer = "0";
+		position = "-3751.53 -1015.66 277.243";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "307.491 -949.137 93.5101";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "335.593 -949.136 125.304";
+		rotation = "0 1.57075 0";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "278.692 -949.13 125.299";
+		rotation = "0 1.57075 0";
+		lightParams = "0 ";
+		locked = "0";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "307.273 -977.076 125.305";
+		rotation = "0 1.57075 1.57075";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "307.527 -917.305 125.305";
+		rotation = "0 1.57075 1.57075";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "307.444 -949.06 129.304";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "307.49 -949.136 165.105";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "307.524 -917.302 173.093";
+		rotation = "0 1.57075 1.57075";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "335.588 -949.131 173.087";
+		rotation = "0 1.57075 0";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "307.27 -977.073 173.093";
+		rotation = "0 1.57075 1.57075";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "278.689 -949.127 173.093";
+		rotation = "0 1.57075 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "iblock1" {
+		fileName = "iblock.dis";
+		isContainer = "1";
+		position = "307.49 -949.136 201.304";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock21" {
+		fileName = "lrock2.dis";
+		isContainer = "1";
+		position = "351.197 -1008.45 270.402";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock31" {
+		fileName = "lrock3.dis";
+		isContainer = "1";
+		position = "347.75 -1010.93 270.04";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock31" {
+		fileName = "lrock3.dis";
+		isContainer = "1";
+		position = "346.037 -1013.38 273.765";
+		rotation = "0 -0 -1.57995";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock41" {
+		fileName = "lrock4.dis";
+		isContainer = "1";
+		position = "350.57 -1012.93 274.297";
+		rotation = "0 -0 -2.01994";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "lrock11" {
+		fileName = "lrock1.dis";
+		isContainer = "0";
+		position = "344.616 -1015.5 278.877";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant StaticShape "BigElectroBeam1" {
+		dataBlock = "ElectricalBeamBig";
+		name = "";
+		position = "329.485 -923.274 169.105";
+		rotation = "0 0 0";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+		locked = "1";
+	};
+	instant StaticShape "ElectrBeam1" {
+		dataBlock = "ElectricalBeam";
+		name = "";
+		position = "330.103 -922.965 97.5101";
+		rotation = "0 0 0";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+	};
+	instant StaticShape "ElectrBeam1" {
+		dataBlock = "ElectricalBeam";
+		name = "";
+		position = "330.463 -922.58 133.304";
+		rotation = "0 0 0";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+	};
+	instant InteriorShape "base71" {
+		fileName = "base7.dis";
+		isContainer = "1";
+		position = "-1770.01 2271.04 -98.258";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "base71" {
+		fileName = "base7.dis";
+		isContainer = "1";
+		position = "-1770 2207.02 -98.2578";
+		rotation = "0 0 3.14158";
+		lightParams = "0 ";
+		locked = "1";
+	};
+	instant InteriorShape "logo21" {
+		fileName = "logo2.dis";
+		isContainer = "1";
+		position = "-1797.51 2275.38 -87.4579";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "logo21" {
+		fileName = "logo2.dis";
+		isContainer = "1";
+		position = "-1769.42 2223.97 -69.2904";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+	instant InteriorShape "logo21" {
+		fileName = "logo2.dis";
+		isContainer = "1";
+		position = "-1741.98 2275.79 -87.6027";
+		rotation = "0 0 0";
+		lightParams = "0 ";
+	};
+//	instant InteriorShape "ncity1" {
+//		fileName = "ncity.dis";
+//		isContainer = "1";
+//		position = "-4897.95 863.151 700.999";
+//		rotation = "0 -0 1.57079";
+//		lightParams = "0 ";
+//	};
+};
+//--- export object end ---//
+$teamScoreLimit = 8;
+exec(objectives);
+$Game::missionType = "RPG";
+$cdTrack = 2;
+$cdPlayMode = 1;
+

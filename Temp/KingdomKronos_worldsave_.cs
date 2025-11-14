@@ -1,0 +1,1 @@
+$TotalSealValue = "20";

@@ -1,0 +1,2 @@
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:55248). Tried to use password: GNA";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:55248). Tried to use password: 0";

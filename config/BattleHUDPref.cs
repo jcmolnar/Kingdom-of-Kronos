@@ -1,0 +1,15 @@
+$BattleHUD::stats::BotsPP = "137";
+$BattleHUD::stats::DamageDonePP = "84967";
+$BattleHUD::stats::DamageTakenPP = "499";
+$BattleHUD::stats::HasPlayed = "true";
+$BattleHUD::stats::KilledPP = "1";
+$BattleHUD::stats::KillSelfPP = "0";
+$BattleHUD::stats::PKsPP = "0";
+$BattleHUD::stats::PlayerName = "PP";
+$BattleHUD::stats::SpellsPP = "89";
+$BattleHUD::stats::Time::HPP = "1";
+$BattleHUD::stats::Time::MPP = "24";
+$BattleHUD::stats::Time::SPP = "0";
+$BattleHUD::stats::TotalTimeH = "1";
+$BattleHUD::stats::TotalTimeM = "24";
+$BattleHUD::stats::TotalTimeS = "0";

@@ -1,0 +1,56 @@
+AdminExporter - ver 1.1
+By: Deus_ex_Machina
+E-Mail: khris142@yahoo.com
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+		-Installing-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+If your hosting and want to use this you will need to open comchat.cs and change the echo of #spawndis
+
+It should look like this
+
+	if(!%echoOff) Client::sendMessage(%TrueClientId, 0, %w@" "@%f@" "@%tag@" at pos "@%pos@" "@%rot);
+
+I included the comchat.cs(ver 5.004) if you don't know how to do this
+
+Just put comchat.cs in your RPG folder and host...
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	-How to use this exporter-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+In-game press  ~  and type
+
+Admin::Export(on);
+-Turns it on!
+
+Admin::Export(off);
+-Turns it off!
+
+Admin::Export(clear);
+-Clears the saved file! (makes a new one...)
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	-I can't get it working!?!?-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+If your admin on a server and want your server host to use this send him/her the comchat.cs
+If you can't get it to work e-mail me with the subject as "AdminExporter help"
+Give me the e-mail of the server owner and I'll send him(or you if your the host) what will make this work :P
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	-Bind a keys-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Ok, some of you are lazy asses and don't wanna type that stuff so all you do is open autoexec.cs and put this in
+
+bindCommand(keyboard0, make, control, "1", TO, "AdminExporter(on);");
+bindCommand(keyboard0, make, control, "2", TO, "AdminExporter(off);");
+bindCommand(keyboard0, make, control, "3", TO, "AdminExporter(clear);");
+
+Change the keys to whatever :P
+You can take out the control if you want to like this...
+
+bindCommand(keyboard0, make "1", TO, "AdminExporter(on);");
+

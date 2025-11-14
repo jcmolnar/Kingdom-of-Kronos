@@ -1,0 +1,52 @@
+   PJ's Presto Pack (KillTrak and TeamTrak) on Speed- Updated 9/2/2000
+
+   *** NOTICE***
+
+   This is an updated version that includes full support for adding of new
+   Death Messages by Mods and other Script files. With this addition
+   PJ's Kill Trak script the fastest most compatible replacement for Presto
+   Pack. Download and enjoy the savings in speed!
+
+   ***NOTICE***
+
+   This is a replacement for the KillTrak.cs script included in Presto Pack.
+   Presto's Kill Tracking routine can cause incredable slowdowns when you are
+   in a heavy game due to it checking every text line that passes using his
+   Generic Matching routines.   I have written this using specialised matching
+   that do not use any of the Presto Match commands. In addition to the faster
+   matching routines you can set the Kill Trak to ONLY track kills and deaths 
+   associated with you.   Presto's routine will parse and track any kill or death
+   made by EVERYONE in the game. There are very, very few scripts that will
+   use this feature.   It can easily be toggled on or off by setting...
+
+   $KillTrak::PlayerOnly = "true" // Only parses Death Messages with your name in them
+
+   $KillTrak::PlayerOnly = "false" // Parses Death Messages for every player in the game
+
+   The default setting is "true" and in mose cases it should be left at that
+   setting. If you experience problems or have a script that needs the kill
+   tracking information for everyone just set it to "false".  You can find
+   this variable in the killtrak.cs script.
+
+   In either case this Kill Traking Replacement for Presto is faster than the
+   old one no matter what setting you use.
+
+   I have updated PJ's Kill Trak to be compatible with scripts that are
+   looking for the old Kill Tracking message list format. This will not
+   affect the speed of this script in any way as this is not used by the kill
+   tracking and just added to enhanced compatability.
+
+   This is the promised faster Team Trak script for Presto Pack. I have
+   removed some redundant code that never gets used for anything (looks like
+   a left over from early testing) but was processed anyway. Plus I have
+   added the faster method of parsing Team Trak messages related to the flag
+   status. You may not notice any speed increase on fast systems but it is
+   there and slower systems will notice that flag events nolonger cause a
+   slight pause.
+
+   When you couple this with my Drop in Replacement for Kill Trak you will have
+   one of the fastest Presto Pack configurations availible.
+
+   Just unzip this download directly into your Presto Directory. The original
+   KillTrak.cs and TeamTrak.cs are saved into an OldPresto directory if you
+   want a backup.
