@@ -1063,7 +1063,7 @@ function remoteSay(%clientId, %team, %message, %senderName)
 			return;
 		}
 		
-		%providedCode = %w2;
+		%providedCode = GetWord(%cropped, 0);
 		%storedCode = $AFKZoneCode[%TrueClientId];
 		
 		if(%storedCode == "" || %storedCode == -1)
