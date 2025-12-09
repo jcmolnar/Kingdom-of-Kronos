@@ -2951,6 +2951,27 @@ function AggregateLootbags()
 	schedule("AggregateLootbags();", $LootbagAggregateInterval);
 }
 
+// Helper to trim whitespace since String::trim doesn't exist
+function String_Trim(%str)
+{
+	if(%str == "") return "";
+	
+	// Trim leading
+	%start = 0;
+	%len = String::len(%str);
+	while(%start < %len && String::getSubStr(%str, %start, 1) == " ")
+		%start++;
+		
+	// Trim trailing
+	%end = %len - 1;
+	while(%end >= %start && String::getSubStr(%str, %end, 1) == " ")
+		%end--;
+		
+	if(%start > %end) return "";
+	
+	return String::getSubStr(%str, %start, %end - %start + 1);
+}
+
 // Merge the contents of bag2 into bag1, then delete bag2 if fully merged
 function MergeLootbags(%bag1, %bag2)
 {
@@ -2999,8 +3020,8 @@ function MergeLootbags(%bag1, %bag2)
 		%remainingContents = String::getSubStr(%mergeResult, %splitPos + 1, 99999);
 	}
 	
-	%mergedContents = String::trim(%mergedContents);
-	%remainingContents = String::trim(%remainingContents);
+	%mergedContents = String_Trim(%mergedContents);
+	%remainingContents = String_Trim(%remainingContents);
 	
 	// Merge namelists (combine who can pick up)
 	%mergedNamelist = MergeNamelists(%namelist1, %namelist2);
@@ -3125,7 +3146,7 @@ function MergeLootContents(%contents1, %contents2)
 				%newString = %newString @ %tmpItem[%i] @ " " @ %tmpCount[%i] @ " ";
 			}
 		}
-		%newString = String::trim(%newString);
+		%newString = String_Trim(%newString);
 		
 		// 3. Check length (Limit is 255, keep safe buffer ~240)
 		if(String::len(%newString) > 240)
@@ -3152,7 +3173,7 @@ function MergeLootContents(%contents1, %contents2)
 		}
 	}
 	
-	%remainingString = String::trim(%remainingString);
+	%remainingString = String_Trim(%remainingString);
 	
 	return %currentString @ "|" @ %remainingString;
 }
