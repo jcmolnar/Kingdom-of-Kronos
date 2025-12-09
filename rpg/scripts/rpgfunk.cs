@@ -7723,10 +7723,11 @@ function AFKZone_Tick()
 		}
 		
 		// Issue warning if overlevel, inactive, and in zone long enough
-		if(%zoneTimeMs >= ($AFKOverLevelMinZoneTime * 1000) && %inactivityMs >= ($AFKOverLevelInactivity * 1000))
+		// Issue warning if overlevel, inactive, and in zone long enough
+		if(%zoneTimeMs >= $AFKOverLevelMinZoneTime && %inactivityMs >= $AFKOverLevelInactivity)
 		{
 			$AFKZoneWarnPos[%id] = %pos;
-			$AFKZoneWarnUntil[%id] = %now + ($AFKOverLevelWarnWindow * 1000);
+			$AFKZoneWarnUntil[%id] = %now + $AFKOverLevelWarnWindow;
 			$AFKZoneWarnAck[%id] = "";
 			
 			// Generate random 4-digit verification code (1000-9999)
