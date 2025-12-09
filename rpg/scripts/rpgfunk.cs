@@ -2951,27 +2951,6 @@ function AggregateLootbags()
 	schedule("AggregateLootbags();", $LootbagAggregateInterval);
 }
 
-// Helper to trim whitespace since String::trim doesn't exist
-function String_Trim(%str)
-{
-	if(%str == "") return "";
-	
-	// Trim leading
-	%start = 0;
-	%len = String::len(%str);
-	while(%start < %len && String::getSubStr(%str, %start, 1) == " ")
-		%start++;
-		
-	// Trim trailing
-	%end = %len - 1;
-	while(%end >= %start && String::getSubStr(%str, %end, 1) == " ")
-		%end--;
-		
-	if(%start > %end) return "";
-	
-	return String::getSubStr(%str, %start, %end - %start + 1);
-}
-
 // Merge the contents of bag2 into bag1, then delete bag2 if fully merged
 function MergeLootbags(%bag1, %bag2)
 {
@@ -3020,8 +2999,8 @@ function MergeLootbags(%bag1, %bag2)
 		%remainingContents = String::getSubStr(%mergeResult, %splitPos + 1, 99999);
 	}
 	
-	%mergedContents = String_Trim(%mergedContents);
-	%remainingContents = String_Trim(%remainingContents);
+	%mergedContents = Trim(%mergedContents);
+	%remainingContents = Trim(%remainingContents);
 	
 	// Merge namelists (combine who can pick up)
 	%mergedNamelist = MergeNamelists(%namelist1, %namelist2);
@@ -3146,7 +3125,7 @@ function MergeLootContents(%contents1, %contents2)
 				%newString = %newString @ %tmpItem[%i] @ " " @ %tmpCount[%i] @ " ";
 			}
 		}
-		%newString = String_Trim(%newString);
+		%newString = Trim(%newString);
 		
 		// 3. Check length (Limit is 255, keep safe buffer ~240)
 		if(String::len(%newString) > 240)
@@ -3173,7 +3152,7 @@ function MergeLootContents(%contents1, %contents2)
 		}
 	}
 	
-	%remainingString = String_Trim(%remainingString);
+	%remainingString = Trim(%remainingString);
 	
 	return %currentString @ "|" @ %remainingString;
 }
@@ -6673,6 +6652,23 @@ function LTrim(%s)
 	%s = String::NEWgetSubStr(%s, %p1, 99999);
 
 	return %s;
+}
+
+function RTrim(%s)
+{
+	// Simple RTrim implementation
+	if(%s == "") return "";
+	%len = String::len(%s);
+	%end = %len - 1;
+	while(%end >= 0 && String::getSubStr(%s, %end, 1) == " ")
+		%end--;
+		
+	return String::getSubStr(%s, 0, %end + 1);
+}
+
+function Trim(%s)
+{
+	return RTrim(LTrim(%s));
 }
 
 function InitObjectives()
