@@ -993,7 +993,7 @@ function getAInumberFromName(%aiName)
 //---------------------------------
 //createAI()
 //---------------------------------
-function createAI(%aiName, %markerGroup, %name, %skipPostSpawn)
+function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck)
 {
 	dbecho($dbechoMode, "createAI(" @ %aiName @ ", " @ %markerGroup @ ", " @ %name @ ", " @ %skipPostSpawn @ ")");
 	//echo("[SPAWN DEBUG] createAI(): aiName=" @ %aiName @ ", markerGroup=" @ %markerGroup @ ", name=" @ %name);
@@ -1208,6 +1208,20 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn)
 	{
 		// Attempt to immediately tag invulnerability via display name if clientId is already resolvable
 		%preClient = NEWgetClientByName(%name);
+		
+		// =========================================================================================================
+		// RACE CONDITION FIX
+		// prevent immediate reuse of Client IDs that were just freed (unless bypassed by critical systems)
+		// =========================================================================================================
+		if(!%bypassRaceCheck && %preClient != -1 && $ClientIdRecentlyFreed[%preClient] != "" && (getSimTime() - $ClientIdRecentlyFreed[%preClient] < 3))
+		{
+			 echo("[SPAWN DANGER] ID REUSE DETECTED! Client " @ %preClient @ " was freed recently. Aborting spawn of " @ %aiName @ " to prevent collision.");
+			 %escapedName = String::replace(%aiName, "\"", "\\\"");
+			 AI::delete(%escapedName);
+			 return "-1_RACE_CONDITION"; // Return specific error code to trigger rollback
+		}
+		// =========================================================================================================
+
 		if(%preClient != -1 && %preClient != "" && %preClient != "False" && %preClient != "false")
 		{
 			storeData(%preClient, "SpawnInvuln", True);
@@ -2969,9 +2983,20 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 	$SpawnAIScheduled[%newName] = ""; // Clear scheduled flag
 	$EnemyBotSpawnRetry[%newName] = ""; // Clear retry flag
 	
+	// Determine if we should bypass the race condition check
+	// Critical systems like Seal Battle and Arena use "TempSpawn" or "MarkerSpawn" and rely on tight timing
+	// They cannot handle the 3-second rejection delay without breaking their logic chains
+	%bypassRaceCheck = false;
+	%issuerType = GetWord(%commandIssuer, 0);
+	if(%issuerType == "TempSpawn" || %issuerType == "MarkerSpawn")
+	{
+		%bypassRaceCheck = true;
+		echo("[SPAWN FLOW] SpawnAI(): Bypassing race condition check for critical system issuer: " @ %issuerType);
+	}
+	
 	// Proceed with spawn immediately
 	// Pass skipPostSpawn=true for SpawnPoint bots (they're handled by SpawnAIGetClientId())
-	%retval = createAI(%newName, %aiSpawnPos, %displayName, true);
+	%retval = createAI(%newName, %aiSpawnPos, %displayName, true, %bypassRaceCheck);
 	echo("[SPAWN FLOW] SpawnAI(): createAI() returned: " @ %retval);
 
 	if(%retval != -1)
@@ -10766,5 +10791,64 @@ function VerifyEnemyBotTeam(%clientId, %botName, %expectedTeam)
 	else
 	{
 		echo("[BOT TEAM DEBUG] VerifyEnemyBotTeam - Enemy bot " @ %botName @ " (clientId=" @ %clientId @ ") has correct team " @ %expectedTeam);
+	}
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// REINFORCED DISCONNECT HANDLER
+// ---------------------------------------------------------------------------------------------------------
+// This function is called by the engine when ANY client drops (disconnects or is deleted).
+// It acts as the final safety net for:
+// 1. Ghost Bot Prevention: Decrementing spawn counters if they weren't already.
+// 2. Race Condition Prevention: Marking the ID as recently freed so it isn't reused immediately.
+function onClientDrop(%clientId)
+{
+	echo("[CLIENT DROP] onClientDrop(" @ %clientId @ ") called @ " @ getSimTime());
+	
+	// 1. Mark ID as recently freed (Critical for Race Condition Fix)
+	// This ensures we don't reuse this ID for 3 seconds, even if it was a player
+	$ClientIdRecentlyFreed[%clientId] = getSimTime();
+	
+	// 2. Check if it was an Enemy Bot
+	// We check multiple flags because some might be cleared during cleanup
+	%botName = fetchData(%clientId, "BotInfoAiName");
+	%spawnInfo = fetchData(%clientId, "SpawnBotInfo");
+	%registryInfo = $BotRegistry[%clientId];
+	
+	%isEnemyBot = false;
+	if(%botName != "" && %botName != -1 && %botName != "0")
+		%isEnemyBot = true;
+	else if(%spawnInfo != "" && %spawnInfo != -1)
+		%isEnemyBot = true;
+	else if(%registryInfo != "" && %registryInfo != -1)
+		%isEnemyBot = true;
+	
+	if(%isEnemyBot)
+	{
+		echo("[CLIENT DROP] Detected Enemy Bot drop: " @ %clientId @ " (Name=" @ %botName @ ", Spawn=" @ %spawnInfo @ ")");
+		
+		// 3. Decrement Spawn Counter (Critical for Ghost Bot Fix)
+		// Usually Player::onKilled handles this, but if the bot was deleted/kicked/disconnected
+		// without dying, we MUST decrement here to free the slot.
+		// DecrementSpawnCounter has built-in checks to prevent double-decrementing.
+		
+		if(%spawnInfo != "" && %spawnInfo != -1)
+		{
+			%spawnPointId = GetWord(%spawnInfo, 1);
+			if(GetWord(%spawnInfo, 0) == "SpawnPoint" && %spawnPointId != "")
+			{
+				echo("[CLIENT DROP] Attempting fail-safe counter decrement for SpawnPoint " @ %spawnPointId);
+				DecrementSpawnCounter(%spawnPointId, %clientId);
+			}
+		}
+		
+		// 4. Cleanup Bot Registry
+		if($BotRegistry[%clientId] != "")
+		{
+			$BotRegistry[%clientId] = "";
+			$EnemyBotCount--; 
+			$TotalBotCount--;
+			echo("[CLIENT DROP] Cleaned up registry for client " @ %clientId);
+		}
 	}
 }

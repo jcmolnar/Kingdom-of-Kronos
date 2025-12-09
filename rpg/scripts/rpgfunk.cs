@@ -7623,6 +7623,10 @@ function AFKZone_Tick()
 		if(isRPGAI(%id) || Player::isAiControlled(%id))
 			continue;
 		
+		// Admin Override: Admins > 5 are immune to AFK checks
+		if(%id.adminLevel > 5)
+			continue;
+		
 		%obj = Client::getOwnedObject(%id);
 		if(%obj == -1 || %obj == "" || !isObject(%obj))
 		{
