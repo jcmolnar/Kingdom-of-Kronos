@@ -1,0 +1,367 @@
+Changelog - November 21, 2025
+=============================================
+
+BELT SYSTEM - DEPLOYABLE BASE PACK INTEGRATION
+-----------------------------------------------
+
+1. Belt.cs — Added Deployables Category
+   Location: Lines 4-7
+   Files Changed: RPG/Scripts/Belt.cs
+   Changes:
+     - Added "Deployables" category to Belt system ($Belt::Count["Deployables"], $Belt::Categories[3])
+     - Updated Belt::Display() to handle Deployables category
+     - Registered DepBasePack in Belt item registry: BeltItem::Add("Deployable Base Pack", "DepBasePack", "Deployables", 0.0, 40000)
+   Reason: Migrate DepBasePack from standard inventory to Belt/Backpack system for consistency
+
+2. Belt.cs — Added Deploy Option to Belt Menu
+   Location: Lines 365-386 (MenuBeltDrop function)
+   Files Changed: RPG/Scripts/Belt.cs
+   Changes:
+     - Added check for deployable items (DepBasePack) in MenuBeltDrop()
+     - Shows "Deploy" option as first menu item when item is DepBasePack
+     - Deploy option appears before Drop and Examine options
+   Reason: Allow players to deploy bases directly from Belt menu
+
+3. Belt.cs — Added Belt::DeployItem() Function
+   Location: Lines 2079-2112
+   Files Changed: RPG/Scripts/Belt.cs
+   Changes:
+     - Created Belt::DeployItem() function to handle deployment from Belt menu
+     - Validates player has item in Belt storage
+     - Validates player object exists (player must be in-game)
+     - Sets flag (%clientId.beltDeploying) so onDeploy knows to remove from Belt instead of standard inventory
+     - Calls Player::deployItem() to trigger deployment system
+     - Clears flag after 2 seconds if deployment fails
+   Reason: Enable deployment of belt items (DepBasePack) from menu system
+
+4. Belt.cs — Added Deploy Handling to processMenuBeltDrop()
+   Location: Lines 403-406
+   Files Changed: RPG/Scripts/Belt.cs
+   Changes:
+     - Added "deploy" option handling in processMenuBeltDrop()
+     - Calls Belt::DeployItem() when player selects deploy option
+   Reason: Process deploy command from Belt menu
+
+5. Belt.cs — Fixed StoredKeyItems Cleanup Bug During Withdrawal
+   Location: Lines 1011-1042
+   Files Changed: RPG/Scripts/Belt.cs
+   Changes:
+     - Added cleanup logic for StoredKeyItems before calling SetStuffString() during withdrawal
+     - Removes invalid entries (item='0', count='-1') before modifying storage
+     - Prevents creation of invalid entries like ' 0 DuelCard -1 ' during withdrawal
+   Reason: Fix bug where StoredKeyItems was not being cleaned before modification during withdrawal, causing invalid data corruption
+
+6. depbase.cs — Updated DepBasePack::onDeploy() for Belt Integration
+   Location: Lines 33-67
+   Files Changed: RPG/Scripts/depbase.cs
+   Changes:
+     - Added check for %clientId.beltDeploying flag to determine if deploying from Belt or standard inventory
+     - Uses Belt::TakeThisStuff() to remove from Belt storage when flag is set
+     - Falls back to Player::decItemCount() for legacy standard inventory items
+     - Clears flag after successful deployment or on failure
+   Reason: Support deployment from Belt storage while maintaining backward compatibility with standard inventory
+
+7. depbase.cs — Simplified DepBasePack::onUse()
+   Location: Lines 25-32
+   Files Changed: RPG/Scripts/depbase.cs
+   Changes:
+     - Removed $BeltSlot mounting logic (Belt items don't use slots)
+     - Simplified to call Player::deployItem() directly
+     - Kept for backward compatibility with items in standard inventory
+   Reason: Clean up code since Belt items are deployed via menu, not by mounting
+
+
+PLAYER COMMANDS
+---------------
+
+8. comchat.cs — Added #suicide Command
+   Location: Lines 3485-3502
+   Files Changed: RPG/Scripts/comchat.cs
+   Changes:
+     - Created #suicide command (also accepts #killme as alias)
+     - Validates player is spawned in-game before allowing suicide
+     - Only kills the player who typed the command (uses %TrueClientId)
+     - Plays death animation and kills player
+     - Sends confirmation message to player
+     - No admin privileges required (self-kill only)
+   Reason: Allow players to kill themselves via chat command as alternative to suicide keybinding
+
+9. comchat.cs — Added #Build Command for Base Deployment
+   Location: Lines 1574-1612
+   Files Changed: RPG/Scripts/comchat.cs
+   Changes:
+     - Created #Build command (case-insensitive: accepts #Build or #build)
+     - Checks for DepBasePack in Belt storage first, then falls back to standard inventory
+     - Deploys base from Belt storage using Belt::DeployItem() if found
+     - Deploys base from standard inventory using Player::deployItem() if found
+     - Provides clear error message if player doesn't have DepBasePack
+     - Separate from #deploy command (which handles vehicles)
+   Reason: Provide dedicated chat command for deploying bases, separate from vehicle deployment
+
+
+BELT SYSTEM - BANK STORAGE IMPROVEMENTS
+---------------------------------------
+
+10. Belt.cs — Added Belt::BankStorageConversion() Function
+    Location: Lines 15-148
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Created Belt::BankStorageConversion() function to sync and clean belt storage on character load
+      - Combines StoredQuestItems and StoredKeyItems into BeltStorage for unified bank storage
+      - Cleans invalid entries (item='0', count='-1', empty entries) from StoredQuestItems
+      - Cleans invalid entries from StoredKeyItems
+      - Rebuilds equipped category lists (QuestItems, KeyItems) using Belt::GetNS for data integrity
+      - Removes corrupted entries from equipped categories
+      - Extensive debug output for troubleshooting storage issues
+      - Updates BeltStorage from saved data to ensure consistency
+      - Calls RefreshAll() to update any open menus after cleanup
+    Reason: Fix data corruption issues in belt storage and ensure proper synchronization between StoredQuestItems, StoredKeyItems, and BeltStorage
+
+11. Belt.cs — Enhanced processMenuSellBeltItemFinal() with Storage Cleanup
+    Location: Lines 650-1104
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added cleanup logic for BeltStorage before adding items during store operations
+      - Added cleanup logic for StoredQuestItems before adding items during store operations
+      - Added cleanup logic for StoredKeyItems before modifying during withdraw operations
+      - Removes invalid entries (item='0', count='-1', empty, negative counts) before SetStuffString calls
+      - Prevents creation of invalid entries during storage operations
+      - Added comprehensive debug output throughout store/withdraw operations
+      - Added validation checks after storage operations to verify data integrity
+      - Handles both banker storage (BeltStorage) and legacy belt storage (StoredQuestItems/StoredKeyItems)
+      - Improved error handling and warning messages for data inconsistencies
+    Reason: Prevent data corruption during bank storage operations and ensure data integrity
+
+12. Belt.cs — Enhanced GiveThisStuff() with Debug Output
+    Location: Lines 156-262
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added comprehensive debug output to track item giving process
+      - Debug statements show client ID, client name, loot string, and processing details
+      - Debug output for belt items vs standard items
+      - Debug statements show entry and exit of function
+    Reason: Enable debugging of item giving issues, especially for belt items vs standard inventory items
+
+13. rpgfunk.cs — Added Belt::BankStorageConversion() Call in LoadWorld()
+    Location: Line 563
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added call to Belt::BankStorageConversion(%clientid) in LoadWorld() function
+      - Called after loading character data but before other character initialization
+      - Ensures belt storage is cleaned and synchronized when character loads
+    Reason: Automatically clean and sync belt storage data when characters are loaded from save files
+
+
+BELT SYSTEM - BUG FIXES AND OPTIMIZATIONS
+------------------------------------------
+
+14. Belt.cs — Fixed GiveThisStuff() Parameter Type for Item::giveItem()
+    Location: Lines 227-232
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Fixed GiveThisStuff() to retrieve player object using Client::getOwnedObject(%clientId) before calling Item::giveItem()
+      - Item::giveItem() expects a player object, not a clientId
+      - Added fallback to Player::incItemCount() if player object is not available
+    Reason: Fix bug where enemy bots were not equipping weapons because wrong parameter type was being passed
+
+15. Belt.cs — Optimized Belt::GiveThisStuff() for Enemy Bots
+    Location: Lines 1668-1814
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added bot detection using isRPGAI() function
+      - Bots skip corruption checks, Belt::GetNS calls, and most debug output to prevent race conditions
+      - Bots only perform basic "0" entry cleanup for performance
+      - Players still get full validation, Belt::GetNS cleanup, and debug output
+      - Client::sendMessage skipped for bots to reduce overhead
+      - Prevents race conditions when processing multiple items from lootbags simultaneously
+    Reason: Fix issue where picking up a second quest item reset the belt to 1 for bots, caused by GetNS race conditions
+
+16. Belt.cs — Removed All DEBUG Echo Statements
+    Location: Belt::GiveThisStuff, Belt::GetNS, Belt::TakeThisStuff functions
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Removed all echo("DEBUG ...") statements from Belt::GiveThisStuff()
+      - Removed all echo("DEBUG ...") statements from Belt::GetNS()
+      - Removed all echo("DEBUG ...") statements from Belt::TakeThisStuff()
+      - Preserved dbecho statements which are controlled by global debug mode
+    Reason: Clean up console output and remove excessive debug logging
+
+17. Belt.cs — Fixed String::trim Errors in Belt::TakeThisStuff()
+    Location: Belt::TakeThisStuff() function
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Removed 4 String::trim() calls that caused "Unknown command" errors
+      - String::trim function does not exist in Tribes scripting environment
+      - Simplified empty list normalization to check "" or "0" directly without trimming
+    Reason: Fix "String::trim: Unknown command" errors in console
+
+
+PLAYER COMMANDS (CONTINUED)
+----------------------------
+
+18. comchat.cs — Reverted #deploy Command to Vehicle-Only Functionality
+    Location: Lines 1530-1572
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Reverted #deploy command to its original functionality
+      - Now only handles ScoutVehicle deployment (vehicles only)
+      - Base deployment moved to separate #Build command
+    Reason: Separate base deployment (#Build) from vehicle deployment (#deploy) for clarity
+
+19. comchat.cs — Added #getinventory Admin Command
+    Location: Lines 3155-3295
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Created #getinventory admin command (Admin Level 1+)
+      - Displays a player or bot's entire inventory
+      - Shows equipped weapon, equipped armor, equipped items (not mounted), regular inventory items
+      - Shows all belt categories: Quest Items, Key Items, Gem Items, Deployables
+      - Shows both equipped belt items and stored belt items
+      - Syntax: #getinventory "playername"
+    Reason: Allow admins to view complete inventory status of players and bots for debugging
+
+
+NPC/ENEMY SYSTEM FIXES
+----------------------
+
+20. itemevents.cs — Auto-Mount Weapons for NPCs/Enemies
+    Location: Lines 58-68
+    Files Changed: RPG/Scripts/itemevents.cs
+    Changes:
+      - Added auto-mount logic in Item::giveItem() for weapons
+      - If item is a Weapon class and no weapon is currently mounted, automatically mounts it to $WeaponSlot
+      - Only applies to NPCs/enemies (when player object exists but may not have weapon mounted)
+      - Ensures enemy bots equip weapons immediately when given
+    Reason: Fix issue where enemy bots were not equipping weapons they were given
+
+
+LOOT DROP SYSTEM FIXES
+----------------------
+
+21. playerdamage.cs — Fixed Quest Item Drop Logic
+    Location: Lines 489-533
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified quest item drop logic to always drop all accumulated items
+      - Previously, percentage roll failures or guaranteed drops could cap the dropped amount to original count
+      - Now all accumulated quest items always drop, regardless of percentage rolls or whether they were original or picked up from lootbags
+      - Prevents item loss when players pick up quest items from enemy lootbags
+    Reason: Fix issue where quest items were only stacking to 5 in enemy lootbags and bots were losing items
+
+22. playerdamage.cs — Fixed Belt Item Drop Logic for Players
+    Location: Lines 381-406
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified belt item drop logic so equipped items always drop, even if same item exists in storage
+      - Previously, if item existed in both equipped and storage, it would be skipped or stored amount subtracted from equipped
+      - Now all equipped items drop, and stored items remain protected in storage
+      - The check for items in storage is now informational only and does not prevent equipped items from dropping
+    Reason: Fix bug where player's equipped quest items disappeared on death if the same item existed in storage
+
+23. playerdamage.cs — Fixed shouldDrop Logic Redundancy
+    Location: Lines 395-438
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Removed redundant %shouldDrop = true; assignments
+      - Now set once at line 395 for all entities (bots and players)
+      - Removed redundant assignments inside isRPGAI check
+      - Bot-specific percentage lookup logic is now purely informational and does not affect drop behavior
+    Reason: Clean up redundant code and ensure consistent drop behavior
+
+
+OBJECTIVES SCREEN IMPROVEMENTS
+-------------------------------
+
+24. rpgfunk.cs — Removed DEBUG Echo Statements from SetStuffString()
+    Location: Lines 2337-2384
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Removed all echo("DEBUG ...") statements from SetStuffString() function
+      - Preserved dbecho statement which is controlled by global debug mode
+    Reason: Clean up console output and remove excessive debug logging
+
+25. rpgfunk.cs — Fixed Objectives Screen Formatting
+    Location: InitObjectives() and UpdateHouseObjectivesDisplay() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Removed duplicate "Bases Controlled / Artifacts Controlled:" header from UpdateHouseObjectivesDisplay()
+      - InitObjectives() now sets separator at slot 16, combined header at slot 17, and house data at slots 18-21
+      - UpdateHouseObjectivesDisplay() now only updates house data at slots 18-21
+      - Improved formatting for readability with color codes, consistent wording ("bases", "artifacts"), and indentation
+      - Removed rule 3 ("If any player is AFKing, you are allowed to kill them...") from PK rules
+      - Renumbered subsequent rule
+      - Replaced text in objective 10 with separator line to break up the objectives screen
+    Reason: Fix duplicate header display and improve readability of objectives screen
+
+26. rpgfunk.cs — Added House Member Counts to Objectives Screen
+    Location: InitObjectives() and UpdateHouseObjectivesDisplay() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added "Members Online" to header (changed from "Bases / Artifacts / Members:" to "Bases / Artifacts / Members Online:")
+      - Added $HouseMember counts to each house line in objectives display
+      - Shows: "House X: Y bases, Z artifacts, W members online"
+      - Updated both initialization and refresh functions
+    Reason: Display real-time count of online players in each house on objectives screen
+
+27. rpgfunk.cs — Added HouseData::Load() Call in LoadHouseObjectives()
+    Location: LoadHouseObjectives() function, line 3312
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added call to HouseData::Load() at start of LoadHouseObjectives()
+      - Loads saved house data (BaseControl, FlagCommand, HouseMember) from [KoK-Houses].cs file
+      - Ensures house member counts are loaded from save file when world loads
+    Reason: Properly load saved house member counts when server restarts
+
+28. rpgfunk.cs — Added RecalcHouseMemberCounts() Function
+    Location: Lines 3540-3565
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Created RecalcHouseMemberCounts() function to recalculate member counts from all currently connected players
+      - Resets all house member counts to 0
+      - Iterates through all connected clients and counts players by house affiliation
+      - Only counts players who have spawned (have player object)
+      - Called in LoadHouseObjectives() and RecalcHouseObjectives() to ensure accurate counts
+    Reason: Recalculate accurate house member counts from currently connected players when world loads
+
+29. rpgfunk.cs — Updated RecalcHouseObjectives() to Recalculate Member Counts
+    Location: RecalcHouseObjectives() function, line 3602
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added call to RecalcHouseMemberCounts() in RecalcHouseObjectives()
+      - Member counts are now recalculated whenever objectives are recalculated
+      - Added echo statement to display member counts after recalculation
+    Reason: Ensure member counts are accurate when objectives are recalculated
+
+
+HOUSE SYSTEM IMPROVEMENTS
+--------------------------
+
+30. house.cs — Added UpdateHouseObjectivesDisplay() Calls
+    Location: JoinHouse() and BootFromCurrentHouse() functions
+    Files Changed: RPG/Scripts/house.cs
+    Changes:
+      - Added call to UpdateHouseObjectivesDisplay() in JoinHouse() after incrementing member count
+      - Added call to UpdateHouseObjectivesDisplay() in BootFromCurrentHouse() after decrementing member count
+      - Objectives screen now updates immediately when players join or leave houses
+    Reason: Keep objectives screen member counts updated in real-time when players join/leave houses
+
+31. connectivity.cs — Added Member Count Updates on Connect/Disconnect
+    Location: Server::onPlayerReady() and Server::onClientDisconnect() functions
+    Files Changed: RPG/Scripts/connectivity.cs
+    Changes:
+      - Added calls to RecalcHouseMemberCounts() and UpdateHouseObjectivesDisplay() in onPlayerReady()
+      - Added calls to RecalcHouseMemberCounts() and UpdateHouseObjectivesDisplay() in onClientDisconnect()
+      - Member counts now update in real-time when players connect or disconnect
+    Reason: Keep objectives screen member counts updated in real-time as players join/leave the server
+
+
+VERSION UPDATES
+---------------
+
+32. connectivity.cs — Updated Version Number to V0.7.1
+    Location: Line 193
+    Files Changed: RPG/Scripts/connectivity.cs
+    Changes:
+      - Updated $Taurik::ConnectScreenMessage1 from "Kingdom of Kronos V0.7" to "Kingdom of Kronos V0.7.1"
+    Reason: Update version number to reflect new changes and improvements
+

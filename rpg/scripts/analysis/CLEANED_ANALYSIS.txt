@@ -1,0 +1,242 @@
+﻿CLEANED ANALYSIS REPORT
+Generated: 11/24/2025 16:06:53
+========================================
+
+SUMMARY
+========================================
+Total Unique Functions: 908
+Total Unique Variables: 552
+Duplicate Function Signatures: 2
+
+NOTE: Variables are now deduplicated - each variable is only counted once per script.
+
+========================================
+DUPLICATE FUNCTION SIGNATURES
+(These need to be investigated - same function defined in multiple files)
+========================================
+
+Function: FixDecimals(%c)
+  Found in: rpgfunk.cs, rpghud.cs
+  WARNING: This function is defined in multiple files!
+
+Function: round(%n)
+  Found in: rpgfunk.cs, rpghud.cs
+  WARNING: This function is defined in multiple files!
+
+
+========================================
+FUNCTIONS BY SCRIPT
+========================================
+
+
+rpgfunk.cs (102 functions)
+  - AddBounty(%clientId, %amt)
+  - AddEventCommand(%object, %senderName, %type, %cmd)
+  - AddObjectToRec(%clientId, %a, %pos, %rot)
+  - AddToCommaList(%list, %item)
+  - AddToTargetList(%clientId, %cl)
+  - Cap(%n, %lb, %ub)
+  - ChangeRace(%clientId, %race)
+  - ChangeSky(%sky)
+  - ChangeWeather()
+  - CheckForProtectedWords(%string)
+  - CheckForReservedWords(%name)
+  - ClearEvents(%id)
+  - ClearFunkVar(%name)
+  - ClearVariables(%clientId)
+  - clipTrailingNumbers(%str)
+  - countNumSpells(%clientId)
+  - CountObjInCommaList(%list)
+  - CountObjInList(%list)
+  - d(%t)
+  - DeployBase(%clientId, %f, %refPos, %refRot)
+  - DeployLootbag(%pos, %rot, %special)
+  - DeployPlatform(%name, %team, %pos, %rot, %plattype)
+  - DisplayGetInfo(%clientId, %id, %obj)
+  - DisplayGetStats(%clientId, %id, %obj)
+  - dmsg(%i, %w)
+  - DoCamp(%clientId, %savecharTry)
+  - Down(%t)
+  - FellOffMap(%id)
+  - FindInvalidChar(%name)
+  - FixDecimals(%c)
+  - FixStuffString(%stuff)
+  - GetBotIdList()
+  - GetBotNameList()
+  - GetCombo(%n)
+  - GetEventCommandIndex(%object, %type)
+  - GetEveryoneIdList()
+  - GetEveryoneNameList()
+  - GetLCKcost(%clientId)
+  - GetNESW(%pos1, %pos2)
+  - GetPersistentTime()
+  - GetPlayerIdList()
+  - GetPlayerNameList()
+  - GetRoll(%roll, %optionalMinMax)
+  - Getrpcost(%clientId)
+  - getSpawnIndex(%aiName)
+  - getSpellAtPos(%name, %pos)
+  - GetStuffStringCount(%stuff, %item)
+  - GetTypicalTossStrength(%clientId)
+  - GiveThisStuff(%clientId, %list, %echo, %multiplier)
+  - HasThisStuff(%clientId, %list, %multiplier)
+  - InitObjectives()
+  - IsDead(%id)
+  - IsInCommaList(%list, %item)
+  - isInSpellList(%name, %sname)
+  - IsPartOfCombo(%combo, %n)
+  - IsStuffStringEquiv(%s1, %s2, %dblCheck)
+  - LoadCharacter(%clientId)
+  - LoadHouseObjectives()
+  - LoadServerTime()
+  - LoadWorld()
+  - LTrim(%s)
+  - msprintf(%in, %a1, %a2, %a3, %a4, %a5, %a6, %a7, %a8)
+  - NEWgetClientByName(%name)
+  - nsprintf(%in, %a1, %a2, %a3, %a4, %a5, %a6, %a7, %a8)
+  - OddsAre(%n)
+  - OnOrOfflineGive(%name, %award)
+  - RandomPositionXY(%minrad, %maxrad)
+  - RecalcHouseMemberCounts()
+  - RecalcHouseObjectives()
+  - RecursiveObjectivesRefresh()
+  - RefreshAll(%clientId)
+  - RemoveFromCommaList(%list, %item)
+  - RemoveFromTargetList(%clientId, %cl)
+  - ResetPlayer(%clientId)
+  - round(%n)
+  - SaveAllCharacters()
+  - SaveCharacter(%clientId)
+  - SaveHouseObjectives()
+  - SaveServerTime()
+  - SaveWorld()
+  - SaveWorldDeployables()
+  - SetOnGround(%clientId, %extraZ)
+  - SetStuffString(%stuff, %item, %amount)
+  - StartRecord(%clientId)
+  - StopRecord(%clientId, %f)
+  - String::create(%c, %len)
+  - String::len(%string)
+  - String::NEWgetSubStr(%s, %x, %y)
+  - String::ofindSubStr(%s, %f, %o)
+  - String::replace(%string, %search, %replace)
+  - TakeThisStuff(%clientId, %list, %multiplier)
+  - TeleportToMarker(%clientId, %markergroup, %testpos, %random)
+  - TossLootbag(%clientId, %loot, %vel, %namelist, %t)
+  - UnequipMountedStuff(%clientId)
+  - UnHide(%clientId)
+  - UpdateAppearance(%clientId)
+  - UpdateHouseObjectivesDisplay()
+  - updateSpawnStuff(%clientId)
+  - UpdateTeam(%clientId)
+  - viewGroupList(%clientId)
+  - WalkSlowInvisLoop(%clientId, %delay, %grace)
+  - WhatIs(%item)
+
+rpghud.cs (5 functions)
+  - FixDecimals(%c)
+  - getrpgdata()
+  - round(%n)
+  - toggleRPGhud()
+  - UpdateRPGHUD(%hud)
+
+========================================
+UNIQUE VARIABLES BY SCRIPT
+(Deduplicated - each variable listed once per script)
+========================================
+
+
+rpgfunk.cs (68 unique variables)
+  - $AccessoryVar
+  - $aidirectiveTable
+  - $ArmorPlayerModel
+  - $ArmorSkin
+  - $BaseControl
+  - $BeltItem
+  - $BonusState
+  - $BonusStateCnt
+  - $BotFollowDirective
+  - $ClassGroup
+  - $Client::info
+  - $ComboTable
+  - $ConsoleWorld::DefaultSearchPath
+  - $damagedBy
+  - $EventCommand
+  - $FlagCommand
+  - $funk::var
+  - $HouseMember
+  - $HouseName
+  - $isRaining
+  - $ItemList
+  - $LoadingWorldSave
+  - $LocationDesc
+  - $loot
+  - $lootbagTime
+  - $los::position
+  - $owner
+  - $PlayerSkill
+  - $possessedBy
+  - $QuestCounter
+  - $RaceToArmorType
+  - $rec::pos
+  - $rec::rot
+  - $rec::type
+  - $recCount
+  - $recording
+  - $recRefpos
+  - $recRefrot
+  - $SavedFlag
+  - $SavedSwitch
+  - $SavedTower
+  - $ServerTimeElapsed
+  - $ServerTimeStart
+  - $SkillCounter
+  - $SkillDesc
+  - $spawnIndex
+  - $speed
+  - $Spell::damageValue
+  - $Spell::delay
+  - $Spell::description
+  - $Spell::index
+  - $Spell::manaCost
+  - $Spell::name
+  - $Spell::recoveryTime
+  - $SpellList
+  - $state
+  - $TeamForRace
+  - $TotalSealValue
+  - $w
+  - $world::lootbagTime
+  - $world::object
+  - $world::objectCount
+  - $world::owner
+  - $world::pos
+  - $world::rot
+  - $world::special
+  - $world::team
+  - $WorldRank
+
+rpghud.cs (22 unique variables)
+  - $atk
+  - $bank
+  - $class
+  - $coins
+  - $def
+  - $exp
+  - $expneeded
+  - $hp
+  - $lck
+  - $lvl
+  - $mana
+  - $maxhp
+  - $maxmana
+  - $maxweight
+  - $mdef
+  - $race
+  - $remort
+  - $rfdcnt
+  - $rpgdata
+  - $rpghudcbdelay
+  - $Weight
+  - $zonedesc
+

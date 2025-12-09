@@ -1,0 +1,30 @@
+I'm working on "Kingdom of Kronos", a TorqueScript-based RPG. The main codebase is in AllScripts.txt (concatenated file with 144 scripts).
+
+RECENT FIXES:
+- Fixed bot spawning race conditions by using internal names (AI::helper() return values) instead of display names
+- Implemented spawn transaction system (ReserveSpawnSlot/CommitSpawnSlot/RollbackSpawnSlot) to prevent counter leaks
+- Fixed guardtype extraction in createAI() - replaced buggy clipTrailingNumbers() with reliable trailing digit removal
+- Refactored Colloseum/Seal Battle to use internal names with spawn cooldowns
+- Created 33 dedicated Colloseum bot types (NewbieRoundOne, AdventurerRoundTwo, etc.)
+
+KEY CONCEPTS:
+- Internal Name: Unique ID from AI::helper() (e.g., "RoundTwo497") - available immediately
+- Display Name: Human-readable (e.g., "SealFighter2") - subject to 1-3s replication lag
+- Spawn Transaction: Reserve → Spawn → Commit (or Rollback on failure)
+- Bot Lookup Priority: AI::getId() → AI::getClientIdFromName() → NEWgetClientByName()
+
+KEY FILES:
+- Ai.cs: Core AI, bot spawning, client ID lookup
+- remortseal.cs: Seal Battle event
+- rpgarena.cs: Colloseum event
+- EnemyArmors.cs: Bot race definitions
+- classes.cs: World ranks, Colloseum arrays
+
+WORKING WITH AllScripts.txt:
+- Extract files using "=== FILE START: filename.cs ===" markers
+- Update after edits using Python regex substitution
+- Always update AllScripts.txt after editing individual files
+
+When working on this codebase, read relevant sections from AllScripts.txt, follow established patterns (internal names, transaction system), and update AllScripts.txt after changes.
+
+

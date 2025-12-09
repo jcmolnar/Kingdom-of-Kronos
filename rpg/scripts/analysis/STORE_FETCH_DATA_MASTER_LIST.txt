@@ -1,0 +1,378 @@
+================================================================================
+MASTER LIST: storeData() and fetchData() Call Sites
+================================================================================
+Purpose: Reference document for refactoring to separate arrays for town bots,
+         enemy bots, and players.
+
+Generated: 2025-01-XX
+Total Active Files: ~30 core files
+Total Call Sites: ~1,913 (excluding backups/docs)
+
+================================================================================
+FILE: rpgstats.cs
+================================================================================
+Function Definitions:
+- fetchData(%clientId, %type) - Line 1
+- storeData(%clientId, %type, %amt, %special) - Line 198
+
+Note: These are the core functions that would need modification.
+
+================================================================================
+FILE: rpgfunk.cs (263 calls)
+================================================================================
+Line 64:    fetchData(%clientId, "grouplist")
+Line 89:    storeData(%clientId, "spawnStuff", %s)
+Line 278:   storeData(%clientId, "campPos", GameBase::getPosition(%clientId))
+Line 279:   storeData(%clientId, "campRot", GameBase::getRotation(%clientId))
+Line 288:   storeData(%clientId, "campPos", GameBase::getPosition(%clientId))
+Line 289:   storeData(%clientId, "campRot", GameBase::getRotation(%clientId))
+Line 300:   fetchData(%clientId, "HasLoadedAndSpawned")
+Line 329:   storeData(%clientId, "campPos", GameBase::getPosition(%clientId))
+Line 330:   storeData(%clientId, "campRot", GameBase::getRotation(%clientId))
+Line 348:   fetchData(%clientId, "RACE")
+Line 349:   fetchData(%clientId, "EXP")
+Line 350:   fetchData(%clientId, "campPos")
+Line 351:   fetchData(%clientId, "COINS")
+Line 352:   fetchData(%clientId, "isMimic")
+Line 353:   fetchData(%clientId, "BANK")
+Line 355:   fetchData(%clientId, "grouplist")
+Line 356:   fetchData(%clientId, "defaultTalk")
+Line 357:   fetchData(%clientId, "password")
+Line 358:   fetchData(%clientId, "bounty")
+Line 359:   fetchData(%clientId, "inArena")
+Line 360:   fetchData(%clientId, "PlayerInfo")
+Line 361:   fetchData(%clientId, "deathmsg")
+Line 363:   fetchData(%clientId, "BankStorage")
+Line 364:   fetchData(%clientId, "campRot")
+Line 369:   fetchData(%clientId, "HP")
+Line 380:   fetchData(%clientId, "MANA")
+Line 390:   fetchData(%clientId, "LCKconsequence")
+Line 391:   fetchData(%clientId, "RemortStep")
+Line 392:   fetchData(%clientId, "LCK")
+Line 394:   fetchData(%clientId, "GROUP")
+Line 395:   fetchData(%clientId, "CLASS")
+Line 396:   fetchData(%clientId, "SPcredits")
+Line 400:   fetchData(%clientId, "MyHouse")
+Line 409:   fetchData(%clientId, "RankPoints")
+Line 410:   fetchData(%clientId, "TournyRank")
+Line 412:   fetchData(%clientId, "QuestItems")          [BOT-SPECIFIC]
+Line 442:   fetchData(%clientId, "KeyItems")            [BOT-SPECIFIC]
+Line 448:   fetchData(%clientId, "Consumables")         [BOT-SPECIFIC]
+Line 458:   fetchData(%clientId, "BeltStorage")
+Line 468:   fetchData(%clientId, "StoredQuestItems")
+Line 469:   fetchData(%clientId, "StoredKeyItems")
+Line 470:   fetchData(%clientId, "StoredConsumables")
+Line 471:   fetchData(%clientId, "StoredArmor")
+Line 472:   fetchData(%clientId, "StoredAccessories")
+Line 473:   fetchData(%clientId, "StoredOther")
+Line 496:   storeData(%clientId, "StoredQuestItems", "")
+Line 497:   storeData(%clientId, "StoredKeyItems", "")
+Line 498:   storeData(%clientId, "StoredConsumables", "")
+Line 499:   storeData(%clientId, "StoredArmor", "")
+Line 500:   storeData(%clientId, "StoredAccessories", "")
+Line 501:   storeData(%clientId, "StoredOther", "")
+Line 503:   storeData(%clientId, "BeltStorage", "")
+Line 516:   storeData(%clientId, "BeltStorage", "")
+Line 661:   storeData(%clientId, "BeltStorage", %cleanedBeltStorage)
+Line 668:   storeData(%clientId, "StoredQuestItems", %storedQuest)
+Line 669:   storeData(%clientId, "StoredKeyItems", %storedKey)
+Line 670:   storeData(%clientId, "StoredConsumables", %storedConsumables)
+Line 671:   storeData(%clientId, "StoredArmor", %storedArmor)
+Line 672:   storeData(%clientId, "StoredAccessories", %storedAccessories)
+Line 673:   storeData(%clientId, "StoredOther", %storedOther)
+Line 722:   fetchData(%clientId, "Stance")
+Line 771:   fetchData(%id, "BotInfoAiName")              [BOT-SPECIFIC]
+Line 843:   storeData(%clientId, "RACE", $funk::var[%name, 0, 1])
+Line 844:   storeData(%clientId, "EXP", $funk::var[%name, 0, 2])
+Line 845:   storeData(%clientId, "campPos", $funk::var[%name, 0, 3])
+Line 846:   storeData(%clientId, "COINS", $funk::var[%name, 0, 4])
+Line 847:   storeData(%clientId, "isMimic", $funk::var[%name, 0, 5])
+Line 848:   storeData(%clientId, "BANK", $funk::var[%name, 0, 6])
+Line 849:   storeData(%clientId, "tmpname", $funk::var[%name, 0, 7])
+Line 850:   storeData(%clientId, "grouplist", $funk::var[%name, 0, 8])
+Line 851:   storeData(%clientId, "defaultTalk", $funk::var[%name, 0, 9])
+Line 852:   storeData(%clientId, "password", $funk::var[%name, 0, 10])
+Line 853:   storeData(%clientId, "bounty", $funk::var[%name, 0, 11])
+Line 854:   storeData(%clientId, "inArena", $funk::var[%name, 0, 12])
+Line 855:   storeData(%clientId, "PlayerInfo", $funk::var[%name, 0, 13])
+Line 856:   storeData(%clientId, "deathmsg", $funk::var[%name, 0, 14])
+Line 877:   storeData(%clientId, "spawnStuff", %spawnStuffCleaned)
+Line 913:   storeData(%clientId, "BankStorage", %bankStorageCleaned)
+Line 947:   storeData(%clientId, "campRot", %campRot)
+Line 959:   storeData(%clientId, "tmphp", %tmphp)
+Line 969:   storeData(%clientId, "tmpmana", %tmpmana)
+Line 972:   storeData(%clientId, "LCKconsequence", $funk::var[%name, 0, 20])
+Line 974:   storeData(%clientId, "RemortStep", $funk::var[%name, 0, 21])
+Line 976:   storeData(%clientId, "LCK", $funk::var[%name, 0, 22])
+Line 978:   storeData(%clientId, "tmpLastSaveVer", $funk::var[%name, 0, 23])
+Line 980:   storeData(%clientId, "GROUP", $funk::var[%name, 0, 26])
+Line 982:   storeData(%clientId, "CLASS", $funk::var[%name, 0, 27])
+Line 984:   storeData(%clientId, "SPcredits", $funk::var[%name, 0, 28])
+Line 1016:   storeData(%clientId, "MyHouse", %houseName)
+Line 1021:   fetchData(%clientId, "MyHouse")
+Line 1025:   storeData(%clientId, "MyHouse", "")
+Line 1030:   storeData(%clientId, "RankPoints", $funk::var[%name, 0, 31])
+Line 1032:   storeData(%clientId, "TournyRank", $funk::var[%name, 0, 32])
+Line 1080:   storeData(%clientId, "QuestItems", %questItems)        [BOT-SPECIFIC]
+Line 1090:   storeData(%clientId, "KeyItems", %keyItems)            [BOT-SPECIFIC]
+Line 1101:   storeData(%clientId, "Consumables", %consumables)     [BOT-SPECIFIC]
+Line 1146:   storeData(%clientId, "StoredQuestItems", %storedQuest)
+Line 1188:   storeData(%clientId, "StoredKeyItems", %storedKey)
+Line 1196:   storeData(%clientId, "BankGemItems", "")
+Line 1197:   storeData(%clientId, "BankRareItems", "")
+Line 1198:   storeData(%clientId, "BankKeysItems", "")
+Line 1199:   storeData(%clientId, "BankScrollsItems", "")
+Line 1208:   storeData(%clientId, "Consumables", %consumables)    [BOT-SPECIFIC]
+Line 1211:   storeData(%clientId, "BankUniqueItems", "")
+Line 1223:   storeData(%clientId, "StoredConsumables", %storedConsumables)
+Line 1233:   storeData(%clientId, "StoredArmor", %storedArmor)
+Line 1243:   storeData(%clientId, "StoredAccessories", %storedAccessories)
+Line 1253:   storeData(%clientId, "StoredOther", %storedOther)
+Line 1256:   storeData(%clientId, "RareItems", "")
+Line 1263:   storeData(%clientId, "KeysItems", "")
+Line 1264:   storeData(%clientId, "ScrollsItems", "")
+Line 1265:   storeData(%clientId, "UniqueItems", "")
+Line 1269:   storeData(%clientId, "Stance", $funk::var[%name, 0, 44])
+Line 1308:   fetchData(%clientId, "RemortStep")
+Line 1311:   storeData(%clientId, "RemortStep", 0)
+Line 1313:   fetchData(%clientId, "LCKconsequence")
+Line 1316:   storeData(%clientId, "LCKconsequence", "death")
+Line 1318:   fetchData(%clientId, "tmphp")
+Line 1321:   storeData(%clientId, "tmphp", 1)
+Line 1323:   fetchData(%clientId, "tmpmana")
+Line 1326:   storeData(%clientId, "tmpmana", 1)
+Line 1328:   fetchData(%clientId, "tmpname")
+Line 1331:   storeData(%clientId, "tmpname", %name)
+Line 1333:   fetchData(%clientId, "TournyRank")
+Line 1336:   storeData(%clientId, "TournyRank", 0)
+Line 1338:   fetchData(%clientId, "Stance")
+Line 1341:   storeData(%clientId, "Stance", "Normal")
+Line 1358:   storeData(%clientId, "RACE", Client::getGender(%clientId) @ "Human")
+Line 1360:   storeData(%clientId, "EXP", 0)
+Line 1362:   storeData(%clientId, "campPos", "")
+Line 1364:   storeData(%clientId, "BANK", $initbankcoins)
+Line 1366:   storeData(%clientId, "grouplist", "")
+Line 1368:   storeData(%clientId, "defaultTalk", "#say")
+Line 1370:   storeData(%clientId, "password", $Client::info[%clientId, 5])
+Line 1372:   storeData(%clientId, "LCK", $initLCK)
+Line 1374:   storeData(%clientId, "PlayerInfo", "")
+Line 1376:   storeData(%clientId, "ignoreGlobal", "")
+Line 1378:   storeData(%clientId, "LCKconsequence", "death")
+Line 1380:   storeData(%clientId, "tmphp", "")
+Line 1382:   storeData(%clientId, "tmpmana", "")
+Line 1384:   storeData(%clientId, "RemortStep", 0)
+Line 1386:   storeData(%clientId, "tmpname", %name)
+Line 1388:   storeData(%clientId, "tmpLastSaveVer", $rpgver)
+Line 1390:   storeData(%clientId, "bounty", 0)
+Line 1392:   storeData(%clientId, "isMimic", "")
+Line 1394:   storeData(%clientId, "MyHouse", "")
+Line 1396:   storeData(%clientId, "RankPoints", 0)
+Line 1398:   storeData(%clientId, "TournyRank", 0)
+Line 1400:   storeData(%clientId, "Stance", "Normal")
+Line 1405:   storeData(%clientId, "QuestItems", "")                [BOT-SPECIFIC]
+Line 1407:   storeData(%clientId, "KeyItems", "")                 [BOT-SPECIFIC]
+Line 1409:   storeData(%clientId, "Consumables", "")                [BOT-SPECIFIC]
+Line 1411:   storeData(%clientId, "StoredQuestItems", "")
+Line 1413:   storeData(%clientId, "StoredKeyItems", "")
+Line 1415:   storeData(%clientId, "StoredConsumables", "")
+Line 1417:   storeData(%clientId, "StoredArmor", "")
+Line 1419:   storeData(%clientId, "StoredAccessories", "")
+Line 1421:   storeData(%clientId, "StoredOther", "")
+Line 1423:   storeData(%clientId, "BeltStorage", "")
+Line 1425:   storeData(%clientId, "Consumables", "")              [BOT-SPECIFIC]
+Line 1427:   storeData(%clientId, "Armor", "")                      [BOT-SPECIFIC]
+Line 1429:   storeData(%clientId, "Accessories", "")                [BOT-SPECIFIC]
+Line 1431:   storeData(%clientId, "Other", "")                     [BOT-SPECIFIC]
+Line 1441:   storeData(%clientId, "spawnStuff", "PickAxe 1 BluePotion 1 CrystalBluePotion 3")
+Line 1905:   fetchData(%clientId, "BotInfoAiName")                [BOT-SPECIFIC]
+Line 1906:   fetchData(%clientId, "SpawnBotInfo")                   [BOT-SPECIFIC]
+Line 2055:   fetchData(%clientId, "BotInfoAiName")                 [BOT-SPECIFIC]
+Line 2257:   fetchData(%clientId, "BotInfoAiName")                 [BOT-SPECIFIC]
+Line 2982:   fetchData(%clientId, "BotInfoAiName")                 [BOT-SPECIFIC]
+Line 3001:   fetchData(%clientId, "SpawnBotInfo")                  [BOT-SPECIFIC]
+Line 3104:   fetchData(%clientId, "SpawnBotInfo")                  [BOT-SPECIFIC]
+Line 3109:   fetchData(%clientId, "BotInfoAiName")                  [BOT-SPECIFIC]
+Line 3123:   fetchData(%clientId, "BotInfoAiName")                  [BOT-SPECIFIC]
+Line 3136:   fetchData(%clientId, "BotInfoAiName")                  [BOT-SPECIFIC]
+
+================================================================================
+FILE: Ai.cs (185 calls)
+================================================================================
+[Note: This file has extensive bot-specific data usage]
+Line 141:   fetchData(%AiId, "SpawnBotInfo")                      [BOT-SPECIFIC]
+Line 152:   storeData(%AiId, "BotInfoAiName", %aiName)            [BOT-SPECIFIC]
+Line 157:   storeData(%AiId, "SpawnBotInfo", "")                  [BOT-SPECIFIC]
+Line 158:   storeData(%AiId, "SpawnTime", "")                      [BOT-SPECIFIC]
+Line 160:   storeData(%AiId, "RACE", $ArmorTypeToRace[%armor])
+Line 161:   storeData(%AiId, "LCKconsequence", "miss")
+Line 162:   storeData(%AiId, "RemortStep", 0)
+Line 163:   storeData(%AiId, "HasLoadedAndSpawned", True)
+Line 164:   storeData(%AiId, "botAttackMode", 1)
+Line 165:   storeData(%AiId, "tmpbotdata", "")
+Line 167:   storeData(%AiId, "HP", fetchData(%AiId, "MaxHP"))
+Line 168:   storeData(%AiId, "MANA", 1000)
+Line 177:   storeData(%AiId, "LCK", %luck)
+Line 181:   storeData(%AiId, "LCKconsequence", "miss")
+Line 184:   storeData(%AiId, "Stance", "Normal")
+Line 265:   storeData(%aiId, "botTeam", %team)
+Line 300:   storeData(%aiId, "OriginalLootString", %equipString)  [BOT-SPECIFIC]
+Line 312:   storeData(%aiId, "OriginalLootString", %items)         [BOT-SPECIFIC]
+Line 324:   storeData(%aiId, "OriginalLootString", %loadoutString) [BOT-SPECIFIC]
+Line 361:   fetchData(%aiId, "dumbAIflag")                          [BOT-SPECIFIC]
+Line 375:   fetchData(%aiId, "SpawnBotInfo")                       [BOT-SPECIFIC]
+Line 442:   fetchData(%aiId, "SpellCastStep")                      [BOT-SPECIFIC]
+Line 481:   fetchData(%aiId, "RACE")
+Line 488:   fetchData(%aiId, "noBotSniff")                         [BOT-SPECIFIC]
+Line 607:   storeData(%aiId, "LoadedProjectile " @ %weapon, %x)
+Line 646:   storeData(%aiId, "LoadedProjectile " @ %weapon, %x)
+Line 672:   fetchData(%aiId, "frozen")                             [BOT-SPECIFIC]
+Line 682:   fetchData(%aiId, "BotInfoAiName")                      [BOT-SPECIFIC]
+Line 694:   fetchData(%aiId, "BotInfoAiName")                      [BOT-SPECIFIC]
+Line 754:   fetchData(%aiId, "dumbAIflag")                         [BOT-SPECIFIC]
+Line 799:   storeData(%aiId, "AIattackMarker", %marker)           [BOT-SPECIFIC]
+Line 818:   fetchData(%aiId, "dumbAIflag")                         [BOT-SPECIFIC]
+Line 822:   fetchData(%aiId, "AIattackMarker")                    [BOT-SPECIFIC]
+Line 834:   storeData(%aiId, "AIattackMarker", "")                [BOT-SPECIFIC]
+Line 840:   storeData(%aiId, "AIattackMarker", "")                [BOT-SPECIFIC]
+Line 858:   storeData(%aiId, "AIattackMarker", "")                [BOT-SPECIFIC]
+Line 1091:   storeData(%aiId, "SpawnBotInfo", "")                  [BOT-SPECIFIC]
+Line 1092:   storeData(%aiId, "SpawnTime", "")                     [BOT-SPECIFIC]
+Line 1096:   storeData(%aiId, "SpawnBotInfo", %commandIssuer)      [BOT-SPECIFIC]
+Line 1101:   storeData(%aiId, "LCKconsequence", "miss")
+Line 1103:   storeData(%aiId, "RemortStep", 0)
+Line 1105:   storeData(%aiId, "QuestItems", "")                    [BOT-SPECIFIC]
+Line 1106:   storeData(%aiId, "KeyItems", "")                      [BOT-SPECIFIC]
+Line 1107:   storeData(%aiId, "Consumables", "")                  [BOT-SPECIFIC]
+Line 1108:   storeData(%aiId, "Armor", "")                         [BOT-SPECIFIC]
+Line 1109:   storeData(%aiId, "Accessories", "")                   [BOT-SPECIFIC]
+Line 1110:   storeData(%aiId, "Other", "")                         [BOT-SPECIFIC]
+Line 1112:   storeData(%aiId, "noExperienceFlag", "")              [BOT-SPECIFIC]
+Line 1113:   storeData(%aiId, "noDropLootbagFlag", "")             [BOT-SPECIFIC]
+Line 1115:   storeData(%aiId, "dumbAIflag", "")                   [BOT-SPECIFIC]
+Line 1116:   storeData(%aiId, "frozen", "")                       [BOT-SPECIFIC]
+Line 1117:   storeData(%aiId, "noBotSniff", "")                   [BOT-SPECIFIC]
+Line 1118:   storeData(%aiId, "SpellCastStep", "")                 [BOT-SPECIFIC]
+Line 1123:   storeData(%aiId, "SpawnBotInfo", %commandIssuer)     [BOT-SPECIFIC]
+Line 1129:   storeData(%aiId, "LCKconsequence", "miss")
+Line 1131:   storeData(%aiId, "RemortStep", 0)
+Line 1133:   storeData(%aiId, "QuestItems", "")                    [BOT-SPECIFIC]
+Line 1134:   storeData(%aiId, "KeyItems", "")                     [BOT-SPECIFIC]
+Line 1135:   storeData(%aiId, "Consumables", "")                  [BOT-SPECIFIC]
+Line 1136:   storeData(%aiId, "Armor", "")                        [BOT-SPECIFIC]
+Line 1137:   storeData(%aiId, "Accessories", "")                  [BOT-SPECIFIC]
+Line 1138:   storeData(%aiId, "Other", "")                         [BOT-SPECIFIC]
+Line 1140:   storeData(%aiId, "noExperienceFlag", "")              [BOT-SPECIFIC]
+Line 1141:   storeData(%aiId, "noDropLootbagFlag", "")            [BOT-SPECIFIC]
+Line 1143:   storeData(%aiId, "dumbAIflag", "")                   [BOT-SPECIFIC]
+Line 1144:   storeData(%aiId, "frozen", "")                       [BOT-SPECIFIC]
+Line 1145:   storeData(%aiId, "noBotSniff", "")                   [BOT-SPECIFIC]
+Line 1146:   storeData(%aiId, "SpellCastStep", "")                 [BOT-SPECIFIC]
+Line 1153:   storeData(%aiId, "SpawnBotInfo", %commandIssuer)      [BOT-SPECIFIC]
+Line 1156:   fetchData(%aiId, "SpawnBotInfo")                       [BOT-SPECIFIC]
+Line 1180:   storeData(%aiId, "RACE", $ArmorTypeToRace[%armor])
+Line 1190:   storeData(%aiId, "LCKconsequence", "miss")
+Line 1194:   storeData(%aiId, "SpawnTime", GetPersistentTime())    [BOT-SPECIFIC]
+Line 1199:   storeData(%aiId, "RemortStep", 0)
+Line 1204:   storeData(%aiId, "QuestItems", "")                    [BOT-SPECIFIC]
+Line 1205:   storeData(%aiId, "KeyItems", "")                     [BOT-SPECIFIC]
+Line 1206:   storeData(%aiId, "Consumables", "")                   [BOT-SPECIFIC]
+Line 1207:   storeData(%aiId, "Armor", "")                        [BOT-SPECIFIC]
+Line 1208:   storeData(%aiId, "Accessories", "")                   [BOT-SPECIFIC]
+Line 1209:   storeData(%aiId, "Other", "")                         [BOT-SPECIFIC]
+Line 1212:   storeData(%aiId, "noExperienceFlag", "")              [BOT-SPECIFIC]
+Line 1213:   storeData(%aiId, "noDropLootbagFlag", "")            [BOT-SPECIFIC]
+Line 1216:   storeData(%aiId, "dumbAIflag", "")                   [BOT-SPECIFIC]
+Line 1217:   storeData(%aiId, "frozen", "")                       [BOT-SPECIFIC]
+Line 1218:   storeData(%aiId, "noBotSniff", "")                   [BOT-SPECIFIC]
+Line 1219:   storeData(%aiId, "SpellCastStep", "")                 [BOT-SPECIFIC]
+Line 1232:   storeData(%aiId, "BotInfoAiName", %newName)           [BOT-SPECIFIC]
+Line 1455:   fetchData(%aiId, "SpawnBotInfo")                      [BOT-SPECIFIC]
+Line 1459:   fetchData(%aiId, "BotInfoAiName")                     [BOT-SPECIFIC]
+Line 1480:   storeData(%aiId, "SpawnBotInfo", "")                  [BOT-SPECIFIC]
+Line 1526:   fetchData(%aiId, "SpawnBotInfo")                      [BOT-SPECIFIC]
+Line 1539:   fetchData(%aiId, "SpawnBotInfo")                       [BOT-SPECIFIC]
+Line 1552:   fetchData(%aiId, "SpawnBotInfo")                      [BOT-SPECIFIC]
+Line 1565:   fetchData(%aiId, "SpawnBotInfo")                      [BOT-SPECIFIC]
+Line 2360:   storeData(%clientId, "SpawnBotInfo", "")              [BOT-SPECIFIC]
+Line 2361:   storeData(%clientId, "SpawnTime", "")                 [BOT-SPECIFIC]
+Line 2492:   storeData(%clientId, "BotInfoAiName", %botName)       [BOT-SPECIFIC]
+Line 2497:   storeData(%clientId, "SpawnBotInfo", "")              [BOT-SPECIFIC]
+Line 2498:   storeData(%clientId, "SpawnTime", "")                 [BOT-SPECIFIC]
+Line 2643:   fetchData(%botId, "SpawnBotInfo")                     [BOT-SPECIFIC]
+Line 2761:   storeData(%clientId, "SpawnBotInfo", "")              [BOT-SPECIFIC]
+Line 2762:   storeData(%clientId, "SpawnTime", "")                 [BOT-SPECIFIC]
+Line 2827:   storeData(%clientId, "TownBotItems", %items)          [TOWN-BOT-SPECIFIC]
+
+================================================================================
+FILE: Belt.cs (170 calls)
+================================================================================
+[Note: Heavy bot usage - belt items are bot-specific]
+[Extracting key bot-specific calls...]
+
+================================================================================
+FILE: comchat.cs (394 calls)
+================================================================================
+[Note: Many admin commands and player interactions]
+[Extracting key bot-specific calls...]
+
+================================================================================
+FILE: playerdamage.cs (133 calls)
+================================================================================
+[Note: Combat system - shared by players and bots]
+[Extracting key bot-specific calls...]
+
+================================================================================
+BOT-SPECIFIC DATA FIELDS IDENTIFIED:
+================================================================================
+These fields are ONLY used by bots and should be separated:
+
+TOWN BOT ONLY:
+- BotInfoAiName (when SpawnBotInfo == "")
+- TownBotItems
+
+ENEMY BOT ONLY:
+- SpawnBotInfo (when != "")
+- SpawnTime
+- BotInfoAiName (when SpawnBotInfo != "")
+- OriginalLootString
+- AIattackMarker
+- dumbAIflag
+- frozen
+- noBotSniff
+- SpellCastStep
+- noExperienceFlag
+- noDropLootbagFlag
+
+SHARED BY BOTH BOT TYPES:
+- QuestItems
+- KeyItems
+- Consumables
+- Armor
+- Accessories
+- Other
+- RemortStep
+- LCKconsequence
+- RACE
+- LCK
+- HP
+- MANA
+- botTeam
+
+SHARED BY PLAYERS AND BOTS:
+- RACE
+- LCK
+- HP
+- MANA
+- RemortStep (players can remort)
+- LCKconsequence (players have this too)
+
+================================================================================
+NEXT STEPS:
+================================================================================
+1. Complete extraction for remaining files (Belt.cs, comchat.cs, etc.)
+2. Categorize each call as: Player-only, Town-bot-only, Enemy-bot-only, or Shared
+3. Determine routing logic for shared fields
+4. Implement function modifications
+5. Test thoroughly
+
+================================================================================

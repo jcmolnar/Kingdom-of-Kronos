@@ -1,0 +1,67 @@
+================================================================================
+NUBI ITEM COMPARISON - Fields 0,15 and 0,16
+================================================================================
+
+FIELD 0,15 (Equipped Items - has trailing space):
+--------------------------------------------------------------------------------
+
+OLD FILE (2-12-25 Temp - Copy):
+"WindWalkers 1 WindPaws 1 WindPaws0 1 DiamondLegendSword 1 Hatchet 1 TerminusEst 1 "
+
+NEW FILE (Temp):
+"WindWalkers 1 WindPaws0 1 DiamondLegendSword 1 BlackDiamondDreamSword 10 Hatchet 1 TerminusEst 5 "
+
+CHANGES IN FIELD 0,15:
+- REMOVED: WindPaws 1 (unequipped version)
+- ADDED: BlackDiamondDreamSword 10
+- CHANGED: TerminusEst 1 → TerminusEst 5
+
+NET CHANGE: Lost WindPaws 1, gained BlackDiamondDreamSword 10, TerminusEst increased by 4
+
+--------------------------------------------------------------------------------
+
+FIELD 0,16 (Storage Items - no trailing space):
+--------------------------------------------------------------------------------
+
+OLD FILE (2-12-25 Temp - Copy):
+"PickAxe 1 BootsOfGliding 1 GoldenLongSword 4 CheetaursPaws 1 GoldenBastardSword 22 MajorAntiMagicBelt 1 DiamondHelmet 1 CrystalKnightShield 1 WindWalkers 1 CrystalBastardSword 9 MajorRegenerationNecklace 1 DiamondKnightShield 1 DiamondFullPlate 1 BlackDiamondAtomSplitter 1 BlackDiamondFullPlate 1 ExtremeRegenerationNecklace 1 ExtremeAntiMagicBelt 1 GodlyPowerRing 2 GodlyRegenerationNecklace 1 GodlyAntiMagicBelt 1 CrystalClaymore 127 DiamondClaymore 69 BlackDiamondKnightShield 2 BlackDiamondHelmet 2 WhiteDiamondHelmet 1 HeavenlyAntiMagicBelt 1 WhiteDiamondKingShield 1 WhiteDiamondPlate 1 HeavenlyRegenerationNecklace 1 DiamondLegendSword 1 CrystalClaymore 75 BlackDiamondDreamSword 115"
+
+NEW FILE (Temp):
+"PickAxe 1 BootsOfGliding 1 GoldenLongSword 4 CheetaursPaws 1 GoldenBastardSword 22 MajorAntiMagicBelt 1 DiamondHelmet 1 CrystalKnightShield 1 WindWalkers 1 CrystalBastardSword 9 MajorRegenerationNecklace 1 DiamondKnightShield 1 DiamondFullPlate 1 BlackDiamondAtomSplitter 1 BlackDiamondFullPlate 1 ExtremeRegenerationNecklace 1 ExtremeAntiMagicBelt 1 GodlyPowerRing 2 GodlyRegenerationNecklace 1 GodlyAntiMagicBelt 1 CrystalClaymore 127 DiamondClaymore 69 BlackDiamondKnightShield 2 BlackDiamondHelmet 2 DiamondLegendSword 1 CrystalClaymore 75 TerminusEst 10 BlackDiamondDreamSword 128"
+
+CHANGES IN FIELD 0,16:
+- REMOVED: WhiteDiamondHelmet 1
+- REMOVED: HeavenlyAntiMagicBelt 1
+- REMOVED: WhiteDiamondKingShield 1
+- REMOVED: WhiteDiamondPlate 1
+- REMOVED: HeavenlyRegenerationNecklace 1
+- ADDED: TerminusEst 10
+- CHANGED: BlackDiamondDreamSword 115 → BlackDiamondDreamSword 128 (+13)
+
+NET CHANGE IN FIELD 0,16:
+- LOST: WhiteDiamondHelmet 1, HeavenlyAntiMagicBelt 1, WhiteDiamondKingShield 1, WhiteDiamondPlate 1, HeavenlyRegenerationNecklace 1
+- GAINED: TerminusEst 10, BlackDiamondDreamSword +13
+
+================================================================================
+SUMMARY OF LOST ITEMS:
+================================================================================
+
+TOTAL ITEMS LOST:
+1. WindPaws 1 (from equipped - field 0,15)
+2. WhiteDiamondHelmet 1 (from storage - field 0,16)
+3. HeavenlyAntiMagicBelt 1 (from storage - field 0,16)
+4. WhiteDiamondKingShield 1 (from storage - field 0,16)
+5. WhiteDiamondPlate 1 (from storage - field 0,16)
+6. HeavenlyRegenerationNecklace 1 (from storage - field 0,16)
+
+TOTAL ITEMS GAINED:
+1. BlackDiamondDreamSword 10 (equipped - field 0,15)
+2. TerminusEst 4 (equipped - field 0,15: +4)
+3. TerminusEst 10 (storage - field 0,16: new)
+4. BlackDiamondDreamSword +13 (storage - field 0,16: 115 → 128)
+
+================================================================================
+NOTE: Field 0,15 is equipped items (has trailing space), Field 0,16 is storage (no trailing space)
+================================================================================
+
+

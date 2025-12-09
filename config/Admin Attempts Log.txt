@@ -1,0 +1,16 @@
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:55248). Tried to use password: hi";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:55248). Tried to use password: GNA";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:61876). Tried to use password: 0";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:62276). Tried to use password: Jobo";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:64117). Tried to use password: idk if ive ever used bash its probably been broken on this mod forever";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:65514). Tried to use password: GNA";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Nubi (IP:207.6.39.117:60932). Tried to use password: GNAA";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Nubi (IP:207.6.39.117:60932). Tried to use password: GNAA";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jarn (IP:207.6.39.117:50180). Tried to use password: dashoe";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jarn (IP:207.6.39.117:50180). Tried to use password: GNAA";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:61355). Tried to use password: GNA";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:61355). Tried to use password: GNAa";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:61355). Tried to use password: GNAa";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jarn (IP:207.6.39.117:65077). Tried to use password: dashoe";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jarn (IP:207.6.39.117:61087). Tried to use password: dashoe";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jarn (IP:207.6.39.117:61777). Tried to use password: dashoe";

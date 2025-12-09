@@ -1,0 +1,362 @@
+Changelog - Since November 14 2025
+=============================================
+
+HELP COMMANDS MENU FIXES
+-------------------------
+
+1. Help.cs — Help Commands Menu Option Values Fix
+   Location: Lines 392-421, 435-462, 493-520
+   Files Changed: RPG/Scripts/Help.cs
+   Changes:
+     - Modified Help::commandsMainMenu() to use numeric option values ("1", "2", "3", "4") instead of text ("armor", "weapons", "spells", "zones")
+     - Updated display text to show "1Armor", "2Weapons", "3Spells", "4Zones" to preserve readability
+     - Updated processMenuhelpCommandsMain() to check for numeric values ("1", "2", "3", "4") instead of text strings
+     - Modified Help::weaponsSubMenu() to use numeric option values ("1", "2", "3") instead of text ("slash", "pierce", "bludge")
+     - Updated display text to show "1Slashing", "2Piercing", "3Bludgeon"
+     - Updated processMenuhelpWeaponsSubMenu() to check for numeric values ("1", "2", "3")
+     - Modified Help::spellsSubMenu() to use numeric option values ("1", "2", "3") instead of text ("offensive", "defensive", "neutral")
+     - Updated display text to show "1Offensive Spells", "2Defensive Spells", "3Neutral Spells"
+     - Updated processMenuhelpSpellsSubMenu() to check for numeric values ("1", "2", "3")
+   Reason: Fixed issue where the first letter of every menu option was being cut off due to Tribes menu system interpreting the first character as a special menu formatting character (x=back, n=next, p=prev, etc.)
+
+
+SKILL POINTS MENU ATTEMPT (REVERTED)
+-------------------------------------
+
+2. rpgstats.cs — Skill Points Menu "No Longer Used" Removal Attempt (REVERTED)
+   Location: Lines 209-246
+   Files Changed: RPG/Scripts/rpgstats.cs
+   Changes:
+     - Attempted to modify MenuSP() function to filter out skills 14 and 17 (marked as "no longer used" in skills.cs)
+     - Built a list of valid skills excluding indices 14 and 17
+     - Updated pagination logic to work with filtered skill list using CountObjInList()
+     - Modified loop to iterate through valid skills list instead of all skills
+   Status: REVERTED - Changes were reverted due to server breaking. Original function restored.
+   Reason: Attempted to hide "No Longer Used" skills from the skill points menu, but implementation caused server issues
+
+
+HOUSE OBJECTIVES SAVE/LOAD SYSTEM
+----------------------------------
+
+3. rpgfunk.cs — SaveHouseObjectives Function
+   Location: SaveHouseObjectives() function
+   Files Changed: RPG/Scripts/rpgfunk.cs
+   Changes:
+     - Modified to save custom .holdingTeam and .team properties for flags and towerswitches
+     - Saves flag positions and house ownership to temp\HouseObjectives.cs
+     - Saves BaseControl and FlagCommand counts as temporary variables before export
+     - Exports SavedFlag* and SavedSwitch* arrays with underscore notation
+   Reason: Properly save house objective ownership and positions across server restarts
+
+4. rpgfunk.cs — LoadHouseObjectives Function
+   Location: LoadHouseObjectives() function
+   Files Changed: RPG/Scripts/rpgfunk.cs
+   Changes:
+     - Modified to read saved .holdingTeam and .team properties from temp\HouseObjectives.cs
+     - Restores flag positions and house ownership
+     - Recalculates $BaseControl and $FlagCommand counts from actual game objects after loading
+     - Handles underscore-separated variable names from export() function
+   Reason: Properly restore house objective ownership and positions on server restart
+
+5. rpgfunk.cs — UpdateHouseObjectivesDisplay Function
+   Location: UpdateHouseObjectivesDisplay() function
+   Files Changed: RPG/Scripts/rpgfunk.cs
+   Changes:
+     - Created standalone function to update Team::setobjective calls for all houses
+     - Centralizes objective display updates
+   Reason: Fix "UpdateHouseObjectivesDisplay: Unknown command" error
+
+6. Server.cs — LoadWorld Timing Fix
+   Location: Server::finishMissionLoad() function
+   Files Changed: RPG/Scripts/Server.cs
+   Changes:
+     - Moved LoadHouseObjectives() call to Server::finishMissionLoad() after mission loads
+     - Ensures MissionGroup exists before loading objectives
+   Reason: Fix "LoadHouseObjectives: Unknown command" and "exec: invalid script file" errors
+
+
+FLAG CAPTURE SYSTEM FIXES
+--------------------------
+
+7. objectives.cs — Flag Capture Fix
+   Location: Flag::onCollision() function
+   Files Changed: RPG/Scripts/objectives.cs
+   Changes:
+     - Added GameBase::setTeam(%this, -1) when flag is picked up
+     - Makes flag neutral and capturable by any house
+   Reason: Fix issue where flags could not be captured by other houses after being captured by one house
+
+
+ADMIN COMMANDS
+--------------
+
+8. comchat.cs — #setartifact Admin Command
+   Location: #setartifact command handler
+   Files Changed: RPG/Scripts/comchat.cs
+   Changes:
+     - Created admin command to assign flags to houses: #setartifact "housename" "1,2,3,4"
+     - Maps flag numbers to flag names (1=Gratigud, 2=Belaguard, 3=Crosion, 4=Murch)
+     - Searches for flagstands by name and moves flags to correct positions
+     - Falls back to hardcoded positions if flagstands not found
+     - Updates $FlagCommand counts
+   Reason: Allow admins to easily assign flags to houses and position them correctly
+
+9. comchat.cs — #setbase Admin Command
+   Location: #setbase command handler
+   Files Changed: RPG/Scripts/comchat.cs
+   Changes:
+     - Created admin command to assign bases to houses: #setbase "housename" "1,2,3,4"
+     - Maps base numbers to Tower groups (1=Tower0, 2=Tower1, 3=Tower2, 4=Tower3)
+     - Updates TowerSwitch .team property and $BaseControl counts
+   Reason: Allow admins to easily assign control points to houses
+
+
+SPELL SYSTEM FIXES
+------------------
+
+10. spells.cs — Apocalypse Spell Optimization
+    Location: Apocalypse spell (index 48)
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - Replaced numerous schedule() calls with batch processing system using $ApocalypseData arrays
+      - Created ApocalypseBatchExplosions() function to process explosions in batches
+      - Created ApocalypseCreateExplosion() helper function
+      - Created ApocalypseCleanup() function to clear temporary data
+      - Fixed string-to-boolean conversion for doDamage parameter
+    Reason: Reduce server load from Apocalypse spell while maintaining visual effects and damage
+
+11. spells.cs — Apocalypse Spell clientId Validation
+    Location: Lines ~2375-2381
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - Added validation at start of Apocalypse spell to ensure %clientId is valid (not 0 or -1)
+    Reason: Prevent crashes and invalid damage attribution
+
+12. spells.cs — CreateAndDetBomb clientId Validation
+    Location: Lines ~2519-2529
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - Added validation in CreateAndDetBomb() to handle invalid client IDs gracefully
+    Reason: Create visual explosion only when client ID is invalid, preventing errors
+
+13. spells.cs — ApocalypseBatchExplosions clientId Validation
+    Location: Lines ~2549-2555
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - Added validation in ApocalypseBatchExplosions() to handle invalid client IDs
+    Reason: Prevent errors in batch processing when client ID is invalid
+
+14. spells.cs — Remort Seal Logic Fix
+    Location: Remort spell (index 21)
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - Changed condition from %remortStep <= %sealValue to %remortStep < %sealValue
+    Reason: Fix issue where players could remort at remort 20 even when seal was active
+
+
+DAMAGE SYSTEM FIXES
+-------------------
+
+15. playerdamage.cs — Spell Damage Display Fix
+    Location: Lines ~391, ~462, ~740
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Added safety checks for $PlayerSkill[%shooterClient, %skilltype] defaulting to 1000 for NPCs
+      - Added check to ensure %value is numeric before calculating %convValue
+    Reason: Fixed "An NPC hits "enemy name" for "" points of damage" when NPCs cast spells
+
+16. playerdamage.cs — Damage Mode Defaulting
+    Location: Lines ~668, ~894, ~957
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Default fetchData(%client, "damageMode") to true if empty
+    Reason: Ensure damage messages display by default for spell and melee damage
+
+17. playerdamage.cs — Melee Damage Skill Value Fix
+    Location: Line ~462
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Added safety check for melee damage skill values, defaulting to 1000 if empty
+    Reason: Fix melee damage not showing for NPCs
+
+18. playerdamage.cs — LCK Miss Handling Fix
+    Location: Lines ~836-839
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Added %lckMiss flag and adjusted order to handle LCK misses before converting -1 to 0
+    Reason: Fix LCK miss messages not displaying properly
+
+19. playerdamage.cs — Typo Fix
+    Location: Line ~533
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Fixed typo from damagedClient to %damagedClient in Duel::isDueling call
+    Reason: Fix "Unknown command" error
+
+20. playerdamage.cs — Quest Items Dropping Fix
+    Location: Lines ~184-195
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Restored belt items (QuestItems, KeyItems, GemItems) dropping logic
+    Reason: Fix enemies not dropping quest items
+
+21. playerdamage.cs — Double Weapon Drop Fix
+    Location: Lines ~155-157
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Added continue statement to skip mounted weapon in item iteration loop
+    Reason: Prevent mounted weapon from being added to loot twice
+
+22. playerdamage.cs — Stance Damage Modifiers Fix
+    Location: Stance modifier section in Player::onDamage()
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Offensive stance: doubles all damage (physical and spell) dealt and received
+      - Defensive stance: halves all damage dealt and received
+      - Casting stance: +33% magic damage dealt, +50% damage received
+      - MageBane: nullifies magic damage received, doubles physical damage received
+      - BladeBane: nullifies physical damage received, doubles magic damage received
+      - Removed MANA > 0 gate for MageBane/BladeBane damage modifiers
+    Reason: Fix stance damage multipliers to match intended behavior
+
+23. playerdamage.cs — AI Damage Nullification Fix
+    Location: Same-team damage check section
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified same-team damage check to skip entire block if %shooterClient is AI-controlled
+    Reason: Fix issue where only every second hit was registered by AI mobs
+
+24. playerdamage.cs — AI Miss Messages Fix
+    Location: Miss message sending logic
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified to always send miss messages to damaged player regardless of shooter type
+      - Message to shooter only sent if shooter is a player
+    Reason: Ensure AI miss messages display correctly
+
+
+STANCE SYSTEM INTEGRATION
+-------------------------
+
+25. Ai.cs — Stance Array Definition
+    Location: $Stance::Array definition
+    Files Changed: RPG/Scripts/Ai.cs
+    Changes:
+      - Added $Stance::Array definition with all stance names
+    Reason: Support stance system for AI
+
+26. Ai.cs — AI Stance Assignment
+    Location: AI creation functions
+    Files Changed: RPG/Scripts/Ai.cs
+    Changes:
+      - Removed random stance assignment for AI enemies
+      - All AI mobs now always assigned "Normal" stance
+    Reason: Ensure AI mobs don't have stance-based damage modifiers
+
+27. rpgfunk.cs — Stance Save/Load
+    Location: SaveWorld() and LoadWorld() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added stance saving to player data export
+      - Added stance loading from player data
+      - Initialize new players with "Normal" stance
+    Reason: Persist player stances across server restarts
+
+28. Admin.cs — Stance Menu Updates
+    Location: menustance block and processMenuPickStance() function
+    Files Changed: RPG/Scripts/Admin.cs
+    Changes:
+      - Updated to use fetchData(%clientId, "Stance") for current stance
+      - Added "Casting" stance to menu
+      - Initialized %curitem = 1 in menustance block
+      - Updated stance descriptions to match actual damage multipliers
+    Reason: Fix "Casting" stance not showing and update descriptions to match implementation
+
+29. rpgstats.cs — Casting Stance Mana Reduction
+    Location: GetStat() function for "MaxMANA"
+    Files Changed: RPG/Scripts/rpgstats.cs
+    Changes:
+      - Added check for "Casting" stance to apply 33% mana reduction
+    Reason: Implement Casting stance mana penalty
+
+30. mana.cs — Stance-Based Mana Regen
+    Location: refreshMANAREGEN() function
+    Files Changed: RPG/Scripts/mana.cs
+    Changes:
+      - Updated to use fetchData(%clientId, "Stance") for MageBane/BladeBane checks
+    Reason: Correctly apply mana drain for MageBane and BladeBane stances
+
+
+REMORT SEAL SYSTEM
+------------------
+
+31. remortseal.cs — Duel System Stubs
+    Location: Lines ~370-380
+    Files Changed: RPG/Scripts/remortseal.cs
+    Changes:
+      - Added stub functions Duel::isDueling(%clientId) (returns false) and Duel::endDuel(%pass) (does nothing)
+    Reason: Fix "Duel::isDueling: Unknown command" errors since dueling system is not used
+
+32. remortseal.cs — TotalSealValue Functions
+    Location: New functions
+    Files Changed: RPG/Scripts/remortseal.cs
+    Changes:
+      - Added GetTotalSealValue() function
+      - Added IncrementTotalSealValue() function (increases by 20)
+      - Added SetTotalSealValue() function
+    Reason: Centralize TotalSealValue management
+
+33. rpgfunk.cs — TotalSealValue Save/Load
+    Location: SaveWorld() and Server::finishMissionLoad()
+    Files Changed: RPG/Scripts/rpgfunk.cs, RPG/Scripts/Server.cs
+    Changes:
+      - Save $TotalSealValue to temp\SealValue.cs using export()
+      - Load $TotalSealValue in Server::finishMissionLoad() after LoadWorld() and LoadHouseObjectives()
+    Reason: Persist remort seal value across server restarts (fixed timing to prevent server breaking)
+
+
+REMOTE FUNCTION STUBS
+---------------------
+
+34. remote.cs — RawKey Stub Function
+    Location: Lines ~8-14
+    Files Changed: RPG/Scripts/remote.cs
+    Changes:
+      - Added stub function remoterawKey(%client, %key, %mod) to prevent console spam
+    Reason: Fix "remoterawKey: Unknown command" errors from client-side keybinds
+
+
+VERSION NUMBER UPDATES
+----------------------
+
+35. ServerPrefs.cs — Version Number Update
+    Location: $Server::Version, $Server::HostName, $Server::Info
+    Files Changed: config\ServerPrefs.cs, config\config backup\ServerPrefs.cs
+    Changes:
+      - Changed all references from "V0.6.6" to "V0.7"
+    Reason: Update version number for new release
+
+36. serverTempData28000.cs — Version Number Update
+    Location: $Server::Version, $Server::HostName, $Server::Connect
+    Files Changed: temp\serverTempData28000.cs
+    Changes:
+      - Changed all references from "V0.6.6" to "V0.7"
+    Reason: Update version number for new release
+
+
+DEBUG OUTPUT REMOVAL
+--------------------
+
+37. rpgfunk.cs — Debug Output Removal
+    Location: SaveWorld(), LoadWorld(), SaveHouseObjectives(), LoadHouseObjectives()
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Removed all debug echo statements from save/load functions
+    Reason: Clean up console output
+
+38. comchat.cs — Debug Output Removal
+    Location: #setartifact command
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Removed all debug echo statements from #setartifact command
+    Reason: Clean up console output after command was working correctly

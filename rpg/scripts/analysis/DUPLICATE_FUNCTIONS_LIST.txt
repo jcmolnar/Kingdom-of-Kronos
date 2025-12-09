@@ -1,0 +1,30 @@
+﻿DUPLICATE FUNCTIONS - REQUIRES INVESTIGATION
+Generated: 11/24/2025 16:06:53
+========================================
+
+Total Duplicate Function Signatures: 2
+
+These functions have the EXACT same signature in multiple files.
+This may indicate:
+1. Functions that were accidentally duplicated
+2. Functions that should be in a shared/common file
+3. Functions that need to be renamed to avoid conflicts
+
+
+========================================
+Function: FixDecimals(%c)
+Found in: rpgfunk.cs, rpghud.cs
+
+ACTION REQUIRED: Review these files and:
+  - Remove duplicate if it's accidental
+  - Move to common file if it's shared code
+  - Rename if they serve different purposes
+
+========================================
+Function: round(%n)
+Found in: rpgfunk.cs, rpghud.cs
+
+ACTION REQUIRED: Review these files and:
+  - Remove duplicate if it's accidental
+  - Move to common file if it's shared code
+  - Rename if they serve different purposes

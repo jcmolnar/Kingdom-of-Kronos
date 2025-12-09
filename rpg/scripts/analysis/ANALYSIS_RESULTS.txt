@@ -1,0 +1,6275 @@
+﻿
+SCRIPT ANALYSIS REPORT
+
+Generated: 11/24/2025 10:06:16
+Total Scripts Analyzed: 64
+========================================
+globals.cs
+
+========================================
+
+Functions:
+
+ 0
+Variables:
+ 136
+
+FUNCTIONS:
+
+
+VARIABLES (first 50):
+  - $console::logmode
+  - $dbecho
+  - $Mode
+  - $AYdist
+  - $An
+  - $Attac
+  - $Ba
+  - $Cha
+  - $Chang
+  - $Costchang
+  - $Costjoi
+  - $Effectspos
+  - $FOVbot
+  - $FOVbotsexpor
+  - $Fre
+  - $Freqinitlckinitlc
+  - $Grap
+  - $HISPERdist
+  - $HOUTdist
+  - $Hous
+  - $Ismart
+  - $Ldisplay
+  - $Levelini
+  - $2
+  - $dbech
+  - $dbechoMode
+  - $dbechoMode2
+  - $arenaOn
+  - $underwaterEffects
+  - $postAttackGraphBar
+  - $SaveWorldFreq
+  - $ChangeWeatherFreq
+  - $initlck
+  - $AIsmartFOVbots
+  - $exportChat
+  - $SelectiveZoneBotSpawning
+  - $displayPingAndPL
+  - $maxPets
+  - $maxPetsPerPlayer
+  - $SPgainedPerLevel
+  - $initSPcredits
+  - $autoStartupSP
+  - $initbankcoins
+  - $maxSAYdistVec
+  - $maxSHOUTdistVec
+  - $maxWHISPERdistVec
+  - $joinHouseCost
+  - $changeHouseCost
+  - $joinHouseRankPoints
+  - $Onunderwate
+  - $PLma
+  - $Pcreditsinit
+  - $Pe
+  - $Pet
+  - $Petsma
+  - $Pgained
+  - $Pin
+  - $Playe
+  - $Points
+  - $Ran
+  - $SPaut
+  - $SPcreditsaut
+  - $SPgaine
+  - $SPinitbankcoinsinitbankcoinsma
+  - $Sav
+  - $Spawnin
+  - $Spawningdispla
+  - $Vecjoi
+  - $Vecma
+  - $Weathe
+  - $Worl
+  - $Zon
+  - $aO
+  - $ank
+  - $aren
+  - $arpost
+  - $ave
+  - $dF
+  - $dP
+  - $eB
+  - $eH
+  - $eR
+  - $eW
+  - $eather
+  - $elective
+  - $er
+  - $ets
+  - $etsmax
+  - $evel
+  - $ffectsunderwater
+  - $gA
+  - $gS
+  - $hB
+  - $hange
+  - $hatexport
+  - $ing
+  - $kA
+  - $kG
+  - $kP
+  - $layermax
+  - $nH
+  - $narena
+  - $nd
+  - $oM
+  - $oS
+  - $ode2
+  - $ointsjoin
+  - $orld
+  - $ot
+  - $ouse
+  - $qC
+  - $rE
+  - $rF
+  - $rL
+  - $rP
+  - $rS
+  - $raph
+  - $req
+  - $sA
+  - $sP
+  - $tA
+  - $tC
+  - $tS
+  - $tartup
+  - $ttack
+  - $xP
+  - $xS
+  - $xW
+  - $yP
+========================================
+Ai.cs
+
+========================================
+
+Functions:
+
+ 51
+Variables:
+ 33
+
+FUNCTIONS:
+
+
+createAI(%aiName, %markerGroup, %name)
+createAIPostSpawn(%aiName, %armor, %group)
+AI::setupAI(%key, %team)
+AI::setWeapons(%aiName, %loadout)
+AI::Periodic(%aiName)
+AI::NextWeapon(%aiId)
+AI::SelectBestWeapon(%aiId)
+AI::SetSpotDist(%aiId)
+AI::activelyFollow(%aiName, %curTarget, %bypass)
+AI::moveToAttackMarker(%name, %method)
+AI::moveSomewhere(%aiName)
+AI::moveToFurthest(%aiName)
+AI::initDrones(%team, %numAi)
+AI::helper(%aiName, %displayName, %commandIssuer, %loadout)
+SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout)
+SpawnAIPostCreate(%newName, %displayName, %commandIssuer, %loadout)
+AI::moveToLOS(%aiName, %commandIssuer)
+AI::moveAhead(%aiName, %commandIssuer, %distance)
+AI::onCommand( %name, %commander, %command, %waypoint, %targetId, %cmdText, %cmdStatus, %cmdSequence)
+Ai::soundHelper( %sourceId, %destId, %waveFileName )
+AI::onPeriodic( %aiName )
+AI::onDroneKilled(%aiName)
+AI::onTargetLOSAcquired(%aiName, %idNum)
+AI::onTargetLOSLost(%aiName, %idNum)
+AI::onTargetLOSRegained(%aiName, %idNum)
+AI::onTargetDied(%aiName, %idNum)
+AI::sayLater(%clientId, %guardId, %message, %look)
+AI::lookAtPlayer(%clientId, %guardId)
+getAInumber()
+setAInumber(%aiName, %n)
+AI::SelectMovement(%aiName)
+HardcodeAIskills(%aiId)
+AI::IsInWhichBotGroup(%aiId)
+AI::CreateBotGroup(%group)
+AI::DiscardBotGroup(%group)
+AI::CountBotGroupMembers(%group)
+AI::IsInBotGroup(%aiId, %group)
+AI::BotGroupExists(%group)
+AI::RemoveBotFromBotGroup(%aiId, %group)
+AI::AddBotToBotGroup(%aiId, %group)
+AI::newDirectiveFollow(%aiName, %idNum, %rad, %directive)
+AI::newDirectiveWaypoint(%aiName, %pos, %directive)
+AI::newDirectiveRemove(%aiName, %directive)
+InitTownBots()
+RotateTownBot(%id, %rot)
+GatherBotInfo(%group)
+isRPGAI(%clientId)
+Pet::BeforeTurnEvil(%clientId)
+Pet::TurnEvil(%clientId)
+ValidateSpawnPointCounters()
+ValidateSpawnPointCountersLoop()
+VARIABLES (first 50):
+  - $1
+  - $2
+  - $3
+  - $4
+  - $5
+  - $6
+  - $AI::default
+  - $Path
+  - $AIPe
+  - $Bludgeoning
+  - $Skil
+  - $Bo
+  - $BotGroups
+  - $TownBotList
+  - $Capacity
+  - $Stance::Array
+  - $Casting
+  - $Combat
+  - $Dodging
+  - $Endurance
+  - $Energy
+  - $Group
+  - $Heading
+  - $Healing
+  - $Iattack
+  - $Lis
+  - $List
+  - $Mode
+  - $nu
+  - $PathTypeAIattackModenumAinumAIPetListSkillSlashing
+  - $Piercing
+  - $Resistance
+  - $SkillBludgeoning
+  - $SkillDefensiveCasting
+  - $SkillDodging
+  - $SkillEndurance
+  - $SkillEnergy
+  - $SkillHealing
+  - $SkillNeutralCasting
+  - $SkillOffensiveCasting
+  - $SkillPiercing
+  - $SkillSenseHeading
+  - $SkillSpeech
+  - $SkillSpellResistance
+  - $SkillVehicleCombat
+  - $SkillWeightCapacity
+  - $Speech
+  - $Tow
+  - $Typ
+  - $eA
+  - $ealing
+  - $Skill
+  - $efensive
+  - $ehicle
+  - $eight
+  - $ense
+  - $eutral
+  - $ffensive
+  - $iercing
+  - $inum
+  - $ist
+  - $lB
+  - $lD
+  - $lE
+  - $lH
+  - $lN
+  - $lO
+  - $lP
+  - $lS
+  - $lV
+  - $lW
+  - $lashing
+  - $Bot
+  - $ludgeoning
+  - $mA
+  - $nB
+  - $ndurance
+  - $nergy
+  - $odging
+  - $ot
+  - $own
+  - $peech
+  - $pell
+  - $sB
+  - $sT
+  - $tL
+  - $tT
+========================================
+rpgfunk.cs
+
+========================================
+
+Functions:
+
+ 108
+Variables:
+ 71
+
+FUNCTIONS:
+
+
+String::len(%string)
+String::replace(%string, %search, %replace)
+String::create(%c, %len)
+String::ofindSubStr(%s, %f, %o)
+viewGroupList(%clientId)
+updateSpawnStuff(%clientId)
+isInSpellList(%name, %sname)
+getSpellAtPos(%name, %pos)
+countNumSpells(%clientId)
+StartRecord(%clientId)
+StopRecord(%clientId, %f)
+AddObjectToRec(%clientId, %a, %pos, %rot)
+DeployBase(%clientId, %f, %refPos, %refRot)
+DoCamp(%clientId, %savecharTry)
+SaveCharacter(%clientId)
+SaveAllCharacters()
+LoadCharacter(%clientId)
+OnOrOfflineGive(%name, %award)
+ResetPlayer(%clientId)
+GetPersistentTime()
+SaveServerTime()
+LoadServerTime()
+SaveWorldDeployables()
+SaveWorld()
+LoadWorld()
+DeployPlatform(%name, %team, %pos, %rot, %plattype)
+DeployLootbag(%pos, %rot, %special)
+NEWgetClientByName(%name)
+clipTrailingNumbers(%str)
+UpdateAppearance(%clientId)
+UpdateTeam(%clientId)
+ChangeRace(%clientId, %race)
+ClearVariables(%clientId)
+ClearFunkVar(%name)
+Down(%t)
+d(%t)
+dmsg(%i, %w)
+GetEveryoneIdList()
+GetEveryoneNameList()
+GetBotIdList()
+GetBotNameList()
+GetPlayerIdList()
+GetPlayerNameList()
+ChangeWeather()
+FindInvalidChar(%name)
+CheckForReservedWords(%name)
+CheckForProtectedWords(%string)
+RandomPositionXY(%minrad, %maxrad)
+OddsAre(%n)
+TeleportToMarker(%clientId, %markergroup, %testpos, %random)
+TossLootbag(%clientId, %loot, %vel, %namelist, %t)
+ChangeSky(%sky)
+round(%n)
+RefreshAll(%clientId)
+HasThisStuff(%clientId, %list, %multiplier)
+TakeThisStuff(%clientId, %list, %multiplier)
+GiveThisStuff(%clientId, %list, %echo, %multiplier)
+getSpawnIndex(%aiName)
+FellOffMap(%id)
+SetStuffString(%stuff, %item, %amount)
+GetStuffStringCount(%stuff, %item)
+FixStuffString(%stuff)
+IsStuffStringEquiv(%s1, %s2, %dblCheck)
+String::NEWgetSubStr(%s, %x, %y)
+GetRoll(%roll, %optionalMinMax)
+GetCombo(%n)
+IsPartOfCombo(%combo, %n)
+IsDead(%id)
+Cap(%n, %lb, %ub)
+GetNESW(%pos1, %pos2)
+SetOnGround(%clientId, %extraZ)
+WalkSlowInvisLoop(%clientId, %delay, %grace)
+UnHide(%clientId)
+DisplayGetInfo(%clientId, %id, %obj)
+DisplayGetStats(%clientId, %id, %obj)
+AddToTargetList(%clientId, %cl)
+RemoveFromTargetList(%clientId, %cl)
+WhatIs(%item)
+FixDecimals(%c)
+AddToCommaList(%list, %item)
+RemoveFromCommaList(%list, %item)
+IsInCommaList(%list, %item)
+CountObjInCommaList(%list)
+CountObjInList(%list)
+AddBounty(%clientId, %amt)
+PostSteal(%clientId, %success, %type, %targetId)
+GetTypicalTossStrength(%clientId)
+AllowedToSteal(%clientId)
+PerhapsPlayStealSound(%clientId, %type)
+GetLCKcost(%clientId)
+Getrpcost(%clientId)
+GetEventCommandIndex(%object, %type)
+AddEventCommand(%object, %senderName, %type, %cmd)
+ClearEvents(%id)
+msprintf(%in, %a1, %a2, %a3, %a4, %a5, %a6, %a7, %a8)
+nsprintf(%in, %a1, %a2, %a3, %a4, %a5, %a6, %a7, %a8)
+UnequipMountedStuff(%clientId)
+LTrim(%s)
+InitObjectives()
+UpdateHouseObjectivesDisplay()
+RecursiveObjectivesRefresh()
+SaveHouseObjectives()
+LoadHouseObjectives()
+RecalcHouseMemberCounts()
+RecalcHouseObjectives()
+VARIABLES (first 50):
+  - $Accessory
+  - $AccessoryType
+  - $Arbal
+  - $Fla
+  - $BaseControl
+  - $Consol
+  - $ConsoleWorld::Default
+  - $Control
+  - $Hous
+  - $Count
+  - $TotalSealValue
+  - $world::object
+  - $Curama
+  - $Elapse
+  - $FlagCommand
+  - $HouseArbal
+  - $HouseCurama
+  - $HouseKronos
+  - $HouseMember
+  - $HouseYuliple
+  - $Kronos
+  - $Loadin
+  - $Member
+  - $Pat
+  - $Rainingtst
+  - $Sav
+  - $Sea
+  - $SearchPathConsoleWorld::Default
+  - $SearchPathLoadingWorldSaveLoadingWorldSaveAccessoryType
+  - $SearchPathServerTimeElapsedServerTimeElapsedServerTimeStartServerTimeStartServerTimeElapsedServerTimeElapsedServerTimeStartServerTimeStartServerTimeElapsedServerTimeStartServerTimeElapsedServerTimeElapsedServerTimeElapsedServerTimeStartworld::object
+  - $Serve
+  - $Star
+  - $Startworld::object
+  - $Coun
+  - $Tim
+  - $Tota
+  - $Type
+  - $Accessor
+  - $Valu
+  - $Worl
+  - $World::Default
+  - $Searc
+  - $Yuliple
+  - $i
+  - $ainingis
+  - $alue
+  - $ase
+  - $ath
+  - $ave
+  - $ccessory
+  - $dS
+  - $eA
+  - $eC
+  - $eE
+  - $eK
+  - $eS
+  - $eT
+  - $eW
+  - $eY
+  - $eal
+  - $erver
+  - $gC
+  - $gW
+  - $hL
+  - $hP
+  - $hS
+  - $ime
+  - $isRaining
+  - $tst
+  - $w
+  - $lS
+  - $lV
+  - $lapsed
+  - $oading
+  - $ommand
+  - $House
+  - $orld
+  - $orld::Default
+  - $Search
+  - $otal
+  - $rT
+  - $rbal
+  - $Base
+  - $ronos
+  - $sR
+  - $tS
+  - $tT
+  - $tart
+  - $uliple
+  - $Console
+  - $urama
+  - $B
+  - $yT
+  - $ype
+========================================
+skills.cs
+
+========================================
+
+Functions:
+
+ 11
+Variables:
+ 421
+
+FUNCTIONS:
+
+
+GetNumSkills()
+AddSkillPoint(%clientId, %skill, %delta)
+GetPlayerSkill(%clientId, %skill)
+FormatSkillDisplay(%clientId, %skill)
+GetSkillMultiplier(%clientId, %skill)
+GetEXPmultiplier(%clientId)
+SetAllSkills(%clientId, %n)
+SkillCanUse(%clientId, %thing)
+UseSkill(%clientId, %skilltype, %successful, %showmsg, %base, %refreshall)
+WhatSkills(%thing)
+GetSkillAmount(%thing, %skill)
+VARIABLES (first 50):
+  - $10
+  - $11
+  - $12
+  - $1
+  - $3
+  - $4
+  - $5
+  - $6
+  - $7
+  - $8
+  - $19
+  - $2
+  - $0
+  - $22
+  - $9
+  - $Skill
+  - $Admi
+  - $Backstabbin
+  - $Bashin
+  - $Capacit
+  - $Castin
+  - $Clas
+  - $Comba
+  - $Critical
+  - $Desc
+  - $Skil
+  - $Enduranc
+  - $Grou
+  - $Hidin
+  - $Hous
+  - $Leve
+  - $Minin
+  - $Offensiv
+  - $Remor
+  - $Sens
+  - $SkillDesc
+  - $SkillSlashing
+  - $SkillPiercing
+  - $SkillBludgeoning
+  - $SkillDodging
+  - $SkillWeightCapacity
+  - $SkillBashing
+  - $SkillStealing
+  - $SkillHiding
+  - $SkillBackstabbing
+  - $SkillOffensiveCasting
+  - $SkillDefensiveCasting
+  - $SkillSpellResistance
+  - $SkillHealing
+  - $SkillVehicleCombat
+  - $SkillEndurance
+  - $SkillCriticals
+  - $SkillMining
+  - $SkillSpeech
+  - $SkillSenseHeading
+  - $SkillEnergy
+  - $SkillHaggling
+  - $SkillNeutralCasting
+  - $MinLevel
+  - $MinGroup
+  - $MinClass
+  - $MinRemort
+  - $MinAdmin
+  - $MinHouse
+  - $Speec
+  - $Spel
+  - $Stealin
+  - $aggling
+  - $asting
+  - $eC
+  - $eH
+  - $eS
+  - $eading
+  - $ealing
+  - $efensive
+  - $ehicle
+  - $eight
+  - $esc[11]
+  - $esc[13]
+  - $esc[15]
+  - $esc[17]
+  - $esc[19]
+  - $esc[21]
+  - $esc[2]
+  - $esc[4]
+  - $esc[6]
+  - $esc[8]
+  - $esistance
+  - $eutral
+  - $gM
+  - $gS
+  - $hS
+  - $iercing
+  - $in
+  - $kill
+  - $lB
+  - $lD
+  - $lE
+  - $lH
+  - $lM
+  - $lN
+  - $lP
+  - $lR
+  - $lS
+  - $lV
+  - $lW
+  - $lashing
+  - $ludgeoning
+  - $nM
+  - $nergy
+  - $odging
+  - $pM
+  - $sM
+  - $sS
+  - $tM
+  - $tS
+  - $yS
+========================================
+house.cs
+
+========================================
+
+Functions:
+
+ 8
+Variables:
+ 18
+
+FUNCTIONS:
+
+
+GetHouseNumber(%n)
+BootFromCurrentHouse(%clientId, %echo)
+JoinHouse(%clientId, %hn, %echo)
+IsSameHouse(%client1, %client2)
+GetClientHouse(%clientId)
+HouseData::Save(%echoOff)
+HouseData::Load()
+HouseData::Reset()
+VARIABLES (first 50):
+  - $1
+  - $2
+  - $3
+  - $4
+  - $House::Load
+  - $File
+  - $Curama
+  - $Hous
+  - $Eq[1]
+  - $Eq[3]
+  - $FileHouse::Save
+  - $House::Save
+  - $HouseArbal
+  - $HouseCurama
+  - $HouseKronos
+  - $HouseMember
+  - $HouseName
+  - $HouseStartUpEq
+  - $HouseYuliple
+  - $Member
+  - $Name
+  - $Star
+  - $U
+  - $Yuliple
+  - $ame[2]
+  - $House
+  - $ame[4]
+  - $eA
+  - $eC
+  - $eK
+  - $eN
+  - $eS
+  - $eY
+  - $pE
+  - $q[2]
+  - $q[4]
+  - $rbal
+  - $ronos
+  - $tU
+  - $tart
+  - $uliple
+  - $urama
+========================================
+rpgarena.cs
+
+========================================
+
+Functions:
+
+ 34
+Variables:
+ 68
+
+FUNCTIONS:
+
+
+InitArena()
+ScheduleArenaMatch()
+StartArenaMatch()
+GiveArenaEquipment(%clientId)
+CreateArenaDueler(%num)
+AddToRoster(%clientId)
+CreateArenaStorage(%clientId)
+RemoveFromRoster(%clientId)
+IsInRoster(%clientId)
+ClearRoster()
+ClearArenaDueler()
+GetArenaDuelerIndex(%clientId)
+IsInArenaDueler(%clientId)
+IsStillArenaFighting(%clientId)
+RemoveFromArenaDueler(%clientId)
+RemoveArenaEquipment(%clientId)
+RestoreArenaStorage(%clientId)
+CheckMatchWin()
+ReturnToArenaLobby(%c)
+FillWaitingRoom(%indexes)
+SpawnArenaBot(%index, %i, %marker)
+DetermineArenaPrize()
+RestorePreviousEquipment(%c)
+RefreshArenaTextBox(%clientId)
+StringArenaTextBox(%text)
+CloseArenaTextBox(%clientId)
+CheckAndBootFromArena(%clientId)
+HumansInArena()
+sr()
+sd()
+DuelFight()
+UndeadInvasion()
+Colloseum()
+ColloLost()
+VARIABLES (first 50):
+  - $Duel
+  - $ABo
+  - $Aren
+  - $Bo
+  - $Bot
+  - $Challenge
+  - $Chance
+  - $nu
+  - $Chec
+  - $Costmaxroste
+  - $D
+  - $DuelOn
+  - $DuelChallenger
+  - $DuelOpponent
+  - $DuelLoser
+  - $InvasionTimer
+  - $AImoveChance
+  - $Dueler
+  - $Equipmenttm
+  - $I
+  - $Imove
+  - $Indexestelepor
+  - $Lengt
+  - $Line
+  - $Lines
+  - $Lose
+  - $Matc
+  - $O
+  - $Opponen
+  - $Pic
+  - $Player
+  - $Priz
+  - $See
+  - $Spaw
+  - $Star
+  - $Tex
+  - $Tick
+  - $Ticke
+  - $Tim
+  - $Time
+  - $Wi
+  - $aB
+  - $aC
+  - $aE
+  - $aP
+  - $aS
+  - $aT
+  - $atch
+  - $dA
+  - $eA
+  - $eD
+  - $eS
+  - $eed
+  - $ength
+  - $ext
+  - $hI
+  - $hL
+  - $hP
+  - $hT
+  - $hW
+  - $heck
+  - $ick
+  - $icker
+  - $icks
+  - $ime
+  - $in
+  - $ines
+  - $num
+  - $kD
+  - $kM
+  - $layers
+  - $mA
+  - $nA
+  - $nD
+  - $nI
+  - $nT
+  - $ndexesteleport
+  - $numArenaPlayers
+  - $ArenaSpawnIndexes
+  - $teleportInArenaCost
+  - $maxroster
+  - $ArenaPickDuelersTime
+  - $ArenaStartTime
+  - $DoCheckMatchWin
+  - $ArenaBotMatchLengthInTicks
+  - $ArenaBotMatchTicker
+  - $ArenaEquipment
+  - $tmp
+  - $IsABotMatch
+  - $PrizeSeed
+  - $ArenaTextBoxLines
+  - $nvasion
+  - $oC
+  - $ostmaxroster
+  - $ot
+  - $ox
+  - $pD
+  - $pawn
+  - $quipmenttmp
+  - $rA
+  - $rD
+  - $rI
+  - $rena
+  - $rize
+  - $sA
+  - $sT
+  - $tB
+  - $tD
+  - $tI
+  - $tM
+  - $tT
+  - $tart
+  - $uel
+  - $uelers
+  - $xL
+========================================
+sleep.cs
+
+========================================
+
+Functions:
+
+ 3
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+GroupTrigger::onTrigEnter(%object, %this)
+GroupTrigger::onTrigLeave(%object, %this)
+DoCampSetup(%clientId, %step, %pos)
+VARIABLES (first 50):
+
+========================================
+game.cs
+
+========================================
+
+Functions:
+
+ 10
+Variables:
+ 49
+
+FUNCTIONS:
+
+
+Time::getMinutes(%simTime)
+Time::getSeconds(%simTime)
+UpdateClientTimes(%time)
+Game::notifyMatchStart(%time)
+spamDoubleExecWarning()
+onServerGhostAlwaysDone()
+GameBase::getHeatFactor(%this)
+addBankerChat(%text, %msg, %sound)
+Game::onPlayerConnected(%game, %clientId)
+messageAll(%msgType, %message)
+VARIABLES (first 50):
+  - $0
+  - $10
+  - $11
+  - $12
+  - $1
+  - $2
+  - $3
+  - $4
+  - $5
+  - $6
+  - $7
+  - $8
+  - $9
+  - $Sensor
+  - $Amm
+  - $Chea
+  - $Cheat
+  - $CommandGuiMode
+  - $Defaul
+  - $Energ
+  - $Energy[0]
+  - $Tea
+  - $Energy[11]
+  - $Energy[1]
+  - $Energy[3]
+  - $Energy[5]
+  - $Energy[7]
+  - $Energy[9]
+  - $Gu
+  - $I
+  - $Initia
+  - $InventoryGuiMode
+  - $Ite
+  - $LobbyDefaultTeamEnergyTeamEnergy[0]
+  - $Ma
+  - $Mi
+  - $Min
+  - $Networ
+  - $Nu
+  - $Objec
+  - $ObjectivesGuiMode
+  - $PlayGuiMode
+  - $Remot
+  - $Respawn
+  - $SensorNetworkEnabled
+  - $GuiMode
+  - $Si
+  - $Spendin
+  - $TeamEnergyCheat
+  - $MaxTeamEnergy
+  - $incTeamEnergy
+  - $secTeamEnergy
+  - $ItemRespawnTime
+  - $RemoteAmmoEnergy
+  - $RemoteInvEnergy
+  - $TeammateSpending
+  - $WarnEnergyLow
+  - $InitialPlayerEnergy
+  - $MaxNumTurretsInBox
+  - $TurretBoxMaxLength
+  - $TurretBoxMaxWidth
+  - $TurretBoxMaxHeight
+  - $TurretBoxMinLength
+  - $TurretBoxMinWidth
+  - $TurretBoxMinHeight
+  - $SimTerrainObjectType
+  - $SimInteriorObjectType
+  - $SimPlayerObjectType
+  - $MineObjectType
+  - $MoveableObjectType
+  - $VehicleObjectType
+  - $StaticObjectType
+  - $ItemObjectType
+  - $ServerCheats
+  - $TestCheats
+  - $AutoRespawn
+  - $TeamEnergy
+  - $Tim
+  - $Turre
+  - $Typ
+  - $Vehicl
+  - $VictoryGuiMode
+  - $arn
+  - $ax
+  - $bject
+  - $eI
+  - $eM
+  - $eO
+  - $eR
+  - $eS
+  - $eam
+  - $eammate
+  - $eight
+  - $emote
+  - $ength
+  - $errain
+  - $erver
+  - $espawn
+  - $est
+  - $gW
+  - $iM
+  - $idth
+  - $kE
+  - $lP
+  - $layer
+  - $mE
+  - $mI
+  - $mO
+  - $mP
+  - $mR
+  - $mT
+  - $nB
+  - $nH
+  - $nL
+  - $nW
+  - $nabled
+  - $nergy
+  - $nergy[10]
+  - $Team
+  - $nergy[12]
+  - $nergy[2]
+  - $nergy[4]
+  - $nergy[6]
+  - $nergy[8]
+  - $nergyinc
+  - $nergysec
+  - $nterior
+  - $nv
+  - $oE
+  - $ode
+  - $Command
+  - $Inventory
+  - $Lobby
+  - $Objectives
+  - $Play
+  - $Victory
+  - $oveable
+  - $ow
+  - $ox
+  - $sA
+  - $sT
+  - $tB
+  - $tM
+  - $tT
+  - $tatic
+  - $urrets
+  - $uto
+  - $xH
+  - $xL
+  - $xW
+  - $yL
+  - $yM
+  - $yT
+  - $ype
+========================================
+Admin.cs
+
+========================================
+
+Functions:
+
+ 31
+Variables:
+ 28
+
+FUNCTIONS:
+
+
+Admin::changeMissionMenu(%clientId)
+processMenuCMType(%clientId, %options)
+processMenuCMission(%clientId, %option)
+remoteAdminPassword(%clientId, %password)
+remoteSetPassword(%clientId, %password)
+remoteSetTimeLimit(%clientId, %time)
+remoteSetTeamInfo(%clientId, %team, %teamName, %skinBase)
+remoteVoteYes(%clientId)
+remoteVoteNo(%clientId)
+Admin::startMatch(%admin)
+Admin::setTeamDamageEnable(%admin, %enabled)
+Admin::kick(%admin, %clientId, %ban)
+Admin::setModeFFA(%clientId)
+Admin::setModeTourney(%clientId)
+Admin::voteFailed()
+Admin::voteSucceded()
+Admin::countVotes(%curVote)
+Admin::startVote(%clientId, %topic, %action, %option)
+Game::menuRequest(%clientId)
+processMenuOptions(%clientId, %option)
+processMenuPickStance(%clientId,%option)
+processMenupartyopt(%clientId, %option)
+processMenuselectspell(%clientId, %option)
+processMenuselectrweapon(%clientId, %item)
+processMenuselectproj(%clientId, %itemandproj)
+processMenuOtheropt(%clientId, %option)
+remoteSelectClient(%clientId, %selId)
+processMenuPickTeamOFF(%clientId, %team, %adminClient)
+VARIABLES (first 50):
+  - $cur
+  - $DamageScaleServer::Team
+  - $DamageScalecurVoteTopic
+  - $Scal
+  - $Scalecu
+  - $Topi
+  - $Topic
+  - $Vot
+  - $VoteTopicServer::Team
+  - $cS
+  - $ctioncur
+  - $curVoteTopic
+  - $curVoteAction
+  - $curVoteOption
+  - $curVoteCount
+  - $curVoteInitiator
+  - $exploitlog::entry
+  - $eA
+  - $eC
+  - $eI
+  - $eO
+  - $eS
+  - $eT
+  - $erver::Team
+  - $Damage
+  - $nitiatorcur
+  - $opiccur
+  - $ote
+  - $ountcur
+  - $ptioncur
+  - $ptionexploitlog::entrycur
+  - $Vote
+  - $rV
+========================================
+marker.cs
+
+========================================
+
+Functions:
+
+ 0
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+VARIABLES (first 50):
+
+========================================
+trigger.cs
+
+========================================
+
+Functions:
+
+ 5
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+GroupTrigger::onEnter(%this,%object)
+GroupTrigger::onLeave(%this,%object)
+GroupTrigger::onContact(%this,%object)
+GroupTrigger::onActivate(%this)
+GroupTrigger::onDeactivate(%this)
+VARIABLES (first 50):
+
+========================================
+zone.cs
+
+========================================
+
+Functions:
+
+ 28
+Variables:
+ 28
+
+FUNCTIONS:
+
+
+InitZones()
+InitZoneTeleporterRequirements()
+RecursiveZone(%delay)
+DoZoneCheck(%w, %d)
+setzoneflags(%object, %z)
+UpdateZone(%object)
+gravWorkaround(%clientId, %method)
+Zone::DoEnter(%z, %clientId)
+Zone::DoExit(%z, %clientId)
+WipeFromZone(%z)
+IsInBetween(%x, %r1, %r2)
+Zone::getIndex(%z)
+Zone::getMarker(%z)
+Zone::getType(%z)
+Zone::getDesc(%z)
+Zone::getEnterSound(%z)
+Zone::getAmbientSound(%z)
+Zone::getAmbientSoundPerc(%z)
+Zone::getExitSound(%z)
+Zone::onEnter(%clientId, %oldZone, %newZone)
+Zone::onExit(%clientId, %zoneLeft)
+GetNearestZone(%clientId, %zonetype, %returnType)
+GetZoneByKeywords(%clientId, %keywords, %returnType)
+Zone::getNumPlayers(%z, %all)
+ObjectInWhichZone(%object)
+Zone::getPlayerList(%z, %type)
+EmptyZoneCheck()
+EmptyZoneCheckLoop()
+VARIABLES (first 50):
+  - $0
+  - $1
+  - $2
+  - $Banished
+  - $BanishedKing
+  - $BattleOx
+  - $Chief
+  - $DeathKnight
+  - $King
+  - $Battl
+  - $Ques
+  - $Knight
+  - $Queen
+  - $Ox
+  - $QuestReload
+  - $Reload
+  - $Deat
+  - $Zone::Ambient
+  - $Soun
+  - $SoundPerc[0]
+  - $Sound[0]
+  - $Ticker[1]
+  - $zon
+  - $Zone
+  - $dP
+  - $eO
+  - $eT
+  - $eload
+  - $Battle
+  - $Quest
+  - $erc[0]
+  - $num
+  - $hK
+  - $icker[2]
+  - $night
+  - $numZones
+  - $Zone::Enter
+  - $one::Enter
+  - $xyvel
+  - $nzvel
+  - $pzvel
+  - $impulse
+  - $zone
+  - $sZ
+  - $tR
+  - $x
+  - $Death
+  - $zoneTicker
+========================================
+spells.cs
+
+========================================
+
+Functions:
+
+ 21
+Variables:
+ 926
+
+FUNCTIONS:
+
+
+BeginCastSpell(%clientId, %keyword)
+DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2)
+Liquifier::fireLaser(%player,%x,%y,%z)
+Liquifier::deployTurret(%player,%pos)
+Turret::objectiveDestroyed()
+CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index)
+ApocalypseBatchExplosions(%clientId, %index, %startIdx)
+ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamage, %index)
+ApocalypseCleanup(%clientId, %count)
+TornadoBatchExplosions(%clientId, %index, %startIdx)
+SpellDamage(%clientId, %targetId, %damageValue, %index)
+SpellRadiusDamage(%clientId, %pos, %index)
+DoSpellDamage(%object, %clientId, %pos, %index)
+SpellCalcRadiusDamage(%dist, %radius, %dmg, %percMin, %percMax)
+GetBestSpell(%clientId, %type, %semiRandomSpell)
+CalcSpellMiss(%clientId, %targetId, %index)
+sendDoneRecovMsg(%clientId)
+DoBoxFunction(%object, %clientId, %index, %extra)
+SpellCanCast(%clientId, %keyword)
+SpellCanCastNow(%clientId, %keyword)
+Client::setCommandStatus(%this, %status)
+VARIABLES (first 50):
+  - $1
+  - $2
+  - $3
+  - $4
+  - $Self
+  - $Check[1]
+  - $Spell::group
+  - $Lis
+  - $Check[3]
+  - $Spell::index
+  - $firebomb
+  - $teleport
+  - $transport
+  - $Spell::keyword
+  - $Spell::mana
+  - $Cost[1]
+  - $Cost[2]
+  - $Cost[3]
+  - $Spell::name
+  - $Spell::radius
+  - $Spell::recovery
+  - $Time[1]
+  - $Time[2]
+  - $Time[3]
+  - $Spell::ref
+  - $Val[1]
+  - $Val[2]
+  - $Val[3]
+  - $Spell::start
+  - $Sound[1]
+  - $Sound[2]
+  - $Sound[3]
+  - $Distance[1]
+  - $Distance[2]
+  - $Distance[3]
+  - $LOSRadiu
+  - $ListCheck[1]
+  - $ListCheck[2]
+  - $ListCheck[3]
+  - $OSRadius
+  - $OSType
+  - $Radiu
+  - $Sel
+  - $SelfType
+  - $LOSType
+  - $SelfRadiusType
+  - $LOSRadiusType
+  - $SelfRadiusLOSType
+  - $LOSRadiusSelfType
+  - $SelfRadiusLOSRadiusType
+  - $Skill
+  - $SkillType
+  - $Spell::LOSrange
+  - $Spell::damage
+  - $Spell::delay
+  - $Spell::description
+  - $Spell::end
+  - $Spell::grace
+  - $Typ
+  - $Type
+  - $Skil
+  - $Value[1]
+  - $adius
+  - $eL
+  - $eS
+  - $elf
+  - $fR
+  - $heck[2]
+  - $List
+  - $lT
+  - $pell::keyword[1]
+  - $sL
+  - $sS
+  - $tC
+  - $ype
+========================================
+classes.cs
+
+========================================
+
+Functions:
+
+ 2
+Variables:
+ 79
+
+FUNCTIONS:
+
+
+getFinalCLASS(%clientId)
+IsAClass(%class)
+VARIABLES (first 50):
+  - $0
+  - $10
+  - $1
+  - $2
+  - $3
+  - $4
+  - $5
+  - $6
+  - $7
+  - $8
+  - $9
+  - $Alien
+  - $Bard
+  - $Class
+  - $ClassGroup
+  - $ClassName
+  - $Cleric
+  - $DeathKnight
+  - $Demon
+  - $Druid
+  - $Elf
+  - $FemaleHuman
+  - $Fight
+  - $er
+  - $Goblin
+  - $God
+  - $Group
+  - $Clas
+  - $Mage
+  - $Squire
+  - $HP
+  - $Mi
+  - $Ogre
+  - $Pigman
+  - $Undead
+  - $Minotaur
+  - $Orc
+  - $Paladin
+  - $Priest
+  - $Rogue
+  - $Thief
+  - $Tourn
+  - $Human
+  - $Mal
+  - $Knight
+  - $MaleHuman
+  - $MinHP
+  - $Name
+  - $Deat
+  - $One[0]
+  - $One[1]
+  - $P
+  - $Death
+  - $Min
+  - $Female
+  - $Male
+  - $Traveller
+  - $Rank[10]
+  - $Worl
+  - $Rank[2]
+  - $Rank[4]
+  - $Rank[6]
+  - $Rank[8]
+  - $Three[0]
+  - $TournyRoundOne
+  - $TournyRoundThree
+  - $TournyRoundTwo
+  - $Two[0]
+  - $Warrior
+  - $Wizard
+  - $WorldRank
+  - $ame
+  - $ank[0]
+  - $World
+  - $ank[1]
+  - $ank[3]
+  - $ank[5]
+  - $ank[7]
+  - $ank[9]
+  - $initcoins
+  - $dR
+  - $eH
+  - $hK
+  - $nH
+  - $night
+  - $ound
+  - $roup
+  - $sG
+  - $sN
+  - $uman
+  - $yR
+========================================
+party.cs
+
+========================================
+
+Functions:
+
+ 6
+Variables:
+ 1
+
+FUNCTIONS:
+
+
+CreateParty(%clientId)
+DisbandParty(%clientId)
+RemoveFromParty(%clientId, %name, %optional)
+AddToParty(%clientId, %name)
+IsInWhichParty(%name)
+GetPartyListIAmIn(%clientId)
+VARIABLES (first 50):
+  - $maxpartymembers
+========================================
+jail.cs
+
+========================================
+
+Functions:
+
+ 4
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+GetRandomJailNumber()
+GetPositionForJailNumber(%jn)
+Jail(%clientId, %time, %jn)
+IsJailed(%clientId)
+VARIABLES (first 50):
+
+========================================
+nsound.cs
+
+========================================
+
+Functions:
+
+ 2
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+InitSoundPoints()
+RandomRaceSound(%race, %type)
+VARIABLES (first 50):
+
+========================================
+Help.cs
+
+========================================
+
+Functions:
+
+ 40
+Variables:
+ 2
+
+FUNCTIONS:
+
+
+Help::getDisplay(%heading)
+Help::Headings()
+Help::Matches(%category)
+Help::Spells(%index)
+Help::mainMenu(%clientId)
+processMenuhelpMainMenu(%clientId, %opt)
+Help::spellDisplay(%index, %spell)
+Help::itemMenu(%clientId, %page)
+processMenuhelpItemMenu(%clientId, %opt)
+Help::listMenu(%clientId, %page, %cat)
+processMenuhelpListMenu(%clientId, %opt)
+Help::spellMenu(%clientId)
+processMenuhelpSpellMenu(%clientId, %opt)
+Help::spellListMenu(%clientId, %page, %index)
+processMenuspellListMenu(%clientId, %opt)
+Help::skillListMenu(%clientId, %page)
+processMenuskillListMenu(%clientId, %opt)
+Help::commandsMainMenu(%clientId)
+processMenuhelpCommandsMain(%clientId, %opt)
+Help::armorSubMenu(%clientId)
+processMenuhelpArmorSubMenu(%clientId, %opt)
+Help::showChestArmor(%clientId)
+Help::showHelmets(%clientId)
+Help::showShields(%clientId)
+Help::weaponsSubMenu(%clientId)
+processMenuhelpWeaponsSubMenu(%clientId, %opt)
+Help::showSlashWeapons(%clientId)
+Help::showPierceWeapons(%clientId)
+Help::showBludgeWeapons(%clientId)
+Help::spellsSubMenu(%clientId)
+processMenuhelpSpellsSubMenu(%clientId, %opt)
+Help::showOffensiveSpells(%clientId)
+Help::showDefensiveSpells(%clientId)
+Help::showNeutralSpells(%clientId)
+Help::accessoriesSubMenu(%clientId)
+processMenuhelpAccessoriesSubMenu(%clientId, %opt)
+Help::showRings(%clientId)
+Help::showBelts(%clientId)
+Help::showNecklaces(%clientId)
+Help::showZones(%clientId)
+VARIABLES (first 50):
+  - $Help::Headings
+========================================
+baseExpData.cs
+
+========================================
+
+Functions:
+
+ 0
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+VARIABLES (first 50):
+
+========================================
+baseDebrisData.cs
+
+========================================
+
+Functions:
+
+ 0
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+VARIABLES (first 50):
+
+========================================
+baseProjData.cs
+
+========================================
+
+Functions:
+
+ 3
+Variables:
+ 17
+
+FUNCTIONS:
+
+
+MiniFusionBolt::onAdd(%this)
+SeekingMissile::updateTargetPercentage(%target)
+Lightning::damageTarget(%target, %timeSlice, %damPerSec, %enDrainPerSec, %pos, %vec, %mom, %shooterId)
+VARIABLES (first 50):
+  - $Impact
+  - $Blaste
+  - $Crus
+  - $Damag
+  - $Energ
+  - $Explosio
+  - $ImpactDamageType
+  - $LandingDamageType
+  - $BulletDamageType
+  - $EnergyDamageType
+  - $PlasmaDamageType
+  - $ExplosionDamageType
+  - $ShrapnelDamageType
+  - $LaserDamageType
+  - $MortarDamageType
+  - $BlasterDamageType
+  - $ElectricityDamageType
+  - $CrushDamageType
+  - $DebrisDamageType
+  - $MissileDamageType
+  - $MineDamageType
+  - $NullDamageType
+  - $SpellDamageType
+  - $Landin
+  - $Lase
+  - $Missil
+  - $Nul
+  - $Typ
+  - $amage
+  - $eB
+  - $eD
+  - $eE
+  - $eM
+  - $eP
+  - $eS
+  - $eT
+  - $ebris
+  - $gD
+  - $hD
+  - $hrapnel
+  - $ine
+  - $lD
+  - $lasma
+  - $lectricity
+  - $nD
+  - $ortar
+  - $pell
+  - $rD
+  - $ullet
+  - $yD
+  - $ype
+========================================
+armordata.cs
+
+========================================
+
+Functions:
+
+ 0
+Variables:
+ 10
+
+FUNCTIONS:
+
+
+VARIABLES (first 50):
+  - $spdlower
+  - $spdlow
+  - $spdlowmed
+  - $spdmed
+  - $spdmedhigh
+  - $spdhigh
+  - $spdhigher
+  - $spdfast
+  - $spdveryfast
+  - $spdgm
+========================================
+mission.cs
+
+========================================
+
+Functions:
+
+ 8
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Example::onAdd(%this)
+Example::onRemove(%this)
+Example::onEnabled(%this)
+Example::onDisabled(%this)
+Example::onDestroyed(%this)
+Example::onPower(%this, %newState, %generator)
+Example::onCollision(%this, %object)
+Example::onAttack(%this, %object)
+VARIABLES (first 50):
+
+========================================
+item.cs
+
+========================================
+
+Functions:
+
+ 10
+Variables:
+ 13
+
+FUNCTIONS:
+
+
+Item::playPickupSound(%this)
+Item::respawn(%this)
+Item::onAdd(%this)
+Item::pop(%item)
+Tool::onUse(%player,%item)
+Belt::onUse(%player,%item)
+checkDeployArea(%clientId, %pos)
+Item::deployShape(%player,%name,%shape,%item)
+RepairPatch::onCollision(%this,%object)
+RepairPatch::onUse(%player,%item)
+VARIABLES (first 50):
+  - $Accessory
+  - $Ammo
+  - $Backpack
+  - $Dep
+  - $Bas
+  - $DepBasePack
+  - $Favorite
+  - $Ite
+  - $ItemFavoritesKey
+  - $ItemPopTime
+  - $ToolSlot
+  - $WeaponSlot
+  - $BeltSlot
+  - $FlagSlot
+  - $DefaultSlot
+  - $TeamItemMax
+  - $PickupSound
+  - $Repair
+  - $Slo
+  - $Sound
+  - $Picku
+  - $Weapon
+  - $Tim
+  - $ack
+  - $Item
+  - $Pickup
+  - $ax
+  - $eP
+  - $eT
+  - $eam
+  - $eapon
+  - $efault
+  - $elt
+  - $ey
+  - $lag
+  - $mM
+  - $mP
+  - $ool
+  - $op
+  - $ound
+  - $pS
+  - $sK
+  - $tB
+  - $tD
+  - $tF
+  - $tT
+  - $tW
+========================================
+Accessory.cs
+
+========================================
+
+Functions:
+
+ 13
+Variables:
+ 318
+
+FUNCTIONS:
+
+
+GenerateAllShieldCosts()
+GetAccessoryVar(%item, %type)
+getCroppedItem(%item)
+GetAccessoryList(%clientId, %type, %filter)
+AddPoints(%clientId, %char)
+AddItemSpecificPoints(%item, %char)
+WhatSpecialVars(%thing)
+NullItemList(%clientId, %type, %msgcolor, %msg)
+GetCurrentlyWearingArmor(%clientId)
+BluePotion::onUse(%player,%item)
+CrystalBluePotion::onUse(%player,%item)
+EnergyVial::onUse(%player,%item)
+CrystalEnergyVial::onUse(%player,%item)
+VARIABLES (first 50):
+  - $10
+  - $11
+  - $1
+  - $2
+  - $3
+  - $4
+  - $5
+  - $6
+  - $7
+  - $8
+  - $9
+  - $Accessory
+  - $Accessor
+  - $AccessoryType
+  - $SpecialVar
+  - $Weight
+  - $Ax
+  - $AxeAccessoryType
+  - $Bac
+  - $BackAccessoryType
+  - $Bel
+  - $BeltAccessoryType
+  - $Bludgeo
+  - $BludgeonAccessoryType
+  - $Bod
+  - $BodyAccessoryType
+  - $BootsAccessoryType
+  - $HeadAccessoryType
+  - $PolearmAccessoryType
+  - $Projectil
+  - $ProjectileAccessoryType
+  - $RangedAccessoryType
+  - $RingAccessoryType
+  - $ShieldAccessoryType
+  - $TalismanAccessoryType
+  - $SwordAccessoryType
+  - $SpecialVarDesc
+  - $Talisma
+  - $Typ
+  - $Va
+  - $anged
+  - $ccessory
+  - $eA
+  - $eB
+  - $eH
+  - $eP
+  - $eR
+  - $eS
+  - $ead
+  - $eight
+  - $Axe
+  - $esc[10]
+  - $Special
+  - $esc[11]
+  - $esc[1]
+  - $esc[2]
+  - $esc[3]
+  - $esc[4]
+  - $esc[5]
+  - $esc[6]
+  - $esc[7]
+  - $esc[8]
+  - $esc[9]
+  - $Sword
+  - $hield
+  - $ing
+  - $kA
+  - $nA
+  - $olearm
+  - $oots
+  - $pecial
+  - $rD
+  - $rW
+  - $tA
+  - $w
+  - $ord
+  - $yA
+  - $yT
+  - $ype
+  - $Back
+  - $Belt
+  - $Bludgeon
+  - $Body
+  - $Boots
+  - $Head
+  - $Polearm
+  - $Projectile
+  - $Ranged
+  - $Ring
+  - $Shield
+  - $Talisman
+========================================
+weapons.cs
+
+========================================
+
+Functions:
+
+ 103
+Variables:
+ 358
+
+FUNCTIONS:
+
+
+GenerateAllWeaponCosts()
+MeleeAttack(%player, %length, %weapon)
+ProjectileAttack(%clientId, %weapon, %vel)
+PickAxeSwing(%player, %length, %weapon)
+PostAttack(%clientId, %weapon)
+DoRandomMining(%clientId, %crystal)
+GetRange(%weapon)
+GetDelay(%weapon)
+GenerateItemCost(%item)
+RustyIronBladeImage::onFire(%player, %slot)
+RustyIronBlade::onMount(%player,%item,
+$WeaponSlot)
+SharpIronBladeImage::onFire(%player, %slot)
+SharpIronBlade::onMount(%player,%item,
+$WeaponSlot)
+IronBroadSwordImage::onFire(%player, %slot)
+IronBroadSword::onMount(%player,%item,
+$WeaponSlot)
+SteelBroadSwordImage::onFire(%player, %slot)
+SteelBroadSword::onMount(%player,%item,
+$WeaponSlot)
+SteelLongSwordImage::onFire(%player, %slot)
+SteelLongSword::onMount(%player,%item,
+$WeaponSlot)
+GoldenLongSwordImage::onFire(%player, %slot)
+GoldenLongSword::onMount(%player,%item,
+$WeaponSlot)
+GoldenBastardSwordImage::onFire(%player, %slot)
+GoldenBastardSword::onMount(%player,%item,
+$WeaponSlot)
+CrystalBastardSwordImage::onFire(%player, %slot)
+CrystalBastardSword::onMount(%player,%item,
+$WeaponSlot)
+TemperedCrystalBastardSwordImage::onFire(%player, %slot)
+TemperedCrystalBastardSword::onMount(%player,%item,
+$WeaponSlot)
+CrystalClaymoreImage::onFire(%player, %slot)
+CrystalClaymore::onMount(%player,%item,
+$WeaponSlot)
+DiamondClaymoreImage::onFire(%player, %slot)
+DiamondClaymore::onMount(%player,%item,
+$WeaponSlot)
+DiamondLegendSwordImage::onFire(%player, %slot)
+DiamondLegendSword::onMount(%player,%item,
+$WeaponSlot)
+BlackDiamondDreamSwordImage::onFire(%player, %slot)
+BlackDiamondDreamSword::onMount(%player,%item,
+$WeaponSlot)
+BlackDiamondAtomSplitterImage::onFire(%player, %slot)
+BlackDiamondAtomSplitter::onMount(%player,%item,
+$WeaponSlot)
+ButterKnifeImage::onFire(%player, %slot)
+ButterKnife::onMount(%player,%item,
+$WeaponSlot)
+LongKnifeImage::onFire(%player, %slot)
+LongKnife::onMount(%player,%item,
+$WeaponSlot)
+IronSpearImage::onFire(%player, %slot)
+IronSpear::onMount(%player,%item,
+$WeaponSlot)
+SteelSpearImage::onFire(%player, %slot)
+SteelSpear::onMount(%player,%item,
+$WeaponSlot)
+SteelPikeImage::onFire(%player, %slot)
+SteelPike::onMount(%player,%item,
+$WeaponSlot)
+GoldenPikeImage::onFire(%player, %slot)
+GoldenPike::onMount(%player,%item,
+$WeaponSlot)
+CrystalPikeImage::onFire(%player, %slot)
+CrystalPike::onMount(%player,%item,
+$WeaponSlot)
+CrystalTridentImage::onFire(%player, %slot)
+CrystalTrident::onMount(%player,%item,
+$WeaponSlot)
+TemperedCrystalTridentImage::onFire(%player, %slot)
+TemperedCrystalTrident::onMount(%player,%item,
+$WeaponSlot)
+DiamondTridentImage::onFire(%player, %slot)
+DiamondTrident::onMount(%player,%item,
+$WeaponSlot)
+DiamondDeathSpearImage::onFire(%player, %slot)
+DiamondDeathSpear::onMount(%player,%item,
+$WeaponSlot)
+DiamondLegendSpearImage::onFire(%player, %slot)
+DiamondLegendSpear::onMount(%player,%item,
+$WeaponSlot)
+BlackDiamondDreamSpearImage::onFire(%player, %slot)
+BlackDiamondDreamSpear::onMount(%player,%item,
+$WeaponSlot)
+BlackDiamondAtomPiercerImage::onFire(%player, %slot)
+BlackDiamondAtomPiercer::onMount(%player,%item,
+$WeaponSlot)
+KnifeImage::onFire(%player, %slot)
+Knife::onMount(%player,%item,
+$WeaponSlot)
+DaggerImage::onFire(%player, %slot)
+HatchetImage::onFire(%player, %slot)
+Hatchet::onMount(%player,%item,
+$WeaponSlot)
+PickAxeImage::onFire(%player, %slot)
+PickAxe::onMount(%player,%item,
+$WeaponSlot)
+CrackedStickImage::onFire(%player, %slot)
+CrackedStick::onMount(%player,%item,
+$WeaponSlot)
+IronStickImage::onFire(%player, %slot)
+IronStick::onMount(%player,%item,
+$WeaponSlot)
+IronMaceImage::onFire(%player, %slot)
+IronMace::onMount(%player,%item,
+$WeaponSlot)
+SteelMaceImage::onFire(%player, %slot)
+SteelMace::onMount(%player,%item,
+$WeaponSlot)
+SteelHammerImage::onFire(%player, %slot)
+SteelHammer::onMount(%player,%item,
+$WeaponSlot)
+SteelWarHammerImage::onFire(%player, %slot)
+SteelWarHammer::onMount(%player,%item,
+$WeaponSlot)
+GoldenWarHammerImage::onFire(%player, %slot)
+GoldenWarHammer::onMount(%player,%item,
+$WeaponSlot)
+GoldenDivineMaceImage::onFire(%player, %slot)
+GoldenDivineMace::onMount(%player,%item,
+$WeaponSlot)
+CrystalDivineMaceImage::onFire(%player, %slot)
+CrystalDivineMace::onMount(%player,%item,
+$WeaponSlot)
+DiamondDivineMaceImage::onFire(%player, %slot)
+DiamondDivineMace::onMount(%player,%item,
+$WeaponSlot)
+DiamondBrainSpillerImage::onFire(%player, %slot)
+DiamondBrainSpiller::onMount(%player,%item,
+$WeaponSlot)
+DiamondLegendMaceImage::onFire(%player, %slot)
+DiamondLegendMace::onMount(%player,%item,
+$WeaponSlot)
+BlackDiamondDreamMaceImage::onFire(%player, %slot)
+BlackDiamondDreamMace::onMount(%player,%item,
+$WeaponSlot)
+BlackDiamondAtomSmasherImage::onFire(%player, %slot)
+BlackDiamondAtomSmasher::onMount(%player,%item,
+$WeaponSlot)
+ClubImage::onFire(%player, %slot)
+Club::onMount(%player,%item,
+$WeaponSlot)
+CastingBladeImage::onFire(%player, %slot)
+VARIABLES (first 50):
+  - $Accessory
+  - $Accessor
+  - $AccessoryType
+  - $Am
+  - $AxeAccessoryType
+  - $BackAccessoryType
+  - $BludgeonAccessoryType
+  - $BodyAccessoryType
+  - $BootsAccessoryType
+  - $HeadAccessoryType
+  - $PolearmAccessoryType
+  - $ProjectileAccessoryType
+  - $RangedAccessoryType
+  - $RingAccessoryType
+  - $Rust
+  - $ShieldAccessoryType
+  - $SwordAccessoryType
+  - $TalismanAccessoryType
+  - $Tim
+  - $Type
+  - $Weigh
+  - $amage
+  - $eD
+  - $elay
+  - $fireTimeDelay
+  - $RustyDamageAmp
+  - $RustyWeightAmp
+  - $RustyCostAmp
+  - $mp
+  - $ost
+  - $pA
+  - $pR
+  - $tA
+  - $usty
+  - $xe
+  - $yC
+  - $yD
+  - $yT
+  - $ype
+  - $Axe
+  - $Back
+  - $Bludgeon
+  - $Body
+  - $Boots
+  - $Head
+  - $Polearm
+  - $Projectile
+  - $Ranged
+  - $Ring
+  - $Shield
+  - $Sword
+  - $Talisman
+  - $fire
+========================================
+armors.cs
+
+========================================
+
+Functions:
+
+ 1
+Variables:
+ 188
+
+FUNCTIONS:
+
+
+GenerateAllArmorCosts()
+VARIABLES (first 50):
+  - $Accessory
+  - $AccessoryType
+  - $Bande
+  - $BlackDiamondFullPlate
+  - $Brigandin
+  - $Chai
+  - $Cost
+  - $Crysta
+  - $Diamon
+  - $Golde
+  - $Iro
+  - $Stee
+  - $Studde
+  - $Tungste
+  - $CrystalBandedMail
+  - $CrystalChainMail
+  - $CrystalRingMail
+  - $CrystalSplintMail
+  - $DiamondFieldPlate
+  - $DiamondFullPlate
+  - $DiamondPlateMail
+  - $Fiel
+  - $GoldenBrigandineMail
+  - $GoldenChainMail
+  - $Hid
+  - $IronScaleMail
+  - $ItemCost
+  - $Leathe
+  - $Mail
+  - $Ite
+  - $Plat
+  - $Plate
+  - $RatSkinShirt
+  - $Rin
+  - $Scal
+  - $Ski
+  - $SpecialVar
+  - $Splin
+  - $SteelBrigandineMail
+  - $SteelScaleMail
+  - $StuddedLeatherSuit
+  - $Suit
+  - $ToughHideSuit
+  - $TungstenPlateMail
+  - $TungstenSplintMail
+  - $Type
+  - $Accessor
+  - $Var
+  - $Specia
+  - $ail
+  - $Item
+  - $Rat
+  - $Steel
+  - $Studded
+  - $Tungsten
+  - $anded
+  - $ar
+  - $cale
+  - $dF
+  - $dL
+  - $dM
+  - $dP
+  - $eM
+  - $eS
+  - $eather
+  - $gM
+  - $hain
+  - $hirt
+  - $Special
+  - $ield
+  - $ing
+  - $lB
+  - $lC
+  - $lR
+  - $lS
+  - $lV
+  - $late
+  - $mC
+  - $nB
+  - $nC
+  - $nM
+  - $nP
+  - $nS
+  - $ost
+  - $Black
+  - $Crystal
+  - $Diamond
+  - $Golden
+  - $Tough
+  - $plint
+  - $rS
+  - $rigandine
+  - $tM
+  - $uit
+  - $ull
+  - $yT
+  - $ype
+========================================
+Crystal.cs
+
+========================================
+
+Functions:
+
+ 2
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Crystal::onDamage()
+InitCrystals()
+VARIABLES (first 50):
+
+========================================
+Spawn.cs
+
+========================================
+
+Functions:
+
+ 2
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+InitSpawnPoints()
+SpawnLoop(%this)
+VARIABLES (first 50):
+
+========================================
+connectivity.cs
+
+========================================
+
+Functions:
+
+ 5
+Variables:
+ 4
+
+FUNCTIONS:
+
+
+Game::initialMissionDrop(%clientId)
+Server::onClientDisconnect(%clientId)
+Server::onClientConnect(%clientId)
+Game::onPlayerConnected(%playerId)
+Client::leaveGame(%clientId)
+VARIABLES (first 50):
+  - $Taurik::Connect
+  - $Screen
+  - $ID
+  - $Message
+  - $Message2
+  - $ScreenMessage1Taurik::Connect
+  - $ScreenMessage2connectlog::entryupdatemodinfo
+  - $T
+  - $aurik::Connect
+  - $connectlog::entry
+  - $updatemodinfo
+========================================
+gameevents.cs
+
+========================================
+
+Functions:
+
+ 8
+Variables:
+ 44
+
+FUNCTIONS:
+
+
+Mission::init()
+Game::startMatch()
+Player::enterMissionArea(%player)
+Player::leaveMissionArea(%player)
+RecursiveWorld(%seconds)
+ScheduleSave(%clientId)
+TrimIP(%ip)
+HouseEarnings()
+VARIABLES (first 50):
+  - $1
+  - $2
+  - $3
+  - $4
+  - $5
+  - $6
+  - $7
+  - $8
+  - $9
+  - $Arena
+  - $ABo
+  - $Acnt
+  - $Arbal
+  - $Hous
+  - $Aren
+  - $ArenaBotMatchTicker
+  - $IsABotMatch
+  - $DoCheckMatchWin
+  - $ticker
+  - $BaseControl
+  - $Bcn
+  - $BlockOwnerAdminLevel
+  - $Bo
+  - $Command
+  - $ConsoleWorld::Default
+  - $Control
+  - $D
+  - $FlagCommand
+  - $Hazecurren
+  - $HouseArbal
+  - $HouseCurama
+  - $HouseKronos
+  - $HouseYuliple
+  - $Kronos
+  - $Level
+  - $Server
+  - $Consol
+  - $Matc
+  - $Owne
+  - $Path
+  - $Rpgservi
+  - $SearchPathpAcntpBcntConsoleWorld::Default
+  - $SearchPathpAcntpBcnttmpdatatmpdataisRpgservisRpgservticker[6]
+  - $Startedmissio
+  - $Ticke
+  - $Timeticker[1]
+  - $World::Default
+  - $Searc
+  - $aB
+  - $atch
+  - $athp
+  - $cntp
+  - $cnttmpdatatmpdatais
+  - $currentHaze
+  - $currentSky
+  - $dmin
+  - $eA
+  - $eC
+  - $eK
+  - $eW
+  - $eY
+  - $hP
+  - $hT
+  - $hW
+  - $heck
+  - $ickerticker[4]
+  - $Base
+  - $in
+  - $kyticker[3]
+  - $match
+  - $matchStarted
+  - $missionStartTime
+  - $nS
+  - $oC
+  - $onsole
+  - $orld::Default
+  - $Search
+  - $ot
+  - $pA
+  - $pB
+  - $pgservticker[6]
+  - $Flag
+  - $rA
+  - $rI
+  - $rbal
+  - $ronos
+  - $sR
+  - $tC
+  - $tM
+  - $tS
+  - $tart
+  - $uliple
+  - $Block
+  - $House
+  - $current
+  - $urama
+========================================
+shopping.cs
+
+========================================
+
+Functions:
+
+ 6
+Variables:
+ 114
+
+FUNCTIONS:
+
+
+SetupShop(%clientId, %id)
+SetupBank(%clientId, %id)
+SetupBlacksmith(%clientId, %id)
+SetupInvSteal(%clientId, %id)
+SetupCreatePack(%clientId)
+ClearCurrentShopVars(%clientId)
+VARIABLES (first 50):
+  - $Shop
+  - $Index
+  - $Sho
+  - $ShopIndex
+  - $ndex
+  - $pI
+========================================
+weight.cs
+
+========================================
+
+Functions:
+
+ 2
+Variables:
+ 2
+
+FUNCTIONS:
+
+
+GetWeight(%clientId)
+RefreshWeight(%clientId)
+VARIABLES (first 50):
+  - $Get
+  - $GetWeight::Armor
+  - $Mod
+  - $ModGetWeight::Armor
+  - $Weight
+  - $Armor
+  - $Mo
+  - $dG
+  - $et
+========================================
+mana.cs
+
+========================================
+
+Functions:
+
+ 3
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+setMANA(%clientId, %val)
+refreshMANA(%clientId, %value)
+refreshMANAREGEN(%clientId)
+VARIABLES (first 50):
+
+========================================
+hp.cs
+
+========================================
+
+Functions:
+
+ 3
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+setHP(%clientId, %val)
+refreshHP(%clientId, %value)
+refreshHPREGEN(%clientId)
+VARIABLES (first 50):
+
+========================================
+rpgstats.cs
+
+========================================
+
+Functions:
+
+ 19
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+fetchData(%clientId, %type)
+remotefetchData(%clientId, %type)
+storeData(%clientId, %type, %amt, %special)
+MenuSP(%clientId, %page)
+processMenusp(%clientId, %opt)
+processMenunull(%clientId, %opt)
+MenuGroup(%clientId)
+processMenupickgroup(%clientId, %opt)
+MenuClass(%clientId)
+processMenupickclass(%clientId, %opt)
+OldGetLevel(%ex, %clientId)
+OldGetExp(%level, %clientId)
+GetLevel(%ex, %clientId)
+GetExp(%level, %clientId)
+DistributeExpForKilling(%damagedClient)
+StartStatSelection(%clientId)
+Game::refreshClientScore(%clientId)
+DoRemort(%clientId)
+GetRankBonus(%clientId)
+VARIABLES (first 50):
+
+========================================
+rpghud.cs
+
+========================================
+
+Functions:
+
+ 5
+Variables:
+ 23
+
+FUNCTIONS:
+
+
+round(%n)
+FixDecimals(%c)
+getrpgdata()
+UpdateRPGHUD(%hud)
+toggleRPGhud()
+VARIABLES (first 50):
+  - $rpghudcbdelay
+  - $mana
+  - $maxmana
+  - $hp
+  - $maxhp
+  - $exp
+  - $coins
+  - $maxweight
+  - $bank
+  - $lvl
+  - $lck
+  - $atk
+  - $def
+  - $mdef
+  - $class
+  - $race
+  - $zonedesc
+  - $remort
+  - $expneeded
+  - $weight
+  - $rfdcnt
+========================================
+playerdamage.cs
+
+========================================
+
+Functions:
+
+ 5
+Variables:
+ 8
+
+FUNCTIONS:
+
+
+Client::onKilled(%clientId, %killerId, %damageType)
+Game::clientKilled(%playerId, %killerId)
+Player::onKilled(%this)
+Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%object,%weapon,%preCalcMiss)
+remoteKill(%clientId)
+VARIABLES (first 50):
+  - $Colloseum::Mode
+  - $Colloseum::Client
+  - $Duel::Challenger
+  - $Seal
+  - $Battl
+  - $SealBattleActive
+  - $ctive
+  - $eA
+========================================
+playerspawn.cs
+
+========================================
+
+Functions:
+
+ 5
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Game::pickObserverSpawn(%clientId)
+Game::pickPlayerSpawn(%clientId, %respawn)
+Game::playerSpawn(%clientId, %respawn)
+Game::playerSpawned(%pl, %clientId, %armor)
+Game::autoRespawn(%clientId)
+VARIABLES (first 50):
+
+========================================
+itemevents.cs
+
+========================================
+
+Functions:
+
+ 9
+Variables:
+ 6
+
+FUNCTIONS:
+
+
+isPlayerBusy(%client)
+Item::giveItem(%player, %item, %delta, %showmsg)
+Item::onCollision(%this,%object)
+Item::onMount(%player,%item)
+Item::onUnmount(%player,%item)
+Item::onUse(%player,%item)
+Item::onDrop(%player,%item)
+Ammo::onDrop(%player,%item)
+Item::onDeploy(%player,%item,%pos)
+VARIABLES (first 50):
+  - $Spawn
+  - $Gambl
+  - $Lis
+  - $Pac
+  - $Sav
+  - $Schedule
+  - $Scheduled
+  - $SpawnPackList
+  - $GambleBot
+  - $GamblePackList
+  - $LootbagSaveWorldScheduled
+  - $ack
+  - $dL
+  - $eB
+  - $eP
+  - $eW
+  - $ist
+  - $kL
+  - $ootbag
+  - $orld
+  - $ot
+  - $tL
+========================================
+Belt.cs
+
+========================================
+
+Functions:
+
+ 95
+Variables:
+ 22
+
+FUNCTIONS:
+
+
+isBackpackItem(%item)
+Belt::BankStorageConversion(%clientId)
+MenuViewBackpack(%clientId, %page)
+MenuViewBelt(%clientId, %page)
+processMenuViewBelt(%clientId, %opt)
+MenuBeltGear(%clientId, %type, %page)
+processMenuBeltGear(%clientId, %opt)
+MenuBeltDrop(%clientId, %item, %type)
+processMenuBeltDrop(%clientId, %opt)
+MenuSellBelt(%clientId)
+processMenuSellBelt(%clientId, %opt)
+MenuSellBeltItem(%clientId, %type, %page)
+processMenuSellBeltItem(%clientId, %opt)
+MenuSellBeltItemFinal(%clientId, %item, %type, %mode)
+processMenuSellBeltItemFinal(%clientId, %opt)
+MenuStoreBelt(%clientId, %mode)
+processMenuStoreBelt(%clientId, %opt)
+Belt::StorageConversion(%clientId)
+Belt::ItemsOnThemConversion(%clientId)
+Belt::GetWeight(%clientId)
+Belt::GetNS(%clientId, %type)
+Belt::GetSellCost(%clientId, %item)
+Belt::HasThisStuff(%clientId, %item)
+Belt::GiveThisStuff(%clientId, %item, %amnt, %echo)
+Belt::Mug(%clientId, %id)
+Belt::MugBeltMain(%clientId, %id)
+processMenuMugBeltMain(%clientId, %opt)
+MenuBelt::MugThisType(%clientId, %type, %page)
+processMenuBelt::MugThisType(%clientId, %opt)
+MenuBelt::MugChoose(%clientId, %item, %type)
+processMenuBelt::MugChoose(%clientId, %opt)
+Belt::MugItem(%clientId, %item, %type)
+MenuBeltWithdrawThisItem(%clientId, %type, %page, %mode)
+processMenuBeltWithdrawThisItem(%clientId, %opt)
+MenuBeltStoreThisItem(%clientId, %type, %page, %mode)
+processMenuBeltStoreThisItem(%clientId, %opt)
+Belt::TakeThisStuff(%clientId, %item, %amnt)
+Belt::ItemCount(%item, %list)
+Belt::isEmpty(%clientId, %type)
+isBeltItem(%item)
+Belt::WhatIs(%clientId, %item)
+Belt::GetLastItem()
+Belt::Display(%type)
+Belt::Sell(%clientId, %npc)
+Belt::DeployItem(%clientId, %item, %type)
+Belt::UseItem(%clientId, %item, %type)
+Belt::DropItem(%clientId, %item, %amnt, %type)
+Belt::AddToList(%list, %item)
+Belt::RemoveFromList(%list, %item)
+Belt::IsInList(%list, %item)
+Belt::GetStored(%clientId, %opt)
+Belt::GetDeathItems(%clientId)
+BeltItem::Add(%name, %item, %type, %weight, %cost)
+Belt::Store(%clientId, %bankerId)
+processMenuBeltStorage(%clientId, %option)
+Belt::ShowDepositMenu(%clientId)
+processMenuBeltDeposit(%clientId, %option)
+Belt::ShowWithdrawMenu(%clientId)
+processMenuBeltWithdraw(%clientId, %option)
+VARIABLES (first 50):
+  - $1
+  - $2
+  - $3
+  - $4
+  - $5
+  - $6
+  - $7
+  - $Belt::Categories
+  - $Misc
+  - $Info
+  - $Weight
+  - $MiscInfo
+========================================
+economy.cs
+
+========================================
+
+Functions:
+
+ 18
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+ShowCoinsDisplay(%clientId)
+StopCoinsDisplay(%clientId)
+getBuyCost(%clientId, %item)
+getSellCost(%clientId, %item)
+GetItemCost(%item)
+BuySell(%player, %item, %delta, %buyORsell)
+buyItem(%clientId, %item)
+DoSteal(%clientId, %cl, %itemcount, %item, %fitem, %w)
+HasTheftFlag(%clientId)
+remoteBuyItem(%clientId, %type)
+sellItem(%clientId, %item)
+remoteSellItem(%clientId, %type)
+checkResources(%player, %item, %cost, %delta, %noMessage)
+CompleteSmith(%clientId, %cost, %sc, %tempsmith, %multiplier)
+BlackSmithClick(%clientId, %item, %delta)
+GetSmithCombo(%tempsmith)
+GetSmithComboCost(%clientId, %sc)
+GetStuffStringCost(%clientId, %itemlist)
+VARIABLES (first 50):
+
+========================================
+remote.cs
+
+========================================
+
+Functions:
+
+ 17
+Variables:
+ 3
+
+FUNCTIONS:
+
+
+remoteTrue()
+remoterawKey(%client, %key, %mod)
+remotePlayMode(%clientId)
+remoteCommandMode(%clientId)
+remoteInventoryMode(%clientId)
+remoteObjectivesMode(%clientId)
+remoteScoresOn(%clientId)
+remoteScoresOff(%clientId)
+remoteToggleCommandMode(%clientId)
+remoteToggleInventoryMode(%clientId)
+remoteToggleObjectivesMode(%clientId)
+remoteConsider(%clientId)
+remoteUseItem(%clientId, %type)
+remoteThrowItem(%clientId,%type,%strength)
+remoteDropItem(%clientId,%type)
+remoteDeployItem(%clientId,%type)
+VARIABLES (first 50):
+  - $dropping
+  - $Allowedlos::objectlos
+  - $position
+  - $droppingAllowed
+  - $los::object
+  - $los::position
+========================================
+weaponHandling.cs
+
+========================================
+
+Functions:
+
+ 10
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+CreateWeaponCyclingTables()
+RPGmountItem(%player, %item, %slot)
+remoteNextWeapon(%clientId)
+remotePrevWeapon(%clientId)
+selectValidWeapon(%clientId)
+isSelectableWeapon(%clientId,%weapon)
+Weapon::onUse(%player,%item)
+Weapon::onFire(%player, %slot)
+GetBestRangedProj(%clientId, %item)
+GetBestWeapon(%clientId)
+VARIABLES (first 50):
+
+========================================
+BonusState.cs
+
+========================================
+
+Functions:
+
+ 3
+Variables:
+ 1
+
+FUNCTIONS:
+
+
+DecreaseBonusStateTicks(%clientId, %b)
+AddBonusStatePoints(%clientId, %filter)
+UpdateBonusState(%clientId, %type, %ticks)
+VARIABLES (first 50):
+  - $max
+  - $Bonu
+  - $maxBonusStates
+  - $sS
+  - $tates
+========================================
+ferry.cs
+
+========================================
+
+Functions:
+
+ 7
+Variables:
+ 3
+
+FUNCTIONS:
+
+
+Ferry::onNewPath(%this)
+Ferry::onWaypoint(%this)
+ResetFerry(%this)
+NextWaypoint(%this)
+Ferry::onCollision(%this, %object)
+IsOnFerry(%clientId)
+InitFerry()
+VARIABLES (first 50):
+  - $Ferryfolder
+  - $FerryfolderNameForSystem
+  - $FerryfolderNameForPath
+  - $FerryStationWait
+  - $Nam
+  - $Pat
+  - $Statio
+  - $Syste
+  - $ait
+  - $eF
+  - $erry
+  - $erryfolder
+  - $hF
+  - $mF
+  - $nW
+  - $or
+========================================
+Player.cs
+
+========================================
+
+Functions:
+
+ 11
+Variables:
+ 15
+
+FUNCTIONS:
+
+
+Player::onAdd(%this)
+Player::onRemove(%this)
+Player::onNoAmmo(%player,%imageSlot,%itemType)
+radnomItems(%num, %an0, %an1, %an2, %an3, %an4, %an5, %an6)
+Player::onCollision(%this,%object)
+Player::getHeatFactor(%this)
+Player::jump(%this,%mom)
+playNextAnim(%clientId)
+Client::takeControl(%clientId, %objectId)
+remoteCmdrMountObject(%clientId, %objectIdx)
+checkControlUnmount(%clientId)
+VARIABLES (first 50):
+  - $Player
+  - $Anim::Crouching
+  - $Playe
+  - $Anim::Die
+  - $Backani
+  - $Blow
+  - $Le
+  - $Righ
+  - $Bac
+  - $BackanimNumberanimNumber
+  - $BlownBackPlayerAnim::Die
+  - $ChestPlayerAnim::Die
+  - $ForwardKneelPlayerAnim::Die
+  - $ForwardPlayerAnim::Die
+  - $GrabBackPlayerAnim::Die
+  - $HeadPlayerAnim::Die
+  - $Knee
+  - $LeftSidePlayerAnim::Die
+  - $LegLeftPlayerAnim::Die
+  - $LegRightPlayerAnim::Die
+  - $Number
+  - $PlayerAnim::Crouching
+  - $PlayerAnim::Die
+  - $RightSidePlayerAnim::Die
+  - $Sid
+  - $SpinPlayerAnim::Die
+  - $ack
+  - $eP
+  - $eft
+  - $gL
+  - $ide
+  - $kP
+  - $lP
+  - $layer
+  - $mN
+  - $nB
+  - $nim::Die
+  - $Chest
+  - $Forward
+  - $Grab
+  - $Head
+  - $Left
+  - $Leg
+  - $Spin
+  - $rA
+  - $tP
+  - $tS
+  - $umberanim
+========================================
+Vehicle.cs
+
+========================================
+
+Functions:
+
+ 19
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Vehicle::onAdd(%this)
+Vehicle::onCollision(%this, %object)
+Vehicle::findEmptySeat(%this,%clientId)
+getClosestPosition(%num,%playerPos,%slotPos0,%slotPos1,%slotPos2,%slotPos3)
+Vehicle::passengerJump(%this,%passenger,%mom)
+Vehicle::jump(%this,%mom)
+Vehicle::dismount(%this,%mom)
+Vehicle::onDestroyed(%this,%mom)
+Vehicle::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+Vehicle::getHeatFactor(%this)
+Vehicle::findEmptySeat(%this,%client)
+VARIABLES (first 50):
+
+========================================
+Turret.cs
+
+========================================
+
+Functions:
+
+ 26
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+RocketTurret::onPower(%this,%power,%generator)
+RocketTurret::verifyTarget(%target)
+DeployableTurret::onAdd(%this)
+DeployableTurret::deploy(%this)
+DeployableTurret::onEndSequence(%this,%thread)
+DeployableTurret::onDestroyed(%this)
+DeployableTurret::onPower(%this,%power,%generator)
+DeployableTurret::onEnabled(%this)
+CameraTurret::onAdd(%this)
+CameraTurret::deploy(%this)
+CameraTurret::onEndSequence(%this,%thread)
+CameraTurret::onDestroyed(%this)
+Turret::verifyTarget(%this, %target)
+Turret::onAdd(%this)
+Turret::onActivate(%this)
+Turret::onDeactivate(%this)
+Turret::onSetTeam(%this,%oldTeam)
+Turret::checkOperator(%this)
+Turret::onPower(%this,%power,%generator)
+Turret::onEnabled(%this)
+Turret::onDisabled(%this)
+Turret::onDestroyed(%this)
+Turret::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+Turret::onControl(%this, %object)
+Turret::onDismount(%this, %object)
+Turret::onCollision(%this, %object)
+VARIABLES (first 50):
+
+========================================
+beacon.cs
+
+========================================
+
+Functions:
+
+ 3
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Beacon::onEnabled(%this)
+Beacon::onDisabled(%this)
+Beacon::onDestroyed(%this)
+VARIABLES (first 50):
+
+========================================
+staticshape.cs
+
+========================================
+
+Functions:
+
+ 23
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+StaticShape::onPower(%this,%power,%generator)
+StaticShape::onEnabled(%this)
+StaticShape::onDisabled(%this)
+StaticShape::onDestroyed(%this)
+StaticShape::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+StaticShape::shieldDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+calcRadiusDamage(%this,%type,%radiusRatio,%damageRatio,%forceRatio,	%rMax,%rMin,%dMax,%dMin,%fMax,%fMin)
+FlagStand::onDamage()
+Generator::onEnabled(%this)
+Generator::onDisabled(%this)
+Generator::onDestroyed(%this)
+Generator::onActivate(%this)
+Generator::onDeactivate(%this)
+PoweredElectricalBeam::onPower(%this, %power, %generator)
+DepPlatSmallHorz::onDestroyed(%this)
+DepPlatMediumHorz::onDestroyed(%this)
+DepPlatLargeHorz::onDestroyed(%this)
+DepPlatSmallVert::onDestroyed(%this)
+DepPlatMediumVert::onDestroyed(%this)
+DepPlatLargeVert::onDestroyed(%this)
+StaticDoorForceField::onCollision(%this, %object)
+RecreateForceField(%this, %pos, %rot, %backupowner)
+StaticDoorForceField::onDestroyed(%this)
+VARIABLES (first 50):
+
+========================================
+Station.cs
+
+========================================
+
+Functions:
+
+ 29
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Station::onActivate(%this)
+Station::onDeactivate(%this)
+Station::onEndSequence(%this,%thread)
+Station::onPower(%this,%power,%generator)
+Station::onEnabled(%this)
+Station::checkTarget(%this)
+Station::onDisabled(%this)
+Station::onDestroyed(%this)
+Station::getTarget(%this)
+Station::onCollision(%this, %object)
+Station::itemsToResupply(%player)
+AmmoStation::onEndSequence(%this,%thread)
+AmmoStation::onResupply(%this)
+AmmoStation::resupply(%player,%weapon,%item,%delta)
+InventoryStation::onEndSequence(%this,%thread)
+InventoryStation::onResupply(%this,%InvShopList)
+resupply(%this)
+CommandStation::onEndSequence(%this,%thread)
+CommandStation::onResupply(%this)
+VehicleStation::onEndSequence(%this,%thread)
+VehicleStation::onBuyingVechicle(%this)
+VehicleStation::checkBuying(%clientId,%item)
+VehiclePad::onActivate(%this)
+VehiclePad::onDeactivate(%this)
+VehiclePad::onEnabled(%this)
+VehiclePad::onAdd(%this)
+VehiclePad::onCollision(%this, %object)
+VehiclePad::onPower(%this,%power,%generator)
+VehiclePad::checkSeq(%this, %station)
+VARIABLES (first 50):
+
+========================================
+moveable.cs
+
+========================================
+
+Functions:
+
+ 36
+Variables:
+ 14
+
+FUNCTIONS:
+
+
+Elevator::onAdd(%this)
+Elevator::onNewPath(%this)
+Elevator::onEnabled(%this)
+Elevator::trigger(%this)
+Elevator::onPower(%this, %state, %generator)
+Elevator::onMove(%this)
+Elevator::onFirst(%this)
+Elevator::onWaypoint(%this)
+Elevator::onLast(%this)
+Elevator::onCollision(%this, %object)
+Elevator::onBlocker(%this,%obj)
+Elevator::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+Elevator::onDisabled(%this)
+Elevator::onDestroyed(%this)
+Elevator::checkDelay(%this)
+Elevator::onTrigEnter(%this,%object,%trigger)
+Elevator::onTrigLeave(%this,%object,%trigger)
+Elevator::onTrigger(%this,%object,%trigger)
+Door::onAdd(%this)
+Door::onNewPath(%this)
+Door::onEnabled(%this)
+Door::trigger(%this)
+Door::onPower(%this, %state, %generator)
+Door::onFirst(%this)
+Door::onLast(%this)
+Door::onWaypoint(%this)
+Door::onMove(%this, %forceClose)
+Door::onCollision(%this, %object)
+Door::onBlocker(%this,%obj)
+Door::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+Door::onDisabled(%this)
+Door::onDestroyed(%this)
+Door::closeCheck(%this)
+Door::onTrigEnter(%this,%object,%trigger)
+Door::onTrigLeave(%this,%object,%trigger)
+Door::onTrigger(%this,%object,%trigger)
+VARIABLES (first 50):
+  - $Blaster
+  - $BlasterDamageType
+  - $BulletDamageType
+  - $CrushDamageType
+  - $Damag
+  - $DebrisDamageType
+  - $ElectricityDamageType
+  - $EnergyDamageType
+  - $ExplosionDamageType
+  - $ImpactDamageType
+  - $LaserDamageType
+  - $MineDamageType
+  - $MissileDamageType
+  - $MortarDamageType
+  - $PlasmaDamageType
+  - $ShrapnelDamageType
+  - $eT
+  - $ype
+  - $Bullet
+  - $Crush
+  - $Debris
+  - $Electricity
+  - $Energy
+  - $Explosion
+  - $Impact
+  - $Laser
+  - $Mine
+  - $Missile
+  - $Mortar
+  - $Plasma
+  - $Shrapnel
+========================================
+sensor.cs
+
+========================================
+
+Functions:
+
+ 10
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Sensor::onActivate(%this)
+Sensor::onDeactivate(%this)
+Sensor::onPower(%this,%power,%generator)
+Sensor::onEnabled(%this)
+Sensor::onDisabled(%this)
+Sensor::onDestroyed(%this)
+Sensor::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+DeployableSensor::onAdd(%this)
+DeployableSensor::deploy(%this)
+DeployableSensor::onEndSequence(%this,%thread)
+VARIABLES (first 50):
+
+========================================
+Mine.cs
+
+========================================
+
+Functions:
+
+ 37
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+AntipersonelMine::onAdd(%this)
+AntipersonelMine::onCollision(%this,%object)
+AntipersonelMine::deployCheck(%this)
+AntipersonelMine::onDestroyed(%this)
+AntipersonelMine::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+Bomb1::onAdd(%this)
+Bomb2::onAdd(%this)
+Bomb3::onAdd(%this)
+Bomb4::onAdd(%this)
+Bomb5::onAdd(%this)
+Bomb6::onAdd(%this)
+Bomb7::onAdd(%this)
+Bomb8::onAdd(%this)
+Bomb9::onAdd(%this)
+Bomb10::onAdd(%this)
+Bomb11::onAdd(%this)
+Bomb12::onAdd(%this)
+Bomb13::onAdd(%this)
+Bomb14::onAdd(%this)
+Bomb15::onAdd(%this)
+Bomb16::onAdd(%this)
+Bomb17::onAdd(%this)
+Bomb18::onAdd(%this)
+Bomb19::onAdd(%this)
+Bomb20::onAdd(%this)
+Bomb21::onAdd(%this)
+Bomb22::onAdd(%this)
+Bomb23::onAdd(%this)
+Bomb24::onAdd(%this)
+Bomb25::onAdd(%this)
+Bomb26::onAdd(%this)
+Bomb27::onAdd(%this)
+Bomb28::onAdd(%this)
+Bomb29::onAdd(%this)
+Handgrenade::onAdd(%this)
+Mine::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+Mine::Detonate(%this)
+VARIABLES (first 50):
+
+========================================
+interiorLight.cs
+
+========================================
+
+Functions:
+
+ 2
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Interior::lightOn(%int, %light)
+Interior::lightOff(%int, %light)
+VARIABLES (first 50):
+
+========================================
+comchat.cs
+
+========================================
+
+Functions:
+
+ 75
+Variables:
+ 78
+
+FUNCTIONS:
+
+
+remoteSay(%clientId, %team, %message, %senderName)
+remoteIssueCommand(%commander, %cmdIcon, %command, %wayX, %wayY, %dest1, %dest2, %dest3, %dest4, %dest5, %dest6, %dest7, %dest8, %dest9, %dest10, %dest11, %dest12, %dest13, %dest14)
+remoteIssueTargCommand(%commander, %cmdIcon, %command, %targIdx, %dest1, %dest2, %dest3, %dest4, %dest5, %dest6, %dest7, %dest8, %dest9, %dest10, %dest11, %dest12, %dest13, %dest14)
+remoteCStatus(%clientId, %status, %message)
+teamMessages(%mtype, %team1, %message1, %team2, %message2, %message3)
+messageAll(%mtype, %message, %filter)
+messageAllExcept(%except, %mtype, %message)
+radiusAllExcept(%except1, %except2, %message)
+FadeMsg(%txt, %dist, %max)
+BuildDotString(%txt, %n)
+ClearBlockData(%name, %block)
+ManageBlockOwnersList(%name)
+ParseBlockData(%bd, %victimId, %killerId)
+messageonlyadmins(%color, %message)
+VARIABLES (first 50):
+  - $1
+  - $2
+  - $3
+  - $4
+  - $Flag
+  - $ABo
+  - $AImov
+  - $Aren
+  - $Battl
+  - $Canwhac
+  - $Cha
+  - $Challenge
+  - $Chatexpor
+  - $DISlis
+  - $Due
+  - $FlagName
+  - $ISlist
+  - $IsABotMatch
+  - $ArenaBotMatchTicker
+  - $AImoveChance
+  - $exportChat
+  - $SpawnPackList
+  - $DISlist
+  - $LoadOutList
+  - $Lis
+  - $Loa
+  - $Matc
+  - $Ms
+  - $MsgTypeSystem
+  - $MsgTypeGame
+  - $MsgTypeChat
+  - $MsgTypeTeamChat
+  - $MsgTypeCommand
+  - $MsgWhite
+  - $MsgRed
+  - $MsgBeige
+  - $MsgGreen
+  - $Refresh
+  - $Canwhack
+  - $DuelOn
+  - $DuelChallenger
+  - $DuelOpponent
+  - $SealBattleActive
+  - $SealBattleParticipants
+  - $DuelLoser
+  - $adminattempt::entry
+  - $Name
+  - $Towe
+  - $Fla
+  - $spaw
+  - $O
+  - $Opponen
+  - $Ou
+  - $Pac
+  - $Participant
+  - $Refres
+  - $Sea
+  - $Spaw
+  - $Syste
+  - $TowerName
+  - $Typ
+  - $aB
+  - $ack
+  - $ame
+  - $ame[1]
+  - $Tower
+  - $ame[3]
+  - $anwhack
+  - $atch
+  - $attle
+  - $ctive
+  - $dO
+  - $eA
+  - $eC
+  - $eG
+  - $eT
+  - $eal
+  - $eam
+  - $ed
+  - $efresh
+  - $eige
+  - $gB
+  - $gG
+  - $gN
+  - $gR
+  - $gT
+  - $gW
+  - $hR
+  - $hT
+  - $hance
+  - $hanceexport
+  - $hat
+  - $hite
+  - $icker
+  - $ist
+  - $kC
+  - $kD
+  - $kL
+  - $lB
+  - $lL
+  - $lag
+  - $mM
+  - $nD
+  - $nM
+  - $nP
+  - $nS
+  - $oad
+  - $ommand
+  - $oser
+  - $oseradminattempt::entry
+  - $Is
+  - $ot
+  - $pawn
+  - $rD
+  - $rN
+  - $reen
+  - $sS
+  - $sg
+  - $spawnMultiplier
+  - $tC
+  - $tD
+  - $tF
+  - $tL
+  - $tM
+  - $tS
+  - $uel
+  - $ultiplier
+  - $ut
+  - $ype
+========================================
+plugs.cs
+
+========================================
+
+Functions:
+
+ 0
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+VARIABLES (first 50):
+
+========================================
+version.cs
+
+========================================
+
+Functions:
+
+ 0
+Variables:
+ 1
+
+FUNCTIONS:
+
+
+VARIABLES (first 50):
+  - $rpgver
+========================================
+hackfix.cs
+
+========================================
+
+Functions:
+
+ 1
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+itendsnowban(%id)
+VARIABLES (first 50):
+
+========================================
+newstuff.cs
+
+========================================
+
+Functions:
+
+ 6
+Variables:
+ 41
+
+FUNCTIONS:
+
+
+TerminusEstImage::onFire(%player, %slot)
+TerminusEst::onMount(%player,%item,
+$WeaponSlot)
+AecoSeoreiImage::onFire(%player, %slot)
+AecoSeorei::onMount(%player,%item,
+$WeaponSlot)
+MorningStarImage::onFire(%player, %slot)
+MorningStar::onMount(%player,%item,
+$WeaponSlot)
+VARIABLES (first 50):
+  - $19
+  - $9
+  - $87
+  - $Accessory
+  - $AccessoryType
+  - $AecoSeorei
+  - $ArmorHitSound
+  - $ArmorList
+  - $ArmorPlayerModel
+  - $ArmorSkin
+  - $Cost
+  - $Terminu
+  - $Whit
+  - $Diamon
+  - $Est
+  - $Skil
+  - $Weight
+  - $Info
+  - $Mornin
+  - $ItemCost
+  - $List[987]
+  - $Armo
+  - $MiscInfo
+  - $Mode
+  - $l
+  - $Re
+  - $MorningStar
+  - $Plate
+  - $Ite
+  - $Mis
+  - $RedDiamondPlate
+  - $Restriction
+  - $Aec
+  - $Seorei
+  - $SkillRestriction
+  - $SkillType
+  - $Skin
+  - $Sound
+  - $SpecialVar
+  - $Star
+  - $TerminusEst
+  - $Type
+  - $Accessor
+  - $Var
+  - $Specia
+  - $WhiteDiamondPlate
+  - $ar
+  - $Terminus
+  - $cI
+  - $dD
+  - $dP
+  - $eD
+  - $eorei
+  - $Skill
+  - $estriction
+  - $White
+  - $gS
+  - $iamond
+  - $ist[19]
+  - $Armor
+  - $it
+  - $kin
+  - $Red
+  - $lR
+  - $lV
+  - $late
+  - $Item
+  - $layer
+  - $mC
+  - $nfo
+  - $Misc
+  - $oS
+  - $ost
+  - $Aeco
+  - $Morning
+  - $rH
+  - $rL
+  - $rP
+  - $rS
+  - $sE
+  - $st
+  - $Special
+  - $tar
+  - $yT
+  - $ype
+========================================
+advertisements.cs
+
+========================================
+
+Functions:
+
+ 1
+Variables:
+ 0
+
+FUNCTIONS:
+
+
+Advertize(%stage)
+VARIABLES (first 50):
+
+========================================
+remortseal.cs
+
+========================================
+
+Functions:
+
+ 20
+Variables:
+ 22
+
+FUNCTIONS:
+
+
+GetTotalSealValue()
+IncrementTotalSealValue()
+SetTotalSealValue(%value)
+SealBattle::GetEnemyStrengthMultiplier()
+SealBattle::GetParticipantNames()
+SealBattle::MessageColloseumPlayers(%message)
+SealBattle::Begin(%clientId,%pos,%seal)
+SealBattle::StartBattle(%clientId,%pos,%seal)
+SealBattle::Loop(%clientId,%pos,%seal,%round)
+SealBattle::SpawnRound2(%clientId, %pos, %seal, %round, %name)
+SealBattle::SpawnRound3(%clientId, %pos, %seal, %round, %name)
+SealBattle::LazyDeathCheck(%clientId)
+SealBattle::Conclude(%clientId, %success)
+SealBattle::FixSpawnPosition(%clientId, %targetPos)
+SealBattle::TeleportParticipantBack(%clientId, %targetPos)
+SealBattle::TeleportOutSuccess(%clientId, %outpos)
+SealBattle::TeleportOut(%clientId)
+SealBattle::SetupBot(%botName, %pos)
+Duel::isDueling(%clientId)
+Duel::endDuel(%pass)
+VARIABLES (first 50):
+  - $Seal
+  - $Activ
+  - $Battl
+  - $Die
+  - $Fight
+  - $e
+  - $Participant
+  - $Participants
+  - $Sea
+  - $SealBattleActive
+  - $TotalSealValue
+  - $SealFighterDied
+  - $SealBattleZone
+  - $SealBattleHouse
+  - $SealBattleParticipants
+  - $Tota
+  - $Valu
+  - $Zon
+  - $alue
+  - $articipants
+  - $attle
+  - $ctive
+  - $dS
+  - $eA
+  - $eH
+  - $eP
+  - $eS
+  - $eT
+  - $eal
+  - $ied
+  - $ighter
+  - $lB
+  - $lF
+  - $lS
+  - $lV
+  - $otal
+  - $ouse
+  - $rD
+  - $sS
+========================================
+DebugInit.cs
+
+========================================
+
+Functions:
+
+ 17
+Variables:
+ 20
+
+FUNCTIONS:
+
+
+calls(VERY verbose, use sparingly)
+InitDebugBroadcast()
+Debug::Enable()
+Debug::Disable()
+Debug::Toggle()
+debugon()
+debugoff()
+debugtoggle()
+Debug::EnableUnassignedVars()
+Debug::DisableUnassignedVars()
+Debug::ShowFunctionStats()
+Debug::ResetStats()
+Debug::QuickSession(%duration)
+Debug::SearchFor(%pattern)
+Debug::Status()
+Debug::On()
+Debug::Off()
+VARIABLES (first 50):
+  - $Debug::Enabled
+  - $Debug::Track
+  - $Unassigned
+  - $Call
+  - $Debug::Port
+  - $FunctionCallsDebug::Track
+  - $FunctionStatsDebug::Enabled
+  - $FunctionStatsDebug::Track
+  - $Stat
+  - $UnassignedVarsDebug::Track
+  - $Var
+  - $ebug::Enabled
+  - $ebug::Track
+  - $Function
+  - $sD
+========================================
+
+CROSS-REFERENCE: FUNCTIONS
+========================================
+game.cs
+AddBonusStatePoints  Used in: 
+BonusState.cs
+AddBounty  Used in: 
+rpgfunk.cs
+AddEventCommand  Used in: 
+rpgfunk.cs
+AddItemSpecificPoints  Used in: 
+Accessory.cs
+AddObjectToRec  Used in: 
+rpgfunk.cs
+AddPoints  Used in: 
+Accessory.cs
+AddSkillPoint  Used in: 
+skills.cs
+AddToCommaList  Used in: 
+rpgfunk.cs
+AddToParty  Used in: 
+party.cs
+AddToRoster  Used in: 
+rpgarena.cs
+AddToTargetList  Used in: 
+rpgfunk.cs
+Admin::changeMissionMenu  Used in: 
+Admin.cs
+Admin::countVotes  Used in: 
+Admin.cs
+Admin::kick  Used in: 
+Admin.cs
+Admin::setModeFFA  Used in: 
+Admin.cs
+Admin::setModeTourney  Used in: 
+Admin.cs
+Admin::setTeamDamageEnable  Used in: 
+Admin.cs
+Admin::startMatch  Used in: 
+Admin.cs
+Admin::startVote  Used in: 
+Admin.cs
+Admin::voteFailed  Used in: 
+Admin.cs
+Admin::voteSucceded  Used in: 
+Admin.cs
+Advertize  Used in: 
+advertisements.cs
+AecoSeorei::onMount  Used in: 
+newstuff.cs
+AecoSeoreiImage::onFire  Used in: 
+newstuff.cs
+AI::activelyFollow  Used in: 
+Ai.cs
+AI::AddBotToBotGroup  Used in: 
+Ai.cs
+AI::BotGroupExists  Used in: 
+Ai.cs
+AI::CountBotGroupMembers  Used in: 
+Ai.cs
+AI::CreateBotGroup  Used in: 
+Ai.cs
+AI::DiscardBotGroup  Used in: 
+Ai.cs
+AI::helper  Used in: 
+Ai.cs
+AI::initDrones  Used in: 
+Ai.cs
+AI::IsInBotGroup  Used in: 
+Ai.cs
+AI::IsInWhichBotGroup  Used in: 
+Ai.cs
+AI::lookAtPlayer  Used in: 
+Ai.cs
+AI::moveAhead  Used in: 
+Ai.cs
+AI::moveSomewhere  Used in: 
+Ai.cs
+AI::moveToAttackMarker  Used in: 
+Ai.cs
+AI::moveToFurthest  Used in: 
+Ai.cs
+AI::moveToLOS  Used in: 
+Ai.cs
+AI::newDirectiveFollow  Used in: 
+Ai.cs
+AI::newDirectiveRemove  Used in: 
+Ai.cs
+AI::newDirectiveWaypoint  Used in: 
+Ai.cs
+AI::NextWeapon  Used in: 
+Ai.cs
+AI::onCommand  Used in: 
+Ai.cs
+AI::onDroneKilled  Used in: 
+Ai.cs
+AI::onPeriodic  Used in: 
+Ai.cs
+AI::onTargetDied  Used in: 
+Ai.cs
+AI::onTargetLOSAcquired  Used in: 
+Ai.cs
+AI::onTargetLOSLost  Used in: 
+Ai.cs
+AI::onTargetLOSRegained  Used in: 
+Ai.cs
+AI::Periodic  Used in: 
+Ai.cs
+AI::RemoveBotFromBotGroup  Used in: 
+Ai.cs
+AI::sayLater  Used in: 
+Ai.cs
+AI::SelectBestWeapon  Used in: 
+Ai.cs
+AI::SelectMovement  Used in: 
+Ai.cs
+AI::SetSpotDist  Used in: 
+Ai.cs
+AI::setupAI  Used in: 
+Ai.cs
+AI::setWeapons  Used in: 
+Ai.cs
+Ai::soundHelper  Used in: 
+Ai.cs
+AllowedToSteal  Used in: 
+rpgfunk.cs
+Ammo::onDrop  Used in: 
+itemevents.cs
+AmmoStation::onEndSequence  Used in: 
+Station.cs
+AmmoStation::onResupply  Used in: 
+Station.cs
+AmmoStation::resupply  Used in: 
+Station.cs
+AntipersonelMine::deployCheck  Used in: 
+Mine.cs
+AntipersonelMine::onAdd  Used in: 
+Mine.cs
+AntipersonelMine::onCollision  Used in: 
+Mine.cs
+AntipersonelMine::onDamage  Used in: 
+Mine.cs
+AntipersonelMine::onDestroyed  Used in: 
+Mine.cs
+ApocalypseBatchExplosions  Used in: 
+spells.cs
+ApocalypseCleanup  Used in: 
+spells.cs
+ApocalypseCreateExplosion  Used in: 
+spells.cs
+Beacon::onDestroyed  Used in: 
+beacon.cs
+Beacon::onDisabled  Used in: 
+beacon.cs
+Beacon::onEnabled  Used in: 
+beacon.cs
+BeginCastSpell  Used in: 
+spells.cs
+Belt::AddToList  Used in: 
+Belt.cs
+Belt::BankStorageConversion  Used in: 
+Belt.cs
+Belt::DeployItem  Used in: 
+Belt.cs
+Belt::Display  Used in: 
+Belt.cs
+Belt::DropItem  Used in: 
+Belt.cs
+Belt::GetDeathItems  Used in: 
+Belt.cs
+Belt::GetLastItem  Used in: 
+Belt.cs
+Belt::GetNS  Used in: 
+Belt.cs
+Belt::GetSellCost  Used in: 
+Belt.cs
+Belt::GetStored  Used in: 
+Belt.cs
+Belt::GetWeight  Used in: 
+Belt.cs
+Belt::GiveThisStuff  Used in: 
+Belt.cs
+Belt::HasThisStuff  Used in: 
+Belt.cs
+Belt::isEmpty  Used in: 
+Belt.cs
+Belt::IsInList  Used in: 
+Belt.cs
+Belt::ItemCount  Used in: 
+Belt.cs
+Belt::ItemsOnThemConversion  Used in: 
+Belt.cs
+Belt::Mug  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+Belt::MugBeltMain  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+Belt::MugItem  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+Belt::onUse  Used in: 
+item.cs
+Belt::RemoveFromList  Used in: 
+Belt.cs
+Belt::Sell  Used in: 
+Belt.cs
+Belt::ShowDepositMenu  Used in: 
+Belt.cs
+Belt::ShowWithdrawMenu  Used in: 
+Belt.cs
+Belt::StorageConversion  Used in: 
+Belt.cs
+Belt::Store  Used in: 
+Belt.cs
+Belt::TakeThisStuff  Used in: 
+Belt.cs
+Belt::UseItem  Used in: 
+Belt.cs
+Belt::WhatIs  Used in: 
+Belt.cs
+BeltItem::Add  Used in: 
+Belt.cs
+BlackDiamondAtomPiercer::onMount  Used in: 
+weapons.cs
+BlackDiamondAtomPiercerImage::onFire  Used in: 
+weapons.cs
+BlackDiamondAtomSmasher::onMount  Used in: 
+weapons.cs
+BlackDiamondAtomSmasherImage::onFire  Used in: 
+weapons.cs
+BlackDiamondAtomSplitter::onMount  Used in: 
+weapons.cs
+BlackDiamondAtomSplitterImage::onFire  Used in: 
+weapons.cs
+BlackDiamondDreamMace::onMount  Used in: 
+weapons.cs
+BlackDiamondDreamMaceImage::onFire  Used in: 
+weapons.cs
+BlackDiamondDreamSpear::onMount  Used in: 
+weapons.cs
+BlackDiamondDreamSpearImage::onFire  Used in: 
+weapons.cs
+BlackDiamondDreamSword::onMount  Used in: 
+weapons.cs
+BlackDiamondDreamSwordImage::onFire  Used in: 
+weapons.cs
+BlackSmithClick  Used in: 
+economy.cs
+BluePotion::onUse  Used in: 
+Accessory.cs
+Bomb1::onAdd  Used in: 
+Mine.cs
+Bomb10::onAdd  Used in: 
+Mine.cs
+Bomb11::onAdd  Used in: 
+Mine.cs
+Bomb12::onAdd  Used in: 
+Mine.cs
+Bomb13::onAdd  Used in: 
+Mine.cs
+Bomb14::onAdd  Used in: 
+Mine.cs
+Bomb15::onAdd  Used in: 
+Mine.cs
+Bomb16::onAdd  Used in: 
+Mine.cs
+Bomb17::onAdd  Used in: 
+Mine.cs
+Bomb18::onAdd  Used in: 
+Mine.cs
+Bomb19::onAdd  Used in: 
+Mine.cs
+Bomb2::onAdd  Used in: 
+Mine.cs
+Bomb20::onAdd  Used in: 
+Mine.cs
+Bomb21::onAdd  Used in: 
+Mine.cs
+Bomb22::onAdd  Used in: 
+Mine.cs
+Bomb23::onAdd  Used in: 
+Mine.cs
+Bomb24::onAdd  Used in: 
+Mine.cs
+Bomb25::onAdd  Used in: 
+Mine.cs
+Bomb26::onAdd  Used in: 
+Mine.cs
+Bomb27::onAdd  Used in: 
+Mine.cs
+Bomb28::onAdd  Used in: 
+Mine.cs
+Bomb29::onAdd  Used in: 
+Mine.cs
+Bomb3::onAdd  Used in: 
+Mine.cs
+Bomb4::onAdd  Used in: 
+Mine.cs
+Bomb5::onAdd  Used in: 
+Mine.cs
+Bomb6::onAdd  Used in: 
+Mine.cs
+Bomb7::onAdd  Used in: 
+Mine.cs
+Bomb8::onAdd  Used in: 
+Mine.cs
+Bomb9::onAdd  Used in: 
+Mine.cs
+BootFromCurrentHouse  Used in: 
+house.cs
+BuildDotString  Used in: 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+ButterKnife::onMount  Used in: 
+weapons.cs
+ButterKnifeImage::onFire  Used in: 
+weapons.cs
+buyItem  Used in: 
+economy.cs
+BuySell  Used in: 
+economy.cs
+calcRadiusDamage  Used in: 
+staticshape.cs
+CalcSpellMiss  Used in: 
+spells.cs
+calls  Used in: 
+DebugInit.cs
+CameraTurret::deploy  Used in: 
+Turret.cs
+CameraTurret::onAdd  Used in: 
+Turret.cs
+CameraTurret::onDestroyed  Used in: 
+Turret.cs
+CameraTurret::onEndSequence  Used in: 
+Turret.cs
+Cap  Used in: 
+rpgfunk.cs
+CastingBladeImage::onFire  Used in: 
+weapons.cs
+ChangeRace  Used in: 
+rpgfunk.cs
+ChangeSky  Used in: 
+rpgfunk.cs
+ChangeWeather  Used in: 
+rpgfunk.cs
+CheckAndBootFromArena  Used in: 
+rpgarena.cs
+checkControlUnmount  Used in: 
+Player.cs
+checkDeployArea  Used in: 
+item.cs
+CheckForProtectedWords  Used in: 
+rpgfunk.cs
+CheckForReservedWords  Used in: 
+rpgfunk.cs
+CheckMatchWin  Used in: 
+rpgarena.cs
+checkResources  Used in: 
+economy.cs
+ClearArenaDueler  Used in: 
+rpgarena.cs
+ClearBlockData  Used in: 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+ClearCurrentShopVars  Used in: 
+shopping.cs
+ClearEvents  Used in: 
+rpgfunk.cs
+ClearFunkVar  Used in: 
+rpgfunk.cs
+ClearRoster  Used in: 
+rpgarena.cs
+ClearVariables  Used in: 
+rpgfunk.cs
+Client::leaveGame  Used in: 
+connectivity.cs
+Client::onKilled  Used in: 
+playerdamage.cs
+Client::setCommandStatus  Used in: 
+spells.cs
+Client::takeControl  Used in: 
+Player.cs
+clipTrailingNumbers  Used in: 
+rpgfunk.cs
+CloseArenaTextBox  Used in: 
+rpgarena.cs
+Club::onMount  Used in: 
+weapons.cs
+ClubImage::onFire  Used in: 
+weapons.cs
+ColloLost  Used in: 
+rpgarena.cs
+Colloseum  Used in: 
+rpgarena.cs
+CommandStation::onEndSequence  Used in: 
+Station.cs
+CommandStation::onResupply  Used in: 
+Station.cs
+CompleteSmith  Used in: 
+economy.cs
+countNumSpells  Used in: 
+rpgfunk.cs
+CountObjInCommaList  Used in: 
+rpgfunk.cs
+CountObjInList  Used in: 
+rpgfunk.cs
+CrackedStick::onMount  Used in: 
+weapons.cs
+CrackedStickImage::onFire  Used in: 
+weapons.cs
+createAI  Used in: 
+Ai.cs
+createAIPostSpawn  Used in: 
+Ai.cs
+CreateAndDetBomb  Used in: 
+spells.cs
+CreateArenaDueler  Used in: 
+rpgarena.cs
+CreateArenaStorage  Used in: 
+rpgarena.cs
+CreateParty  Used in: 
+party.cs
+CreateWeaponCyclingTables  Used in: 
+weaponHandling.cs
+Crystal::onDamage  Used in: 
+Crystal.cs
+CrystalBastardSword::onMount  Used in: 
+weapons.cs
+CrystalBastardSwordImage::onFire  Used in: 
+weapons.cs
+CrystalBluePotion::onUse  Used in: 
+Accessory.cs
+CrystalClaymore::onMount  Used in: 
+weapons.cs
+CrystalClaymoreImage::onFire  Used in: 
+weapons.cs
+CrystalDivineMace::onMount  Used in: 
+weapons.cs
+CrystalDivineMaceImage::onFire  Used in: 
+weapons.cs
+CrystalEnergyVial::onUse  Used in: 
+Accessory.cs
+CrystalPike::onMount  Used in: 
+weapons.cs
+CrystalPikeImage::onFire  Used in: 
+weapons.cs
+CrystalTrident::onMount  Used in: 
+weapons.cs
+CrystalTridentImage::onFire  Used in: 
+weapons.cs
+d  Used in: 
+rpgfunk.cs
+DaggerImage::onFire  Used in: 
+weapons.cs
+Debug::Disable  Used in: 
+DebugInit.cs
+Debug::DisableUnassignedVars  Used in: 
+DebugInit.cs
+Debug::Enable  Used in: 
+DebugInit.cs
+Debug::EnableUnassignedVars  Used in: 
+DebugInit.cs
+Debug::Off  Used in: 
+DebugInit.cs
+Debug::On  Used in: 
+DebugInit.cs
+Debug::QuickSession  Used in: 
+DebugInit.cs
+Debug::ResetStats  Used in: 
+DebugInit.cs
+Debug::SearchFor  Used in: 
+DebugInit.cs
+Debug::ShowFunctionStats  Used in: 
+DebugInit.cs
+Debug::Status  Used in: 
+DebugInit.cs
+Debug::Toggle  Used in: 
+DebugInit.cs
+debugoff  Used in: 
+DebugInit.cs
+debugon  Used in: 
+DebugInit.cs
+debugtoggle  Used in: 
+DebugInit.cs
+DecreaseBonusStateTicks  Used in: 
+BonusState.cs
+DeployableSensor::deploy  Used in: 
+sensor.cs
+DeployableSensor::onAdd  Used in: 
+sensor.cs
+DeployableSensor::onEndSequence  Used in: 
+sensor.cs
+DeployableTurret::deploy  Used in: 
+Turret.cs
+DeployableTurret::onAdd  Used in: 
+Turret.cs
+DeployableTurret::onDestroyed  Used in: 
+Turret.cs
+DeployableTurret::onEnabled  Used in: 
+Turret.cs
+DeployableTurret::onEndSequence  Used in: 
+Turret.cs
+DeployableTurret::onPower  Used in: 
+Turret.cs
+DeployBase  Used in: 
+rpgfunk.cs
+DeployLootbag  Used in: 
+rpgfunk.cs
+DeployPlatform  Used in: 
+rpgfunk.cs
+DepPlatLargeHorz::onDestroyed  Used in: 
+staticshape.cs
+DepPlatLargeVert::onDestroyed  Used in: 
+staticshape.cs
+DepPlatMediumHorz::onDestroyed  Used in: 
+staticshape.cs
+DepPlatMediumVert::onDestroyed  Used in: 
+staticshape.cs
+DepPlatSmallHorz::onDestroyed  Used in: 
+staticshape.cs
+DepPlatSmallVert::onDestroyed  Used in: 
+staticshape.cs
+DetermineArenaPrize  Used in: 
+rpgarena.cs
+DiamondBrainSpiller::onMount  Used in: 
+weapons.cs
+DiamondBrainSpillerImage::onFire  Used in: 
+weapons.cs
+DiamondClaymore::onMount  Used in: 
+weapons.cs
+DiamondClaymoreImage::onFire  Used in: 
+weapons.cs
+DiamondDeathSpear::onMount  Used in: 
+weapons.cs
+DiamondDeathSpearImage::onFire  Used in: 
+weapons.cs
+DiamondDivineMace::onMount  Used in: 
+weapons.cs
+DiamondDivineMaceImage::onFire  Used in: 
+weapons.cs
+DiamondLegendMace::onMount  Used in: 
+weapons.cs
+DiamondLegendMaceImage::onFire  Used in: 
+weapons.cs
+DiamondLegendSpear::onMount  Used in: 
+weapons.cs
+DiamondLegendSpearImage::onFire  Used in: 
+weapons.cs
+DiamondLegendSword::onMount  Used in: 
+weapons.cs
+DiamondLegendSwordImage::onFire  Used in: 
+weapons.cs
+DiamondTrident::onMount  Used in: 
+weapons.cs
+DiamondTridentImage::onFire  Used in: 
+weapons.cs
+DisbandParty  Used in: 
+party.cs
+DisplayGetInfo  Used in: 
+rpgfunk.cs
+DisplayGetStats  Used in: 
+rpgfunk.cs
+DistributeExpForKilling  Used in: 
+rpgstats.cs
+dmsg  Used in: 
+rpgfunk.cs
+DoBoxFunction  Used in: 
+spells.cs
+DoCamp  Used in: 
+rpgfunk.cs
+DoCampSetup  Used in: 
+sleep.cs
+DoCastSpell  Used in: 
+spells.cs
+Door::closeCheck  Used in: 
+moveable.cs
+Door::onAdd  Used in: 
+moveable.cs
+Door::onBlocker  Used in: 
+moveable.cs
+Door::onCollision  Used in: 
+moveable.cs
+Door::onDamage  Used in: 
+moveable.cs
+Door::onDestroyed  Used in: 
+moveable.cs
+Door::onDisabled  Used in: 
+moveable.cs
+Door::onEnabled  Used in: 
+moveable.cs
+Door::onFirst  Used in: 
+moveable.cs
+Door::onLast  Used in: 
+moveable.cs
+Door::onMove  Used in: 
+moveable.cs
+Door::onNewPath  Used in: 
+moveable.cs
+Door::onPower  Used in: 
+moveable.cs
+Door::onTrigEnter  Used in: 
+moveable.cs
+Door::onTrigger  Used in: 
+moveable.cs
+Door::onTrigLeave  Used in: 
+moveable.cs
+Door::onWaypoint  Used in: 
+moveable.cs
+Door::trigger  Used in: 
+moveable.cs
+DoRandomMining  Used in: 
+weapons.cs
+DoRemort  Used in: 
+rpgstats.cs
+DoSpellDamage  Used in: 
+spells.cs
+DoSteal  Used in: 
+economy.cs
+Down  Used in: 
+rpgfunk.cs
+DoZoneCheck  Used in: 
+zone.cs
+Duel::endDuel  Used in: 
+remortseal.cs
+Duel::isDueling  Used in: 
+remortseal.cs
+DuelFight  Used in: 
+rpgarena.cs
+Elevator::checkDelay  Used in: 
+moveable.cs
+Elevator::onAdd  Used in: 
+moveable.cs
+Elevator::onBlocker  Used in: 
+moveable.cs
+Elevator::onCollision  Used in: 
+moveable.cs
+Elevator::onDamage  Used in: 
+moveable.cs
+Elevator::onDestroyed  Used in: 
+moveable.cs
+Elevator::onDisabled  Used in: 
+moveable.cs
+Elevator::onEnabled  Used in: 
+moveable.cs
+Elevator::onFirst  Used in: 
+moveable.cs
+Elevator::onLast  Used in: 
+moveable.cs
+Elevator::onMove  Used in: 
+moveable.cs
+Elevator::onNewPath  Used in: 
+moveable.cs
+Elevator::onPower  Used in: 
+moveable.cs
+Elevator::onTrigEnter  Used in: 
+moveable.cs
+Elevator::onTrigger  Used in: 
+moveable.cs
+Elevator::onTrigLeave  Used in: 
+moveable.cs
+Elevator::onWaypoint  Used in: 
+moveable.cs
+Elevator::trigger  Used in: 
+moveable.cs
+EmptyZoneCheck  Used in: 
+zone.cs
+EmptyZoneCheckLoop  Used in: 
+zone.cs
+EnergyVial::onUse  Used in: 
+Accessory.cs
+Example::onAdd  Used in: 
+mission.cs
+Example::onAttack  Used in: 
+mission.cs
+Example::onCollision  Used in: 
+mission.cs
+Example::onDestroyed  Used in: 
+mission.cs
+Example::onDisabled  Used in: 
+mission.cs
+Example::onEnabled  Used in: 
+mission.cs
+Example::onPower  Used in: 
+mission.cs
+Example::onRemove  Used in: 
+mission.cs
+FadeMsg  Used in: 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+FellOffMap  Used in: 
+rpgfunk.cs
+Ferry::onCollision  Used in: 
+ferry.cs
+Ferry::onNewPath  Used in: 
+ferry.cs
+Ferry::onWaypoint  Used in: 
+ferry.cs
+fetchData  Used in: 
+rpgstats.cs
+FillWaitingRoom  Used in: 
+rpgarena.cs
+FindInvalidChar  Used in: 
+rpgfunk.cs
+FixDecimals  Used in: 
+rpgfunk.cs
+, 
+rpghud.cs
+FixStuffString  Used in: 
+rpgfunk.cs
+FlagStand::onDamage  Used in: 
+staticshape.cs
+FormatSkillDisplay  Used in: 
+skills.cs
+Game::autoRespawn  Used in: 
+playerspawn.cs
+Game::clientKilled  Used in: 
+playerdamage.cs
+Game::initialMissionDrop  Used in: 
+connectivity.cs
+Game::menuRequest  Used in: 
+Admin.cs
+Game::notifyMatchStart  Used in: 
+game.cs
+Game::onPlayerConnected  Used in: 
+game.cs
+, 
+connectivity.cs
+Game::pickObserverSpawn  Used in: 
+playerspawn.cs
+Game::pickPlayerSpawn  Used in: 
+playerspawn.cs
+Game::playerSpawn  Used in: 
+playerspawn.cs
+Game::playerSpawned  Used in: 
+playerspawn.cs
+Game::refreshClientScore  Used in: 
+rpgstats.cs
+Game::startMatch  Used in: 
+gameevents.cs
+GameBase::getHeatFactor  Used in: 
+game.cs
+GatherBotInfo  Used in: 
+Ai.cs
+GenerateAllArmorCosts  Used in: 
+armors.cs
+GenerateAllShieldCosts  Used in: 
+Accessory.cs
+GenerateAllWeaponCosts  Used in: 
+weapons.cs
+GenerateItemCost  Used in: 
+weapons.cs
+Generator::onActivate  Used in: 
+staticshape.cs
+Generator::onDeactivate  Used in: 
+staticshape.cs
+Generator::onDestroyed  Used in: 
+staticshape.cs
+Generator::onDisabled  Used in: 
+staticshape.cs
+Generator::onEnabled  Used in: 
+staticshape.cs
+GetAccessoryList  Used in: 
+Accessory.cs
+GetAccessoryVar  Used in: 
+Accessory.cs
+getAInumber  Used in: 
+Ai.cs
+GetArenaDuelerIndex  Used in: 
+rpgarena.cs
+GetBestRangedProj  Used in: 
+weaponHandling.cs
+GetBestSpell  Used in: 
+spells.cs
+GetBestWeapon  Used in: 
+weaponHandling.cs
+GetBotIdList  Used in: 
+rpgfunk.cs
+GetBotNameList  Used in: 
+rpgfunk.cs
+getBuyCost  Used in: 
+economy.cs
+GetClientHouse  Used in: 
+house.cs
+getClosestPosition  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+GetCombo  Used in: 
+rpgfunk.cs
+getCroppedItem  Used in: 
+Accessory.cs
+GetCurrentlyWearingArmor  Used in: 
+Accessory.cs
+GetDelay  Used in: 
+weapons.cs
+GetEventCommandIndex  Used in: 
+rpgfunk.cs
+GetEveryoneIdList  Used in: 
+rpgfunk.cs
+GetEveryoneNameList  Used in: 
+rpgfunk.cs
+GetExp  Used in: 
+rpgstats.cs
+GetEXPmultiplier  Used in: 
+skills.cs
+getFinalCLASS  Used in: 
+classes.cs
+GetHouseNumber  Used in: 
+house.cs
+GetItemCost  Used in: 
+economy.cs
+GetLCKcost  Used in: 
+rpgfunk.cs
+GetLevel  Used in: 
+rpgstats.cs
+GetNearestZone  Used in: 
+zone.cs
+GetNESW  Used in: 
+rpgfunk.cs
+GetNumSkills  Used in: 
+skills.cs
+GetPartyListIAmIn  Used in: 
+party.cs
+GetPersistentTime  Used in: 
+rpgfunk.cs
+GetPlayerIdList  Used in: 
+rpgfunk.cs
+GetPlayerNameList  Used in: 
+rpgfunk.cs
+GetPlayerSkill  Used in: 
+skills.cs
+GetPositionForJailNumber  Used in: 
+jail.cs
+GetRandomJailNumber  Used in: 
+jail.cs
+GetRange  Used in: 
+weapons.cs
+GetRankBonus  Used in: 
+rpgstats.cs
+GetRoll  Used in: 
+rpgfunk.cs
+Getrpcost  Used in: 
+rpgfunk.cs
+getrpgdata  Used in: 
+rpghud.cs
+getSellCost  Used in: 
+economy.cs
+GetSkillAmount  Used in: 
+skills.cs
+GetSkillMultiplier  Used in: 
+skills.cs
+GetSmithCombo  Used in: 
+economy.cs
+GetSmithComboCost  Used in: 
+economy.cs
+getSpawnIndex  Used in: 
+rpgfunk.cs
+getSpellAtPos  Used in: 
+rpgfunk.cs
+GetStuffStringCost  Used in: 
+economy.cs
+GetStuffStringCount  Used in: 
+rpgfunk.cs
+GetTotalSealValue  Used in: 
+remortseal.cs
+GetTypicalTossStrength  Used in: 
+rpgfunk.cs
+GetWeight  Used in: 
+weight.cs
+GetZoneByKeywords  Used in: 
+zone.cs
+GiveArenaEquipment  Used in: 
+rpgarena.cs
+GiveThisStuff  Used in: 
+rpgfunk.cs
+GoldenBastardSword::onMount  Used in: 
+weapons.cs
+GoldenBastardSwordImage::onFire  Used in: 
+weapons.cs
+GoldenDivineMace::onMount  Used in: 
+weapons.cs
+GoldenDivineMaceImage::onFire  Used in: 
+weapons.cs
+GoldenLongSword::onMount  Used in: 
+weapons.cs
+GoldenLongSwordImage::onFire  Used in: 
+weapons.cs
+GoldenPike::onMount  Used in: 
+weapons.cs
+GoldenPikeImage::onFire  Used in: 
+weapons.cs
+GoldenWarHammer::onMount  Used in: 
+weapons.cs
+GoldenWarHammerImage::onFire  Used in: 
+weapons.cs
+gravWorkaround  Used in: 
+zone.cs
+GroupTrigger::onActivate  Used in: 
+trigger.cs
+GroupTrigger::onContact  Used in: 
+trigger.cs
+GroupTrigger::onDeactivate  Used in: 
+trigger.cs
+GroupTrigger::onEnter  Used in: 
+trigger.cs
+GroupTrigger::onLeave  Used in: 
+trigger.cs
+GroupTrigger::onTrigEnter  Used in: 
+sleep.cs
+GroupTrigger::onTrigLeave  Used in: 
+sleep.cs
+Handgrenade::onAdd  Used in: 
+Mine.cs
+HardcodeAIskills  Used in: 
+Ai.cs
+HasTheftFlag  Used in: 
+economy.cs
+HasThisStuff  Used in: 
+rpgfunk.cs
+Hatchet::onMount  Used in: 
+weapons.cs
+HatchetImage::onFire  Used in: 
+weapons.cs
+Help::accessoriesSubMenu  Used in: 
+Help.cs
+Help::armorSubMenu  Used in: 
+Help.cs
+Help::commandsMainMenu  Used in: 
+Help.cs
+Help::getDisplay  Used in: 
+Help.cs
+Help::Headings  Used in: 
+Help.cs
+Help::itemMenu  Used in: 
+Help.cs
+Help::listMenu  Used in: 
+Help.cs
+Help::mainMenu  Used in: 
+Help.cs
+Help::Matches  Used in: 
+Help.cs
+Help::showBelts  Used in: 
+Help.cs
+Help::showBludgeWeapons  Used in: 
+Help.cs
+Help::showChestArmor  Used in: 
+Help.cs
+Help::showDefensiveSpells  Used in: 
+Help.cs
+Help::showHelmets  Used in: 
+Help.cs
+Help::showNecklaces  Used in: 
+Help.cs
+Help::showNeutralSpells  Used in: 
+Help.cs
+Help::showOffensiveSpells  Used in: 
+Help.cs
+Help::showPierceWeapons  Used in: 
+Help.cs
+Help::showRings  Used in: 
+Help.cs
+Help::showShields  Used in: 
+Help.cs
+Help::showSlashWeapons  Used in: 
+Help.cs
+Help::showZones  Used in: 
+Help.cs
+Help::skillListMenu  Used in: 
+Help.cs
+Help::spellDisplay  Used in: 
+Help.cs
+Help::spellListMenu  Used in: 
+Help.cs
+Help::spellMenu  Used in: 
+Help.cs
+Help::Spells  Used in: 
+Help.cs
+Help::spellsSubMenu  Used in: 
+Help.cs
+Help::weaponsSubMenu  Used in: 
+Help.cs
+HouseData::Load  Used in: 
+house.cs
+HouseData::Reset  Used in: 
+house.cs
+HouseData::Save  Used in: 
+house.cs
+HouseEarnings  Used in: 
+gameevents.cs
+HumansInArena  Used in: 
+rpgarena.cs
+IncrementTotalSealValue  Used in: 
+remortseal.cs
+InitArena  Used in: 
+rpgarena.cs
+InitCrystals  Used in: 
+Crystal.cs
+InitDebugBroadcast  Used in: 
+DebugInit.cs
+InitFerry  Used in: 
+ferry.cs
+InitObjectives  Used in: 
+rpgfunk.cs
+InitSoundPoints  Used in: 
+nsound.cs
+InitSpawnPoints  Used in: 
+Spawn.cs
+InitTownBots  Used in: 
+Ai.cs
+InitZones  Used in: 
+zone.cs
+InitZoneTeleporterRequirements  Used in: 
+zone.cs
+Interior::lightOff  Used in: 
+interiorLight.cs
+Interior::lightOn  Used in: 
+interiorLight.cs
+InventoryStation::onEndSequence  Used in: 
+Station.cs
+InventoryStation::onResupply  Used in: 
+Station.cs
+IronBroadSword::onMount  Used in: 
+weapons.cs
+IronBroadSwordImage::onFire  Used in: 
+weapons.cs
+IronMace::onMount  Used in: 
+weapons.cs
+IronMaceImage::onFire  Used in: 
+weapons.cs
+IronSpear::onMount  Used in: 
+weapons.cs
+IronSpearImage::onFire  Used in: 
+weapons.cs
+IronStick::onMount  Used in: 
+weapons.cs
+IronStickImage::onFire  Used in: 
+weapons.cs
+IsAClass  Used in: 
+classes.cs
+isBackpackItem  Used in: 
+Belt.cs
+isBeltItem  Used in: 
+Belt.cs
+IsDead  Used in: 
+rpgfunk.cs
+IsInArenaDueler  Used in: 
+rpgarena.cs
+IsInBetween  Used in: 
+zone.cs
+IsInCommaList  Used in: 
+rpgfunk.cs
+IsInRoster  Used in: 
+rpgarena.cs
+isInSpellList  Used in: 
+rpgfunk.cs
+IsInWhichParty  Used in: 
+party.cs
+IsJailed  Used in: 
+jail.cs
+IsOnFerry  Used in: 
+ferry.cs
+IsPartOfCombo  Used in: 
+rpgfunk.cs
+isPlayerBusy  Used in: 
+itemevents.cs
+isRPGAI  Used in: 
+Ai.cs
+IsSameHouse  Used in: 
+house.cs
+isSelectableWeapon  Used in: 
+weaponHandling.cs
+IsStillArenaFighting  Used in: 
+rpgarena.cs
+IsStuffStringEquiv  Used in: 
+rpgfunk.cs
+Item::deployShape  Used in: 
+item.cs
+Item::giveItem  Used in: 
+itemevents.cs
+Item::onAdd  Used in: 
+item.cs
+Item::onCollision  Used in: 
+itemevents.cs
+Item::onDeploy  Used in: 
+itemevents.cs
+Item::onDrop  Used in: 
+itemevents.cs
+Item::onMount  Used in: 
+itemevents.cs
+Item::onUnmount  Used in: 
+itemevents.cs
+Item::onUse  Used in: 
+itemevents.cs
+Item::playPickupSound  Used in: 
+item.cs
+Item::pop  Used in: 
+item.cs
+Item::respawn  Used in: 
+item.cs
+itendsnowban  Used in: 
+hackfix.cs
+Jail  Used in: 
+jail.cs
+JoinHouse  Used in: 
+house.cs
+Knife::onMount  Used in: 
+weapons.cs
+KnifeImage::onFire  Used in: 
+weapons.cs
+Lightning::damageTarget  Used in: 
+baseProjData.cs
+Liquifier::deployTurret  Used in: 
+spells.cs
+Liquifier::fireLaser  Used in: 
+spells.cs
+LoadCharacter  Used in: 
+rpgfunk.cs
+LoadHouseObjectives  Used in: 
+rpgfunk.cs
+, 
+rpgfunk.cs
+LoadServerTime  Used in: 
+rpgfunk.cs
+LoadWorld  Used in: 
+rpgfunk.cs
+LongKnife::onMount  Used in: 
+weapons.cs
+LongKnifeImage::onFire  Used in: 
+weapons.cs
+LTrim  Used in: 
+rpgfunk.cs
+ManageBlockOwnersList  Used in: 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+MeleeAttack  Used in: 
+weapons.cs
+MenuBelt::MugChoose  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+MenuBelt::MugThisType  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+MenuBeltDrop  Used in: 
+Belt.cs
+MenuBeltGear  Used in: 
+Belt.cs
+MenuBeltStoreThisItem  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+MenuBeltWithdrawThisItem  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+MenuClass  Used in: 
+rpgstats.cs
+MenuGroup  Used in: 
+rpgstats.cs
+MenuSellBelt  Used in: 
+Belt.cs
+MenuSellBeltItem  Used in: 
+Belt.cs
+MenuSellBeltItemFinal  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+MenuSP  Used in: 
+rpgstats.cs
+MenuStoreBelt  Used in: 
+Belt.cs
+MenuViewBackpack  Used in: 
+Belt.cs
+MenuViewBelt  Used in: 
+Belt.cs
+messageAll  Used in: 
+game.cs
+, 
+comchat.cs
+, 
+comchat.cs
+messageAllExcept  Used in: 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+messageonlyadmins  Used in: 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+Mine::Detonate  Used in: 
+Mine.cs
+Mine::onDamage  Used in: 
+Mine.cs
+MiniFusionBolt::onAdd  Used in: 
+baseProjData.cs
+Mission::init  Used in: 
+gameevents.cs
+MorningStar::onMount  Used in: 
+newstuff.cs
+MorningStarImage::onFire  Used in: 
+newstuff.cs
+msprintf  Used in: 
+rpgfunk.cs
+NEWgetClientByName  Used in: 
+rpgfunk.cs
+NextWaypoint  Used in: 
+ferry.cs
+nsprintf  Used in: 
+rpgfunk.cs
+NullItemList  Used in: 
+Accessory.cs
+ObjectInWhichZone  Used in: 
+zone.cs
+OddsAre  Used in: 
+rpgfunk.cs
+OldGetExp  Used in: 
+rpgstats.cs
+OldGetLevel  Used in: 
+rpgstats.cs
+OnOrOfflineGive  Used in: 
+rpgfunk.cs
+onServerGhostAlwaysDone  Used in: 
+game.cs
+ParseBlockData  Used in: 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+PerhapsPlayStealSound  Used in: 
+rpgfunk.cs
+Pet::BeforeTurnEvil  Used in: 
+Ai.cs
+Pet::TurnEvil  Used in: 
+Ai.cs
+PickAxe::onMount  Used in: 
+weapons.cs
+PickAxeImage::onFire  Used in: 
+weapons.cs
+PickAxeSwing  Used in: 
+weapons.cs
+Player::enterMissionArea  Used in: 
+gameevents.cs
+Player::getHeatFactor  Used in: 
+Player.cs
+Player::jump  Used in: 
+Player.cs
+Player::leaveMissionArea  Used in: 
+gameevents.cs
+Player::onAdd  Used in: 
+Player.cs
+Player::onCollision  Used in: 
+Player.cs
+Player::onDamage  Used in: 
+playerdamage.cs
+Player::onKilled  Used in: 
+playerdamage.cs
+Player::onNoAmmo  Used in: 
+Player.cs
+Player::onRemove  Used in: 
+Player.cs
+playNextAnim  Used in: 
+Player.cs
+PostAttack  Used in: 
+weapons.cs
+PostSteal  Used in: 
+rpgfunk.cs
+PoweredElectricalBeam::onPower  Used in: 
+staticshape.cs
+processMenuBelt::MugChoose  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+processMenuBelt::MugThisType  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+processMenuBeltDeposit  Used in: 
+Belt.cs
+processMenuBeltDrop  Used in: 
+Belt.cs
+processMenuBeltGear  Used in: 
+Belt.cs
+processMenuBeltStorage  Used in: 
+Belt.cs
+processMenuBeltStoreThisItem  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+processMenuBeltWithdraw  Used in: 
+Belt.cs
+processMenuBeltWithdrawThisItem  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+processMenuCMission  Used in: 
+Admin.cs
+processMenuCMType  Used in: 
+Admin.cs
+processMenuhelpAccessoriesSubMenu  Used in: 
+Help.cs
+processMenuhelpArmorSubMenu  Used in: 
+Help.cs
+processMenuhelpCommandsMain  Used in: 
+Help.cs
+processMenuhelpItemMenu  Used in: 
+Help.cs
+processMenuhelpListMenu  Used in: 
+Help.cs
+processMenuhelpMainMenu  Used in: 
+Help.cs
+processMenuhelpSpellMenu  Used in: 
+Help.cs
+processMenuhelpSpellsSubMenu  Used in: 
+Help.cs
+processMenuhelpWeaponsSubMenu  Used in: 
+Help.cs
+processMenuMugBeltMain  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+processMenunull  Used in: 
+rpgstats.cs
+processMenuOptions  Used in: 
+Admin.cs
+processMenuOtheropt  Used in: 
+Admin.cs
+processMenupartyopt  Used in: 
+Admin.cs
+processMenupickclass  Used in: 
+rpgstats.cs
+processMenupickgroup  Used in: 
+rpgstats.cs
+processMenuPickStance  Used in: 
+Admin.cs
+processMenuPickTeamOFF  Used in: 
+Admin.cs
+processMenuselectproj  Used in: 
+Admin.cs
+processMenuselectrweapon  Used in: 
+Admin.cs
+, 
+Admin.cs
+processMenuselectspell  Used in: 
+Admin.cs
+, 
+Admin.cs
+, 
+Admin.cs
+processMenuSellBelt  Used in: 
+Belt.cs
+processMenuSellBeltItem  Used in: 
+Belt.cs
+processMenuSellBeltItemFinal  Used in: 
+Belt.cs
+, 
+Belt.cs
+, 
+Belt.cs
+processMenuskillListMenu  Used in: 
+Help.cs
+processMenusp  Used in: 
+rpgstats.cs
+processMenuspellListMenu  Used in: 
+Help.cs
+processMenuStoreBelt  Used in: 
+Belt.cs
+processMenuViewBelt  Used in: 
+Belt.cs
+ProjectileAttack  Used in: 
+weapons.cs
+radiusAllExcept  Used in: 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+, 
+comchat.cs
+radnomItems  Used in: 
+Player.cs
+RandomPositionXY  Used in: 
+rpgfunk.cs
+RandomRaceSound  Used in: 
+nsound.cs
+RecalcHouseMemberCounts  Used in: 
+rpgfunk.cs
+, 
+rpgfunk.cs
+RecalcHouseObjectives  Used in: 
+rpgfunk.cs
+, 
+rpgfunk.cs
+RecreateForceField  Used in: 
+staticshape.cs
+RecursiveObjectivesRefresh  Used in: 
+rpgfunk.cs
+RecursiveWorld  Used in: 
+gameevents.cs
+RecursiveZone  Used in: 
+zone.cs
+RefreshAll  Used in: 
+rpgfunk.cs
+RefreshArenaTextBox  Used in: 
+rpgarena.cs
+refreshHP  Used in: 
+hp.cs
+refreshHPREGEN  Used in: 
+hp.cs
+refreshMANA  Used in: 
+mana.cs
+refreshMANAREGEN  Used in: 
+mana.cs
+RefreshWeight  Used in: 
+weight.cs
+remoteAdminPassword  Used in: 
+Admin.cs
+remoteBuyItem  Used in: 
+economy.cs
+remoteCmdrMountObject  Used in: 
+Player.cs
+remoteCommandMode  Used in: 
+remote.cs
+remoteConsider  Used in: 
+remote.cs
+, 
+remote.cs
+remoteCStatus  Used in: 
+comchat.cs
+remoteDeployItem  Used in: 
+remote.cs
+remoteDropItem  Used in: 
+remote.cs
+remotefetchData  Used in: 
+rpgstats.cs
+remoteInventoryMode  Used in: 
+remote.cs
+remoteIssueCommand  Used in: 
+comchat.cs
+remoteIssueTargCommand  Used in: 
+comchat.cs
+remoteKill  Used in: 
+playerdamage.cs
+remoteNextWeapon  Used in: 
+weaponHandling.cs
+remoteObjectivesMode  Used in: 
+remote.cs
+remotePlayMode  Used in: 
+remote.cs
+remotePrevWeapon  Used in: 
+weaponHandling.cs
+remoterawKey  Used in: 
+remote.cs
+remoteSay  Used in: 
+comchat.cs
+remoteScoresOff  Used in: 
+remote.cs
+remoteScoresOn  Used in: 
+remote.cs
+remoteSelectClient  Used in: 
+Admin.cs
+remoteSellItem  Used in: 
+economy.cs
+remoteSetPassword  Used in: 
+Admin.cs
+remoteSetTeamInfo  Used in: 
+Admin.cs
+remoteSetTimeLimit  Used in: 
+Admin.cs
+remoteThrowItem  Used in: 
+remote.cs
+remoteToggleCommandMode  Used in: 
+remote.cs
+remoteToggleInventoryMode  Used in: 
+remote.cs
+remoteToggleObjectivesMode  Used in: 
+remote.cs
+remoteTrue  Used in: 
+remote.cs
+remoteUseItem  Used in: 
+remote.cs
+remoteVoteNo  Used in: 
+Admin.cs
+remoteVoteYes  Used in: 
+Admin.cs
+RemoveArenaEquipment  Used in: 
+rpgarena.cs
+RemoveFromArenaDueler  Used in: 
+rpgarena.cs
+RemoveFromCommaList  Used in: 
+rpgfunk.cs
+RemoveFromParty  Used in: 
+party.cs
+RemoveFromRoster  Used in: 
+rpgarena.cs
+RemoveFromTargetList  Used in: 
+rpgfunk.cs
+RepairPatch::onCollision  Used in: 
+item.cs
+RepairPatch::onUse  Used in: 
+item.cs
+ResetFerry  Used in: 
+ferry.cs
+ResetPlayer  Used in: 
+rpgfunk.cs
+RestoreArenaStorage  Used in: 
+rpgarena.cs
+RestorePreviousEquipment  Used in: 
+rpgarena.cs
+resupply  Used in: 
+Station.cs
+ReturnToArenaLobby  Used in: 
+rpgarena.cs
+RocketTurret::onPower  Used in: 
+Turret.cs
+RocketTurret::verifyTarget  Used in: 
+Turret.cs
+RotateTownBot  Used in: 
+Ai.cs
+round  Used in: 
+rpgfunk.cs
+, 
+rpghud.cs
+RPGmountItem  Used in: 
+weaponHandling.cs
+RustyIronBlade::onMount  Used in: 
+weapons.cs
+RustyIronBladeImage::onFire  Used in: 
+weapons.cs
+SaveAllCharacters  Used in: 
+rpgfunk.cs
+SaveCharacter  Used in: 
+rpgfunk.cs
+SaveHouseObjectives  Used in: 
+rpgfunk.cs
+SaveServerTime  Used in: 
+rpgfunk.cs
+SaveWorld  Used in: 
+rpgfunk.cs
+SaveWorldDeployables  Used in: 
+rpgfunk.cs
+ScheduleArenaMatch  Used in: 
+rpgarena.cs
+ScheduleSave  Used in: 
+gameevents.cs
+sd  Used in: 
+rpgarena.cs
+SealBattle::Begin  Used in: 
+remortseal.cs
+SealBattle::Conclude  Used in: 
+remortseal.cs
+SealBattle::FixSpawnPosition  Used in: 
+remortseal.cs
+SealBattle::GetEnemyStrengthMultiplier  Used in: 
+remortseal.cs
+SealBattle::GetParticipantNames  Used in: 
+remortseal.cs
+SealBattle::LazyDeathCheck  Used in: 
+remortseal.cs
+SealBattle::Loop  Used in: 
+remortseal.cs
+SealBattle::MessageColloseumPlayers  Used in: 
+remortseal.cs
+SealBattle::SetupBot  Used in: 
+remortseal.cs
+SealBattle::SpawnRound2  Used in: 
+remortseal.cs
+SealBattle::SpawnRound3  Used in: 
+remortseal.cs
+SealBattle::StartBattle  Used in: 
+remortseal.cs
+SealBattle::TeleportOut  Used in: 
+remortseal.cs
+SealBattle::TeleportOutSuccess  Used in: 
+remortseal.cs
+SealBattle::TeleportParticipantBack  Used in: 
+remortseal.cs
+SeekingMissile::updateTargetPercentage  Used in: 
+baseProjData.cs
+selectValidWeapon  Used in: 
+weaponHandling.cs
+sellItem  Used in: 
+economy.cs
+sendDoneRecovMsg  Used in: 
+spells.cs
+Sensor::onActivate  Used in: 
+sensor.cs
+Sensor::onDamage  Used in: 
+sensor.cs
+Sensor::onDeactivate  Used in: 
+sensor.cs
+Sensor::onDestroyed  Used in: 
+sensor.cs
+Sensor::onDisabled  Used in: 
+sensor.cs
+Sensor::onEnabled  Used in: 
+sensor.cs
+Sensor::onPower  Used in: 
+sensor.cs
+Server::onClientConnect  Used in: 
+connectivity.cs
+Server::onClientDisconnect  Used in: 
+connectivity.cs
+setAInumber  Used in: 
+Ai.cs
+SetAllSkills  Used in: 
+skills.cs
+setHP  Used in: 
+hp.cs
+setMANA  Used in: 
+mana.cs
+SetOnGround  Used in: 
+rpgfunk.cs
+SetStuffString  Used in: 
+rpgfunk.cs
+SetTotalSealValue  Used in: 
+remortseal.cs
+SetupBank  Used in: 
+shopping.cs
+SetupBlacksmith  Used in: 
+shopping.cs
+SetupCreatePack  Used in: 
+shopping.cs
+SetupInvSteal  Used in: 
+shopping.cs
+SetupShop  Used in: 
+shopping.cs
+setzoneflags  Used in: 
+zone.cs
+SharpIronBlade::onMount  Used in: 
+weapons.cs
+SharpIronBladeImage::onFire  Used in: 
+weapons.cs
+ShowCoinsDisplay  Used in: 
+economy.cs
+SkillCanUse  Used in: 
+skills.cs
+spamDoubleExecWarning  Used in: 
+game.cs
+SpawnAI  Used in: 
+Ai.cs
+SpawnAIPostCreate  Used in: 
+Ai.cs
+SpawnArenaBot  Used in: 
+rpgarena.cs
+SpawnLoop  Used in: 
+Spawn.cs
+SpellCalcRadiusDamage  Used in: 
+spells.cs
+SpellCanCast  Used in: 
+spells.cs
+SpellCanCastNow  Used in: 
+spells.cs
+SpellDamage  Used in: 
+spells.cs
+SpellRadiusDamage  Used in: 
+spells.cs
+sr  Used in: 
+rpgarena.cs
+StartArenaMatch  Used in: 
+rpgarena.cs
+StartRecord  Used in: 
+rpgfunk.cs
+StartStatSelection  Used in: 
+rpgstats.cs
+StaticDoorForceField::onCollision  Used in: 
+staticshape.cs
+StaticDoorForceField::onDestroyed  Used in: 
+staticshape.cs
+StaticShape::onDamage  Used in: 
+staticshape.cs
+StaticShape::onDestroyed  Used in: 
+staticshape.cs
+StaticShape::onDisabled  Used in: 
+staticshape.cs
+StaticShape::onEnabled  Used in: 
+staticshape.cs
+StaticShape::onPower  Used in: 
+staticshape.cs
+StaticShape::shieldDamage  Used in: 
+staticshape.cs
+Station::checkTarget  Used in: 
+Station.cs
+Station::getTarget  Used in: 
+Station.cs
+Station::itemsToResupply  Used in: 
+Station.cs
+Station::onActivate  Used in: 
+Station.cs
+Station::onCollision  Used in: 
+Station.cs
+Station::onDeactivate  Used in: 
+Station.cs
+Station::onDestroyed  Used in: 
+Station.cs
+Station::onDisabled  Used in: 
+Station.cs
+Station::onEnabled  Used in: 
+Station.cs
+Station::onEndSequence  Used in: 
+Station.cs
+Station::onPower  Used in: 
+Station.cs
+SteelBroadSword::onMount  Used in: 
+weapons.cs
+SteelBroadSwordImage::onFire  Used in: 
+weapons.cs
+SteelHammer::onMount  Used in: 
+weapons.cs
+SteelHammerImage::onFire  Used in: 
+weapons.cs
+SteelLongSword::onMount  Used in: 
+weapons.cs
+SteelLongSwordImage::onFire  Used in: 
+weapons.cs
+SteelMace::onMount  Used in: 
+weapons.cs
+SteelMaceImage::onFire  Used in: 
+weapons.cs
+SteelPike::onMount  Used in: 
+weapons.cs
+SteelPikeImage::onFire  Used in: 
+weapons.cs
+SteelSpear::onMount  Used in: 
+weapons.cs
+SteelSpearImage::onFire  Used in: 
+weapons.cs
+SteelWarHammer::onMount  Used in: 
+weapons.cs
+SteelWarHammerImage::onFire  Used in: 
+weapons.cs
+StopCoinsDisplay  Used in: 
+economy.cs
+StopRecord  Used in: 
+rpgfunk.cs
+storeData  Used in: 
+rpgstats.cs
+String::create  Used in: 
+rpgfunk.cs
+String::len  Used in: 
+rpgfunk.cs
+String::NEWgetSubStr  Used in: 
+rpgfunk.cs
+String::ofindSubStr  Used in: 
+rpgfunk.cs
+String::replace  Used in: 
+rpgfunk.cs
+StringArenaTextBox  Used in: 
+rpgarena.cs
+TakeThisStuff  Used in: 
+rpgfunk.cs
+teamMessages  Used in: 
+comchat.cs
+TeleportToMarker  Used in: 
+rpgfunk.cs
+TemperedCrystalBastardSword::onMount  Used in: 
+weapons.cs
+TemperedCrystalBastardSwordImage::onFire  Used in: 
+weapons.cs
+TemperedCrystalTrident::onMount  Used in: 
+weapons.cs
+TemperedCrystalTridentImage::onFire  Used in: 
+weapons.cs
+TerminusEst::onMount  Used in: 
+newstuff.cs
+TerminusEstImage::onFire  Used in: 
+newstuff.cs
+Time::getMinutes  Used in: 
+game.cs
+Time::getSeconds  Used in: 
+game.cs
+toggleRPGhud  Used in: 
+rpghud.cs
+Tool::onUse  Used in: 
+item.cs
+TornadoBatchExplosions  Used in: 
+spells.cs
+TossLootbag  Used in: 
+rpgfunk.cs
+TrimIP  Used in: 
+gameevents.cs
+Turret::checkOperator  Used in: 
+Turret.cs
+Turret::objectiveDestroyed  Used in: 
+spells.cs
+Turret::onActivate  Used in: 
+Turret.cs
+Turret::onAdd  Used in: 
+Turret.cs
+Turret::onCollision  Used in: 
+Turret.cs
+Turret::onControl  Used in: 
+Turret.cs
+Turret::onDamage  Used in: 
+Turret.cs
+Turret::onDeactivate  Used in: 
+Turret.cs
+Turret::onDestroyed  Used in: 
+Turret.cs
+Turret::onDisabled  Used in: 
+Turret.cs
+Turret::onDismount  Used in: 
+Turret.cs
+Turret::onEnabled  Used in: 
+Turret.cs
+Turret::onPower  Used in: 
+Turret.cs
+Turret::onSetTeam  Used in: 
+Turret.cs
+Turret::verifyTarget  Used in: 
+Turret.cs
+UndeadInvasion  Used in: 
+rpgarena.cs
+UnequipMountedStuff  Used in: 
+rpgfunk.cs
+UnHide  Used in: 
+rpgfunk.cs
+UpdateAppearance  Used in: 
+rpgfunk.cs
+UpdateBonusState  Used in: 
+BonusState.cs
+UpdateClientTimes  Used in: 
+game.cs
+UpdateHouseObjectivesDisplay  Used in: 
+rpgfunk.cs
+UpdateRPGHUD  Used in: 
+rpghud.cs
+updateSpawnStuff  Used in: 
+rpgfunk.cs
+UpdateTeam  Used in: 
+rpgfunk.cs
+UpdateZone  Used in: 
+zone.cs
+UseSkill  Used in: 
+skills.cs
+ValidateSpawnPointCounters  Used in: 
+Ai.cs
+ValidateSpawnPointCountersLoop  Used in: 
+Ai.cs
+Vehicle::dismount  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+Vehicle::findEmptySeat  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+Vehicle::getHeatFactor  Used in: 
+Vehicle.cs
+Vehicle::jump  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+Vehicle::onAdd  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+Vehicle::onCollision  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+Vehicle::onDamage  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+Vehicle::onDestroyed  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+Vehicle::passengerJump  Used in: 
+Vehicle.cs
+, 
+Vehicle.cs
+VehiclePad::checkSeq  Used in: 
+Station.cs
+VehiclePad::onActivate  Used in: 
+Station.cs
+VehiclePad::onAdd  Used in: 
+Station.cs
+VehiclePad::onCollision  Used in: 
+Station.cs
+VehiclePad::onDeactivate  Used in: 
+Station.cs
+VehiclePad::onEnabled  Used in: 
+Station.cs
+VehiclePad::onPower  Used in: 
+Station.cs
+VehicleStation::checkBuying  Used in: 
+Station.cs
+VehicleStation::onBuyingVechicle  Used in: 
+Station.cs
+VehicleStation::onEndSequence  Used in: 
+Station.cs
+viewGroupList  Used in: 
+rpgfunk.cs
+WalkSlowInvisLoop  Used in: 
+rpgfunk.cs
+Weapon::onFire  Used in: 
+weaponHandling.cs
+Weapon::onUse  Used in: 
+weaponHandling.cs
+WhatIs  Used in: 
+rpgfunk.cs
+WhatSkills  Used in: 
+skills.cs
+WhatSpecialVars  Used in: 
+Accessory.cs
+WipeFromZone  Used in: 
+zone.cs
+Zone::DoEnter  Used in: 
+zone.cs
+Zone::DoExit  Used in: 
+zone.cs
+Zone::getAmbientSound  Used in: 
+zone.cs
+Zone::getAmbientSoundPerc  Used in: 
+zone.cs
+Zone::getDesc  Used in: 
+zone.cs
+Zone::getEnterSound  Used in: 
+zone.cs
+Zone::getExitSound  Used in: 
+zone.cs
+Zone::getIndex  Used in: 
+zone.cs
+Zone::getMarker  Used in: 
+zone.cs
+Zone::getNumPlayers  Used in: 
+zone.cs
+Zone::getPlayerList  Used in: 
+zone.cs
+Zone::getType  Used in: 
+zone.cs
+Zone::onEnter  Used in: 
+zone.cs
+Zone::onExit  Used in: 
+zone.cs
+
+========================================
+
+CROSS-REFERENCE: VARIABLES (Top 100)
+========================================
+$AccessoryType  Used in: 
+Accessory.cs
+
+$AccessoryType]  Used in: 
+rpgfunk.cs
+, 
+Accessory.cs
+, 
+weapons.cs
+, 
+armors.cs
+, 
+newstuff.cs
+
+$addedShopMsg  Used in: 
+globals.cs
+
+$adminattempt::entry  Used in: 
+comchat.cs
+
+$AI::defaultPathType  Used in: 
+Ai.cs
+
+$AIattackMode  Used in: 
+Ai.cs
+
+$AIcloseEnoughMarkerDist  Used in: 
+globals.cs
+
+$AIFOVPan  Used in: 
+globals.cs
+
+$AImaxrad  Used in: 
+globals.cs
+
+$AImaxRange  Used in: 
+globals.cs
+
+$AIminrad  Used in: 
+globals.cs
+
+$AImoveChance  Used in: 
+globals.cs
+, 
+rpgarena.cs
+, 
+comchat.cs
+
+$AIsmartFOVbots  Used in: 
+globals.cs
+
+$AIspotDist  Used in: 
+globals.cs
+
+$allowDuplicateIPs  Used in: 
+globals.cs
+
+$animNumber  Used in: 
+Player.cs
+
+$ArenaBotMatchLengthInTicks  Used in: 
+rpgarena.cs
+
+$ArenaBotMatchTicker  Used in: 
+rpgarena.cs
+, 
+gameevents.cs
+, 
+comchat.cs
+
+$ArenaEquipment  Used in: 
+rpgarena.cs
+
+$arenaOn  Used in: 
+globals.cs
+
+$ArenaPickDuelersTime  Used in: 
+rpgarena.cs
+
+$ArenaSpawnIndexes  Used in: 
+rpgarena.cs
+
+$ArenaStartTime  Used in: 
+rpgarena.cs
+
+$ArenaTextBoxLines  Used in: 
+rpgarena.cs
+
+$ArenaTextBoxLines]  Used in: 
+rpgarena.cs
+
+$ArmorHitSound[BlackDiamondFullPlate]  Used in: 
+armors.cs
+
+$ArmorHitSound[CrystalBandedMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[CrystalChainMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[CrystalRingMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[CrystalSplintMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[DiamondFieldPlate]  Used in: 
+armors.cs
+
+$ArmorHitSound[DiamondFullPlate]  Used in: 
+armors.cs
+
+$ArmorHitSound[DiamondPlateMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[FineRobe]  Used in: 
+armors.cs
+
+$ArmorHitSound[FullPlateArmor]  Used in: 
+armors.cs
+
+$ArmorHitSound[GoldenBrigandineMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[GoldenChainMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[IronScaleMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[RatSkinShirt]  Used in: 
+armors.cs
+
+$ArmorHitSound[RedDiamondPlate]  Used in: 
+newstuff.cs
+
+$ArmorHitSound[SplintMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[SteelBrigandineMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[SteelScaleMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[StuddedLeather]  Used in: 
+armors.cs
+
+$ArmorHitSound[StuddedLeatherSuit]  Used in: 
+armors.cs
+
+$ArmorHitSound[ToughHideSuit]  Used in: 
+armors.cs
+
+$ArmorHitSound[TungstenPlateMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[TungstenSplintMail]  Used in: 
+armors.cs
+
+$ArmorHitSound[WhiteDiamondPlate]  Used in: 
+newstuff.cs
+
+$ArmorList[1]  Used in: 
+armors.cs
+
+$ArmorList[10]  Used in: 
+armors.cs
+
+$ArmorList[11]  Used in: 
+armors.cs
+
+$ArmorList[12]  Used in: 
+armors.cs
+
+$ArmorList[13]  Used in: 
+armors.cs
+
+$ArmorList[14]  Used in: 
+armors.cs
+
+$ArmorList[15]  Used in: 
+armors.cs
+
+$ArmorList[16]  Used in: 
+armors.cs
+
+$ArmorList[17]  Used in: 
+armors.cs
+
+$ArmorList[18]  Used in: 
+armors.cs
+
+$ArmorList[19]  Used in: 
+newstuff.cs
+
+$ArmorList[2]  Used in: 
+armors.cs
+
+$ArmorList[3]  Used in: 
+armors.cs
+
+$ArmorList[4]  Used in: 
+armors.cs
+
+$ArmorList[5]  Used in: 
+armors.cs
+
+$ArmorList[6]  Used in: 
+armors.cs
+
+$ArmorList[7]  Used in: 
+armors.cs
+
+$ArmorList[8]  Used in: 
+armors.cs
+
+$ArmorList[9]  Used in: 
+armors.cs
+
+$ArmorList[987]  Used in: 
+newstuff.cs
+
+$ArmorPlayerModel[BlackDiamondFullPlate]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[CrystalBandedMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[CrystalChainMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[CrystalRingMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[CrystalSplintMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[DiamondFieldPlate]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[DiamondFullPlate]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[DiamondPlateMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[GoldenBrigandineMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[GoldenChainMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[IronScaleMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[RatSkinShirt]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[RedDiamondPlate]  Used in: 
+newstuff.cs
+
+$ArmorPlayerModel[SteelBrigandineMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[SteelScaleMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[StuddedLeatherSuit]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[ToughHideSuit]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[TungstenPlateMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[TungstenSplintMail]  Used in: 
+armors.cs
+
+$ArmorPlayerModel[WhiteDiamondPlate]  Used in: 
+newstuff.cs
+
+$ArmorSkin[AdvisorRobe]  Used in: 
+armors.cs
+
+$ArmorSkin[ApprenticeRobe]  Used in: 
+armors.cs
+
+$ArmorSkin[BandedMail]  Used in: 
+armors.cs
+
+$ArmorSkin[BlackDiamondFullPlate]  Used in: 
+armors.cs
+
+$ArmorSkin[BloodRobe]  Used in: 
+armors.cs
+
+$ArmorSkin[BrigandineArmor]  Used in: 
+armors.cs
+
+$ArmorSkin[BronzePlateMail]  Used in: 
+armors.cs
+
+$ArmorSkin[ChainMail]  Used in: 
+armors.cs
+
+$ArmorSkin[CrystalBandedMail]  Used in: 
+armors.cs
+
+$ArmorSkin[CrystalChainMail]  Used in: 
+armors.cs
+
+$ArmorSkin[CrystalRingMail]  Used in: 
+armors.cs
+

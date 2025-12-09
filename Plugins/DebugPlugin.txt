@@ -1,0 +1,69 @@
+This plugin is not part of the bov plugin official release.  Instead it's the Bov do what you want but don't blame me if it crashes release
+
+The general purpose is to help figure out issues if you are having it (including slowdowns).
+
+This can patch into functions so using this plugin might cause worse performance, but can be used to help analyze performance (or which areas you might need to optimize)
+
+===================
+Published Functions
+===================
+Debug::functions - Pretty much loads up the "stack" analysis code.  This will spam echo when you access a variable that isn't assigned
+Debug::DisplayFunctionStats - Shows each functions "runtime" and the times called.  Must have called Debug::functions(); already
+Debug::ResetFunctionStats - Resets things
+
+broadcastDebugPort(port]) - When you call this, it opens a socket broadcasting to 127.0.0.1:port.  It essentially sends UDP packets locally.
+	When used, debug::functions will be spamming UDP packets (can be useful to see what function was last called before a crash)
+
+
+
+==========================================================================
+Simple python script to capture the "stack" from broadcastDebugPort(1123);
+This ignores Game::EndFrame...since there are just so many calls to it
+1st word in data is just a number to verify that the packet arrived in the
+correct order
+==========================================================================
+import socket
+
+def main(port):
+    # create an INET, STREAMing socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(("127.0.0.1", port))
+
+    arr = [None] * 4096
+
+    while(True):
+        data,  address = s.recvfrom(4096)
+        words = str(data).split()
+        if b"Game::EndFrame" not in data:
+            print(f"{data}");
+
+    return
+
+
+# Press the green button in the gutter to run the script.
+if __name__ == '__main__':
+    main(1123)
+
+
+
+======================
+Tribes Script example
+-Add this and call dbt
+and watch your python
+output
+======================
+function dbt() {
+	broadcastDebugPort(1123);
+	Debug::functions();
+	echo("Test");
+	function unassignedVariableTest() { if($asdfasdfqwerwerasdfxcv == True) return true; }
+	unassignedVariableTest();
+	slowFunction();
+}
+
+function slowFunction() {
+	for(%i = 0; %i < 10000; %i++) {
+		for(%b = 0; %b < 100; %b++)
+			%slow = 123;
+	}
+}

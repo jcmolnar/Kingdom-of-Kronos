@@ -1,0 +1,511 @@
+﻿DUPLICATE ANALYSIS REPORT
+Generated: 11/24/2025 10:47:47
+========================================
+
+SUMMARY
+========================================
+Total Unique Functions: 925
+Total Unique Function Signatures: 928
+Total Unique Variables: 539
+Duplicate Function Signatures: 39
+Variables Used in Multiple Scripts: 101
+
+========================================
+DUPLICATE FUNCTION SIGNATURES
+(Exact same function signature in multiple files)
+========================================
+Function: Belt::Mug(%clientId, %id)
+  Found in: Belt.cs, Belt.cs
+
+Function: Belt::MugBeltMain(%clientId, %id)
+  Found in: Belt.cs, Belt.cs
+
+Function: Belt::MugItem(%clientId, %item, %type)
+  Found in: Belt.cs, Belt.cs
+
+Function: BuildDotString(%txt, %n)
+  Found in: comchat.cs, comchat.cs
+
+Function: ClearBlockData(%name, %block)
+  Found in: comchat.cs, comchat.cs
+
+Function: FadeMsg(%txt, %dist, %max)
+  Found in: comchat.cs, comchat.cs
+
+Function: FixDecimals(%c)
+  Found in: rpgfunk.cs, rpghud.cs
+
+Function: getClosestPosition(%num,%playerPos,%slotPos0,%slotPos1,%slotPos2,%slotPos3)
+  Found in: Vehicle.cs, Vehicle.cs
+
+Function: LoadHouseObjectives()
+  Found in: rpgfunk.cs, rpgfunk.cs
+
+Function: ManageBlockOwnersList(%name)
+  Found in: comchat.cs, comchat.cs
+
+Function: MenuBelt::MugChoose(%clientId, %item, %type)
+  Found in: Belt.cs, Belt.cs
+
+Function: MenuBelt::MugThisType(%clientId, %type, %page)
+  Found in: Belt.cs, Belt.cs
+
+Function: MenuBeltStoreThisItem(%clientId, %type, %page, %mode)
+  Found in: Belt.cs, Belt.cs
+
+Function: MenuBeltWithdrawThisItem(%clientId, %type, %page, %mode)
+  Found in: Belt.cs, Belt.cs
+
+Function: MenuSellBeltItemFinal(%clientId, %item, %type, %mode)
+  Found in: Belt.cs, Belt.cs
+
+Function: messageAll(%mtype, %message, %filter)
+  Found in: comchat.cs, comchat.cs
+
+Function: messageAllExcept(%except, %mtype, %message)
+  Found in: comchat.cs, comchat.cs
+
+Function: messageonlyadmins(%color, %message)
+  Found in: comchat.cs, comchat.cs
+
+Function: ParseBlockData(%bd, %victimId, %killerId)
+  Found in: comchat.cs, comchat.cs
+
+Function: processMenuBelt::MugChoose(%clientId, %opt)
+  Found in: Belt.cs, Belt.cs
+
+Function: processMenuBelt::MugThisType(%clientId, %opt)
+  Found in: Belt.cs, Belt.cs
+
+Function: processMenuBeltStoreThisItem(%clientId, %opt)
+  Found in: Belt.cs, Belt.cs
+
+Function: processMenuBeltWithdrawThisItem(%clientId, %opt)
+  Found in: Belt.cs, Belt.cs
+
+Function: processMenuMugBeltMain(%clientId, %opt)
+  Found in: Belt.cs, Belt.cs
+
+Function: processMenuselectrweapon(%clientId, %item)
+  Found in: Admin.cs, Admin.cs
+
+Function: processMenuselectspell(%clientId, %option)
+  Found in: Admin.cs, Admin.cs
+
+Function: processMenuSellBeltItemFinal(%clientId, %opt)
+  Found in: Belt.cs, Belt.cs
+
+Function: radiusAllExcept(%except1, %except2, %message)
+  Found in: comchat.cs, comchat.cs
+
+Function: RecalcHouseMemberCounts()
+  Found in: rpgfunk.cs, rpgfunk.cs
+
+Function: RecalcHouseObjectives()
+  Found in: rpgfunk.cs, rpgfunk.cs
+
+Function: remoteConsider(%clientId)
+  Found in: remote.cs, remote.cs
+
+Function: round(%n)
+  Found in: rpgfunk.cs, rpghud.cs
+
+Function: Vehicle::dismount(%this,%mom)
+  Found in: Vehicle.cs, Vehicle.cs
+
+Function: Vehicle::jump(%this,%mom)
+  Found in: Vehicle.cs, Vehicle.cs
+
+Function: Vehicle::onAdd(%this)
+  Found in: Vehicle.cs, Vehicle.cs
+
+Function: Vehicle::onCollision(%this, %object)
+  Found in: Vehicle.cs, Vehicle.cs
+
+Function: Vehicle::onDamage(%this,%type,%value,%pos,%vec,%mom,%object)
+  Found in: Vehicle.cs, Vehicle.cs
+
+Function: Vehicle::onDestroyed(%this,%mom)
+  Found in: Vehicle.cs, Vehicle.cs
+
+Function: Vehicle::passengerJump(%this,%passenger,%mom)
+  Found in: Vehicle.cs, Vehicle.cs
+
+
+========================================
+FUNCTIONS WITH SAME NAME BUT DIFFERENT SIGNATURES
+(Overloaded functions or functions with same name in different namespaces)
+========================================
+Function Name: Game::onPlayerConnected
+  - Game::onPlayerConnected(%game, %clientId) in game.cs
+  - Game::onPlayerConnected(%playerId) in connectivity.cs
+
+Function Name: messageAll
+  - messageAll(%msgType, %message) in game.cs
+  - messageAll(%mtype, %message, %filter) in comchat.cs
+  - messageAll(%mtype, %message, %filter) in comchat.cs
+
+Function Name: Vehicle::findEmptySeat
+  - Vehicle::findEmptySeat(%this,%clientId) in Vehicle.cs
+  - Vehicle::findEmptySeat(%this,%client) in Vehicle.cs
+
+
+========================================
+VARIABLES USED IN MULTIPLE SCRIPTS
+(These are likely global variables shared across scripts)
+========================================
+$AccessoryVar
+  Used in: rpgfunk.cs, Accessory.cs, weapons.cs, armors.cs, shopping.cs, Belt.cs, comchat.cs, newstuff.cs
+
+$aidirectiveTable
+  Used in: Ai.cs, rpgfunk.cs
+
+$AImoveChance
+  Used in: globals.cs, rpgarena.cs, comchat.cs
+
+$ArenaBotMatchTicker
+  Used in: rpgarena.cs, gameevents.cs, comchat.cs
+
+$ArenaDueler
+  Used in: rpgarena.cs, gameevents.cs
+
+$ArmorHitSound
+  Used in: armors.cs, playerdamage.cs, newstuff.cs
+
+$ArmorList
+  Used in: armors.cs, newstuff.cs
+
+$ArmorPlayerModel
+  Used in: rpgfunk.cs, armors.cs, newstuff.cs
+
+$ArmorSkin
+  Used in: rpgfunk.cs, armors.cs, newstuff.cs
+
+$BaseControl
+  Used in: globals.cs, rpgfunk.cs, gameevents.cs, comchat.cs
+
+$Belt::Categories
+  Used in: shopping.cs, playerdamage.cs, Belt.cs
+
+$Belt::Count
+  Used in: shopping.cs, Belt.cs
+
+$BeltItem
+  Used in: rpgfunk.cs, shopping.cs, playerdamage.cs, Belt.cs, comchat.cs
+
+$BlockOwnerAdminLevel
+  Used in: gameevents.cs, comchat.cs
+
+$BonusState
+  Used in: rpgfunk.cs, BonusState.cs
+
+$BonusStateCnt
+  Used in: rpgfunk.cs, BonusState.cs
+
+$BotEquipment
+  Used in: Ai.cs, comchat.cs
+
+$BotInfo
+  Used in: Ai.cs, gameevents.cs, comchat.cs
+
+$BurnOut
+  Used in: zone.cs, Accessory.cs
+
+$BurnOutInRain
+  Used in: zone.cs, Accessory.cs
+
+$ClassGroup
+  Used in: rpgfunk.cs, classes.cs, rpgstats.cs
+
+$ClassName
+  Used in: classes.cs, rpgstats.cs
+
+$Client::info
+  Used in: rpgfunk.cs, connectivity.cs, comchat.cs
+
+$ConsoleWorld::DefaultSearchPath
+  Used in: rpgfunk.cs, gameevents.cs
+
+$Contestant
+  Used in: rpgarena.cs, comchat.cs
+
+$currentHaze
+  Used in: globals.cs, gameevents.cs
+
+$currentSky
+  Used in: globals.cs, gameevents.cs
+
+$damagedBy
+  Used in: rpgfunk.cs, rpgstats.cs, playerdamage.cs
+
+$dayCycleHaze
+  Used in: globals.cs, gameevents.cs
+
+$dayCycleSky
+  Used in: globals.cs, gameevents.cs
+
+$DoCheckMatchWin
+  Used in: rpgarena.cs, gameevents.cs
+
+$DuelChallenger
+  Used in: rpgarena.cs, comchat.cs
+
+$DuelLoser
+  Used in: rpgarena.cs, comchat.cs
+
+$DuelOn
+  Used in: rpgarena.cs, comchat.cs
+
+$DuelOpponent
+  Used in: rpgarena.cs, comchat.cs
+
+$EventCommand
+  Used in: Ai.cs, rpgfunk.cs, playerdamage.cs, itemevents.cs, remote.cs, comchat.cs
+
+$exportChat
+  Used in: globals.cs, comchat.cs
+
+$Fight
+  Used in: rpgarena.cs, comchat.cs
+
+$FlagCommand
+  Used in: globals.cs, rpgfunk.cs, gameevents.cs, comchat.cs
+
+$HardcodedItemCost
+  Used in: Accessory.cs, Belt.cs
+
+$HomeSpawn
+  Used in: globals.cs, comchat.cs
+
+$HouseChecked
+  Used in: house.cs, connectivity.cs
+
+$HouseMember
+  Used in: rpgfunk.cs, house.cs, connectivity.cs, comchat.cs
+
+$HouseName
+  Used in: rpgfunk.cs, house.cs, comchat.cs
+
+$HouseStartUpEq
+  Used in: house.cs, comchat.cs
+
+$initcoins
+  Used in: classes.cs, rpgstats.cs
+
+$IsABotMatch
+  Used in: rpgarena.cs, gameevents.cs, comchat.cs
+
+$ItemCost
+  Used in: Accessory.cs, weapons.cs, armors.cs, newstuff.cs
+
+$ItemList
+  Used in: rpgfunk.cs, zone.cs, Accessory.cs
+
+$LoadOut
+  Used in: Ai.cs, comchat.cs
+
+$log::msg
+  Used in: comchat.cs, hackfix.cs
+
+$loot
+  Used in: rpgfunk.cs, itemevents.cs, comchat.cs
+
+$lootbagTime
+  Used in: rpgfunk.cs, itemevents.cs
+
+$LoreItem
+  Used in: playerdamage.cs, itemevents.cs, economy.cs, remote.cs
+
+$los::object
+  Used in: spells.cs, weapons.cs, playerdamage.cs, remote.cs, comchat.cs
+
+$los::position
+  Used in: Ai.cs, remote.cs, comchat.cs
+
+$maxAccessory
+  Used in: Accessory.cs, itemevents.cs
+
+$MerchantCounterB
+  Used in: gameevents.cs, economy.cs
+
+$MerchantCounterS
+  Used in: gameevents.cs, economy.cs
+
+$MinHP
+  Used in: classes.cs, rpgstats.cs
+
+$numAIperSpawnPoint
+  Used in: Ai.cs, Spawn.cs, comchat.cs
+
+$OverrideMountPoint
+  Used in: Accessory.cs, itemevents.cs
+
+$owner
+  Used in: rpgfunk.cs, Vehicle.cs, Turret.cs, staticshape.cs, Station.cs
+
+$PetList
+  Used in: Ai.cs, comchat.cs
+
+$PlayerAnim::Crouching
+  Used in: playerdamage.cs, Player.cs
+
+$PlayerAnim::DieLeftSide
+  Used in: playerdamage.cs, Player.cs
+
+$PlayerSkill
+  Used in: Ai.cs, rpgfunk.cs, skills.cs, zone.cs, spells.cs, rpgstats.cs, playerdamage.cs, Belt.cs, economy.cs, comchat.cs
+
+$possessedBy
+  Used in: rpgfunk.cs, playerdamage.cs, comchat.cs
+
+$ProjectileDoubleCheck
+  Used in: weapons.cs, itemevents.cs
+
+$ProtectFromWater
+  Used in: zone.cs, Accessory.cs
+
+$QuestReload
+  Used in: zone.cs, comchat.cs
+
+$RACE
+  Used in: armors.cs, rpghud.cs
+
+$RaceToArmorType
+  Used in: Ai.cs, rpgfunk.cs, playerspawn.cs
+
+$Round
+  Used in: rpgarena.cs, comchat.cs
+
+$SealBattleActive
+  Used in: playerdamage.cs, comchat.cs, remortseal.cs
+
+$SealBattleParticipants
+  Used in: comchat.cs, remortseal.cs
+
+$Server::Hostname
+  Used in: connectivity.cs, rpgstats.cs
+
+$SkillCounter
+  Used in: rpgfunk.cs, skills.cs, rpgstats.cs
+
+$SkillDesc
+  Used in: skills.cs, comchat.cs
+
+$SkillRestriction
+  Used in: skills.cs, newstuff.cs
+
+$SkillType
+  Used in: spells.cs, weapons.cs, newstuff.cs
+
+$spawnIndex
+  Used in: Spawn.cs, remortseal.cs
+
+$spawnMultiplier
+  Used in: globals.cs, comchat.cs
+
+$SpawnPackList
+  Used in: itemevents.cs, comchat.cs
+
+$Spell::index
+  Used in: spells.cs, playerdamage.cs
+
+$Spell::keyword
+  Used in: spells.cs, Help.cs, weapons.cs
+
+$Spell::name
+  Used in: spells.cs, playerdamage.cs
+
+$state
+  Used in: rpgfunk.cs, comchat.cs
+
+$tagToObjectId
+  Used in: itemevents.cs, comchat.cs
+
+$TeamEnergy
+  Used in: game.cs, Admin.cs, Station.cs
+
+$TeamItemCount
+  Used in: Vehicle.cs, Turret.cs, beacon.cs, Station.cs, sensor.cs, Mine.cs
+
+$ticker
+  Used in: gameevents.cs, itemevents.cs
+
+$tmpBotGroup
+  Used in: Ai.cs, comchat.cs
+
+$tmpdata
+  Used in: gameevents.cs, comchat.cs
+
+$TotalSealValue
+  Used in: rpgfunk.cs, remortseal.cs
+
+$TournyRoundOne
+  Used in: rpgarena.cs, classes.cs
+
+$TournyRoundThree
+  Used in: rpgarena.cs, classes.cs
+
+$TournyRoundTwo
+  Used in: rpgarena.cs, classes.cs
+
+$Weight
+  Used in: Accessory.cs, rpghud.cs
+
+$WorldRank
+  Used in: rpgarena.cs, classes.cs, comchat.cs
+
+$zonedis
+  Used in: connectivity.cs, rpgstats.cs, comchat.cs
+
+
+========================================
+UNIQUE VARIABLES BY SCRIPT
+(First 20 variables per script, deduplicated)
+========================================
+
+connectivity.cs
+  - $HouseMember
+  - $Server::Hostname
+  - $HouseChecked
+  - $updatemodinfoID
+  - $Taurik::ConnectScreenMessage2
+  - $Server::FileURL
+  - $zonedis
+  - $Client::info
+  - $connectlog::entry
+  - $Taurik::ConnectScreenMessage1
+
+rpgstats.cs
+  - $MinHP
+  - $Server::Hostname
+  - $PlayerSkill
+  - $damagedBy
+  - $ClassName
+  - $SkillCounter
+  - $ClassGroup
+  - $zonedis
+  - $ClientData
+  - $initcoins
+
+comchat.cs
+  - $HouseMember
+  - $spawnMultiplier
+  - $tagToObjectId
+  - $Round
+  - $HomeSpawn
+  - $LoadOut
+  - $FlagName
+  - $SealBattleParticipants
+  - $PlayerSkill
+  - $WorldRank
+  - $BlockList
+  - $tmpdata
+  - $BotEquipment
+  - $loot
+  - $adminattempt::entry
+  - $Refresh
+  - $FlagCommand
+  - $DuelOn
+  - $possessedBy
+  - $ArenaBotMatchTicker
+

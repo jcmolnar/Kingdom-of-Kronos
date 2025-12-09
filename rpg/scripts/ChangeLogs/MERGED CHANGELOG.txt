@@ -1,0 +1,2053 @@
+MERGED CHANGELOG - Kingdom of Kronos V0.7
+==========================================
+This file contains all changes merged from:
+- 141125 changes.txt
+- 2025-11-14 changes.txt
+- Nov 2025 changes.txt
+- 2025-11-21 changes.txt
+
+Date Range: November 14, 2014 through November 21, 2025
+========================================================
+
+
+EARLY FIXES (November 14, 2014)
+--------------------------------
+
+1. playerdamage.cs — Spell damage display fix
+   Location: Lines ~391, ~462, ~740
+   Change: Added safety checks for $PlayerSkill[%shooterClient, %skilltype] defaulting to 1000 for NPCs
+   Change: Added check to ensure %value is numeric before calculating %convValue
+   Reason: Fixed "An NPC hits "enemy name" for "" points of damage" when NPCs cast spells
+
+2. playerdamage.cs — Damage mode defaulting
+   Location: Lines ~668, ~894, ~957
+   Change: Default fetchData(%client, "damageMode") to true if empty
+   Reason: Ensure damage messages display by default for spell and melee damage
+
+3. playerdamage.cs — Melee damage skill value fix
+   Location: Line ~462
+   Change: Added safety check for melee damage skill values, defaulting to 1000 if empty
+   Reason: Fix melee damage not showing for NPCs
+
+4. playerdamage.cs — LCK miss handling fix
+   Location: Lines ~836-839
+   Change: Added %lckMiss flag and adjusted order to handle LCK misses before converting -1 to 0
+   Reason: Fix LCK miss messages not displaying properly
+
+5. playerdamage.cs — Typo fix
+   Location: Line ~533
+   Change: Fixed typo from damagedClient to %damagedClient in Duel::isDueling call
+   Reason: Fix "Unknown command" error
+
+6. playerdamage.cs — Quest items dropping fix
+   Location: Lines ~184-195
+   Change: Restored belt items (QuestItems, KeyItems, GemItems) dropping logic
+   Reason: Fix enemies not dropping quest items
+
+7. playerdamage.cs — Double weapon drop fix
+   Location: Lines ~155-157
+   Change: Added continue statement to skip mounted weapon in item iteration loop
+   Reason: Prevent mounted weapon from being added to loot twice
+
+8. remortseal.cs — Duel system stubs
+   Location: Lines ~370-380
+   Change: Added stub functions Duel::isDueling(%clientId) (returns false) and Duel::endDuel(%pass) (does nothing)
+   Reason: Fix "Duel::isDueling: Unknown command" errors since dueling system is not used
+
+9. remote.cs — RawKey stub function
+   Location: Lines ~8-14
+   Change: Added stub function remoterawKey(%client, %key, %mod) to prevent console spam
+   Reason: Fix "remoterawKey: Unknown command" errors from client-side keybinds
+
+10. spells.cs — Apocalypse spell clientId validation
+    Location: Lines ~2375-2381
+    Change: Added validation at start of Apocalypse spell to ensure %clientId is valid (not 0 or -1)
+    Reason: Prevent crashes and invalid damage attribution
+
+11. spells.cs — CreateAndDetBomb clientId validation
+    Location: Lines ~2519-2529
+    Change: Added validation in CreateAndDetBomb() to handle invalid client IDs gracefully
+    Reason: Create visual explosion only when client ID is invalid, preventing errors
+
+12. spells.cs — ApocalypseBatchExplosions clientId validation
+    Location: Lines ~2549-2555
+    Change: Added validation in ApocalypseBatchExplosions() to handle invalid client IDs
+    Reason: Prevent errors in batch processing when client ID is invalid
+
+
+NOVEMBER 2025 CHANGES
+=====================
+
+HELP COMMANDS MENU FIXES
+-------------------------
+
+13. Help.cs — Help Commands Menu Option Values Fix
+    Location: Lines 392-421, 435-462, 493-520
+    Files Changed: RPG/Scripts/Help.cs
+    Changes:
+      - Modified Help::commandsMainMenu() to use numeric option values ("1", "2", "3", "4") instead of text ("armor", "weapons", "spells", "zones")
+      - Updated display text to show "1Armor", "2Weapons", "3Spells", "4Zones" to preserve readability
+      - Updated processMenuhelpCommandsMain() to check for numeric values ("1", "2", "3", "4") instead of text strings
+      - Modified Help::weaponsSubMenu() to use numeric option values ("1", "2", "3") instead of text ("slash", "pierce", "bludge")
+      - Updated display text to show "1Slashing", "2Piercing", "3Bludgeon"
+      - Updated processMenuhelpWeaponsSubMenu() to check for numeric values ("1", "2", "3")
+      - Modified Help::spellsSubMenu() to use numeric option values ("1", "2", "3") instead of text ("offensive", "defensive", "neutral")
+      - Updated display text to show "1Offensive Spells", "2Defensive Spells", "3Neutral Spells"
+      - Updated processMenuhelpSpellsSubMenu() to check for numeric values ("1", "2", "3")
+    Reason: Fixed issue where the first letter of every menu option was being cut off due to Tribes menu system interpreting the first character as a special menu formatting character (x=back, n=next, p=prev, etc.)
+
+
+SKILL POINTS MENU ATTEMPT (REVERTED)
+-------------------------------------
+
+14. rpgstats.cs — Skill Points Menu "No Longer Used" Removal Attempt (REVERTED)
+    Location: Lines 209-246
+    Files Changed: RPG/Scripts/rpgstats.cs
+    Changes:
+      - Attempted to modify MenuSP() function to filter out skills 14 and 17 (marked as "no longer used" in skills.cs)
+      - Built a list of valid skills excluding indices 14 and 17
+      - Updated pagination logic to work with filtered skill list using CountObjInList()
+      - Modified loop to iterate through valid skills list instead of all skills
+    Status: REVERTED - Changes were reverted due to server breaking. Original function restored.
+    Reason: Attempted to hide "No Longer Used" skills from the skill points menu, but implementation caused server issues
+
+
+HOUSE OBJECTIVES SAVE/LOAD SYSTEM
+----------------------------------
+
+15. rpgfunk.cs — SaveHouseObjectives Function
+    Location: SaveHouseObjectives() function
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Modified to save custom .holdingTeam and .team properties for flags and towerswitches
+      - Saves flag positions and house ownership to temp\HouseObjectives.cs
+      - Saves BaseControl and FlagCommand counts as temporary variables before export
+      - Exports SavedFlag* and SavedSwitch* arrays with underscore notation
+    Reason: Properly save house objective ownership and positions across server restarts
+
+16. rpgfunk.cs — LoadHouseObjectives Function
+    Location: LoadHouseObjectives() function
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Modified to read saved .holdingTeam and .team properties from temp\HouseObjectives.cs
+      - Restores flag positions and house ownership
+      - Recalculates $BaseControl and $FlagCommand counts from actual game objects after loading
+      - Handles underscore-separated variable names from export() function
+      - Added call to HouseData::Load() at start to load saved house data (BaseControl, FlagCommand, HouseMember)
+    Reason: Properly restore house objective ownership and positions on server restart
+
+17. rpgfunk.cs — UpdateHouseObjectivesDisplay Function
+    Location: UpdateHouseObjectivesDisplay() function
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Created standalone function to update Team::setobjective calls for all houses
+      - Centralizes objective display updates
+      - Added house member counts to objectives display
+      - Updated header to show "Bases / Artifacts / Members Online:"
+    Reason: Fix "UpdateHouseObjectivesDisplay: Unknown command" error and display member counts
+
+18. Server.cs — LoadWorld Timing Fix
+    Location: Server::finishMissionLoad() function
+    Files Changed: RPG/Scripts/Server.cs
+    Changes:
+      - Moved LoadHouseObjectives() call to Server::finishMissionLoad() after mission loads
+      - Ensures MissionGroup exists before loading objectives
+    Reason: Fix "LoadHouseObjectives: Unknown command" and "exec: invalid script file" errors
+
+
+FLAG CAPTURE SYSTEM FIXES
+--------------------------
+
+19. objectives.cs — Flag Capture Fix
+    Location: Flag::onCollision() function
+    Files Changed: RPG/Scripts/objectives.cs
+    Changes:
+      - Added GameBase::setTeam(%this, -1) when flag is picked up
+      - Makes flag neutral and capturable by any house
+    Reason: Fix issue where flags could not be captured by other houses after being captured by one house
+
+
+ADMIN COMMANDS
+--------------
+
+20. comchat.cs — #setartifact Admin Command
+    Location: #setartifact command handler
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Created admin command to assign flags to houses: #setartifact "housename" "1,2,3,4"
+      - Maps flag numbers to flag names (1=Gratigud, 2=Belaguard, 3=Crosion, 4=Murch)
+      - Searches for flagstands by name and moves flags to correct positions
+      - Falls back to hardcoded positions if flagstands not found
+      - Updates $FlagCommand counts
+    Reason: Allow admins to easily assign flags to houses and position them correctly
+
+21. comchat.cs — #setbase Admin Command
+    Location: #setbase command handler
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Created admin command to assign bases to houses: #setbase "housename" "1,2,3,4"
+      - Maps base numbers to Tower groups (1=Tower0, 2=Tower1, 3=Tower2, 4=Tower3)
+      - Updates TowerSwitch .team property and $BaseControl counts
+    Reason: Allow admins to easily assign control points to houses
+
+
+SPELL SYSTEM FIXES
+------------------
+
+22. spells.cs — Apocalypse Spell Optimization
+    Location: Apocalypse spell (index 48)
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - Replaced numerous schedule() calls with batch processing system using $ApocalypseData arrays
+      - Created ApocalypseBatchExplosions() function to process explosions in batches
+      - Created ApocalypseCreateExplosion() helper function
+      - Created ApocalypseCleanup() function to clear temporary data
+      - Fixed string-to-boolean conversion for doDamage parameter
+    Reason: Reduce server load from Apocalypse spell while maintaining visual effects and damage
+
+23. spells.cs — Remort Seal Logic Fix
+    Location: Remort spell (index 21)
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - Changed condition from %remortStep <= %sealValue to %remortStep < %sealValue
+    Reason: Fix issue where players could remort at remort 20 even when seal was active
+
+
+DAMAGE SYSTEM FIXES
+-------------------
+
+24. playerdamage.cs — Stance Damage Modifiers Fix
+    Location: Stance modifier section in Player::onDamage()
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Offensive stance: doubles all damage (physical and spell) dealt and received
+      - Defensive stance: halves all damage dealt and received
+      - Casting stance: +33% magic damage dealt, +50% damage received
+      - MageBane: nullifies magic damage received, doubles physical damage received
+      - BladeBane: nullifies physical damage received, doubles magic damage received
+      - Removed MANA > 0 gate for MageBane/BladeBane damage modifiers
+    Reason: Fix stance damage multipliers to match intended behavior
+
+25. playerdamage.cs — AI Damage Nullification Fix
+    Location: Same-team damage check section
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified same-team damage check to skip entire block if %shooterClient is AI-controlled
+    Reason: Fix issue where only every second hit was registered by AI mobs
+
+26. playerdamage.cs — AI Miss Messages Fix
+    Location: Miss message sending logic
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified to always send miss messages to damaged player regardless of shooter type
+      - Message to shooter only sent if shooter is a player
+    Reason: Ensure AI miss messages display correctly
+
+27. playerdamage.cs — Fixed Quest Item Drop Logic
+    Location: Lines 489-533
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified quest item drop logic to always drop all accumulated items
+      - Previously, percentage roll failures or guaranteed drops could cap the dropped amount to original count
+      - Now all accumulated quest items always drop, regardless of percentage rolls or whether they were original or picked up from lootbags
+      - Prevents item loss when players pick up quest items from enemy lootbags
+    Reason: Fix issue where quest items were only stacking to 5 in enemy lootbags and bots were losing items
+
+28. playerdamage.cs — Fixed Belt Item Drop Logic for Players
+    Location: Lines 381-406
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified belt item drop logic so equipped items always drop, even if same item exists in storage
+      - Previously, if item existed in both equipped and storage, it would be skipped or stored amount subtracted from equipped
+      - Now all equipped items drop, and stored items remain protected in storage
+      - The check for items in storage is now informational only and does not prevent equipped items from dropping
+    Reason: Fix bug where player's equipped quest items disappeared on death if the same item existed in storage
+
+29. playerdamage.cs — Fixed shouldDrop Logic Redundancy
+    Location: Lines 395-438
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Removed redundant %shouldDrop = true; assignments
+      - Now set once at line 395 for all entities (bots and players)
+      - Removed redundant assignments inside isRPGAI check
+      - Bot-specific percentage lookup logic is now purely informational and does not affect drop behavior
+    Reason: Clean up redundant code and ensure consistent drop behavior
+
+
+STANCE SYSTEM INTEGRATION
+-------------------------
+
+30. Ai.cs — Stance Array Definition
+    Location: $Stance::Array definition
+    Files Changed: RPG/Scripts/Ai.cs
+    Changes:
+      - Added $Stance::Array definition with all stance names
+    Reason: Support stance system for AI
+
+31. Ai.cs — AI Stance Assignment
+    Location: AI creation functions
+    Files Changed: RPG/Scripts/Ai.cs
+    Changes:
+      - Removed random stance assignment for AI enemies
+      - All AI mobs now always assigned "Normal" stance
+    Reason: Ensure AI mobs don't have stance-based damage modifiers
+
+32. rpgfunk.cs — Stance Save/Load
+    Location: SaveWorld() and LoadWorld() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added stance saving to player data export
+      - Added stance loading from player data
+      - Initialize new players with "Normal" stance
+    Reason: Persist player stances across server restarts
+
+33. Admin.cs — Stance Menu Updates
+    Location: menustance block and processMenuPickStance() function
+    Files Changed: RPG/Scripts/Admin.cs
+    Changes:
+      - Updated to use fetchData(%clientId, "Stance") for current stance
+      - Added "Casting" stance to menu
+      - Initialized %curitem = 1 in menustance block
+      - Updated stance descriptions to match actual damage multipliers
+    Reason: Fix "Casting" stance not showing and update descriptions to match implementation
+
+34. rpgstats.cs — Casting Stance Mana Reduction
+    Location: GetStat() function for "MaxMANA"
+    Files Changed: RPG/Scripts/rpgstats.cs
+    Changes:
+      - Added check for "Casting" stance to apply 33% mana reduction
+    Reason: Implement Casting stance mana penalty
+
+35. mana.cs — Stance-Based Mana Regen
+    Location: refreshMANAREGEN() function
+    Files Changed: RPG/Scripts/mana.cs
+    Changes:
+      - Updated to use fetchData(%clientId, "Stance") for MageBane/BladeBane checks
+    Reason: Correctly apply mana drain for MageBane and BladeBane stances
+
+
+REMORT SEAL SYSTEM
+------------------
+
+36. remortseal.cs — TotalSealValue Functions
+    Location: New functions
+    Files Changed: RPG/Scripts/remortseal.cs
+    Changes:
+      - Added GetTotalSealValue() function
+      - Added IncrementTotalSealValue() function (increases by 20)
+      - Added SetTotalSealValue() function
+    Reason: Centralize TotalSealValue management
+
+37. rpgfunk.cs — TotalSealValue Save/Load
+    Location: SaveWorld() and Server::finishMissionLoad()
+    Files Changed: RPG/Scripts/rpgfunk.cs, RPG/Scripts/Server.cs
+    Changes:
+      - Save $TotalSealValue to temp\SealValue.cs using export()
+      - Load $TotalSealValue in Server::finishMissionLoad() after LoadWorld() and LoadHouseObjectives()
+    Reason: Persist remort seal value across server restarts (fixed timing to prevent server breaking)
+
+
+VERSION NUMBER UPDATES
+----------------------
+
+38. ServerPrefs.cs — Version Number Update
+    Location: $Server::Version, $Server::HostName, $Server::Info
+    Files Changed: config\ServerPrefs.cs, config\config backup\ServerPrefs.cs
+    Changes:
+      - Changed all references from "V0.6.6" to "V0.7"
+    Reason: Update version number for new release
+
+39. serverTempData28000.cs — Version Number Update
+    Location: $Server::Version, $Server::HostName, $Server::Connect
+    Files Changed: temp\serverTempData28000.cs
+    Changes:
+      - Changed all references from "V0.6.6" to "V0.7"
+    Reason: Update version number for new release
+
+
+BELT SYSTEM - DEPLOYABLE BASE PACK INTEGRATION
+-----------------------------------------------
+
+40. Belt.cs — Added Deployables Category
+    Location: Lines 4-7
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added "Deployables" category to Belt system ($Belt::Count["Deployables"], $Belt::Categories[3])
+      - Updated Belt::Display() to handle Deployables category
+      - Registered DepBasePack in Belt item registry: BeltItem::Add("Deployable Base Pack", "DepBasePack", "Deployables", 0.0, 40000)
+    Reason: Migrate DepBasePack from standard inventory to Belt/Backpack system for consistency
+
+41. Belt.cs — Added Deploy Option to Belt Menu
+    Location: Lines 365-386 (MenuBeltDrop function)
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added check for deployable items (DepBasePack) in MenuBeltDrop()
+      - Shows "Deploy" option as first menu item when item is DepBasePack
+      - Deploy option appears before Drop and Examine options
+    Reason: Allow players to deploy bases directly from Belt menu
+
+42. Belt.cs — Added Belt::DeployItem() Function
+    Location: Lines 2079-2112
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Created Belt::DeployItem() function to handle deployment from Belt menu
+      - Validates player has item in Belt storage
+      - Validates player object exists (player must be in-game)
+      - Sets flag (%clientId.beltDeploying) so onDeploy knows to remove from Belt instead of standard inventory
+      - Calls Player::deployItem() to trigger deployment system
+      - Clears flag after 2 seconds if deployment fails
+    Reason: Enable deployment of belt items (DepBasePack) from menu system
+
+43. Belt.cs — Added Deploy Handling to processMenuBeltDrop()
+    Location: Lines 403-406
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added "deploy" option handling in processMenuBeltDrop()
+      - Calls Belt::DeployItem() when player selects deploy option
+    Reason: Process deploy command from Belt menu
+
+44. depbase.cs — Updated DepBasePack::onDeploy() for Belt Integration
+    Location: Lines 33-67
+    Files Changed: RPG/Scripts/depbase.cs
+    Changes:
+      - Added check for %clientId.beltDeploying flag to determine if deploying from Belt or standard inventory
+      - Uses Belt::TakeThisStuff() to remove from Belt storage when flag is set
+      - Falls back to Player::decItemCount() for legacy standard inventory items
+      - Clears flag after successful deployment or on failure
+    Reason: Support deployment from Belt storage while maintaining backward compatibility with standard inventory
+
+45. depbase.cs — Simplified DepBasePack::onUse()
+    Location: Lines 25-32
+    Files Changed: RPG/Scripts/depbase.cs
+    Changes:
+      - Removed $BeltSlot mounting logic (Belt items don't use slots)
+      - Simplified to call Player::deployItem() directly
+      - Kept for backward compatibility with items in standard inventory
+    Reason: Clean up code since Belt items are deployed via menu, not by mounting
+
+
+PLAYER COMMANDS
+---------------
+
+46. comchat.cs — Added #suicide Command
+    Location: Lines 3485-3502
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Created #suicide command (also accepts #killme as alias)
+      - Validates player is spawned in-game before allowing suicide
+      - Only kills the player who typed the command (uses %TrueClientId)
+      - Plays death animation and kills player
+      - Sends confirmation message to player
+      - No admin privileges required (self-kill only)
+    Reason: Allow players to kill themselves via chat command as alternative to suicide keybinding
+
+47. comchat.cs — Added #Build Command for Base Deployment
+    Location: Lines 1574-1612
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Created #Build command (case-insensitive: accepts #Build or #build)
+      - Checks for DepBasePack in Belt storage first, then falls back to standard inventory
+      - Deploys base from Belt storage using Belt::DeployItem() if found
+      - Deploys base from standard inventory using Player::deployItem() if found
+      - Provides clear error message if player doesn't have DepBasePack
+      - Separate from #deploy command (which handles vehicles)
+    Reason: Provide dedicated chat command for deploying bases, separate from vehicle deployment
+
+48. comchat.cs — Reverted #deploy Command to Vehicle-Only Functionality
+    Location: Lines 1530-1572
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Reverted #deploy command to its original functionality
+      - Now only handles ScoutVehicle deployment (vehicles only)
+      - Base deployment moved to separate #Build command
+    Reason: Separate base deployment (#Build) from vehicle deployment (#deploy) for clarity
+
+49. comchat.cs — Added #getinventory Admin Command
+    Location: Lines 3155-3295
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Created #getinventory admin command (Admin Level 1+)
+      - Displays a player or bot's entire inventory
+      - Shows equipped weapon, equipped armor, equipped items (not mounted), regular inventory items
+      - Shows all belt categories: Quest Items, Key Items, Gem Items, Deployables
+      - Shows both equipped belt items and stored belt items
+      - Syntax: #getinventory "playername"
+    Reason: Allow admins to view complete inventory status of players and bots for debugging
+
+
+BELT SYSTEM - BANK STORAGE IMPROVEMENTS
+---------------------------------------
+
+50. Belt.cs — Added Belt::BankStorageConversion() Function
+    Location: Lines 15-148
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Created Belt::BankStorageConversion() function to sync and clean belt storage on character load
+      - Combines StoredQuestItems and StoredKeyItems into BeltStorage for unified bank storage
+      - Cleans invalid entries (item='0', count='-1', empty entries) from StoredQuestItems
+      - Cleans invalid entries from StoredKeyItems
+      - Rebuilds equipped category lists (QuestItems, KeyItems) using Belt::GetNS for data integrity
+      - Removes corrupted entries from equipped categories
+      - Updates BeltStorage from saved data to ensure consistency
+      - Calls RefreshAll() to update any open menus after cleanup
+    Reason: Fix data corruption issues in belt storage and ensure proper synchronization between StoredQuestItems, StoredKeyItems, and BeltStorage
+
+51. Belt.cs — Enhanced processMenuSellBeltItemFinal() with Storage Cleanup
+    Location: Lines 650-1104
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added cleanup logic for BeltStorage before adding items during store operations
+      - Added cleanup logic for StoredQuestItems before adding items during store operations
+      - Added cleanup logic for StoredKeyItems before modifying during withdraw operations
+      - Removes invalid entries (item='0', count='-1', empty, negative counts) before SetStuffString calls
+      - Prevents creation of invalid entries during storage operations
+      - Handles both banker storage (BeltStorage) and legacy belt storage (StoredQuestItems/StoredKeyItems)
+      - Improved error handling and warning messages for data inconsistencies
+    Reason: Prevent data corruption during bank storage operations and ensure data integrity
+
+52. Belt.cs — Fixed StoredKeyItems Cleanup Bug During Withdrawal
+    Location: Lines 1011-1042
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added cleanup logic for StoredKeyItems before calling SetStuffString() during withdrawal
+      - Removes invalid entries (item='0', count='-1') before modifying storage
+      - Prevents creation of invalid entries like ' 0 DuelCard -1 ' during withdrawal
+    Reason: Fix bug where StoredKeyItems was not being cleaned before modification during withdrawal, causing invalid data corruption
+
+53. rpgfunk.cs — Added Belt::BankStorageConversion() Call in LoadWorld()
+    Location: Line 563
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added call to Belt::BankStorageConversion(%clientid) in LoadWorld() function
+      - Called after loading character data but before other character initialization
+      - Ensures belt storage is cleaned and synchronized when character loads
+    Reason: Automatically clean and sync belt storage data when characters are loaded from save files
+
+
+BELT SYSTEM - BUG FIXES AND OPTIMIZATIONS
+------------------------------------------
+
+54. Belt.cs — Fixed GiveThisStuff() Parameter Type for Item::giveItem()
+    Location: Lines 227-232
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Fixed GiveThisStuff() to retrieve player object using Client::getOwnedObject(%clientId) before calling Item::giveItem()
+      - Item::giveItem() expects a player object, not a clientId
+      - Added fallback to Player::incItemCount() if player object is not available
+    Reason: Fix bug where enemy bots were not equipping weapons because wrong parameter type was being passed
+
+55. Belt.cs — Optimized Belt::GiveThisStuff() for Enemy Bots
+    Location: Lines 1668-1814
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Added bot detection using isRPGAI() function
+      - Bots skip corruption checks, Belt::GetNS calls, and most debug output to prevent race conditions
+      - Bots only perform basic "0" entry cleanup for performance
+      - Players still get full validation, Belt::GetNS cleanup, and debug output
+      - Client::sendMessage skipped for bots to reduce overhead
+      - Prevents race conditions when processing multiple items from lootbags simultaneously
+    Reason: Fix issue where picking up a second quest item reset the belt to 1 for bots, caused by GetNS race conditions
+
+56. Belt.cs — Removed All DEBUG Echo Statements
+    Location: Belt::GiveThisStuff, Belt::GetNS, Belt::TakeThisStuff functions
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Removed all echo("DEBUG ...") statements from Belt::GiveThisStuff()
+      - Removed all echo("DEBUG ...") statements from Belt::GetNS()
+      - Removed all echo("DEBUG ...") statements from Belt::TakeThisStuff()
+      - Preserved dbecho statements which are controlled by global debug mode
+    Reason: Clean up console output and remove excessive debug logging
+
+57. Belt.cs — Fixed String::trim Errors in Belt::TakeThisStuff()
+    Location: Belt::TakeThisStuff() function
+    Files Changed: RPG/Scripts/Belt.cs
+    Changes:
+      - Removed 4 String::trim() calls that caused "Unknown command" errors
+      - String::trim function does not exist in Tribes scripting environment
+      - Simplified empty list normalization to check "" or "0" directly without trimming
+    Reason: Fix "String::trim: Unknown command" errors in console
+
+
+NPC/ENEMY SYSTEM FIXES
+----------------------
+
+58. itemevents.cs — Auto-Mount Weapons for NPCs/Enemies
+    Location: Lines 58-68
+    Files Changed: RPG/Scripts/itemevents.cs
+    Changes:
+      - Added auto-mount logic in Item::giveItem() for weapons
+      - If item is a Weapon class and no weapon is currently mounted, automatically mounts it to $WeaponSlot
+      - Only applies to NPCs/enemies (when player object exists but may not have weapon mounted)
+      - Ensures enemy bots equip weapons immediately when given
+    Reason: Fix issue where enemy bots were not equipping weapons they were given
+
+
+OBJECTIVES SCREEN IMPROVEMENTS
+-------------------------------
+
+59. rpgfunk.cs — Removed DEBUG Echo Statements from SetStuffString()
+    Location: Lines 2337-2384
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Removed all echo("DEBUG ...") statements from SetStuffString() function
+      - Preserved dbecho statement which is controlled by global debug mode
+    Reason: Clean up console output and remove excessive debug logging
+
+60. rpgfunk.cs — Fixed Objectives Screen Formatting
+    Location: InitObjectives() and UpdateHouseObjectivesDisplay() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Removed duplicate "Bases Controlled / Artifacts Controlled:" header from UpdateHouseObjectivesDisplay()
+      - InitObjectives() now sets separator at slot 16, combined header at slot 17, and house data at slots 18-21
+      - UpdateHouseObjectivesDisplay() now only updates house data at slots 18-21
+      - Improved formatting for readability with color codes, consistent wording ("bases", "artifacts"), and indentation
+      - Removed rule 3 ("If any player is AFKing, you are allowed to kill them...") from PK rules
+      - Renumbered subsequent rule
+      - Replaced text in objective 10 with separator line to break up the objectives screen
+    Reason: Fix duplicate header display and improve readability of objectives screen
+
+61. rpgfunk.cs — Added House Member Counts to Objectives Screen
+    Location: InitObjectives() and UpdateHouseObjectivesDisplay() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added "Members Online" to header (changed from "Bases / Artifacts / Members:" to "Bases / Artifacts / Members Online:")
+      - Added $HouseMember counts to each house line in objectives display
+      - Shows: "House X: Y bases, Z artifacts, W members online"
+      - Updated both initialization and refresh functions
+    Reason: Display real-time count of online players in each house on objectives screen
+
+62. rpgfunk.cs — Added RecalcHouseMemberCounts() Function
+    Location: Lines 3540-3565
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Created RecalcHouseMemberCounts() function to recalculate member counts from all currently connected players
+      - Resets all house member counts to 0
+      - Iterates through all connected clients and counts players by house affiliation
+      - Only counts players who have spawned (have player object)
+      - Called in LoadHouseObjectives() and RecalcHouseObjectives() to ensure accurate counts
+    Reason: Recalculate accurate house member counts from currently connected players when world loads
+
+63. rpgfunk.cs — Updated RecalcHouseObjectives() to Recalculate Member Counts
+    Location: RecalcHouseObjectives() function, line 3602
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added call to RecalcHouseMemberCounts() in RecalcHouseObjectives()
+      - Member counts are now recalculated whenever objectives are recalculated
+      - Added echo statement to display member counts after recalculation
+    Reason: Ensure member counts are accurate when objectives are recalculated
+
+
+HOUSE SYSTEM IMPROVEMENTS
+--------------------------
+
+64. house.cs — Added UpdateHouseObjectivesDisplay() Calls
+    Location: JoinHouse() and BootFromCurrentHouse() functions
+    Files Changed: RPG/Scripts/house.cs
+    Changes:
+      - Added call to UpdateHouseObjectivesDisplay() in JoinHouse() after incrementing member count
+      - Added call to UpdateHouseObjectivesDisplay() in BootFromCurrentHouse() after decrementing member count
+      - Objectives screen now updates immediately when players join or leave houses
+    Reason: Keep objectives screen member counts updated in real-time when players join/leave houses
+
+65. connectivity.cs — Added Member Count Updates on Connect/Disconnect
+    Location: Server::onPlayerReady() and Server::onClientDisconnect() functions
+    Files Changed: RPG/Scripts/connectivity.cs
+    Changes:
+      - Added calls to RecalcHouseMemberCounts() and UpdateHouseObjectivesDisplay() in onPlayerReady()
+      - Added calls to RecalcHouseMemberCounts() and UpdateHouseObjectivesDisplay() in onClientDisconnect()
+      - Member counts now update in real-time when players connect or disconnect
+    Reason: Keep objectives screen member counts updated in real-time as players join/leave the server
+
+
+VERSION UPDATES
+---------------
+
+66. connectivity.cs — Updated Version Number to V0.7.1
+    Location: Line 193
+    Files Changed: RPG/Scripts/connectivity.cs
+    Changes:
+      - Updated $Taurik::ConnectScreenMessage1 from "Kingdom of Kronos V0.7" to "Kingdom of Kronos V0.7.1"
+    Reason: Update version number to reflect new changes and improvements
+
+
+DEBUG OUTPUT REMOVAL
+--------------------
+
+67. rpgfunk.cs — Debug Output Removal
+    Location: SaveWorld(), LoadWorld(), SaveHouseObjectives(), LoadHouseObjectives()
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Removed all debug echo statements from save/load functions
+    Reason: Clean up console output
+
+68. comchat.cs — Debug Output Removal
+    Location: #setartifact command
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Removed all debug echo statements from #setartifact command
+    Reason: Clean up console output after command was working correctly
+
+69. itemevents.cs — Lootbag Save Delay Adjustment
+    Location: Item::onCollision() function (lootbag pickup)
+    Files Changed: RPG/Scripts/itemevents.cs
+    Changes:
+      - Changed scheduled SaveWorldDeployables() delay from 3 minutes (180 seconds) to 6 minutes (360 seconds)
+      - Updated delay calculation when SaveWorld is about to run to account for new 6-minute delay
+    Reason: Increase delay to batch more lootbag pickups and further reduce server load
+
+70. playerdamage.cs — Debug Output Removal (Player::onKilled)
+    Location: Player::onKilled() function
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Removed all debug echo statements from Player::onKilled() function
+      - Removed debug messages for: loot drop processing, item checking, LCK logic, flag setting, item adding/not adding, lootbag creation
+    Reason: Clean up console output after loot drop logic was working correctly
+
+71. Admin.cs — Glass Cannon Stance Parsing Fix
+    Location: processMenuPickStance() function
+    Files Changed: RPG/Scripts/Admin.cs
+    Changes:
+      - Added special handling for "Glass Cannon" stance name before using getWord() to parse menu option
+      - Check for "Glass Cannon" using String::findSubStr() before extracting first word with getWord()
+      - This ensures the full "Glass Cannon" string is preserved instead of being truncated to just "Glass"
+    Reason: Fix Glass Cannon stance not working due to space in name causing getWord() to only extract first word
+
+
+SPELL SYSTEM OPTIMIZATION
+-------------------------
+
+72. spells.cs — Comprehensive Spell System Optimization
+    Location: Multiple functions throughout spells.cs
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - BeginCastSpell(): Cached string length calculation, player position lookup, and spell properties to reduce redundant array access
+      - Optimized recovery time calculation by caching intermediate values
+      - DoCastSpell(): Cached position parsing (GetWord calls on %castPos) for all multi-explosion spells (indices 7, 16, 17, 18, 19, 37, 39, 50, 51)
+      - Power Cloud (index 7): Optimized to use explicit schedule calls instead of loop-based scheduling
+      - Spells 16/40 and 17: Cached position coordinates before loops to avoid repeated GetWord() calls
+      - Spell 18: Cached position parsing and fixed schedule delay calculation
+      - Spells 19/37/39: Cached position parsing and optimized string concatenation in nested loops
+      - Tornado Spell (index 46): Converted from 30+ individual schedule() calls to batch processing system similar to Apocalypse
+        * Added TornadoBatchExplosions() function to process explosions in batches of 5
+        * Uses data arrays to store explosion information for deferred processing
+        * Significantly reduces server load from scheduling overhead
+      - Ion Blast (index 50): Cached position parsing in all 8 nested loops to eliminate redundant GetWord() calls
+      - Psynergy Liquifier (index 51): Cached position parsing and optimized variable calculations
+      - Healing Spells (indices 9-11, 20, 34-36, 60-65): Cached Client::getName() calls to avoid repeated lookups
+      - Shielding Spells (indices 26-30, 49, 52-57): Cached Client::getName() calls and consolidated duplicate code patterns
+      - Lightstep/Heavystep (indices 44, 47): Cached name lookups and optimized calculations
+      - SpellCalcRadiusDamage(): Cached division result (%dmg / %radius) to avoid redundant calculation
+      - GetBestSpell(): Cached mana lookup and spell keyword, simplified calculation expressions
+      - Fixed ternary operator in TornadoBatchExplosions() (replaced with if/else as Tribes doesn't support ternary operators)
+    Reason: Comprehensive optimization to reduce server load by caching repeated calculations, eliminating redundant function calls, and implementing batch processing for complex spells. Maintains exact same functionality while significantly improving performance, especially when multiple players cast spells simultaneously.
+
+73. spells.cs, baseProjData.cs — Spell Explosion System Conversion (RocketData/MineData Hybrid)
+    Location: CreateAndDetBomb(), ApocalypseCreateExplosion(), baseProjData.cs SpellBomb definitions
+    Files Changed: RPG/Scripts/spells.cs, RPG/Scripts/baseProjData.cs
+    Changes:
+      - Added RocketData definitions for SpellBomb1 through SpellBomb29 in baseProjData.cs
+      - Each SpellBomb projectile configured as invisible (bulletShapeName = ""), instant explosion (totalTime = 0.2, liveTime = 0.2), small mass (0.1), and uses corresponding explosionTag from MineData
+      - Set collisionRadius = 0.5 for all SpellBomb projectiles (changed from 0.0)
+      - Modified CreateAndDetBomb() to use hybrid approach:
+        * Creates temporary MineData object for visual explosion (scheduled for deletion after 0.5 seconds)
+        * Spawns invisible RocketData projectile for network synchronization
+      - Modified ApocalypseCreateExplosion() to use same hybrid approach for visual-only explosions
+      - Removed GameBase::Throw() calls for mines - only uses GameBase::setPosition()
+    Reason: Convert spell explosion system from MineData-only to hybrid RocketData/MineData approach for better network performance while ensuring visual explosions are visible. RocketData projectiles handle network sync efficiently while MineData provides reliable visual explosions.
+
+
+TURRET SYSTEM FIXES
+--------------------
+
+74. Turret.cs — Turret Team Assignment Fix
+    Location: All turret onAdd() functions
+    Files Changed: RPG/Scripts/Turret.cs
+    Changes:
+      - Changed all turrets from team -1 (neutral) to team 1 (enemy of team 0 players)
+      - Updated PlasmaTurret, GuardianTurret, RocketTurret, TempleIndoorTurret, and IndoorTurret onAdd() functions
+      - Updated comments to explain that turrets on team -1 don't activate the engine's targeting system
+      - Setting them to team 1 makes them enemies of team 0 players, allowing targeting
+    Reason: Fix turrets not firing at players - neutral team turrets don't activate Tribes' native targeting system
+
+75. rpgfunk.cs — Generator Team Assignment Fix
+    Location: ActivateAllGenerators() function
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Changed generators from team -1 (neutral) to team 1 to match turrets
+      - Generators must be on the same team as turrets to power them via GameBase::generatePower()
+      - Updated all generator activation code in ActivateAllGenerators()
+    Reason: Generators must be on the same team as turrets to establish power connections
+
+76. rpgfunk.cs — Turret Finding Improvements
+    Location: CheckTurretPower() function
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Enhanced recursive search to find turrets in TeamGroups (not just SimGroups)
+      - Increased search depth to 4 levels (MissionGroup > TeamGroup > SimGroup > Turret)
+      - Now finds all 25 turrets including temple turrets (GuardianTurret, TempleIndoorTurret)
+      - Previously only found 12 tower turrets, missing temple turrets
+    Reason: Ensure all turrets are found and properly powered, including temple turrets
+
+77. rpgfunk.cs — Turret Power System
+    Location: CheckTurretPower() and ActivateAllGenerators() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs, RPG/Scripts/Server.cs
+    Changes:
+      - ActivateAllGenerators() called twice in Server::finishMissionLoad(): once after Mission::init() and again after LoadHouseObjectives()
+      - CheckTurretPower() scheduled after generator activation to verify turret power status
+      - Re-enables all powered turrets to activate engine's targeting system
+      - Calls onPower() before onEnabled() for each turret type to ensure proper power state
+    Reason: Ensure all turrets are properly powered and enabled for targeting after server startup
+
+78. objectives.cs — Turret Team Setting Fix
+    Location: TowerSwitch::onCollision() function
+    Files Changed: RPG/Scripts/objectives.cs
+    Changes:
+      - Changed turrets from team -1 to team 1 when tower is captured
+      - Updated recursive sub-group search to set turrets to team 1
+    Reason: Ensure turrets remain on enemy team to continue targeting players
+
+79. comchat.cs — Turret Team Setting Fix (#setbase)
+    Location: #setbase command
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Changed turrets from team -1 to team 1 when base is assigned via admin command
+    Reason: Ensure turrets are on enemy team for proper targeting
+
+80. rpgfunk.cs — Turret Team Setting Fix (LoadHouseObjectives)
+    Location: LoadHouseObjectives() function
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Changed turrets from team -1 to team 1 when loading saved tower ownership
+    Reason: Ensure turrets are on enemy team when objectives are restored
+
+81. Turret.cs — verifyTarget Debug Removal
+    Location: Turret::verifyTarget() and RocketTurret::verifyTarget() functions
+    Files Changed: RPG/Scripts/Turret.cs
+    Changes:
+      - Removed all debug echo statements from verifyTarget functions
+      - verifyTarget is called very frequently (multiple times per second per turret) causing console spam
+    Reason: Fix console spam and server freezing from excessive debug output
+
+82. Turret.cs — House-Based Targeting for TempleIndoorTurret
+    Location: TempleIndoorTurret::verifyTarget() function
+    Files Changed: RPG/Scripts/Turret.cs
+    Changes:
+      - Added custom verifyTarget function for TempleIndoorTurret
+      - Checks turret's house from %this.Team property (set from mission file TEAM property)
+      - Checks player's house from fetchData(%clientId, "MyHouse")
+      - Only approves targets if player's house is different from turret's house (opposing houses)
+      - Neutral turrets (no house assigned) target all players
+      - Players with no house are valid targets
+    Reason: TempleIndoorTurret turrets guarding house artifacts should only shoot at opposing houses
+
+83. Turret.cs — All Turret Debug Output Removal
+    Location: All turret functions
+    Files Changed: RPG/Scripts/Turret.cs
+    Changes:
+      - Removed all debug echo statements from:
+        * PlasmaTurret::onAdd(), onEnabled(), activateGenerator()
+        * GuardianTurret::onEnabled(), activateGenerator()
+        * TempleIndoorTurret::onEnabled(), activateGenerator()
+        * IndoorTurret::onAdd(), onEnabled(), activateGenerator()
+    Reason: Clean up console output after turret system was working correctly
+
+84. rpgfunk.cs — Turret Debug Output Removal
+    Location: CheckTurretPower() and ActivateAllGenerators() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Removed all debug echo statements from CheckTurretPower() function
+      - Removed turret listing, power status checks, and re-enabling messages
+      - Removed all debug echo statements from ActivateAllGenerators() function
+      - Removed generator team change and activation messages
+    Reason: Clean up console output after turret power system was working correctly
+
+85. Server.cs — Generator Debug Output Removal
+    Location: Server::finishMissionLoad() function
+    Files Changed: RPG/Scripts/Server.cs
+    Changes:
+      - Removed debug echo statements for generator activation messages
+    Reason: Clean up console output
+
+
+TAB MENU SYSTEM REDESIGN
+------------------------
+
+86. remote.cs — Tab Menu Redirect System
+    Location: remoteScoresOn(), remoteCommandMode(), remoteToggleCommandMode(), CheckAndExitCommandMode()
+    Files Changed: RPG/Scripts/remote.cs
+    Changes:
+      - remoteScoresOn(): Intercepts TAB key press, cancels base Tribes menu, exits command mode, and opens RPG menu
+      - remoteCommandMode(): Redirects all players (including admins) to RPG menu instead of commander mode
+      - remoteToggleCommandMode(): Opens RPG menu instead of command mode when TAB is pressed
+      - CheckAndExitCommandMode(): Periodic check to prevent anyone from staying in command mode
+      - Removed admin checks - applies to ALL players, not just non-admins
+    Reason: Fix tab menu loading base Tribes menu options instead of RPG menu - all players should use RPG menu
+
+87. spells.cs — Client::setCommandStatus Override
+    Location: Client::setCommandStatus() override
+    Files Changed: RPG/Scripts/spells.cs
+    Changes:
+      - Override command status to disable default command menu for all players (including admins)
+      - Always keeps command menu disabled and opens RPG menu instead
+      - Removed remoteToggleCommandMode stub to ensure remote.cs version takes precedence
+    Reason: Prevent command menu from being enabled and ensure TAB always opens RPG menu
+
+88. menu.cs — Base Tribes Menu Command Interception
+    Location: remoteMenuSelect() function
+    Files Changed: RPG/Scripts/menu.cs
+    Changes:
+      - Intercepts base Tribes menu commands (changeteams, observe, vcmission, etc.) for all players
+      - Cancels menu selection and opens RPG menu instead
+      - Added comments to remoteNewMenu() explaining base Tribes menu disabling
+      - Disables PlayChatMenu and enables CurServerMenu (our RPG menu)
+    Reason: Block base Tribes commands from menu and redirect to RPG menu
+
+89. menu.cs — remoteCancelMenu Update
+    Location: remoteCancelMenu() function
+    Files Changed: RPG/Scripts/menu.cs
+    Changes:
+      - Explicitly disables base Tribes menu (PlayChatMenu) when menu is cancelled
+      - Ensures base menu doesn't reappear when closing RPG menu
+    Reason: Ensure base Tribes menu stays disabled when RPG menu closes
+
+90. comchat.cs — Base Tribes Command Interception
+    Location: remoteSay() function
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Added hook at start of remoteSay to intercept base game menu commands for all players
+      - Blocks changeteams, observe, fteamchange, vcmission, vetd, vdtd, vctourney, vcffa, vsmatch
+      - Redirects blocked commands to Game::menuRequest() instead
+      - Removed admin checks - applies to ALL players
+    Reason: Intercept base Tribes commands sent via chat and redirect to RPG menu
+
+
+ADMIN COMMANDS (CONTINUED)
+---------------------------
+
+91. comchat.cs — #listbots Admin Command
+    Location: #listbots command handler
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Created admin command to list all currently spawned AI bots
+      - Shows bot name, client ID, AI name, team, and position for each bot
+      - Displays total bot count and $numAI value
+      - Requires admin level 2
+    Reason: Allow admins to easily check all spawned bots and their details
+
+
+HUD SYSTEM FIXES
+----------------
+
+92. rpghud.cs — HUD Initialization Fix
+    Location: initRPGHUD() function
+    Files Changed: RPG/Scripts/rpghud.cs
+    Changes:
+      - Moved HUD::New() and HUD::Display() calls into initRPGHUD() function
+      - Scheduled initRPGHUD() to run after a short delay (0 seconds)
+      - Added $dedicated check to prevent HUD creation on dedicated server
+      - Prevents "Unknown command" errors on dedicated servers where PrestoPack HUD functions aren't available
+    Reason: Fix "HUD::New: Unknown command" and "HUD::Display: Unknown command" errors on dedicated servers
+
+
+GLASS CANNON STANCE BALANCING
+------------------------------
+
+93. Admin.cs — Glass Cannon Stance Rename
+    Location: Stance menu and processMenuPickStance()
+    Files Changed: RPG/Scripts/Admin.cs
+    Changes:
+      - Renamed "Casting" stance to "Glass Cannon"
+      - Updated menu option to display "Glass Cannon"
+      - Updated description to: "Spell damage you deal will be increased by 2.5x, but your maximum HP and maximum mana will be halved."
+    Reason: Better reflect stance's high-damage, low-survivability nature
+
+94. rpgstats.cs — Glass Cannon Stance Stat Modifications
+    Location: GetStat() function for "MaxHP" and "MaxMANA"
+    Files Changed: RPG/Scripts/rpgstats.cs
+    Changes:
+      - Glass Cannon stance: 50% MaxHP reduction (changed from 33%)
+      - Glass Cannon stance: 50% MaxMANA reduction (changed from 33%)
+    Reason: Balance Glass Cannon stance to match 2.5x spell damage - increase penalties to offset power boost
+
+95. playerdamage.cs — Glass Cannon Stance Damage Multiplier
+    Location: Stance damage modifier section in Player::onDamage()
+    Files Changed: RPG/Scripts/playerdamage.cs
+    Changes:
+      - Glass Cannon stance: 2.5x spell damage dealt (changed from +33% = 1.33x)
+      - Updated comments to reflect new damage multiplier
+    Reason: Increase Glass Cannon spell damage to 2.5x to justify the heavy HP/mana penalties
+
+96. Ai.cs — Glass Cannon Stance Array Update
+    Location: $Stance::Array definition
+    Files Changed: RPG/Scripts/Ai.cs
+    Changes:
+      - Changed $Stance::Array[4] from "Casting" to "Glass Cannon"
+    Reason: Update stance array to match renamed stance
+
+
+DEBUG OUTPUT REMOVAL (CONTINUED)
+---------------------------------
+
+97. remote.cs — Tab Menu Debug Output Removal
+    Location: remoteScoresOn() function
+    Files Changed: RPG/Scripts/remote.cs
+    Changes:
+      - Removed debug echo statement from remoteScoresOn() function
+      - This function is called when TAB key is pressed
+    Reason: Clean up console output after tab menu fix was working correctly
+
+
+AI BEHAVIOR IMPROVEMENTS
+------------------------
+
+98. Ai.cs, remortseal.cs, Colloseum.cs, playerdamage.cs — Per-Bot AImoveChance for Seal/Colloseum Bots
+    Location: AI::SelectMovement(), SealBattle::Loop(), Colloseum::spawnSeal(), Colloseum::spawnRound(), Player::onDamage()
+    Files Changed: RPG/Scripts/Ai.cs, RPG/Scripts/remortseal.cs, RPG/Scripts/Colloseum.cs, RPG/Scripts/playerdamage.cs
+    Changes:
+      - Modified AI::SelectMovement() to check for per-bot AImoveChance value first, then fall back to global $AImoveChance
+      - Added storeData(%aiId, "AImoveChance", 1) to all seal battle bots (SealFighter1-4, SealMage1-4, SealGuardian1-4) in remortseal.cs
+      - Added storeData(%id, "AImoveChance", 1) to Colloseum bots in Colloseum::spawnSeal() and Colloseum::spawnRound()
+      - Removed global $AImoveChance = 1 from SealBattle::Begin() and $AImoveChance = 99999 from SealBattle::Conclude()
+      - Removed AI::activelyFollow() block from Player::onDamage() that was forcing all bots to follow attackers
+      - Bots now use their normal movement logic with per-bot AImoveChance values
+    Reason: Set AImoveChance = 1 specifically for seal/Colloseum bots only, instead of globally, so they don't run away during battles while other bots maintain normal behavior
+
+
+BANK STORAGE / BELT SYNCHRONIZATION FIX
+----------------------------------------
+
+99. Belt.cs, rpgfunk.cs — Bank Storage and Belt Data Synchronization
+    Location: Backpack::BankStorageConversion(), processMenuBeltDeposit(), processMenuBeltWithdraw(), SaveCharacter()
+    Files Changed: RPG/Scripts/Belt.cs, RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Modified Backpack::BankStorageConversion() to sync BeltStorage from StoredQuestItems and StoredKeyItems on character load
+      - Added RefreshAll() call in Backpack::BankStorageConversion() to refresh menus after sync
+      - Modified processMenuBeltDeposit() to sync both BeltStorage and StoredQuestItems/StoredKeyItems when depositing
+      - Modified processMenuBeltWithdraw() to sync both BeltStorage and StoredQuestItems/StoredKeyItems when withdrawing
+      - Added sync logic in SaveCharacter() to update StoredQuestItems/StoredKeyItems from BeltStorage before saving
+    Reason: Fixed issue where items saved in character data file weren't showing in bank storage menu - BeltStorage and StoredQuestItems/StoredKeyItems were out of sync
+
+
+ADMIN COMMANDS - BELT MANAGEMENT
+---------------------------------
+
+100. comchat.cs — #addbelt Admin Command
+     Location: Lines 2955-2987
+     Files Changed: RPG/Scripts/comchat.cs
+     Changes:
+       - Added new #addbelt command requiring admin level 5
+       - Usage: #addbelt <playername> <itemname> <count>
+       - Validates item is a belt item using isBeltItem()
+       - Uses Belt::GiveThisStuff() to add to existing count (doesn't replace)
+       - Provides error messages for invalid items or players
+       - Logs command usage to console
+     Reason: Allow admins to add belt items (QuestItems, KeyItems) to players' belts
+
+101. comchat.cs — #getbelt Admin Command
+     Location: Lines 2988-3053
+     Files Changed: RPG/Scripts/comchat.cs
+     Changes:
+       - Added new #getbelt command requiring admin level 1
+       - Usage: #getbelt <playername>
+       - Displays all belt items organized by category (Quest Items, Key Items)
+       - Shows item name and count for each item
+       - Each item displayed on separate line for readability
+       - Uses display names from $AccessoryVar
+       - Shows "(No belt items)" if belt is empty
+     Reason: Allow admins to view what belt items a player currently has
+
+102. comchat.cs — #getbeltstorage Admin Command
+     Location: Lines 3054-3108
+     Files Changed: RPG/Scripts/comchat.cs
+     Changes:
+       - Added new #getbeltstorage command requiring admin level 1
+       - Usage: #getbeltstorage <playername>
+       - Displays all items stored at banker in player's belt storage
+       - Shows item name, category, and count for each stored item
+       - Each item displayed on separate line for readability
+       - Uses display names from $AccessoryVar
+       - Shows "(No items in belt storage)" if storage is empty
+     Reason: Allow admins to view what belt items a player has stored at the banker
+
+
+DEBUG OUTPUT REMOVAL (CONTINUED)
+---------------------------------
+
+103. Ai.cs — AI::setWeapons Debug Output Removal
+     Location: AI::setWeapons() function
+     Files Changed: RPG/Scripts/Ai.cs
+     Changes:
+       - Removed three DEBUG echo statements:
+         * "DEBUG AI::setWeapons: Bot ... - Equipment string: ..."
+         * "DEBUG AI::setWeapons: Bot ... - Custom items string: ..."
+         * "DEBUG AI::setWeapons: Bot ... - Loadout: ..."
+       - Kept WARNING statement for missing equipment strings
+     Reason: Clean up console output - debug statements no longer needed
+
+
+SYNTAX ERROR FIXES
+------------------
+
+104. rpgfunk.cs — Extra Closing Brace Removal
+     Location: Line 3447 in LoadHouseObjectives() function
+     Files Changed: RPG/Scripts/rpgfunk.cs
+     Changes:
+       - Removed extra closing brace at line 3447
+       - Function now correctly ends at line 3446
+     Reason: Fixed "rpgfunk.cs Line: 3447 - Syntax error" caused by duplicate closing brace
+
+
+VEHICLE COMBAT SKILL SYSTEM
+----------------------------
+
+105. skills.cs — Vehicle Combat Skill Implementation (Replaced Archery)
+     Location: $SkillVehicleCombat definition, $SkillDesc[14], AddSkillPoint() function, all class skill multipliers
+     Files Changed: RPG/Scripts/skills.cs
+     Changes:
+       - Renamed $SkillArchery to $SkillVehicleCombat (Skill 14)
+       - Changed $SkillDesc[14] from "(no longer used)" to "Vehicle Combat"
+       - Removed skill 14 from AddSkillPoint() block (only skill 17 remains blocked)
+       - Set all Vehicle Combat skill multipliers to 1.0 for all classes:
+         * Cleric: 1.0 (was 0.8)
+         * Druid: 1.0 (unchanged)
+         * Thief: 1.0 (was 1.2)
+         * Bard: 1.0 (was 1.3)
+         * Fighter: 1.0 (was 1.5)
+         * Paladin: 1.0 (was 1.4)
+         * Squire: 1.0 (was 1.6)
+         * Mage: 1.0 (was 0.6)
+         * RedFlag: 1.0 (was 0.1)
+       - Updated class comments: "Archery" → "Vehicle Combat" (Thief, Bard, Squire)
+       - Updated skill restriction comment: "archery" → "vehicle combat"
+     Reason: Replace unused Archery skill with Vehicle Combat skill for vehicle damage scaling. All classes now have equal skill point gain rate (1.0 multiplier) for Vehicle Combat.
+
+106. skills.cs, playerdamage.cs, Ai.cs — Archery to Vehicle Combat Reference Replacement
+     Location: All files referencing $SkillArchery or "Archery"
+     Files Changed: RPG/Scripts/skills.cs, RPG/Scripts/playerdamage.cs, RPG/Scripts/Ai.cs
+     Changes:
+       - Replaced all instances of $SkillArchery with $SkillVehicleCombat (variable name, no space)
+       - Replaced all instances of "Archery" in comments with "Vehicle Combat" (with space)
+       - Updated vehicle combat skill lookup in playerdamage.cs (Vehicle Combat skill bonus section)
+       - Updated sound effect check in playerdamage.cs (else if %skilltype == $SkillVehicleCombat)
+       - Updated AI bot skill initialization in Ai.cs ($PlayerSkill[%aiId, $SkillVehicleCombat])
+     Reason: Remove all legacy Archery code references to prevent confusion and ensure consistency. Vehicle Combat is now the only skill system for vehicle-related mechanics.
+
+107. playerdamage.cs — Vehicle Combat Skill Bonus to Vehicle Damage
+     Location: Vehicle Combat skill bonus section in Player::onDamage() (after damage calculation, before TribesDamageToNumericDamage conversion)
+     Files Changed: RPG/Scripts/playerdamage.cs
+     Changes:
+       - Added Vehicle Combat skill bonus calculation for vehicle projectiles
+       - Detects vehicle projectiles by checking if shooter is a Vehicle/Flier object or player in a vehicle
+       - Gets Vehicle Combat skill (Skill 14) from $PlayerSkill[%shooterClient, $SkillVehicleCombat]
+       - Caps skill at 1000 (maximum skill level)
+       - Calculates bonus: +1 damage per 100 skill points (floor(%vehicleSkill / 100))
+       - Maximum bonus: +10 damage at 1000 skill
+       - Only applies to players (not AI bots)
+       - Bonus added in Tribes damage units before final conversion
+     Reason: Allow players to scale vehicle damage with Vehicle Combat skill. Provides progression incentive and makes vehicle combat more rewarding for skilled players.
+
+108. comchat.cs — SaveCharacter After #undeploy Command
+     Location: #undeploy command handler (after vehicle is successfully packed up)
+     Files Changed: RPG/Scripts/comchat.cs
+     Changes:
+       - Added SaveCharacter(%TrueClientId) call immediately after vehicle is packed up
+       - Called after success message "Your vehicle has been packed up." is sent
+       - Ensures ScoutVehicle item is saved to character file immediately
+     Reason: Prevent data loss if server crashes after player undeploys vehicle - ensures the ScoutVehicle item is saved to character file immediately.
+
+109. playerdamage.cs — Fixed getObjectType() Error for AI Bot Attacks
+     Location: Vehicle detection sections in Player::onDamage() (miss calculation and Vehicle Combat skill bonus)
+     Files Changed: RPG/Scripts/playerdamage.cs
+     Changes:
+       - Fixed "getObjectType: could not find object" error when AI bots attack
+       - Modified vehicle detection to first get player object using Client::getOwnedObject(%shooterClient)
+       - Validates object exists (not -1) before calling getObjectType()
+       - Only calls getObjectType() on valid player objects, not client IDs
+       - Applied fix to both miss calculation section and Vehicle Combat skill bonus section
+       - Changed else if to if(!%isVehicle) to check both conditions independently
+     Reason: Fix console error "getObjectType: could not find object" when enemy bots attack. getObjectType() requires an object, not a client ID, so we must get the player object first.
+
+110. playerdamage.cs — AI Bot Self-Damage Nullification (Known Issue)
+     Location: Self-damage check section in Player::onDamage() (line ~832)
+     Files Changed: RPG/Scripts/playerdamage.cs
+     Changes:
+       - Current code: When %damagedClient == %shooterClient (self-damage), if the damaged client is an AI bot (isRPGAI(%damagedClient)), damage is set to 0
+       - This prevents AI bots from taking damage from their own spells (e.g., AoE spells that damage the caster)
+       - Original behavior (from backupplayerdamage.cs): Self-damage was reduced to 1/3 for spell damage, not nullified
+     Status: KNOWN ISSUE - This prevents AI bots from taking damage from their own spells. This was likely added to prevent AI bots from killing themselves with AoE spells, but it's too aggressive. Consider allowing reduced self-damage (e.g., 1/3) instead of complete nullification.
+     Reason: Document existing behavior that prevents AI bots from taking self-damage. This may need to be adjusted in the future to allow reduced self-damage for AI bots.
+
+
+BELT STORAGE BUG FIXES
+-----------------------
+
+111. Belt.cs — Fixed Belt Storage Deposit/Withdraw Count Bug
+     Location: processMenuBeltDeposit() and processMenuBeltWithdraw() functions
+     Files Changed: RPG/Scripts/Belt.cs
+     Changes:
+       - processMenuBeltDeposit(): Fixed to deposit the FULL COUNT of items instead of only 1
+         * Gets current count using Belt::HasThisStuff(%clientId, %item)
+         * Uses %itemCount when adding to BeltStorage and StoredQuestItems/StoredKeyItems
+         * Uses -%itemCount when removing from belt category data
+         * Updated success message to show count: "Deposited X itemName into backpack storage."
+       - processMenuBeltWithdraw(): Fixed to withdraw the FULL COUNT of items instead of only 1
+         * Gets current count from storage using GetStuffStringCount(%beltStorage, %item)
+         * Uses -%itemCount when removing from BeltStorage and StoredQuestItems/StoredKeyItems
+         * Uses %itemCount when adding back to belt category data
+         * Updated success message to show count: "Withdrew X itemName from backpack storage."
+       - Added validation checks to ensure items exist before deposit/withdraw operations
+     Reason: Critical bug fix - Previously, if a player had 5 BlackStatue and deposited them, only 1 would be deposited and 4 would remain in the belt. This caused item loss and incorrect storage counts. Now all items are properly deposited/withdrawn in a single operation.
+
+112. rpgfunk.cs — Fixed Belt Storage Sync Logic for Empty Storage
+     Location: SaveCharacter() function (belt storage sync section, lines 367-403)
+     Files Changed: RPG/Scripts/rpgfunk.cs
+     Changes:
+       - Moved the update logic outside the if(%beltStorage != "") block
+       - Now properly clears StoredQuestItems and StoredKeyItems when BeltStorage is empty
+       - Ensures that if a player withdraws all items, the saved data reflects empty storage
+       - Prevents stale data from being saved when storage is cleared
+     Reason: Critical bug fix - If a player withdrew all items from storage, BeltStorage would be empty but StoredQuestItems/StoredKeyItems would still contain old data, causing items to reappear after server restart. Now the sync logic properly clears stored data when BeltStorage is empty.
+
+113. rpgfunk.cs — Fixed Belt Storage Variables Not Being Saved When Empty
+     Location: SaveCharacter() and LoadCharacter() functions (belt storage save/load sections)
+     Files Changed: RPG/Scripts/rpgfunk.cs
+     Changes:
+       - SaveCharacter(): Modified to always save StoredQuestItems and StoredKeyItems, even if empty
+         * Uses a space character (" ") instead of empty string for empty storage to ensure export() writes the variable
+         * Tribes 1's export() function skips empty strings, so using a space ensures the variable is always written
+       - LoadCharacter(): Modified to handle both empty strings and space characters
+         * Converts space characters back to empty strings on load
+         * Handles case where variable doesn't exist in old save files (defaults to empty)
+       - Always updates stored data before saving (removed conditional check) to ensure sync
+     Reason: Critical bug fix - The export() function in Tribes 1 skips empty strings, so if StoredQuestItems or StoredKeyItems were empty, they wouldn't be written to the save file. This caused issues where:
+       - Players with empty storage would have missing variables in their save files
+       - On load, if the variable didn't exist, it would default to empty (correct), but the variable wouldn't be saved on next save
+       - This could lead to data loss if the sync logic cleared items but the save file didn't reflect the change
+       - OneAngryGnome's save file was missing StoredQuestItems/StoredKeyItems entries, causing stored items to disappear
+       Now the variables are always saved, ensuring data consistency and preventing item loss.
+
+114. gameevents.cs, rpgfunk.cs — Removed SaveWorld Chat Messages and Added SaveCharacter for All Players
+     Location: RecursiveWorld() function, SaveWorld() function, ScheduleSave() function, and HouseEarnings() function
+     Files Changed: RPG/Scripts/gameevents.cs, RPG/Scripts/rpgfunk.cs
+     Changes:
+       - gameevents.cs: Removed 60-second warning message "Notice: SaveWorld will occur in 60 seconds."
+       - gameevents.cs: Removed SaveCharacter() calls from SaveWorld() section (to avoid duplicate saves)
+       - gameevents.cs: Added SaveCharacter() calls for all players after HouseEarnings() completes
+         * Saves all player characters after both SaveWorld() and HouseEarnings() complete (both run every 15 minutes at the same time)
+         * Uses staggered delays (0.1 seconds between each) to reduce server load
+         * Ensures world state and house earnings (coins, EXP, rank points, skill points) are persisted in a single save operation
+         * Removed individual "saved." messages that were sent to each player
+       - rpgfunk.cs: Removed "SaveWorld in progress..." message from SaveWorld()
+       - rpgfunk.cs: Removed "SaveWorld complete." message from SaveWorld()
+       - gameevents.cs: Updated ScheduleSave() function to remove chat message (kept for backwards compatibility)
+     Reason: Quality of life improvement - Removed chat spam from scheduled SaveWorld operations (runs every 15 minutes). Players no longer see save messages, making the game experience cleaner. Since SaveWorld() and HouseEarnings() both run every 15 minutes at the same time, characters are now saved once after both complete, ensuring all data (world state and house bonuses) is persisted without duplicate saves or annoying notifications.
+
+115. Belt.cs, comchat.cs — Added Numeric Input Support for Belt Storage Deposit/Withdraw
+     Location: processMenuBeltDeposit(), processMenuBeltWithdraw(), and bulkNum check in remoteSay()
+     Files Changed: RPG/Scripts/Belt.cs, RPG/Scripts/comchat.cs
+     Changes:
+       - comchat.cs: Modified bulkNum check to include currentBeltBank (line 114)
+         * Now checks for currentBeltBank in addition to currentShop and currentBank
+         * Allows numeric chat input to set bulkNum when at belt storage banker
+       - Belt.cs (processMenuBeltDeposit): Modified to use bulkNum for deposit amount
+         * Checks if %clientId.bulkNum is set and uses that amount instead of full count
+         * Limits deposit amount to available count
+         * Resets bulkNum to 1 after operation (like bank storage does)
+         * Added SaveCharacter(%clientId) call after successful deposit
+       - Belt.cs (processMenuBeltWithdraw): Modified to use bulkNum for withdraw amount
+         * Checks if %clientId.bulkNum is set and uses that amount instead of full count
+         * Limits withdraw amount to available count
+         * Resets bulkNum to 1 after operation (like bank storage does)
+         * Added SaveCharacter(%clientId) call after successful withdraw
+     Reason: Feature addition - Players can now type a number in chat (1-100) while at the belt storage banker to deposit or withdraw that specific amount, matching the behavior of normal bank storage. This makes belt storage more user-friendly and consistent with the existing bank system. Character data is now saved immediately after deposit/withdraw operations to prevent data loss on server crash.
+
+
+116. playerdamage.cs — Changed Damage Messages to Bottomprint with Left/Right Alignment
+     Location: All damage message sections (miss, resist, hit, critical hit)
+     Files Changed: RPG/Scripts/playerdamage.cs
+     Changes:
+       - Changed all damage dealt messages to use bottomprint with <jl> (left align) tag
+         * "You try to hit..., but miss!" messages
+         * "You... resists your spell!" messages
+         * "You... for X points of damage!" messages (critical and normal)
+         * "You try to hit..., but miss! (LCK)" messages
+       - Changed all damage taken messages to use bottomprint with <jr> (right align) tag
+         * "... tries to hit you, but misses!" messages
+         * "You resist...'s spell!" messages
+         * "You were... for X points of damage!" messages (critical and normal)
+         * "... tries to hit you, but misses! (LCK)" messages
+       - All spell damage messages now display as bottomprint instead of chat
+       - Physical damage messages also changed to bottomprint for consistency
+     Reason: User experience improvement - Damage dealt now appears on bottom left, damage taken appears on bottom right, making it easier to track combat in real-time without cluttering the chat window.
+
+117. Server.cs, Admin.cs, connectivity.cs, spells.cs, menu.cs, rpgstats.cs, playerspawn.cs — Added remoteEval Client Validation
+     Location: All remoteEval() function calls
+     Files Changed: RPG/Scripts/Server.cs, RPG/Scripts/Admin.cs, RPG/Scripts/connectivity.cs, RPG/Scripts/spells.cs, RPG/Scripts/menu.cs, RPG/Scripts/rpgstats.cs, RPG/Scripts/playerspawn.cs
+     Changes:
+       - Added Client::getName(%clientId) != "" check before all remoteEval() calls
+       - Server.cs: Added validation to centerprint(), bottomprint(), topprint(), msg(), centerprintall(), bottomprintall(), topprintall(), Client::setInventoryText(), Server::loadMission(), Game::initialMissionDrop()
+       - Admin.cs: Added validation to setInfoLine() calls
+       - connectivity.cs: Added validation to remoteEval() calls in OnClientConnect()
+       - spells.cs: Added validation to remoteEval() call after spell casting
+       - menu.cs: Added validation to Client::buildMenu() and Client::addMenuItem()
+       - rpgstats.cs: Added validation to remotefetchData() call
+       - playerspawn.cs: Added validation to scheduled remoteEval() calls
+     Reason: Critical bug fix - Prevents "remoteEval: bad managerId." console spam errors when clients disconnect. The bottomprint changes triggered this issue more frequently, as bottomprint uses remoteEval. Now all remoteEval calls check if the client is still connected before attempting to send data, preventing errors when players disconnect mid-operation.
+
+118. EnemyArmors.cs — Changed BlackDiamondDreamSword Drop Rate to 1%
+     Location: $BotEquipment definitions for Liquifier, Abolisher, RoundSeven, RoundNine, RoundTwelve
+     Files Changed: RPG/Scripts/EnemyArmors.cs
+     Changes:
+       - Changed BlackDiamondDreamSword drop rate from "1" (100%) to "1/-100" (1%) for all enemies that drop it
+       - Affected enemies: Liquifier, Abolisher, RoundSeven, RoundNine, RoundTwelve
+       - Uses the same drop rate format as DuelCard (1/-100 = 1% chance)
+     Reason: Game balance - BlackDiamondDreamSword is a high-tier weapon and should be rare. Changed from guaranteed drop to 1% drop rate to make it more valuable and harder to obtain.
+
+119. comchat.cs, rpgfunk.cs — Added #getstats Command
+     Location: remoteSay() function in comchat.cs, new DisplayGetStats() function in rpgfunk.cs
+     Files Changed: RPG/Scripts/comchat.cs, RPG/Scripts/rpgfunk.cs
+     Changes:
+       - comchat.cs: Added #getstats command handler (lines 823-834)
+         * Takes a player name as argument
+         * Looks up player by name and displays their stats
+       - rpgfunk.cs: Added DisplayGetStats() function (lines 3357-3400)
+         * Displays DEF, MDEF, ATK, HP, MANA, Weight, LCK, Stance, and Overweight Penalty
+         * Shows client ID and object ID for admins
+         * Uses bottomprint to display stats
+     Reason: Feature addition - Allows players and admins to quickly check non-skill related stats (DEF, MDEF, etc.) for any player or bot using #getstats <name>. Useful for debugging and checking character stats without using admin commands.
+
+120. mana.cs — Added Bane Stance Mana Restoration Prevention
+     Location: refreshMANA() function
+     Files Changed: RPG/Scripts/mana.cs
+     Changes:
+       - Added check to prevent mana increase when player is in MageBane or BladeBane stance
+       - If %value < 0 (mana increase) and stance is MageBane or BladeBane, function returns early
+       - Prevents potions and other mana restoration items from working while in bane stances
+     Reason: Game balance - Bane stances are meant to prevent mana regeneration. Players were able to bypass this by using potions. Now mana cannot be increased through any means while in a bane stance, maintaining the intended gameplay mechanic.
+
+121. rpgfunk.cs — Commented Out Debug Statements
+     Location: SetStuffString() and SaveCharacter() functions
+     Files Changed: RPG/Scripts/rpgfunk.cs
+     Changes:
+       - Commented out all echo("DEBUG SetStuffString: ...") statements (lines 2910-2981)
+       - Commented out all echo("DEBUG SaveCharacter: ...") statements (lines 314-624)
+       - Commented out "DEBUG RefreshAll: RACE = 'Zombie'" echo statement (line 2396)
+     Reason: Code cleanup - Removed debug spam from console. These debug statements were useful during development but are no longer needed in production, reducing console clutter.
+
+122. Documentation — Created Belt Item Addition Guide and HTML Generator
+     Location: Root directory
+     Files Created: BELT_ITEM_ADDITION_GUIDE.md, BeltItemGenerator.html
+     Changes:
+       - Created comprehensive guide (BELT_ITEM_ADDITION_GUIDE.md) explaining how to add items to the belt system
+         * Explains all 7 belt categories
+         * Documents BeltItem::Add() function parameters
+         * Provides step-by-step instructions
+         * Includes examples for each category
+         * Troubleshooting section
+       - Created HTML form generator (BeltItemGenerator.html)
+         * Interactive web form with all required fields
+         * Validates input (PascalCase for item identifiers, positive numbers, etc.)
+         * Generates properly formatted TorqueScript code
+         * Copy-to-clipboard functionality
+         * Category descriptions and help text
+     Reason: Developer tooling - Makes it easier for developers to add new items to the belt system without needing to manually format code or remember all the parameters. The HTML generator ensures code is correctly formatted and reduces errors.
+
+123. playerdamage.cs — Turret Damage Detection and Calculation Fix
+     Location: Player::onDamage() function, damage calculation section
+     Files Changed: RPG/Scripts/playerdamage.cs
+     Changes:
+       - Added turret damage detection by checking if %object.className == "Turret"
+       - Added fallback detection for turret projectiles: checks if damage type is MissileDamageType from source without ATK/skills (and not a vehicle)
+       - Implemented special turret damage calculation that bypasses physical damage formula
+         * Turrets don't have ATK, weapons, or skills, so they can't use the standard physical damage formula
+         * Uses base turret damage value (100 Tribes damage units) instead
+         * Still applies DEF reduction and random variation (±15%)
+       - Fixed turret damage being capped at 1 damage due to incorrect formula usage
+     Reason: Fix turret damage calculation - Turrets were only dealing 1 damage because they were using the physical damage formula which requires ATK, weapon damage, and skills that turrets don't have. Now turrets use their own damage calculation system.
+
+124. playerdamage.cs — Turret Damage Stance Bypass
+     Location: Player::onDamage() function, stance modifier section
+     Files Changed: RPG/Scripts/playerdamage.cs
+     Changes:
+       - Turret damage now bypasses all stance modifiers except Normal and Glass Cannon
+       - Added %isTurretDamage flag check before applying stance modifiers
+       - Turret damage bypasses: Offensive (doubles damage), Defensive (halves damage), MageBane (nullifies magic/physical), BladeBane (nullifies physical/magic)
+       - Turret damage is still affected by: Normal stance (no modifiers) and Glass Cannon stance (2.5x spell damage if turret deals spell damage)
+     Reason: Game balance - Turrets should be a consistent threat regardless of player stance. Bane stances were allowing players to completely avoid turret damage, which was not intended. Turrets now deal their base damage (scaled by level) regardless of defensive stances.
+
+125. playerdamage.cs — Turret Damage Level Scaling
+     Location: Player::onDamage() function, turret damage calculation section
+     Files Changed: RPG/Scripts/playerdamage.cs
+     Changes:
+       - Added level-based scaling for turret damage to keep threat consistent across all player levels
+       - Formula: baseDamage * (1 + (playerLevel / 100))
+       - Scaling examples: Level 0 = 1x, Level 100 = 2x, Level 200 = 3x, Level 500 = 6x
+       - Higher level players have more DEF and HP, so scaling compensates to maintain relative threat
+       - DEF reduction still applies after scaling, so high DEF players still take less damage
+     Reason: Game balance - Higher level players have significantly more DEF and HP, making turrets trivial. Level scaling ensures turrets remain a threat at all levels while still respecting DEF values.
+
+126. rpgfunk.cs — House Loading NULL/0 Fix
+     Location: LoadWorld() function, MyHouse loading section
+     Files Changed: RPG/Scripts/rpgfunk.cs
+     Changes:
+       - Fixed new players getting house "0" instead of empty string (no house)
+       - Updated house loading logic to treat 0, "0", empty, or -1 as no house (empty string)
+       - Added validation to check if houseName exists before using it
+       - Houses start at index 1, so 0 is not a valid house number
+       - New players now correctly have MyHouse = "" instead of "0"
+     Reason: Fix house system - New players were getting house "0" which prevented them from joining houses. Now 0 and "0" are properly treated as no house, allowing new players to join houses normally.
+
+127. house.cs — BootFromCurrentHouse NULL/0 Fix
+     Location: BootFromCurrentHouse() function
+     Files Changed: RPG/Scripts/house.cs
+     Changes:
+       - Added check to treat "0" as empty string when checking if player has a house
+       - Prevents issues when players have "0" stored instead of empty string
+       - Ensures house joining logic works correctly for players with "0" house value
+     Reason: Fix house system - Players with house "0" were not being recognized as having no house, preventing proper house joining. Now "0" is normalized to empty string.
+
+128. comchat.cs — #sethouse NULL Fix
+     Location: #sethouse command handler
+     Files Changed: RPG/Scripts/comchat.cs
+     Changes:
+       - Fixed #sethouse command to properly handle NULL value
+       - When "null" is specified, now properly clears house (sets to empty string)
+       - Properly boots player from current house if they had one (decrements house member count, unequips items, resets rank points)
+       - Updates house objectives display after clearing house
+       - Also handles house switching properly (boots from old house before joining new one)
+       - Added check to treat "0" as empty when checking old house
+     Reason: Fix admin command - #sethouse name NULL was not working correctly. Now properly clears house and performs all necessary cleanup (unequip items, reset rank points, update member counts).
+
+129. comchat.cs — House Joining NULL/0 Fix
+     Location: House joining dialogue handler
+     Files Changed: RPG/Scripts/comchat.cs
+     Changes:
+       - Added check to treat "0" as empty string when checking player's current house
+       - Ensures house joining logic recognizes players with "0" as having no house
+       - Prevents issues when checking if player can join/change houses
+     Reason: Fix house system - Players with house "0" were not being recognized as having no house in the joining dialogue, preventing them from joining houses.
+
+130. rpgfunk.cs — Old Bank Variables Field Conflict Fix
+     Location: LoadWorld() function, bank items loading section
+     Files Changed: RPG/Scripts/rpgfunk.cs
+     Changes:
+       - Removed loading of unused bank variables: BankGemItems, BankRareItems, BankKeysItems, BankScrollsItems
+       - Set KeysItems, ScrollsItems, and UniqueItems to empty strings instead of loading from funk::var
+       - Field 40 was used for KeysItems (now unused)
+       - Field 41 was used for ScrollsItems (now unused)
+       - Field 42 is now used for StoredConsumables (belt storage), not UniqueItems
+       - Prevents field conflicts where old bank variables were reading from wrong fields
+     Reason: Fix field conflicts - Old bank system variables (KeysItems, ScrollsItems, UniqueItems) were conflicting with belt storage fields. Field 42 was being used for both StoredConsumables and UniqueItems, causing data corruption. Now these unused variables are explicitly set to empty strings.
+
+131. Belt.cs, rpgfunk.cs — Belt Storage Debug Output Removal
+     Location: Belt::BankStorageConversion() and SaveCharacter() functions
+     Files Changed: RPG/Scripts/Belt.cs, RPG/Scripts/rpgfunk.cs
+     Changes:
+       - Commented out all DEBUG echo statements in Belt::BankStorageConversion() function
+         * Loaded categories debug message
+         * Rebuilt BeltStorage debug message
+         * Updated StoredQuestItems debug message
+       - Commented out all DEBUG echo statements in SaveCharacter() function related to belt storage
+         * BeltStorage processing debug messages
+         * Item category assignment debug messages
+         * Final stored categories debug messages
+     Reason: Code cleanup - Removed debug spam from console after confirming belt storage system is working correctly. These debug statements were useful during development but are no longer needed in production.
+
+132. rpgfunk.cs, Admin.cs — House Display NULL/0 Fix
+     Location: DisplayGetInfo() function in rpgfunk.cs, "View your stats" menu in Admin.cs
+     Files Changed: RPG/Scripts/rpgfunk.cs, RPG/Scripts/Admin.cs
+     Changes:
+       - rpgfunk.cs: Added check in DisplayGetInfo() to treat "0" as empty string before displaying house
+         * Prevents "Proud member of 0" from showing in #getinfo command
+         * Normalizes house value before checking if it's empty
+       - Admin.cs: Added same check in "View your stats" menu handler
+         * Prevents "House: 0" from showing in stats menu
+         * Normalizes house value before displaying
+     Reason: Fix display bug - When house is set to NULL, it was stored as empty string but sometimes displayed as "0" in getinfo and stats menu. Now "0" is treated as empty and house information is not displayed when player has no house.
+
+133. objectives.cs — Flag Drop on Disconnect Fix
+    Location: Flag::clientDropped() function
+    Files Changed: RPG/Scripts/objectives.cs
+    Changes:
+      - Modified Flag::clientDropped() to properly handle flag drops when players disconnect
+      - Now checks if player is carrying a flag via %player.carryFlag
+      - Calls Flag::onDrop() directly to trigger all proper drop logic (broadcast messages, save, reset timer)
+      - Falls back to Player::dropItem() if needed
+    Reason: Fix flag mechanics - When players disconnected while carrying flags, flags weren't being properly dropped with all the associated logic (broadcast messages, house objective updates, 1-minute reset timer). Now flags are properly dropped on disconnect with full functionality.
+
+134. rpgfunk.cs — Flag Save Prevention
+    Location: SaveCharacter(), updateSpawnStuff(), and LoadCharacter() functions
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - SaveCharacter(): Added check to skip flags when saving player inventory (line 714-716)
+      - updateSpawnStuff(): Added check to skip flags when updating spawnStuff (line 80-82)
+      - LoadCharacter(): Added filter to remove flags from old saves when loading spawnStuff (line 829-845)
+    Reason: Critical bug fix - Flags are mission objectives, not player inventory items. If a player disconnected/crashed while carrying a flag, it could be saved to their character data and restored on reload, causing issues. Now flags are never saved to character data and are filtered out from old saves.
+
+135. rpgfunk.cs, Admin.cs, comchat.cs — Centerprint Display Changes
+    Location: DisplayGetInfo(), DisplayGetStats(), viewstats menu, and #w command
+    Files Changed: RPG/Scripts/rpgfunk.cs, RPG/Scripts/Admin.cs, RPG/Scripts/comchat.cs
+    Changes:
+      - Changed all bottomprint() calls to centerprint() for stats/info displays
+      - DisplayGetInfo() (#getinfo command) now uses centerprint
+      - DisplayGetStats() (#getstats command) now uses centerprint
+      - "View your stats" menu now uses centerprint
+      - #w command (WhatIs) now uses centerprint
+    Reason: UX improvement - Stats and info displays were being overwritten by bottomprint messages during combat. Moving them to centerprint prevents them from being overwritten and keeps them visible.
+
+136. Server.cs — Persistent Centerprint Function
+    Location: New functions persistentCenterprint(), persistentCenterprintRefresh(), clearPersistentCenterprint()
+    Files Changed: RPG/Scripts/Server.cs
+    Changes:
+      - Created persistentCenterprint() function that re-displays messages periodically to prevent overwriting
+      - Messages refresh every 1.5 seconds for the specified duration (default 5 seconds)
+      - Uses flag-based approach to manage active messages (no cancel() function in Tribes)
+      - Automatically cleans up when duration expires or client disconnects
+      - Added clearPersistentCenterprint() function to manually clear messages
+    Reason: Feature addition - Regular centerprint messages can still be overwritten by bottomprint. This new function ensures stats/info displays remain visible by continuously refreshing them, preventing them from being overwritten during combat or other actions.
+
+137. rpgfunk.cs, Admin.cs, comchat.cs — Centered Text for Stats Displays
+    Location: DisplayGetInfo(), DisplayGetStats(), viewstats menu, and WhatIs() function
+    Files Changed: RPG/Scripts/rpgfunk.cs, RPG/Scripts/Admin.cs, RPG/Scripts/comchat.cs
+    Changes:
+      - Added <jc> tag to all centerprint messages to center the text
+      - DisplayGetInfo() now uses <jc> tag
+      - DisplayGetStats() now uses <jc> tag
+      - "View your stats" menu now uses <jc> tag
+      - WhatIs() function now uses <jc> tag
+    Reason: UX improvement - All stats and info displays now have centered text for better readability and visual consistency.
+
+138. rpgfunk.cs, Admin.cs, comchat.cs — Persistent Centerprint Duration
+    Location: All persistentCenterprint() calls
+    Files Changed: RPG/Scripts/rpgfunk.cs, RPG/Scripts/Admin.cs, RPG/Scripts/comchat.cs
+    Changes:
+      - Changed persistentCenterprint duration from 30 seconds to 5 seconds for all stats/info displays
+      - DisplayGetInfo() now uses 5 second duration
+      - DisplayGetStats() now uses 5 second duration
+      - "View your stats" menu now uses 5 second duration
+      - #w command now uses 5 second duration
+    Reason: UX improvement - 30 seconds was too long for stats displays. Reduced to 5 seconds for better user experience while still preventing overwriting during combat.
+
+139. rpgfunk.cs — House0 Prevention and Cleanup (Save)
+    Location: SaveCharacter() function
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added check to treat "0", "House0", and "house0" as empty before calling GetHouseNumber()
+      - Ensures house number is never saved as "0" - saves as empty string instead
+      - Prevents "House0" from being saved to character data
+    Reason: Critical bug fix - Players were getting "House0" saved to their character data, preventing them from joining houses. Now invalid house values are normalized to empty string before saving.
+
+140. rpgfunk.cs — House0 Prevention and Cleanup (Load)
+    Location: LoadCharacter() function
+    Files Changed: RPG/Scripts/rpgfunk.cs
+    Changes:
+      - Added check before storing house to detect "House0", "0", or "house0" and clear them
+      - Added double-check after storing to catch any edge cases
+      - Calls BootFromCurrentHouse() if invalid house is detected to properly clean up
+      - Handles missing field 30 (house number) correctly
+    Reason: Critical bug fix - Players with "House0" in their save files were unable to join houses. Now invalid house values are detected and cleared on character load, allowing players to join houses normally.
+
+141. rpgfunk.cs, Admin.cs — House0 Display Validation
+    Location: DisplayGetInfo() and viewstats menu
+    Files Changed: RPG/Scripts/rpgfunk.cs, RPG/Scripts/Admin.cs
+    Changes:
+      - Added validation using GetHouseNumber() to verify house names are valid
+      - Clears invalid house values immediately if detected
+      - Prevents "House0" from being displayed in stats
+    Reason: Bug fix - Invalid house values like "House0" were being displayed in stats. Now house values are validated and cleared if invalid.
+
+142. comchat.cs — GuildMaster House Check Fix
+    Location: GuildMaster dialogue handler
+    Files Changed: RPG/Scripts/comchat.cs
+    Changes:
+      - Added check to treat "0", "House0", and "house0" as empty before checking if player has a house
+      - Clears invalid house values immediately
+      - Now correctly prompts "join a House" instead of "join a new House" for players with invalid house values
+    Reason: Bug fix - Players with "House0" were being treated as having a house, causing GuildMaster to prompt them to "join a new House" instead of "join a House". Now invalid house values are detected and cleared, allowing proper house joining.
+
+143. Version Update to V0.7.5
+    Location: 
+      - rpg/scripts/connectivity.cs (Line 197)
+      - config/ServerPrefs.cs (Line 46)
+    Files Changed: 
+      - rpg/scripts/connectivity.cs
+      - config/ServerPrefs.cs
+    Changes:
+      - Updated $Taurik::ConnectScreenMessage1 from "Kingdom of Kronos V0.7.1" to "Kingdom of Kronos V0.7.5"
+      - Updated $Server::Version from "0.7" to "0.7.5"
+    Reference: Previous version V0.7.1 was documented in changelog entry 66 (connectivity.cs line 197)
+    Reason: Update version number to V0.7.5 to reflect all changes and improvements made since V0.7.1
+
+
+==========================================
+V0.7.5 FINISH
+==========================================
+All changes above this line are part of V0.7.5
+
+
+POST V0.7.5 CHANGES
+==========================================
+
+144. Server Version Rejection Message Setup (Commented Out for Compatibility)
+    Date: November 24-25, 2025
+    Location: rpg/scripts/Server.cs (Lines 101-109)
+    Files Changed: rpg/scripts/Server.cs
+    Changes:
+      - Added patchServerNetcode() call (commented out)
+      - Added setNetCodeRejectMessage() call with custom message (commented out)
+      - Both functions are commented out to maintain compatibility with pre-1.31 clients
+      - Custom message prepared: "You're running an old Tribes RPG version - Download the newest version at TribesRPG.org to join in on the fun! NOTE: Remove -autojoin Worlds from the target field in the preferences of the Tribes RPG shortcut it places on your desktop."
+    Reason: Prepared version rejection message infrastructure for future use. Currently disabled to allow pre-1.31 clients to connect. Can be enabled by uncommenting both lines if extended functionality (4094 object limit) is needed and compatibility with older clients is not required.
+
+145. KingdomKronos.mis — Forcefield Addition and Removal
+    Date: November 24-25, 2025
+    Location: rpg/MISSIONS/KingdomKronos.mis (near end of file, before closing brace)
+    Files Changed: rpg/MISSIONS/KingdomKronos.mis
+    Changes:
+      - Added StaticShape "ForceField1" with dataBlock "StaticDoorForceField" at position "879.256 1378.13 -365.002"
+      - Later removed the forcefield (net change: no forcefield added)
+    Reason: Temporary addition for testing, later removed. No net change to mission file.
+
+146. find_recent_files.py — Python Script for Tracking Modified Files
+    Date: November 24-25, 2025
+    Location: Root directory
+    Files Changed: find_recent_files.py (new file)
+    Changes:
+      - Created Python script to find all files modified in the last 12/24 hours
+      - Scans directory recursively, excludes temp/log/backup files
+      - Outputs list of modified files with timestamps and sizes
+      - Saves results to recent_files_12h.txt or recent_files_24h.txt
+    Reason: Tool to help track and document all file modifications during coding sessions.
+
+147. Ai.cs — Bot Rotation Fix
+    Date: November 24-25, 2025
+    Location: AI::lookAtPlayer() function (Lines ~1353-1371)
+    Files Changed: rpg/scripts/Ai.cs
+    Changes:
+      - Fixed bot rotation to use player objects instead of client IDs for position/rotation calculations
+      - Changed GameBase::getPosition(%clientId) to GameBase::getPosition(%clientPlayer)
+      - Changed GameBase::getPosition(%guardId) to GameBase::getPosition(%guardPlayer)
+      - Changed GameBase::getRotation(%guardId) to GameBase::getRotation(%guardPlayer)
+      - Changed RotateTownBot(%guardId, %rot) to RotateTownBot(%guardPlayer, %rot)
+      - Removed redundant GameBase::setRotation call
+    Reason: Bug fix - Bots were not turning to face players when talked to because the function was using client IDs instead of player objects for position and rotation calculations.
+
+148. shopping.cs — New Merchants and Weapon Shop Indices
+    Date: November 24-25, 2025
+    Location: rpg/scripts/shopping.cs (Lines ~324-350)
+    Files Changed: rpg/scripts/shopping.cs
+    Changes:
+      - Added shop indices for new weapons: AecoSeorei (231), MorningStar (232)
+      - Added merchant "Giovanni Echos" at position 893.966 1380.46 -365.002 selling Red/White Diamond armor (ShopIndex: 217, 223, 229, 230, 227, 228)
+      - Added merchant "GodFather Gian" at position 893.991 1412.52 -365.002 selling Heavenly accessories (ShopIndex: 224, 226, 225)
+      - Added merchant "Uncle Tony" at position 920.387 1445.77 -351.752 selling legendary weapons (ShopIndex: 222, 231, 232)
+    Reason: Added new merchants to sell the new armor items, heavenly accessories, and new legendary weapons (Aeco Seorei, Morning Star, Terminus Est).
+
+149. Help.cs — Zone List Display and Back Button Fix
+    Date: November 24-25, 2025
+    Location: Help::showZones() and processMenuhelpCommandsMain() functions
+    Files Changed: rpg/scripts/Help.cs
+    Changes:
+      - Simplified zone display to show exact hardcoded lists for PROTECTED and DUNGEON zones
+      - PROTECTED zones: "Yuliple City - Empress Sanctuary - Curama Outpost - Arbal Research Center - Black Market - Kingdom of Kronos - Asna's Pad - Lamisor - Porellis - Gian Echoes"
+      - DUNGEON zones: "Pig Den, Ogre Skybase, Ogre Stronghold, Ghost Town, Minotaur Tomb, Stone Henge, Contaminated Well, Demon Incubus, Admin's Demise, Angels Enigma, Starsiege"
+      - FREEFORALL zones still dynamically built from zone list
+      - Fixed "back" button in Help Commands menu to return to MenuOptions() instead of deprecated Help::mainMenu()
+    Reason: Simplified zone display per user request and fixed navigation bug where "back" button led to deprecated menu.
+
+150. mana.cs — Bane Stance Mana Depletion Check
+    Date: November 24-25, 2025
+    Location: refreshMANAREGEN() and CheckBaneStanceMana() functions
+    Files Changed: rpg/scripts/mana.cs
+    Changes:
+      - Added CheckBaneStanceMana() function that runs every 1 second when player is in MageBane or BladeBane stance
+      - Automatically switches player back to PreviousStance (or "Normal") when mana runs out
+      - Sends message: "You have run out of mana - Returning to [previous stance]."
+      - Calls refreshMANAREGEN() after stance change to reset mana drain
+      - Uses $BaneStanceCheck[%clientId] flag to prevent multiple schedules
+    Reason: Fix for bane stances - Players now automatically revert to their previous stance when mana is depleted, with immediate mana regen reset. Previously had ~20 second delay.
+
+151. rpgfunk.cs — House0 Prevention in SaveCharacter
+    Date: November 24-25, 2025
+    Location: SaveCharacter() function (Lines ~398-408)
+    Files Changed: rpg/scripts/rpgfunk.cs
+    Changes:
+      - Added check to treat "0", "House0", and "house0" as empty string before saving house number
+      - Ensures GetHouseNumber() result is saved as empty string if it's empty, 0, or "0"
+      - Prevents "House0" from being saved to character data
+    Reason: Bug fix - New players were getting "House0" saved to their character, preventing them from joining houses. Now invalid house values are normalized to empty string before saving.
+
+152. Admin.cs — House0 Validation in View Stats
+    Date: November 24-25, 2025
+    Location: viewstats menu (Lines ~522-537)
+    Files Changed: rpg/scripts/Admin.cs
+    Changes:
+      - Added validation to check for "0", "House0", and "house0" in viewstats menu
+      - Uses GetHouseNumber() to verify house names are valid
+      - Clears invalid house values immediately if detected
+      - Prevents "House0" from being displayed in stats
+    Reason: Bug fix - Invalid house values like "House0" were being displayed in the stats menu. Now house values are validated and cleared if invalid.
+
+153. playerdamage.cs — Scout Vehicle Damage Fix
+    Date: November 24-25, 2025
+    Location: Player::onDamage() function (Lines ~967-978)
+    Files Changed: rpg/scripts/playerdamage.cs
+    Changes:
+      - Added check to identify when player is firing from inside a vehicle
+      - Checks if shooterPlayerObj.vehicle != "" to detect player in vehicle
+      - Ensures damage from players in scout vehicles uses normal vehicle damage calculation, not turret damage
+    Reason: Bug fix - Scout vehicles were incorrectly dealing turret-level damage (600+) because the turret detection logic was incorrectly classifying vehicle damage as turret damage.
+
+154. gameevents.cs — Max Level EXP Prevention
+    Date: November 24-25, 2025
+    Location: HouseEarnings() function (Lines ~386-409)
+    Files Changed: rpg/scripts/gameevents.cs
+    Changes:
+      - Added check to prevent players at max level from receiving EXP
+      - Max level formula: RemortStep × 4 + 100
+      - Sets %shouldGiveExp flag to false if player is at max level
+      - Shows message: "You are currently max level for your remort, and did not receive any experience." if EXP is withheld
+    Reason: Prevents players from exceeding their maximum level for their remort step. Players at max level no longer receive EXP from house earnings.
+
+155. skills.cs — FormatSkillDisplay Function
+    Date: November 24-25, 2025
+    Location: FormatSkillDisplay() function (Lines ~733-755)
+    Files Changed: rpg/scripts/skills.cs
+    Changes:
+      - Created FormatSkillDisplay() function to format skill values for display
+      - Shows whole numbers without decimals (e.g., "100" instead of "100.0")
+      - Shows 1 decimal place only if the value has a decimal part (e.g., "100.5" instead of "100.50")
+      - Used in Skill Points menu and #getskill command
+    Reason: Improved skill display - Skills that upgrade by whole numbers (e.g., +2) don't show unnecessary decimals, while skills that upgrade by decimals (e.g., +1.1) show exactly 1 decimal place.
+
+156. advertisements.cs — Feature Request Advertisement and Manual Execution Fix
+    Date: November 24-25, 2025
+    Location: Advertize() function and initialization (Lines ~82-118)
+    Files Changed: rpg/scripts/advertisements.cs
+    Changes:
+      - Added new advertisement stage (13) for feature requests: "#featurerequest or #requestfeature"
+      - Incremented stage numbers for "Vehicle Combat Skill" (13→14) and "LUCK toggle" (14→15)
+      - Added logic to prevent duplicate schedules when script is manually executed while server is live
+      - Uses $AdvertizeStopped and $AdvertizeActive flags to manage scheduled advertisements
+    Reason: Added feature request advertisement and fixed issue where manually executing advertisements.cs would create duplicate scheduled messages.
+
+157. comchat.cs — New Commands: Feature Request, DTS Viewer, Font Colors
+    Date: November 24-25, 2025
+    Location: Command handlers (Lines ~312-400)
+    Files Changed: rpg/scripts/comchat.cs
+    Changes:
+      - Added #requestfeature / #featurerequest command - logs feature requests to temp\featurerequests.txt
+      - Added #viewdts <shape name> command - spawns .dts shape file in front of player (admin only)
+      - Added #listdts [page] command - lists available .dts files (admin only, paginated)
+      - Added #searchdts <search term> command - searches for .dts files by name (admin only)
+      - Added #cleardts command - removes currently viewed shape (admin only)
+      - Added #fontcolors / #testcolors command - displays all font color tags (<f0> through <f8>) for testing
+    Reason: Added new player commands for feature requests and admin tools for viewing DTS shape files and testing font colors.
+
+158. connectivity.cs — Version Update to V0.7.5
+    Date: November 24-25, 2025
+    Location: Server::onClientConnect() function (Line 197)
+    Files Changed: rpg/scripts/connectivity.cs
+    Changes:
+      - Updated $Taurik::ConnectScreenMessage1 from "Kingdom of Kronos V0.7.1" to "Kingdom of Kronos V0.7.5"
+    Reason: Version update to reflect all changes and improvements made since V0.7.1.
+
+159. newstuff.cs — New Legendary Weapons: Aeco Seorei and Morning Star
+    Date: November 24-25, 2025
+    Location: rpg/scripts/newstuff.cs (Lines ~50-146)
+    Files Changed: rpg/scripts/newstuff.cs
+    Changes:
+      - Added "Aeco Seorei" - Spear weapon with equivalent damage (600) and speed (0.5s) of Terminus Est
+        - Uses $SkillPiercing, requires Piercing 2030, Remort 50
+        - Price: $700,000,000, Weight: 10 lbs
+      - Added "Morning Star" - Mace weapon with equivalent damage (600) of Terminus Est
+        - Uses $SkillBludgeoning, requires Bludgeoning 2030, Remort 50
+        - Price: $700,000,000, Weight: 10 lbs
+        - Uses GetDelay() for attack speed (category-based)
+    Reason: Added two new legendary weapons to provide equivalent alternatives to Terminus Est for different weapon types (spear and mace).
+
+160. dtsviewer.cs — In-Game DTS Shape File Viewer
+    Date: November 24-25, 2025
+    Location: rpg/scripts/dtsviewer.cs (new file)
+    Files Changed: rpg/scripts/dtsviewer.cs (new file)
+    Changes:
+      - Created DTSViewer::init() function to load DTS_FILE_LIST.txt on server start
+      - Created DTSViewer::viewShape() function to spawn .dts files in front of players
+      - Created DTSViewer::listShapes() function for paginated listing of available shapes
+      - Created DTSViewer::searchShapes() function to search for shapes by name
+      - Created DTSViewer::clearViewer() function to remove viewed shapes
+      - Loads from "..\\..\\DTS_FILE_LIST.txt" (corrected path from initial implementation)
+    Reason: Admin tool to view .dts shape files in-game for easier asset management and verification. Commands: #viewdts, #listdts, #searchdts, #cleardts.
+
+165. Ai.cs, zone.cs, connectivity.cs — MAJOR: Dynamic Town Bot Loading System Implementation
+    Date: December 2025
+    Location: Multiple functions across multiple files
+    Files Changed: rpg/scripts/Ai.cs, rpg/scripts/zone.cs, rpg/scripts/connectivity.cs
+    Changes:
+      - **Complete overhaul of town bot system from static to dynamic loading**
+      - Modified InitTownBots() to register bots with spawn positions, rotations, and zones instead of immediately spawning them
+      - Created new system variables: $TownBotRegistry (list of registered bot names), $TownBotZone[botName] (zone index), $TownBotSpawned[botName] (clientId if spawned)
+      - Added SpawnZoneBots(%zoneIndex) function to spawn all bots for a specific zone when first player enters
+      - Added DespawnZoneBots(%zoneIndex) function to despawn all bots when all players leave a zone
+      - Added ScheduleZoneBotDespawn(%zoneIndex) with 10-second delay after last player leaves
+      - Added GetBotZone(%position) helper function to determine which zone a position belongs to
+      - Modified UpdateZone() in zone.cs to track player counts per zone ($ZonePlayerCount) and trigger bot spawning/despawning
+      - Modified Server::onClientDisconnect() to decrement zone player count and schedule despawn if needed
+      - Added zone player count tracking that excludes town bots (only counts real players)
+      - Bots are now only loaded when needed, reducing server load and stuttering
+    Reason: Major performance improvement - town bots are now dynamically loaded only when players are in their zones, and despawned when zones are empty. This significantly reduces server load and eliminates stuttering from having all town bots loaded at once.
+
+166. Ai.cs — Town Bot Conversion from Item Objects to Player Objects (Client-Based)
+    Date: December 2025
+    Location: SpawnZoneBots(), InitTownBotPostSpawn(), and related functions
+    Files Changed: rpg/scripts/Ai.cs
+    Changes:
+      - **Complete conversion of town bots from Item objects to Player objects (client-based)**
+      - Changed from newObject("", "Item", ...) to AI::spawn() which creates Player objects with client IDs
+      - Town bots now use client IDs instead of Item object IDs
+      - Updated $TownBotList to store client IDs instead of Item object IDs
+      - Modified all town bot identification to use fetchData(%clientId, "BotInfoAiName") instead of Item object properties
+      - Updated bot interaction logic to work with client IDs
+      - Added immediate BotInfoAiName and team setting after spawn to ensure bots are immediately interactable
+      - Added validation for race/armor type with defaults ("Human" and "MaleHumanArmor" if missing)
+      - Added explicit skin setting after spawn to prevent wrong models
+      - Fixed bot cleanup to use deleteObject() on Player objects instead of Item objects
+    Reason: Town bots needed to be Player objects to work properly with the game's AI system and interaction mechanics. This conversion enables proper bot behavior, interaction, and dynamic loading.
+
+167. Ai.cs — Town Bot Team Correction and Interaction Fixes
+    Date: December 2025
+    Location: SpawnZoneBots(), InitTownBotPostSpawn(), AI::lookAtPlayer()
+    Files Changed: rpg/scripts/Ai.cs
+    Changes:
+      - Changed town bot default team from enemy (team 1+) to friendly (team 0)
+      - Set bot team immediately after spawn (not in scheduled post-spawn function) to ensure team is correct for interaction
+      - Fixed bot identification in AI::lookAtPlayer() to use fetchData(%guardId, "BotInfoAiName") instead of looping $TownBotList
+      - Fixed bot rotation calculation to use only horizontal (yaw) components, ignoring height differences
+      - Bots now properly face players when talked to, even on stairs or different elevations
+      - Added validation to ensure bots are on correct team before allowing interaction
+    Reason: Town bots were incorrectly set to enemy teams, preventing interaction. Fixed team assignment and rotation issues to ensure proper player-bot interaction.
+
+168. Ai.cs, comchat.cs, spells.cs, playerdamage.cs — Town Bot Shoving Immunity
+    Date: December 2025
+    Location: Multiple command and spell handlers
+    Files Changed: rpg/scripts/comchat.cs, rpg/scripts/spells.cs, rpg/scripts/playerdamage.cs
+    Changes:
+      - Added town bot check to #shove command: if(fetchData(%id, "BotInfoAiName") != "") prevents shoving
+      - Added town bot check to #powershove command with player message
+      - Added town bot skip in Airfist spell (index 43): if(fetchData(%id, "BotInfoAiName") != "") continue;
+      - Added town bot skip in Advshove spell (index 45): if(fetchData(%id, "BotInfoAiName") != "") continue;
+      - Added town bot skip in Airblast/Airwarp spells (index 58/59): if(fetchData(%id, "BotInfoAiName") != "") continue;
+    Reason: Town bots should not be affected by shoving commands or spells. Added checks throughout the codebase to prevent town bots from being shoved or affected by air-based shoving spells.
+
+169. Ai.cs — Town Bot Spawn/Despawn Cleanup and Error Fixes
+    Date: December 2025
+    Location: SpawnZoneBots(), DespawnZoneBots(), SpawnSingleZoneBot()
+    Files Changed: rpg/scripts/Ai.cs
+    Changes:
+      - Fixed "String::replaceSubStr: Unknown command" error by replacing with manual loop to reconstruct $TownBotList
+      - Fixed "deleteObject: Object doesn't exist" errors by adding Client::getOwnedObject() validation before deleteObject()
+      - Added cleanup steps in DespawnZoneBots(): set noDropLootbagFlag, ClearEvents(), RemoveBotFromBotGroup()
+      - Added AI existence check in SpawnZoneBots() using AI::getId() to prevent "AI already exists" warnings
+      - Added SpawnSingleZoneBot() helper function to retry spawning after cleanup
+      - Fixed despawn scheduling by replacing cancel() (not available in Tribes) with flag-based approach ($ZoneBotDespawnSchedule)
+      - Added CheckAndDespawnZoneBots() function to verify despawn flag before executing
+    Reason: Fixed multiple errors and warnings related to bot spawning and despawning. Improved cleanup and error handling to prevent console spam and ensure proper bot lifecycle management.
+
+170. zone.cs — Town Bot Protection in Zone Wipe System
+    Date: December 2025
+    Location: WipeFromZone() function (Lines ~696-699)
+    Files Changed: rpg/scripts/zone.cs
+    Changes:
+      - Added town bot check in WipeFromZone() to skip town bots when wiping zones
+      - WipeFromZone() runs every 120 seconds (2 minutes) for DUNGEON zones
+      - Added check: if(fetchData(%id, "BotInfoAiName") != "") continue; before processing bots
+      - Prevents town bots from being killed and respawned every 2 minutes
+    Reason: Fixed critical bug where town bots were being killed every 2 minutes by the zone wipe system, causing client ID changes and equipment loss. Town bots are now protected from zone wipes.
+
+171. Ai.cs, playerdamage.cs — Quest Item Drop Rate Fix for Bots
+    Date: December 2025
+    Location: Quest item drop logic in playerdamage.cs
+    Files Changed: rpg/scripts/playerdamage.cs
+    Changes:
+      - Modified quest item drop logic to ensure items picked up by enemy bots from lootbags are always dropped (100% chance)
+      - Only the original count of items (from OriginalLootString) is subject to the drop rate roll
+      - Extra items picked up by bots (beyond original count) are guaranteed to drop without re-rolling
+      - Prevents quest items from decreasing in count when bots pick them up and drop them multiple times
+    Reason: Fixed issue where quest items picked up by enemy bots would decrease in count over time due to drop rate re-rolling. Now extra items are guaranteed to drop, preserving quest item counts.
+
+172. KingdomKronos.mis — Town Bot Inventory and Attribute Updates
+    Date: December 2025
+    Location: Mission file - all town bot SimGroups
+    Files Changed: rpg/MISSIONS/KingdomKronos.mis
+    Changes:
+      - **Removed "Dagger 1" from all town bot inventories**
+      - **Added zone-appropriate items to each town bot:**
+        * Each bot receives one randomly selected weapon from items sold in their zone
+        * Each bot receives one randomly selected armor from items sold in their zone (excluding helmets)
+        * Each bot has 50% chance to receive one randomly selected shield (if shields are sold in their zone)
+      - Items are selected from merchants in each PROTECTED zone
+      - Updated all instances of "LVL 2 LCK 0" to "LVL 999 LCK 999" for all bots (67 replacements)
+      - Ensures town bots have appropriate gear matching their zone's available items
+    Reason: Town bots should have zone-appropriate equipment instead of default daggers. Updated all town bot inventories to match items sold in their respective zones, and corrected bot level/luck attributes.
+
+    161. comchat.cs — Town Bot Weapon Mounting Behavior Change
+    Date: December 2025
+    Location: Bot interaction handler (Lines ~7706-7728)
+    Files Changed: rpg/scripts/comchat.cs
+    Changes:
+      - Removed weapon mounting when players talk to town bots
+      - Weapon mounting now only occurs:
+        * On collision with a player (handled in Player::onCollision)
+        * After the 30-minute idle message timer has elapsed
+      - Added comment noting the change: "Note: Weapon mounting on talk removed - now only mounts on collision or after idle timer"
+    Reason: Town bots were drawing their weapons immediately when talked to, which was not desired. Now they only draw weapons when physically collided with or after being idle for 30 minutes.
+
+162. Player.cs — Town Bot Collision Handler Enhancement
+    Date: December 2025
+    Location: Player::onCollision() function (Lines ~43-69)
+    Files Changed: rpg/scripts/Player.cs
+    Changes:
+      - Added collision detection for town bots when players collide with them
+      - When a real player collides with a town bot:
+        * Bot mounts its weapon (via MountTownBotWeapon)
+        * Bot turns to face the player (via AI::lookAtPlayer)
+      - Both actions are scheduled with 0.1 second delay to ensure bot is fully initialized
+      - Checks for BotInfoAiName to identify town bots
+      - Validates that colliding object is a real player (not AI controlled)
+    Reason: Town bots now respond to player collisions by mounting weapons and facing the player, providing better interaction feedback.
+
+163. Ai.cs — Spawn Point Counter Validation Fix
+    Date: December 2025
+    Location: ValidateSpawnPointCounters() function (Lines ~3118-3136)
+    Files Changed: rpg/scripts/Ai.cs
+    Changes:
+      - Modified counter correction logic to prevent over-spawning
+      - Only corrects counters when recorded count is HIGHER than actual count
+      - When actual count is higher than recorded, updates silently (won't cause over-spawning)
+      - Added detailed comments explaining the fix
+      - Prevents validation from resetting counters to 0 right after bots are killed, which was causing spawn loops to spawn multiple bots at once
+    Reason: Fixed issue where enemy bots were spawning in excessive numbers (10+ instead of 3-4) after town bot rework. The validation was correcting counters downward too aggressively, triggering over-spawning.
+
+164. Ai.cs — Town Bot aiNumTable Cleanup on Despawn
+    Date: December 2025
+    Location: DespawnZoneBots() function (Lines ~1977-1980)
+    Files Changed: rpg/scripts/Ai.cs
+    Changes:
+      - Added cleanup of $aiNumTable entries when town bots despawn
+      - Clears $aiNumTable[$tmpbotn[%aiName]] and $tmpbotn[%aiName] if town bot has a number assigned
+      - Prevents town bot number slots from being permanently filled in the table
+    Reason: Fixed issue where enemy bots were starting with numbers 50+ instead of lower numbers. Town bots were filling number slots 0-49 in $aiNumTable but not clearing them on despawn, forcing enemy bots to use higher numbers.
+
+
+173. comchat.cs — Animation Preview Command for Bots
+    Date: December 2025
+    Location: Command handler and PlayAnimationSequence() function (Lines ~406-427, ~11285-11312)
+    Files Changed: rpg/scripts/comchat.cs
+    Changes:
+      - Added #animations <clientid> command to preview all player animations on a bot
+      - Command plays animations 1-50 sequentially with 3-second delays between each
+      - Created PlayAnimationSequence() function that validates bot existence and schedules animations
+      - Automatically advances through all 50 animations without requiring manual input
+      - Sends completion message when sequence finishes
+      - Stops sequence if bot is deleted during playback
+    Reason: Admin/debugging tool to easily preview all available player animations on bots without manually entering RemotePlayAnim commands 50 times. Useful for testing and verifying animation availability.
+
+174. Multiple Files — BotInfoAiName Validation Fixes
+    Date: December 2025
+    Location: Various functions across multiple files
+    Files Changed: economy.cs, gameevents.cs, shopping.cs, comchat.cs, spells.cs, zone.cs, Player.cs, Ai.cs, rpgfunk.cs, weapons.cs
+    Changes:
+      - Added comprehensive validation for BotInfoAiName to handle invalid values ("", -1, "0")
+      - Added fallback to Client::getName() when BotInfoAiName is invalid
+      - Fixed array lookups in economy.cs (getBuyCost, getSellCost) to validate bot names before accessing $NewItemBuyCost/$NewItemSellCost
+      - Fixed $BotInfo array lookups in gameevents.cs to validate bot names
+      - Updated all AI function calls (AI::setVar, AI::newDirectiveRemove) to validate BotInfoAiName first
+      - Fixed town bot detection conditionals to check for "0" in addition to "" and -1
+      - Updated isRPGAI() function to properly validate BotInfoAiName
+      - Fixed string concatenation in rpgfunk.cs to skip invalid bot names
+    Reason: Prevented "Bot 0" errors and silent failures when BotInfoAiName contains invalid values. Ensures all bot-related operations validate bot names before use, preventing crashes and incorrect behavior.
+
+175. zone.cs — WipeFromZone Player-Only Check Fix
+    Date: December 2025
+    Location: WipeFromZone() function (Lines ~728-730)
+    Files Changed: rpg/scripts/zone.cs
+    Changes:
+      - Modified zone emptiness check to only consider PLAYERS, not AI bots
+      - Added !Player::isAiControlled(%cl) check before setting %run = 0
+      - Prevents zone cleanup from being skipped when only enemy bots remain in zone
+    Reason: Fixed issue where enemy bots would not be cleaned up from DUNGEON zones because the system thought the zone was still occupied (by the bots themselves). Now correctly identifies empty zones by checking only for players.
+
+176. zone.cs — Enemy Bot Zone Change Detection
+    Date: December 2025
+    Location: UpdateZone() function (Lines ~308-338)
+    Files Changed: rpg/scripts/zone.cs, Ai.cs
+    Changes:
+      - Added spawn time tracking in Ai.cs SpawnAI() for enemy bots (SpawnPoint type)
+      - Added zone change detection in UpdateZone() that kills enemy bots if they change zones after 10 seconds
+      - Kills bots with noDropLootbagFlag and noExperienceFlag set
+      - Only applies to enemy bots (have SpawnBotInfo), not town bots
+      - Logs debug message when bot is killed for zone violation
+    Reason: Prevents enemy bots from leaving their spawn zones. Bots that change zones within 10 seconds are allowed (normal movement), but bots that change zones after 10 seconds are killed immediately to prevent them from wandering outside their intended areas.
+
+177. rpgfunk.cs — UpdateAppearance Town Bot Skip
+    Date: December 2025
+    Location: UpdateAppearance() function (Lines ~1839-1842)
+    Files Changed: rpg/scripts/rpgfunk.cs
+    Changes:
+      - Added early return for town bots in UpdateAppearance()
+      - Checks for BotInfoAiName without SpawnBotInfo to identify town bots
+      - Prevents UpdateAppearance from resetting town bot skins/appearance
+    Reason: Fixed issue where town bot skins were being reset after a few minutes. UpdateAppearance() is called from RefreshAll() when players enter zones, and was resetting town bot appearances. Town bots now maintain their correct appearance.
+
+178. Ai.cs — Town Bot Skin Verification
+    Date: December 2025
+    Location: InitTownBotItems() and InitTownBotItemsForBot() functions (Lines ~3065-3120, ~2800-2824)
+    Files Changed: rpg/scripts/Ai.cs
+    Changes:
+      - Added skin verification even when armor is already mounted
+      - Checks current skin vs expected skin using Client::getSkin()
+      - Fixes skin if it's incorrect, even if armor is already mounted correctly
+      - Applied to both InitTownBotItems() (all bots) and InitTownBotItemsForBot() (single bot)
+    Reason: Ensures town bot skins remain correct even if something resets them. Previously, if armor was already mounted, the skin check was skipped, allowing incorrect skins to persist.
+
+179. zone.cs — Player::getItemCount Validation Fix
+    Date: December 2025
+    Location: UpdateZone() function (Lines ~460-485, ~570-640)
+    Files Changed: rpg/scripts/zone.cs
+    Changes:
+      - Added validation before all Player::getItemCount() calls in zone checking code
+      - Validates client is a valid player (not a bot) using Client::getOwnedObject() and !Player::isAiControlled()
+      - Prevents spam of "Player::getItemCount: could not find player" errors
+      - Applied to water zone protection checks, orb burn-out checks, and badge checks
+    Reason: Fixed console spam of errors when RecursiveZone() ran periodically and tried to check items for bots or invalid clients. Now only processes valid player clients.
+
+180. newstuff.cs — RedDiamondPlate and WhiteDiamondPlate Light Effects
+    Date: December 2025
+    Location: ItemImageData definitions (Lines ~161-172, ~204-215)
+    Files Changed: rpg/scripts/newstuff.cs
+    Changes:
+      - Created ItemImageData blocks for RedDiamondPlateImage and WhiteDiamondPlateImage
+      - Added light properties: lightType, lightRadius, lightTime, lightColor
+      - RedDiamondPlate: Red glow (lightColor = { 1.0, 0.0, 0.0 }), always on, radius 10
+      - WhiteDiamondPlate: White glow (lightColor = { 1.0, 1.0, 1.0 }), always on, radius 20
+      - Used "orb" shapeFile (same as AdminOrb) for compatibility with light system
+      - Set mountPoint = 1 (body armor), mountOffset = {0.0, 0.0, 1.5} (chest area)
+      - Both ItemData definitions reference their ItemImageData with imageType
+    Reason: Added light effects to diamond plate armors. Light is emitted from the chest area when armor is equipped. Red plate emits red light, white plate emits white light with larger radius.
+
+Changes below this line are for future versions (V0.8+)
+
+
+END OF MERGED CHANGELOG
+=======================
+Total entries: 180
+Last updated: December 2025
+
+Source files merged:
+- 141125 changes.txt
+- 2025-11-14 changes.txt (all directories)
+- Nov 2025 changes.txt
+- 2025-11-21 changes.txt
+- 2025-11-23 changes.txt
+
+Run find_live_scripts_changes.py then "Look through C:\Users\Joe\Desktop\Kingdom of Kronos V0.7 BOV Plugins\rpg\scripts and find all the files that were modified within the last 12 hours and document the changes, since these are all script changes that went live onto the server"

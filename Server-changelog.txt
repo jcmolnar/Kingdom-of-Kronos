@@ -1,0 +1,104 @@
+All base rpg server changes are now listed in this file instead of Repack readme.txt
+
+6.9 (Nov 30, 2020):
+-Fixdecimals improved to work with any accuracy if it has the new tribes plugin system available.
+-Added plugins which add new functions, math accuracy, and stability (AI crash fix) for the server.
+
+6.8 (Nov 20, 2019):
+-Added the compass menu from the main server.
+-Recall replaced with new version which has an on-screen counter.
+-Important character functions moved into charfunk.cs.
+-Improvements to function felloffmap to enable better recalls.
+-Various logic improvements to spell casting (begincastspell and docastspell, from main server).
+-Teleport spell now has a menu (from main server).
+
+6.7.4 (Jun 19, 2017):
+-Synced changerace with main server. Less hardcoding, easier to use.
+-Potions are now in belt.
+-Small improvement to belt-weight.
+
+6.7.3 (Feb 09, 2017):
+-Fixed casting oops. Spells weren't always ending properly.
+
+6.7.2 (Nov 18, 2016):
+-Backend improvements, performance improvements.
+-Merged in spell code from main server, notably support for repack 33 regen bar.
+-Added a confirmation for admin menu kick.
+-Added bashing regen bar (repack 34).
+-Battle message improvements: better colours and new hud support.
+
+6.7.1 (Aug 06, 2016):
+-Fixed admin menu option 'teleport to', and some other menu display issues.
+-Added admin menu options: 'Force recall', 'Jail'.
+-Improvements to #kick and admin menu kick.
+-Fixed rare client crash bug related to spawning with less than 1 HP.
+-Startup efficiency (removed a few unneeded scripts).
+
+6.7 (May 12, 2016):
+-Fixes for a couple broken options in admin menu.
+-Admin menu now appears when selecting your own name too.
+-Added options to admin menu: Set race.
+-Added support for escape screen text.
+-A few misc code improvements.
+
+6.6 (Dec 29, 2015):
+-Added in-game admin menu.
+-Improvements and fixes for chat handling.
+-Sync certain bottalk functions with main server.
+-More support for expanded text colours (bottom prints).
+
+6.5 (Oct 17, 2015):
+-Minor improvements to bashing code.
+-Basic initial support for new font colours.
+
+6.4.2 (Jul 15, 2015):
+--Improvements to character saving, saveworld, loadworld.
+--Improvements to server startup.
+--Key bind improvements and bug fixes.
+--Other misc improvements.
+--Fixed bug that allowed players to drop the "belt items" placeholder.
+
+6.4.1 (Jun 16, 2015):
+--Fixed 4-line console spam on AI death.
+
+6.4 (Jun 15, 2015):
+--Fixed saveworld bug, wasn't properly clearing when the last pack is removed.
+--Minor security update to tab menus.
+--Misc improvements to belt.
+--Added belt stealing.
+--Fixed connection ghosting bug, wasn't working properly.
+
+6.3 (Feb 17, 2015):
+--Added proper handling of login messages for repack 24+.
+
+6.2 (Jan 31, 2015):
+--Improved weapon handling efficiency.
+--Spam fix when auto kicking for abuse.
+
+6.1 (Oct 01, 2014):
+--Small keybind related improvements.
+--Improvements to connectivity code.
+--Spawn improvements, no more black screens on login.
+--Improved death handling for AI and for players.
+--Other small bugs fixed.
+--Fixed a moderately severe security issue.
+--Improved server interface, for the operator.
+
+6.0 (May 11, 2014):
+--NPC menu system from Phantom Worlds RPG is now standard. #say may still be used.
+--Default talk is #global, tab option is now a submenu with 3 options.
+--Server detects when an entering player doesn't have RPG, kicks with a link.
+--Connection spam protection.
+--Improved remoteSay hack fix, quest scripts should work fine again.
+--Autoremort level increases with remorts.
+--Hail and snowstorms from main server ported.
+--New battle messages from main server ported.
+--Blood spray from main server ported.
+--Misc code improvements.
+--Belt added. Ammunition and Gems are belt items. Belt can handle more than 500/item. Also frees up itemdata blocks.
+--Must now be close to shops/banks to use them. No more mining and storing at the same time.
+--Weapon fast-swinging protection improved.
+--Smithing upgraded to the #smith command from tvt, for compatibility with belt.
+--Saveworld is truly fixed now. Saves packs properly.
+--rpgmap5 retains compatibility with original RPG clients.
+--rpgmap6 contains new shapes.

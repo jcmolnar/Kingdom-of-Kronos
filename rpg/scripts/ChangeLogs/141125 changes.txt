@@ -1,0 +1,49 @@
+1. playerdamage.cs — Spell damage display fix
+Location: Lines ~391, ~462, ~740
+Change: Added safety checks for $PlayerSkill[%shooterClient, %skilltype] defaulting to 1000 for NPCs
+Change: Added check to ensure %value is numeric before calculating %convValue
+Reason: Fixed "An NPC hits "enemy name" for "" points of damage" when NPCs cast spells
+2. playerdamage.cs — Damage mode defaulting
+Location: Lines ~668, ~894, ~957
+Change: Default fetchData(%client, "damageMode") to true if empty
+Reason: Ensure damage messages display by default for spell and melee damage
+3. playerdamage.cs — Melee damage skill value fix
+Location: Line ~462
+Change: Added safety check for melee damage skill values, defaulting to 1000 if empty
+Reason: Fix melee damage not showing for NPCs
+4. playerdamage.cs — LCK miss handling fix
+Location: Lines ~836-839
+Change: Added %lckMiss flag and adjusted order to handle LCK misses before converting -1 to 0
+Reason: Fix LCK miss messages not displaying properly
+5. playerdamage.cs — Typo fix
+Location: Line ~533
+Change: Fixed typo from damagedClient to %damagedClient in Duel::isDueling call
+Reason: Fix "Unknown command" error
+6. playerdamage.cs — Quest items dropping fix
+Location: Lines ~184-195
+Change: Restored belt items (QuestItems, KeyItems, GemItems) dropping logic
+Reason: Fix enemies not dropping quest items
+7. playerdamage.cs — Double weapon drop fix
+Location: Lines ~155-157
+Change: Added continue statement to skip mounted weapon in item iteration loop
+Reason: Prevent mounted weapon from being added to loot twice
+8. remortseal.cs — Duel system stubs
+Location: Lines ~370-380
+Change: Added stub functions Duel::isDueling(%clientId) (returns false) and Duel::endDuel(%pass) (does nothing)
+Reason: Fix "Duel::isDueling: Unknown command" errors since dueling system is not used
+9. remote.cs — RawKey stub function
+Location: Lines ~8-14
+Change: Added stub function remoterawKey(%client, %key, %mod) to prevent console spam
+Reason: Fix "remoterawKey: Unknown command" errors from client-side keybinds
+10. spells.cs — Apocalypse spell clientId validation
+Location: Lines ~2375-2381
+Change: Added validation at start of Apocalypse spell to ensure %clientId is valid (not 0 or -1)
+Reason: Prevent crashes and invalid damage attribution
+11. spells.cs — CreateAndDetBomb clientId validation
+Location: Lines ~2519-2529
+Change: Added validation in CreateAndDetBomb() to handle invalid client IDs gracefully
+Reason: Create visual explosion only when client ID is invalid, preventing errors
+12. spells.cs — ApocalypseBatchExplosions clientId validation
+Location: Lines ~2549-2555
+Change: Added validation in ApocalypseBatchExplosions() to handle invalid client IDs
+Reason: Prevent errors in batch processing when client ID is invalid

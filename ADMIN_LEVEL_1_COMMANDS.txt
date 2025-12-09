@@ -1,0 +1,49 @@
+ADMIN LEVEL 1 COMMANDS LIST
+============================
+
+This document lists all commands that require Admin Level 1 or higher.
+
+BOT MANAGEMENT:
+----------------
+#killallbots          - Kill all bots (enemy and town bots)
+#respawnpoints        - Reset all spawn point counters (doesn't kill bots)
+#resetspawnpoints     - Alias for #respawnpoints
+#resetspawns          - Kill all bots AND reset all spawn point counters
+#wipespawns           - Alias for #resetspawns
+
+PLAYER MANAGEMENT:
+-----------------
+#kick <name> [time]   - Kick a player (optional time in seconds)
+#kickid <id> [time]   - Kick a player by client ID (optional time in seconds)
+#fell <name>          - Force a player to fall off the map (respawn them)
+
+PLAYER INFORMATION:
+-------------------
+#getadmin [name]      - Get admin level of yourself or specified player
+#getinfo <name>       - Get basic info about a player
+#getstats <name>      - Get stats (DEF, MDEF, etc.) of a player
+#getlvl <name>        - Get level of a player
+#getplayerid <name>   - Get player ID (object ID) of a player
+#getname <clientId>   - Get player name from client ID
+#listallclients       - List all connected clients with their IDs
+
+INVENTORY/BELT MANAGEMENT:
+--------------------------
+#getbelt <name>       - View a player's equipped belt items
+#getbeltstorage <name> - View a player's belt storage items
+#getinventory <name>  - View a player's inventory
+#getstorage <name>    - View a player's storage
+#getitemcount <name> <item> - Get count of a specific item for a player
+#packsummary [name]   - Get summary of a player's pack (or your own if no name)
+
+GAME MANAGEMENT:
+----------------
+#arenacutshort        - Cut arena bot match short (set to end immediately)
+
+NOTES:
+------
+- All commands respect admin level hierarchy (can't target players with equal or higher admin level)
+- Some commands have additional restrictions (e.g., can't target yourself in some cases)
+- Commands that take player names will use your own name if not specified (where applicable)
+
+

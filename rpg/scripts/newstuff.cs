@@ -1,0 +1,381 @@
+$AccessoryVar[TerminusEst, $AccessoryType] = $SwordAccessoryType;
+$AccessoryVar[TerminusEst, $SpecialVar] = "6 600";
+$AccessoryVar[TerminusEst, $Weight] = 10;
+$AccessoryVar[TerminusEst, $MiscInfo] = "A sword used by a great warrior Terminus Est = This is the end";
+$SkillType[TerminusEst] = $SkillSlashing;
+$ItemCost[TerminusEst] = 700000000;
+$SkillRestriction[TerminusEst] = $SkillSlashing @ " 2030 " @ $MinRemort @ " 50";
+//****************************************************************************************************
+//   Terminus Est
+//****************************************************************************************************
+
+ItemImageData TerminusEstImage
+{
+	shapeFile  = "elfinblade";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing2;
+	sfxActivate = ActivateAS;
+};
+ItemData TerminusEst
+{
+	heading = "bWeapons";
+	description = "Terminus Est";
+	className = "Weapon";
+	shapeFile  = "katana";
+	hudIcon = "blaster";
+	shadowDetailMask = 4;
+	imageType = TerminusEstImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function TerminusEstImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(TerminusEst), TerminusEst);
+}
+
+function TerminusEst::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>Terminus Est: <f0>Attack: <f2>600    <f0>Skill Slashing Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
+}
+
+//****************************************************************************************************
+//   Aeco Seorei
+//****************************************************************************************************
+$AccessoryVar[AecoSeorei, $AccessoryType] = $PolearmAccessoryType;
+$AccessoryVar[AecoSeorei, $SpecialVar] = "6 600";
+$AccessoryVar[AecoSeorei, $Weight] = 10;
+$AccessoryVar[AecoSeorei, $MiscInfo] = "A legendary spear of unmatched power and speed";
+$SkillType[AecoSeorei] = $SkillPiercing;
+$ItemCost[AecoSeorei] = 700000000;
+$SkillRestriction[AecoSeorei] = $SkillPiercing @ " 2030 " @ $MinRemort @ " 50";
+
+ItemImageData AecoSeoreiImage
+{
+	shapeFile  = "spear";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing3;
+	sfxActivate = AxeSlash2;
+};
+ItemData AecoSeorei
+{
+	heading = "bWeapons";
+	description = "Aeco Seorei";
+	className = "Weapon";
+	shapeFile  = "spear";
+	hudIcon = "trident";
+	shadowDetailMask = 4;
+	imageType = AecoSeoreiImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function AecoSeoreiImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(AecoSeorei), AecoSeorei);
+}
+
+function AecoSeorei::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>Aeco Seorei: <f0>Attack: <f2>600    <f0>Skill Piercing Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
+}
+
+//****************************************************************************************************
+//   Morning Star
+//****************************************************************************************************
+$AccessoryVar[MorningStar, $AccessoryType] = $BludgeonAccessoryType;
+$AccessoryVar[MorningStar, $SpecialVar] = "6 600";
+$AccessoryVar[MorningStar, $Weight] = 10;
+$AccessoryVar[MorningStar, $MiscInfo] = "A devastating mace of legendary power";
+$SkillType[MorningStar] = $SkillBludgeoning;
+$ItemCost[MorningStar] = 700000000;
+$SkillRestriction[MorningStar] = $SkillBludgeoning @ " 2030 " @ $MinRemort @ " 50";
+
+ItemImageData MorningStarImage
+{
+	shapeFile  = "mace";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing5;
+	sfxActivate = AxeSlash2;
+};
+ItemData MorningStar
+{
+	heading = "bWeapons";
+	description = "Morning Star";
+	className = "Weapon";
+	shapeFile  = "mace";
+	hudIcon = "sclub";
+	shadowDetailMask = 4;
+	imageType = MorningStarImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function MorningStarImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(MorningStar), MorningStar);
+}
+
+function MorningStar::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>Morning Star: <f0>Attack: <f2>600    <f0>Skill Bludgeoning Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
+}
+
+
+//ARMORS
+$ItemCost[RedDiamondPlate] = 900000000;
+$AccessoryVar[RedDiamondPlate, $AccessoryType] = $BodyAccessoryType;
+$AccessoryVar[RedDiamondPlate, $SpecialVar] = "7 1500 4 800 3 250 10 3.0";
+$AccessoryVar[RedDiamondPlate, $Weight] = 900;
+$AccessoryVar[RedDiamondPlate, $MiscInfo] = "Mastery put into armor. Rare red diamond makes it stronger than Black diamond.";
+$ArmorSkin[RedDiamondPlate] = "rpghuman7";
+$ArmorPlayerModel[RedDiamondPlate] = "";
+$ArmorHitSound[RedDiamondPlate] = SoundHitPlate;
+	$ArmorList[19] = "RedDiamondPlate";
+	$SkillRestriction[RedDiamondPlate] = $SkillEndurance @ " 1950 " @ $MinRemort @ " 50";
+//============================================================================
+ItemImageData RedDiamondPlateImage
+{
+	shapeFile = "orb";  // Use orb shape (same as AdminOrb) - small and works with light
+	mountPoint = 1;  // Body armor mount point
+	mountOffset = {0.0, 0.0, 1.5};  // Center on chest area (Z = up/down)
+	mountRotation = {0, 0, 0};  // Adjust rotation of light source
+
+	lightType = 1;   // Always on
+	lightRadius = 10;
+	lightTime = 9999;
+	lightColor = { 1.0, 0.0, 0.0 };  // Bright red glow (RGB: red=1.0, green=0.2, blue=0.2)
+};
+ItemData RedDiamondPlate
+{
+	shapeFile  = "";
+	description = "Red Diamond Plate";
+	className = "Accessory";
+	shapeFile = "discammo";
+	imageType = RedDiamondPlateImage;
+
+	heading = "eMiscellany";
+	price = 0;
+};
+ItemData RedDiamondPlate0
+{
+	description = "Red Diamond Plate";
+	className = "Equipped";
+	shapeFile = "discammo";
+	imageType = RedDiamondPlateImage;
+
+	heading = "aArmor";
+};
+$ItemCost[WhiteDiamondPlate] = 1000000000;
+$AccessoryVar[WhiteDiamondPlate, $AccessoryType] = $BodyAccessoryType;
+$AccessoryVar[WhiteDiamondPlate, $SpecialVar] = "7 2000 4 1000 3 500 10 4.0";
+$AccessoryVar[WhiteDiamondPlate, $Weight] = 1500;
+$AccessoryVar[WhiteDiamondPlate, $MiscInfo] = "The rarest of white diamonds put into armor!";
+$ArmorSkin[WhiteDiamondPlate] = "rpghuman9";
+$ArmorPlayerModel[WhiteDiamondPlate] = "";
+$ArmorHitSound[WhiteDiamondPlate] = SoundHitPlate;
+	$ArmorList[987] = "WhiteDiamondPlate";
+	$SkillRestriction[WhiteDiamondPlate] = $SkillEndurance @ " 2400 " @ $MinRemort @ " 75";
+//============================================================================
+ItemImageData WhiteDiamondPlateImage
+{
+	shapeFile = "orb";  // Use orb shape (same as AdminOrb) - small and works with light
+	mountPoint = 1;  // Body armor mount point
+	mountOffset = {0.0, 0.0, 1.5};  // Center on chest area (Z = up/down)
+	mountRotation = {0, 0, 0};  // Adjust rotation of light source
+
+	lightType = 1;   // on
+	lightRadius = 20;
+	lightTime = 9999;
+	lightColor = { 1.0, 1.0, 1.0 };  // Bright white
+};
+ItemData WhiteDiamondPlate
+{
+	description = "White Diamond Plate";
+	className = "Accessory";
+	shapeFile = "discammo";
+	imageType = WhiteDiamondPlateImage;
+
+	heading = "eMiscellany";
+	price = 0;
+};
+ItemData WhiteDiamondPlate0
+{
+	description = "White Diamond Plate";
+	className = "Equipped";
+	shapeFile = "discammo";
+	imageType = WhiteDiamondPlateImage;
+
+	heading = "aArmor";
+};
+//============================================================================
+
+//****************************************************************************************************
+//   WHITE DIAMOND VOID WEAPONS (Remort 75 Tier)
+//****************************************************************************************************
+
+// WhiteDiamondVoidCutter (Sword)
+$AccessoryVar[WhiteDiamondVoidCutter, $AccessoryType] = $SwordAccessoryType;
+$AccessoryVar[WhiteDiamondVoidCutter, $SpecialVar] = "6 750";
+$AccessoryVar[WhiteDiamondVoidCutter, $Weight] = 2.5;
+$AccessoryVar[WhiteDiamondVoidCutter, $MiscInfo] = "A blade forged from the rarest white diamond, capable of cutting through the void itself";
+$SkillType[WhiteDiamondVoidCutter] = $SkillSlashing;
+$ItemCost[WhiteDiamondVoidCutter] = 5000000000;
+$SkillRestriction[WhiteDiamondVoidCutter] = $SkillSlashing @ " 2500 " @ $MinRemort @ " 75";
+
+ItemImageData WhiteDiamondVoidCutterImage
+{
+	shapeFile  = "elfinblade";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.45;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing2;
+	sfxActivate = ActivateAS;
+};
+ItemData WhiteDiamondVoidCutter
+{
+	heading = "bWeapons";
+	description = "White Diamond Void Cutter";
+	className = "Weapon";
+	shapeFile  = "katana";
+	hudIcon = "blaster";
+	shadowDetailMask = 4;
+	imageType = WhiteDiamondVoidCutterImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function WhiteDiamondVoidCutterImage::onFire(%player, %slot)
+{
+	VoidWeaponAttack(%player, GetRange(WhiteDiamondVoidCutter), WhiteDiamondVoidCutter);
+}
+
+function WhiteDiamondVoidCutter::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>White Diamond Void Cutter: <f0>Attack: <f2>750    <f0>Skill Slashing Req @ <f2>2500 Remort 75    <f0>Speed: <f2>0.45 Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
+}
+
+// WhiteDiamondVoidCrusher (Bludgeoning)
+$AccessoryVar[WhiteDiamondVoidCrusher, $AccessoryType] = $BludgeonAccessoryType;
+$AccessoryVar[WhiteDiamondVoidCrusher, $SpecialVar] = "6 1146";
+$AccessoryVar[WhiteDiamondVoidCrusher, $Weight] = 2.5;
+$AccessoryVar[WhiteDiamondVoidCrusher, $MiscInfo] = "A mace forged from the rarest white diamond, capable of crushing the void itself";
+$SkillType[WhiteDiamondVoidCrusher] = $SkillBludgeoning;
+$ItemCost[WhiteDiamondVoidCrusher] = 5000000000;
+$SkillRestriction[WhiteDiamondVoidCrusher] = $SkillBludgeoning @ " 2500 " @ $MinRemort @ " 75";
+
+ItemImageData WhiteDiamondVoidCrusherImage
+{
+	shapeFile  = "hammer";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = GetDelay(WhiteDiamondVoidCrusher);
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing5;
+	sfxActivate = AxeSlash2;
+};
+ItemData WhiteDiamondVoidCrusher
+{
+	heading = "bWeapons";
+	description = "White Diamond Void Crusher";
+	className = "Weapon";
+	shapeFile  = "hammer";
+	hudIcon = "sclub";
+	shadowDetailMask = 4;
+	imageType = WhiteDiamondVoidCrusherImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function WhiteDiamondVoidCrusherImage::onFire(%player, %slot)
+{
+	VoidWeaponAttack(%player, GetRange(WhiteDiamondVoidCrusher), WhiteDiamondVoidCrusher);
+}
+
+function WhiteDiamondVoidCrusher::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>White Diamond Void Crusher: <f0>Attack: <f2>1146    <f0>Skill Bludgeoning Req @ <f2>2500 Remort 75    <f0>Speed: <f2>" @ GetDelay(WhiteDiamondVoidCrusher) @ " Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
+}
+
+// WhiteDiamondVoidImpaler (Polearm)
+$AccessoryVar[WhiteDiamondVoidImpaler, $AccessoryType] = $PolearmAccessoryType;
+$AccessoryVar[WhiteDiamondVoidImpaler, $SpecialVar] = "6 750";
+$AccessoryVar[WhiteDiamondVoidImpaler, $Weight] = 2.5;
+$AccessoryVar[WhiteDiamondVoidImpaler, $MiscInfo] = "A spear forged from the rarest white diamond, capable of impaling the void itself";
+$SkillType[WhiteDiamondVoidImpaler] = $SkillPiercing;
+$ItemCost[WhiteDiamondVoidImpaler] = 5000000000;
+$SkillRestriction[WhiteDiamondVoidImpaler] = $SkillPiercing @ " 2500 " @ $MinRemort @ " 75";
+
+ItemImageData WhiteDiamondVoidImpalerImage
+{
+	shapeFile  = "trident";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.45;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing3;
+	sfxActivate = AxeSlash2;
+};
+ItemData WhiteDiamondVoidImpaler
+{
+	heading = "bWeapons";
+	description = "White Diamond Void Impaler";
+	className = "Weapon";
+	shapeFile  = "trident";
+	hudIcon = "trident";
+	shadowDetailMask = 4;
+	imageType = WhiteDiamondVoidImpalerImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function WhiteDiamondVoidImpalerImage::onFire(%player, %slot)
+{
+	VoidWeaponAttack(%player, GetRange(WhiteDiamondVoidImpaler), WhiteDiamondVoidImpaler);
+}
+
+function WhiteDiamondVoidImpaler::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>White Diamond Void Impaler: <f0>Attack: <f2>750    <f0>Skill Piercing Req @ <f2>2500 Remort 75    <f0>Speed: <f2>0.45 Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
+}
+//============================================================================

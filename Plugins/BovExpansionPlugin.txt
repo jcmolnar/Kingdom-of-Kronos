@@ -1,0 +1,15 @@
+Functions
+=============
+Parameters in [] are optional
+
+To-do, setting gravity
+
+patchServerNetcode()
+	This will make your server incompatible with 1.31 users (they will recieve a boot message informing them of such)
+	Extends functionality of Tribes
+		-Expansion to allow more than 1024 objects (new limit around 4094)
+		-Sound and itemdata expanded to 1024 total
+
+setNetCodeRejectMessage(msg)
+	The message you wish to send the client if they don't have the correct version of the expansion plugin
+	This assumes you have run patchServerNetcode(); on the server

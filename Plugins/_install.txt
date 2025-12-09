@@ -1,0 +1,11 @@
+Just extract this to your tribes.exe directory and it should run
+
+Your tribes directory should look something like this
+
+console.cs //You should already have this one
+tribes.exe //You should already have this one
+mem.dll 	//Important that you use this mem.dll included in the zip
+Plugins\	//Folder
+Plugins\..	//A fair amount of files, but if you extracted and the plugin folder exists it should be good
+
+Check out MathPlugin.txt to find the functions added

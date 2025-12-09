@@ -1,0 +1,67 @@
+Notes
+=============
+Using this to expand functionality to the server.  (The client can have a standard 1.11 and still join!)
+
+If you are just recieving the dll file (not part of a distribution package) please add the following to the pluginloader.cs file
+
+$PluginLoader::ServerSidePlugin = true;
+
+Functions
+=============
+CollisionCallback::Mask(maskNumber)
+	Used to detect the collision of a player with an object
+	CollisionBallback::Mask("2147524708"); //This is the default
+	See the collision mask at the bottom of the this text document to see what masks to use
+
+Player::setJet(%aiId, true/false)
+	On AI death make sure to set it to false (otherwise the next AI that spawns with this ID will be flying)
+
+Player::getPitch(%client)
+	Get's the pitch of the client
+
+Player::setPitch(client, value [ -(88 * PI / 180) to (88 * PI / 180) ]);
+	Set's the pitch of the client
+
+Player::setGravity(client, gravity)
+	Sets a players gravity (a note, gravity gets calculated but not sent to the client...so they might experience a slight jutter)
+
+Player::getGravity(client)
+	Gets a players gravity
+
+Client::setSkin(%cl, %skin)
+	Modified this, it doesn't do as many checks on the client, so it will allow you to setAI skin
+
+ShowAICrash(true/false)
+	Used to show whether a crash scenario was detected and prevented
+
+//Credits to Ursa for programming this in
+AStar::find_path(globalVar:string, fromX:float, fromY:float, fromZ:float, toX:float, toY:float, toZ:float, [includeZ:boolean])
+
+
+Collision Mask
+=============
+       $ME::SimDefaultObject         = 1 << 0;
+       $ME::SimTerrain               = 1 << 1;
+       $ME::SimInteriorObject         = 1 << 2;
+       $ME::SimCameraObject            = 1 << 3;
+       $ME::SimMissionObject         = 1 << 4;
+       $ME::SimShapeObject            = 1 << 5;
+       $ME::SimContainerObject         = 1 << 6;
+       $ME::SimPlayerObjectType      = 1 << 7;
+       $ME::SimProjectileObject      = 1 << 8;
+       $ME::SimVehicleObjectType       = 1 << 9;
+
+       // fear specific
+       $ME::FearItemObjectType         = 1 << 31;
+       $ME::FearPlayerObjectType       = 1 << 30;
+       $ME::FearTeleportObjectType     = 1 << 29;
+       $ME::FearCorpseObjectType       = 1 << 28;
+       $ME::StationObjectType          = 1 << 27;
+       $ME::FearMineObjectType         = 1 << 26;
+       $ME::FearMoveableObjectType     = 1 << 25;
+       $ME::FearVehicleObjectType      = 1 << 24;
+       $ME::StaticObjectType           = 1 << 23;
+       $ME::MoveableBaseObjectType     = 1 << 22;
+       $ME::ItemObjectType             = 1 << 21;
+       $ME::MarkerObjectType           = 1 << 20;
+       $ME::AIObjectType               = 1 << 19;

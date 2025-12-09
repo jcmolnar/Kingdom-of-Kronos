@@ -1,0 +1,32 @@
+V0.13
+-BovExpansionPlugin.dll has added saferEval([function], [arg1], [arg2], ...);
+-Fixed up the pluginloader.cs file
+
+V0.12
+-Added BovExpansionPlugin.dll
+-ClientSideAddon has more crash fixes for Tribes graphics
+-Including hudbot release (but note, the hudbot release sometimes hangs in the background after quitting)
+-Added AI flying, and expansion of the 1024 object limit count!  Se the plugin notes to find out more
+
+V0.11
+-Added ServerSidePlugin.dll fixing AI crash glitch 
+-Added Misc features throughout
+
+V0.10
+-Added CommLinkPlugin.dll along with documentation
+
+V0.09
+-Word::FindWord has been fixed (Thanks to Phantom for pointing out the error)
+
+V0.08
+-String::Create added (Benefit is it has more protections on it than the original Tribes script one)
+
+V0.07
+-Opening of files now fixed (It is no longer case sensitive)
+
+V0.06
+-Gamebase::getEyeTransform
+-Number::Beautify
+-Math::isInteger
+
+-Patched the export function, so \r doesn't create a problem

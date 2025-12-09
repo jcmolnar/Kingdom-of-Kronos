@@ -1,0 +1,80 @@
+WEAPON DPS COMPARISON LIST
+=========================================
+
+Calculated using: DPS = Damage / Delay
+Delay formula: Cap(Weight / 4.0, 0.5, inf) * DelayFactor
+DelayFactors: Sword=0.9, Polearm=1.2, Bludgeon=1.1, Axe=1.1
+
+Hardcoded delays (from ItemImageData fireTime):
+- TerminusEst: 0.5s
+- AecoSeorei: 0.5s  
+- WhiteDiamondVoidCutter: 0.45s
+- WhiteDiamondVoidImpaler: 0.45s
+- WhiteDiamondVoidCrusher: Uses GetDelay() = 0.688s
+
+Rank | Weapon Name                    | Damage | Delay (s) | DPS      | Type
+-----|--------------------------------|--------|-----------|----------|----------
+1    | WhiteDiamondVoidCutter         | 750    | 0.450     | 1666.67  | Sword
+2    | WhiteDiamondVoidImpaler        | 750    | 0.450     | 1666.67  | Polearm
+3    | WhiteDiamondVoidCrusher        | 1146   | 0.688     | 1665.70  | Bludgeon
+4    | TerminusEst                    | 600    | 0.500     | 1200.00  | Sword
+5    | AecoSeorei                     | 600    | 0.500     | 1200.00  | Polearm
+6    | BlackDiamondAtomSplitter       | 450    | 0.675     | 666.67   | Sword
+7    | BlackDiamondAtomSmasher        | 490    | 0.825     | 593.94   | Bludgeon
+8    | BlackDiamondAtomPiercer        | 520    | 0.900     | 577.78   | Polearm
+9    | BlackDiamondDreamSword         | 300    | 0.788     | 380.95   | Sword
+10   | BlackDiamondDreamMace           | 330    | 0.963     | 342.50   | Bludgeon
+11   | BlackDiamondDreamSpear         | 350    | 1.050     | 333.33   | Polearm
+12   | DiamondLegendSword              | 220    | 0.900     | 244.44   | Sword
+13   | DiamondLegendMace                | 240    | 0.990     | 242.42   | Bludgeon
+14   | DiamondLegendSpear              | 260    | 1.200     | 216.67   | Polearm
+15   | MorningStar                    | 600    | 2.750     | 218.18   | Bludgeon
+16   | DiamondClaymore                 | 195    | 1.913     | 101.94   | Sword
+17   | DiamondDeathSpear               | 220    | 2.400     | 91.67    | Polearm
+18   | DiamondBrainSpiller              | 210    | 2.475     | 84.85    | Bludgeon
+19   | CrystalClaymore                 | 165    | 1.913     | 86.25    | Sword
+20   | DiamondTrident                  | 190    | 2.400     | 79.17    | Polearm
+21   | TemperedCrystalBastardSword      | 140    | 1.800     | 77.78    | Sword
+22   | DiamondDivineMace                | 180    | 2.475     | 72.73    | Bludgeon
+23   | TemperedCrystalTrident           | 160    | 2.250     | 71.11    | Polearm
+24   | CrystalBastardSword             | 115    | 1.688     | 68.15    | Sword
+25   | CrystalDivineMace                | 150    | 2.338     | 64.16    | Bludgeon
+26   | Knife                           | 55     | 0.900     | 61.11    | Sword
+27   | CrystalTrident                  | 130    | 2.100     | 61.90    | Polearm
+28   | GoldenBastardSword              | 90     | 1.575     | 57.14    | Sword
+29   | GoldenDivineMace                 | 120    | 2.200     | 54.55    | Bludgeon
+30   | CrystalPike                     | 105    | 1.950     | 53.85    | Polearm
+31   | Club                            | 55     | 1.100     | 50.00    | Bludgeon
+32   | GoldenLongSword                 | 70     | 1.463     | 47.85    | Sword
+33   | GoldenPike                      | 83     | 1.800     | 46.11    | Polearm
+34   | GoldenWarHammer                 | 95     | 2.063     | 46.10    | Bludgeon
+35   | SteelLongSword                  | 55     | 1.350     | 40.74    | Sword
+36   | SteelPike                       | 65     | 1.650     | 39.39    | Polearm
+37   | SteelWarHammer                  | 77     | 1.925     | 39.95    | Bludgeon
+38   | SteelBroadSword                 | 40     | 1.238     | 32.32    | Sword
+39   | SteelSpear                      | 48     | 1.500     | 32.00    | Polearm
+40   | Dagger                          | 23     | 0.675     | 34.07    | Sword
+41   | Hatchet                         | 60     | 1.375     | 43.64    | Axe
+42   | SteelMace                       | 49     | 1.650     | 29.70    | Bludgeon
+43   | SteelHammer                     | 62     | 1.788     | 34.68    | Bludgeon
+44   | IronBroadSword                  | 27     | 1.125     | 24.00    | Sword
+45   | IronSpear                       | 34     | 1.350     | 25.19    | Polearm
+46   | IronMace                        | 36     | 1.513     | 23.78    | Bludgeon
+47   | IronStick                       | 23     | 1.375     | 16.73    | Bludgeon
+48   | LongKnife                       | 13     | 0.788     | 16.50    | Polearm
+49   | SharpIronBlade                  | 16     | 1.013     | 15.80    | Sword
+50   | CrackedStick                    | 13     | 1.238     | 10.50    | Bludgeon
+51   | RustyIronBlade                  | 9      | 0.900     | 10.00    | Sword
+52   | ButterKnife                     | 5      | 0.788     | 6.35     | Sword
+53   | PickAxe                         | 3      | 1.100     | 2.73     | Polearm
+54   | CastingBlade                    | 18     | 0.500     | 36.00    | Sword
+
+=========================================
+NOTES:
+- CastingBlade delay is capped at minimum 0.5s (weight 0.5 / 4.0 = 0.125, capped to 0.5, * 0.9 = 0.45, but minimum delay is 0.5)
+- MorningStar uses GetDelay() calculation: (10 / 4.0) * 1.1 = 2.75s
+- WhiteDiamondVoidCrusher: (2.5 / 4.0) * 1.1 = 0.6875s ≈ 0.688s
+- Top 3 weapons are all WhiteDiamondVoid weapons with ~1666 DPS
+- TerminusEst and AecoSeorei tie at 1200 DPS
+- BlackDiamondAtom weapons range from 577-667 DPS
+- Significant DPS drop after DiamondLegend tier (244 DPS) to DiamondClaymore (102 DPS)
