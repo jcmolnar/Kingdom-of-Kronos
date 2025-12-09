@@ -322,19 +322,22 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 		{
 			%f = AI::getClientIdFromName($SealBattle::FighterName);
 			if(%f == "") %f = -1; // Normalize empty string to -1
-			if(%f != -1) Player::Kill(%f);
+			// CRITICAL SAFEGUARD: Only kill if it is actually an AI
+			if(%f != -1 && Player::isAiControlled(%f)) Player::Kill(%f);
 		}
 		if($SealBattle::MageName != "" && $SealBattle::MageName != -1)
 		{
 			%m = AI::getClientIdFromName($SealBattle::MageName);
 			if(%m == "") %m = -1; // Normalize empty string to -1
-			if(%m != -1) Player::Kill(%m);
+			// CRITICAL SAFEGUARD: Only kill if it is actually an AI
+			if(%m != -1 && Player::isAiControlled(%m)) Player::Kill(%m);
 		}
 		if($SealBattle::GuardianName != "" && $SealBattle::GuardianName != -1)
 		{
 			%g = AI::getClientIdFromName($SealBattle::GuardianName);
 			if(%g == "") %g = -1; // Normalize empty string to -1
-			if(%g != -1) Player::Kill(%g);
+			// CRITICAL SAFEGUARD: Only kill if it is actually an AI
+			if(%g != -1 && Player::isAiControlled(%g)) Player::Kill(%g);
 		}
 		// Fallback: Also try display names for any bots we might have missed
 		for(%r = 1; %r <= 3; %r++)
@@ -342,9 +345,10 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 			%g = NEWgetClientByName("SealGuardian" @ %r);
 			%m = NEWgetClientByName("SealMage" @ %r);
 			%f = NEWgetClientByName("SealFighter" @ %r);
-			if(%g != -1) Player::Kill(%g);
-			if(%m != -1) Player::Kill(%m);
-			if(%f != -1) Player::Kill(%f);
+			// CRITICAL SAFEGUARD: Only kill if it is actually an AI
+			if(%g != -1 && Player::isAiControlled(%g)) Player::Kill(%g);
+			if(%m != -1 && Player::isAiControlled(%m)) Player::Kill(%m);
+			if(%f != -1 && Player::isAiControlled(%f)) Player::Kill(%f);
 		}
 		
 		// Broadcast message that all players have died
