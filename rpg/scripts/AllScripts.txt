@@ -4475,7 +4475,7 @@ function getAInumberFromName(%aiName)
 //---------------------------------
 //createAI()
 //---------------------------------
-function createAI(%aiName, %markerGroup, %name, %skipPostSpawn)
+function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck)
 {
 	dbecho($dbechoMode, "createAI(" @ %aiName @ ", " @ %markerGroup @ ", " @ %name @ ", " @ %skipPostSpawn @ ")");
 	//echo("[SPAWN DEBUG] createAI(): aiName=" @ %aiName @ ", markerGroup=" @ %markerGroup @ ", name=" @ %name);
@@ -4690,6 +4690,20 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn)
 	{
 		// Attempt to immediately tag invulnerability via display name if clientId is already resolvable
 		%preClient = NEWgetClientByName(%name);
+		
+		// =========================================================================================================
+		// RACE CONDITION FIX
+		// prevent immediate reuse of Client IDs that were just freed (unless bypassed by critical systems)
+		// =========================================================================================================
+		if(!%bypassRaceCheck && %preClient != -1 && $ClientIdRecentlyFreed[%preClient] != "" && (getSimTime() - $ClientIdRecentlyFreed[%preClient] < 3))
+		{
+			 echo("[SPAWN DANGER] ID REUSE DETECTED! Client " @ %preClient @ " was freed recently. Aborting spawn of " @ %aiName @ " to prevent collision.");
+			 %escapedName = String::replace(%aiName, "\"", "\\\"");
+			 AI::delete(%escapedName);
+			 return "-1_RACE_CONDITION"; // Return specific error code to trigger rollback
+		}
+		// =========================================================================================================
+
 		if(%preClient != -1 && %preClient != "" && %preClient != "False" && %preClient != "false")
 		{
 			storeData(%preClient, "SpawnInvuln", True);
@@ -6451,9 +6465,20 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 	$SpawnAIScheduled[%newName] = ""; // Clear scheduled flag
 	$EnemyBotSpawnRetry[%newName] = ""; // Clear retry flag
 	
+	// Determine if we should bypass the race condition check
+	// Critical systems like Seal Battle and Arena use "TempSpawn" or "MarkerSpawn" and rely on tight timing
+	// They cannot handle the 3-second rejection delay without breaking their logic chains
+	%bypassRaceCheck = false;
+	%issuerType = GetWord(%commandIssuer, 0);
+	if(%issuerType == "TempSpawn" || %issuerType == "MarkerSpawn")
+	{
+		%bypassRaceCheck = true;
+		echo("[SPAWN FLOW] SpawnAI(): Bypassing race condition check for critical system issuer: " @ %issuerType);
+	}
+	
 	// Proceed with spawn immediately
 	// Pass skipPostSpawn=true for SpawnPoint bots (they're handled by SpawnAIGetClientId())
-	%retval = createAI(%newName, %aiSpawnPos, %displayName, true);
+	%retval = createAI(%newName, %aiSpawnPos, %displayName, true, %bypassRaceCheck);
 	echo("[SPAWN FLOW] SpawnAI(): createAI() returned: " @ %retval);
 
 	if(%retval != -1)
@@ -6619,6 +6644,18 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			{
 				%aiId = %aiIdFromGetId;
 				echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via AI::getId() (fastest method)");
+				
+				// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
+				if(%spawnPointId != "" && %spawnPointId != -1)
+				{
+					%markerZone = $MarkerZone[%spawnPointId];
+					if(%markerZone != "" && %markerZone != -1)
+					{
+						storeData(%aiId, "zone", %markerZone);
+						storeData(%aiId, "tmpzone", %markerZone);
+						echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+					}
+				}
 			}
 		}
 	}
@@ -6643,6 +6680,18 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					{
 						// Safe to use - this is our newly-spawned bot
 						echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via NEWgetClientByName()");
+						
+						// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
+						if(%spawnPointId != "" && %spawnPointId != -1)
+						{
+							%markerZone = $MarkerZone[%spawnPointId];
+							if(%markerZone != "" && %markerZone != -1)
+							{
+								storeData(%aiId, "zone", %markerZone);
+								storeData(%aiId, "tmpzone", %markerZone);
+								echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+							}
+						}
 					}
 					else
 					{
@@ -6659,10 +6708,21 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					{
 						// Enough time has passed - clear flag and use it
 						$ClientIdRecentlyFreed[%aiId] = "";
-						%existingBotInfoAiName = fetchData(%aiId, "BotInfoAiName");
 						if(%existingBotInfoAiName == "" || %existingBotInfoAiName == -1 || %existingBotInfoAiName == "0" || %existingBotInfoAiName == %newName)
 						{
 							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via NEWgetClientByName() (was recently freed but enough time passed)");
+
+							// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
+							if(%spawnPointId != "" && %spawnPointId != -1)
+							{
+								%markerZone = $MarkerZone[%spawnPointId];
+								if(%markerZone != "" && %markerZone != -1)
+								{
+									storeData(%aiId, "zone", %markerZone);
+									storeData(%aiId, "tmpzone", %markerZone); // Set tmpzone too just in case
+									echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+								}
+							}
 						}
 						else
 						{
@@ -6801,6 +6861,18 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								// No existing bot assigned - this is our fresh bot whose name hasn't replicated yet
 								%aiId = %checkId;
 								echo("[SPAWN FLOW] SpawnAIGetClientId(): Found nameless AI client " @ %checkId @ " - Assuming it is " @ %displayName @ " (name lag)");
+								
+								// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
+								if(%spawnPointId != "" && %spawnPointId != -1)
+								{
+									%markerZone = $MarkerZone[%spawnPointId];
+									if(%markerZone != "" && %markerZone != -1)
+									{
+										storeData(%aiId, "zone", %markerZone);
+										storeData(%aiId, "tmpzone", %markerZone);
+										echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+									}
+								}
 								break;
 							}
 						}
@@ -6817,6 +6889,18 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					$ClientIdRecentlyFreed[%checkId] = "";
 					%isOurNewBot = true;
 					echo("[SPAWN FLOW] SpawnAIGetClientId(): Found newly-spawned bot " @ %newName @ " at clientId " @ %checkId @ " - cleared recently freed flag");
+					
+					// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
+					if(%spawnPointId != "" && %spawnPointId != -1)
+					{
+						%markerZone = $MarkerZone[%spawnPointId];
+						if(%markerZone != "" && %markerZone != -1)
+						{
+							storeData(%checkId, "zone", %markerZone);
+							storeData(%checkId, "tmpzone", %markerZone);
+							echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %checkId @ ")");
+						}
+					}
 				}
 				
 				// If this is NOT our newly-spawned bot, check if it was recently freed
@@ -6854,6 +6938,18 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						{
 							%aiId = %checkId;
 							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via brute-force search (no existing BotInfoAiName)");
+							
+							// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
+							if(%spawnPointId != "" && %spawnPointId != -1)
+							{
+								%markerZone = $MarkerZone[%spawnPointId];
+								if(%markerZone != "" && %markerZone != -1)
+								{
+									storeData(%aiId, "zone", %markerZone);
+									storeData(%aiId, "tmpzone", %markerZone);
+									echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+								}
+							}
 							break;
 						}
 						else if(%existingBotInfoAiName == %newName)
@@ -12465,6 +12561,9 @@ function DespawnZoneBots(%zoneIndex)
 		if(%playerObj == "" || %playerObj == -1)
 			continue;
 		
+		// DEBUG: Trace enemy bot candidates
+		// echo("[DESPAWN DEBUG] Checking bot candidate: " @ %botId @ " (" @ Client::getName(%botId) @ ")");
+		
 		// CRITICAL SAFEGUARD: Verify this is actually a bot, not a player
 		if(!isRPGAI(%botId) && !Player::isAiControlled(%botId))
 		{
@@ -12537,7 +12636,10 @@ function DespawnZoneBots(%zoneIndex)
 		
 		// Compare bot's zone directly with target zone
 		if(%botZone != %targetZoneFolder)
+		{
+			// echo("[DESPAWN DEBUG] Zone Mismatch for " @ %botId @ ": botZone=" @ %botZone @ ", targetZone=" @ %targetZoneFolder @ ". Skipping.");
 			continue; // Bot is in a different zone, skip to prevent killing bots in other zones
+		}
 		
 		// Double-check using zone description as well (defense in depth)
 		%botZoneDesc = Zone::getDesc(%botZone);
@@ -12616,7 +12718,7 @@ function ScheduleZoneBotDespawn(%zoneIndex)
 		return;
 	
 	// Schedule despawn after a delay (prevents crash from too many operations happening at once during zone changes)
-	schedule("DespawnZoneBots(" @ %zoneIndex @ ");", 1.5);
+	schedule("DespawnZoneBots(" @ %zoneIndex @ ");", 10);
 }
 
 // Check if despawn is still needed before executing (prevents duplicate despawns)
@@ -14248,6 +14350,65 @@ function VerifyEnemyBotTeam(%clientId, %botName, %expectedTeam)
 	else
 	{
 		echo("[BOT TEAM DEBUG] VerifyEnemyBotTeam - Enemy bot " @ %botName @ " (clientId=" @ %clientId @ ") has correct team " @ %expectedTeam);
+	}
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// REINFORCED DISCONNECT HANDLER
+// ---------------------------------------------------------------------------------------------------------
+// This function is called by the engine when ANY client drops (disconnects or is deleted).
+// It acts as the final safety net for:
+// 1. Ghost Bot Prevention: Decrementing spawn counters if they weren't already.
+// 2. Race Condition Prevention: Marking the ID as recently freed so it isn't reused immediately.
+function onClientDrop(%clientId)
+{
+	echo("[CLIENT DROP] onClientDrop(" @ %clientId @ ") called @ " @ getSimTime());
+	
+	// 1. Mark ID as recently freed (Critical for Race Condition Fix)
+	// This ensures we don't reuse this ID for 3 seconds, even if it was a player
+	$ClientIdRecentlyFreed[%clientId] = getSimTime();
+	
+	// 2. Check if it was an Enemy Bot
+	// We check multiple flags because some might be cleared during cleanup
+	%botName = fetchData(%clientId, "BotInfoAiName");
+	%spawnInfo = fetchData(%clientId, "SpawnBotInfo");
+	%registryInfo = $BotRegistry[%clientId];
+	
+	%isEnemyBot = false;
+	if(%botName != "" && %botName != -1 && %botName != "0")
+		%isEnemyBot = true;
+	else if(%spawnInfo != "" && %spawnInfo != -1)
+		%isEnemyBot = true;
+	else if(%registryInfo != "" && %registryInfo != -1)
+		%isEnemyBot = true;
+	
+	if(%isEnemyBot)
+	{
+		echo("[CLIENT DROP] Detected Enemy Bot drop: " @ %clientId @ " (Name=" @ %botName @ ", Spawn=" @ %spawnInfo @ ")");
+		
+		// 3. Decrement Spawn Counter (Critical for Ghost Bot Fix)
+		// Usually Player::onKilled handles this, but if the bot was deleted/kicked/disconnected
+		// without dying, we MUST decrement here to free the slot.
+		// DecrementSpawnCounter has built-in checks to prevent double-decrementing.
+		
+		if(%spawnInfo != "" && %spawnInfo != -1)
+		{
+			%spawnPointId = GetWord(%spawnInfo, 1);
+			if(GetWord(%spawnInfo, 0) == "SpawnPoint" && %spawnPointId != "")
+			{
+				echo("[CLIENT DROP] Attempting fail-safe counter decrement for SpawnPoint " @ %spawnPointId);
+				DecrementSpawnCounter(%spawnPointId, %clientId);
+			}
+		}
+		
+		// 4. Cleanup Bot Registry
+		if($BotRegistry[%clientId] != "")
+		{
+			$BotRegistry[%clientId] = "";
+			$EnemyBotCount--; 
+			$TotalBotCount--;
+			echo("[CLIENT DROP] Cleaned up registry for client " @ %clientId);
+		}
 	}
 }
 === FILE END: Ai.cs ===
@@ -39047,7 +39208,6 @@ IDRGN_END_COMEDIT			           = 01049999; // "-- Common Editors reserve 1 to 1.
 
 
 === FILE START: connectivity.cs ===
-
 function Game::initialMissionDrop(%clientId)
 {
 	dbecho($dbechoMode2, "Game::initialMissionDrop(" @ %clientId @ ")");
@@ -39201,7 +39361,7 @@ function Server::onClientDisconnect(%clientId)
 				{
 					// DEBUG: Commented out to reduce server lag
 					//echo("[ZONE DEBUG] Zone " @ %zoneIndex @ " (" @ $Zone::Desc[%zoneIndex] @ ") is now empty - despawning bots in 1.5 seconds (player disconnected)");
-					schedule("DespawnZoneBots(" @ %zoneIndex @ ");", 1.5);
+					schedule("DespawnZoneBots(" @ %zoneIndex @ ");", 10);
 				}
 			}
 		}
@@ -39383,7 +39543,6 @@ function Game::onPlayerConnected(%playerId)
 function Client::leaveGame(%clientId)
 {
 }
-
 
 === FILE END: connectivity.cs ===
 
@@ -77606,7 +77765,6 @@ function checkControlUnmount(%clientId)
 
 
 === FILE START: playerdamage.cs ===
-
 // Helper function to get client ID from a Player object
 // For real players, Player::getClient() returns their client ID
 // For enemy bots, Player::getClient() returns -1, so we need to do a reverse lookup
@@ -77836,7 +77994,7 @@ function Player::onKilled(%this)
 		%hasCharacterFile = false;
 		if(%playerNameCheck != "" && %playerNameCheck != -1)
 		{
-			%characterFile = "temp\" @ %playerNameCheck @ ".cs";
+			%characterFile = "temp\\" @ %playerNameCheck @ ".cs";
 			if(isFile(%characterFile))
 			{
 				%hasCharacterFile = true;
@@ -78529,7 +78687,11 @@ function Player::onKilled(%this)
 					if(%b.className == "Equipped")
 						%b = String::getSubStr(%b, 0, String::len(%b)-1);
 
-					%tmploot = SetStuffString(%tmploot, %b, %dropItemCount);
+					%newTmploot = SetStuffString(%tmploot, %b, %dropItemCount);
+					if(%newTmploot != "False" && %newTmploot != "")
+						%tmploot = %newTmploot;
+					else
+						echo("WARNING: playerdamage.cs - SetStuffString returned invalid data ('" @ %newTmploot @ "'). Keeping original loot string.");
 					
 					if(!isRPGAI(%clientId))	
 						Player::setItemCount(%clientId, %a, 0);
@@ -79255,7 +79417,8 @@ function Player::onKilled(%this)
 					// Try to extract the number from the end of the display name
 					// Pattern: "AdminLiquifier20" -> extract "20", then try "Liquifier20", "AdminLiquifier20", etc.
 					%lastChar = String::getSubStr(%displayName, String::len(%displayName) - 1, 1);
-					%isNumeric = (%lastChar >= "0" && %lastChar <= "9");
+					%digitString = "0123456789";
+					%isNumeric = (String::findSubStr(%digitString, %lastChar) != -1);
 					
 					if(%isNumeric)
 					{
@@ -79265,7 +79428,8 @@ function Player::onKilled(%this)
 						for(%i = %numStart; %i >= 0; %i--)
 						{
 							%char = String::getSubStr(%displayName, %i, 1);
-							if(%char >= "0" && %char <= "9")
+							// Check if character is a digit (0-9 only) - use String::findSubStr to avoid TorqueScript == comparison bug ("E" == "0" evaluates to true)
+							if(String::findSubStr(%digitString, %char) != -1)
 							{
 								%extractedNumber = %char @ %extractedNumber;
 							}
@@ -79385,7 +79549,7 @@ function Player::onKilled(%this)
 				echo("[BOT SHELL DEBUG] Player::onKilled(): Cleared $SpawnAIScheduled flag for bot " @ %botInfoAiName);
 				
 				// CRITICAL: Escape quotes in bot name to prevent syntax errors
-				%escapedName = String::replace(%botInfoAiName, "\"", "\\"");
+				%escapedName = String::replace(%botInfoAiName, "\"", "\\\"");
 				// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
 				schedule("AI::delete(\"" @ %escapedName @ "\");", 1.0);
 				echo("[BOT SHELL DEBUG] Player::onKilled(): Scheduled AI::delete() for bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ")");
@@ -81550,7 +81714,6 @@ function remoteKill(%clientId)
 		Player::kill(%clientId);
 	}
 }
-
 === FILE END: playerdamage.cs ===
 
 
@@ -94277,7 +94440,7 @@ function AggregateLootbags()
 	schedule("AggregateLootbags();", $LootbagAggregateInterval);
 }
 
-// Merge the contents of bag2 into bag1, then delete bag2
+// Merge the contents of bag2 into bag1, then delete bag2 if fully merged
 function MergeLootbags(%bag1, %bag2)
 {
 	dbecho($dbechoMode, "MergeLootbags(" @ %bag1 @ ", " @ %bag2 @ ")");
@@ -94307,52 +94470,64 @@ function MergeLootbags(%bag1, %bag2)
 	%namelist2 = GetWord(%loot2, 1);
 	%contents2 = String::getSubStr(%loot2, String::len(%owner2) + String::len(%namelist2) + 2, 99999);
 	
-	// Merge the item lists
-	%mergedContents = MergeLootContents(%contents1, %contents2);
+	// Merge the item lists (supports partial merges)
+	// Returns: "MergedContents | RemainingContents"
+	%mergeResult = MergeLootContents(%contents1, %contents2);
 	
-	// CRITICAL: Check if merge was complete (not truncated due to length limit)
-	// Estimate expected length: sum of both contents plus some overhead
-	%expectedMinLength = String::len(%contents1) + String::len(%contents2) - 10; // Allow some overhead
-	%actualLength = String::len(%mergedContents);
-	// FIX: Do NOT accept hitting the limit (200) as success.
-	// If it hits 200 but expected 300, it means we truncated, so %mergeComplete should be false.
-	// Only consider merge complete if actual length meets or exceeds expected minimum
-	%mergeComplete = (%actualLength >= %expectedMinLength);
-	
-	// Only proceed with merge and deletion if merge was complete
-	if(!%mergeComplete)
+	// Split result
+	%splitPos = String::findSubStr(%mergeResult, "|");
+	if(%splitPos == -1)
 	{
-		echo("[LOOTBAG AGGREGATE DEBUG] Merge incomplete (Limit Hit?) - Merged: " @ %actualLength @ " vs Expected: ~" @ %expectedMinLength @ ". Keeping Bag2 to prevent item loss.");
-		return false; // Don't delete bag2 - items would be lost
+		// Should not happen with new function, but fallback
+		%mergedContents = %mergeResult;
+		%remainingContents = "";
 	}
+	else
+	{
+		%mergedContents = String::getSubStr(%mergeResult, 0, %splitPos);
+		%remainingContents = String::getSubStr(%mergeResult, %splitPos + 1, 99999);
+	}
+	
+	%mergedContents = Trim(%mergedContents);
+	%remainingContents = Trim(%remainingContents);
 	
 	// Merge namelists (combine who can pick up)
 	%mergedNamelist = MergeNamelists(%namelist1, %namelist2);
 	
 	// Use the older/primary bag's owner, but with merged namelist
-	%newLoot = %owner1 @ " " @ %mergedNamelist @ " " @ %mergedContents;
+	%newLoot1 = %owner1 @ " " @ %mergedNamelist @ " " @ %mergedContents;
 	
 	// Update bag1 with merged contents
-	$loot[%bag1] = %newLoot;
+	$loot[%bag1] = %newLoot1;
 	echo("[LOOTBAG AGGREGATE DEBUG] After merge: bag1=" @ %bag1 @ " loot='" @ $loot[%bag1] @ "'");
 	
-	// CRITICAL: Only delete bag2 if merge was successful
-	// Delete bag2
-	$loot[%bag2] = "";
-	$lootbagTime[%bag2] = "";
-	deleteObject(%bag2);
-	
-	return true;
+	if(%remainingContents == "")
+	{
+		// Full merge success - delete bag2
+		echo("[LOOTBAG AGGREGATE DEBUG] Full merge successful. Deleting bag2=" @ %bag2);
+		$loot[%bag2] = "";
+		$lootbagTime[%bag2] = "";
+		deleteObject(%bag2);
+		return true;
+	}
+	else
+	{
+		// Partial merge - update bag2 with leftovers
+		// Keep original owner/namelist for bag2
+		%newLoot2 = %owner2 @ " " @ %namelist2 @ " " @ %remainingContents;
+		$loot[%bag2] = %newLoot2;
+		echo("[LOOTBAG AGGREGATE DEBUG] Partial merge. Updated bag2=" @ %bag2 @ " leftovers='" @ $loot[%bag2] @ "'");
+		return true; // Return true as we successfully merged *something* (or tried)
+	}
 }
 
-// Merge two loot content strings (the part after owner and namelist)
-// Format: "COINS X Item1 Y Item2 Z ..."
+// Merge two loot content strings with partial merge support
+// Returns "MergedString|RemainingString"
 function MergeLootContents(%contents1, %contents2)
 {
 	dbecho($dbechoMode, "MergeLootContents(" @ %contents1 @ ", " @ %contents2 @ ")");
 	
 	// Parse contents1 into an associative array
-	// We'll use global temp vars for simplicity
 	%itemCount = 0;
 	
 	// Parse contents1
@@ -94367,28 +94542,17 @@ function MergeLootContents(%contents1, %contents2)
 		%count = %count * 1; // Convert to number
 		if(%count <= 0)
 			continue;
-		
-		// Check if we already have this item
-		%found = false;
-		for(%j = 0; %j < %itemCount; %j++)
-		{
-			if(%tmpItem[%j] == %item)
-			{
-				%tmpCount[%j] = %tmpCount[%j] + %count;
-				%found = true;
-				break;
-			}
-		}
-		
-		if(!%found)
-		{
-			%tmpItem[%itemCount] = %item;
-			%tmpCount[%itemCount] = %count;
-			%itemCount++;
-		}
+			
+		%tmpItem[%itemCount] = %item;
+		%tmpCount[%itemCount] = %count;
+		%itemCount++;
 	}
 	
-	// Parse contents2 and add to the array
+	// Store initial state string for length checking
+	%currentString = %contents1;
+	
+	// Parse contents2 into a list to process
+	%srcItemCount = 0;
 	for(%i = 0; GetWord(%contents2, %i) != -1; %i += 2)
 	{
 		%item = GetWord(%contents2, %i);
@@ -94396,18 +94560,39 @@ function MergeLootContents(%contents1, %contents2)
 		
 		if(%item == -1 || %item == "" || %count == -1 || %count == "")
 			continue;
-		
+			
 		%count = %count * 1;
 		if(%count <= 0)
 			continue;
+			
+		%srcItem[%srcItemCount] = %item;
+		%srcCount[%srcItemCount] = %count;
+		%srcItemCount++;
+	}
+	
+	%remainingString = "";
+	
+	// Process source items one by one
+	for(%k = 0; %k < %srcItemCount; %k++)
+	{
+		%addItem = %srcItem[%k];
+		%addCount = %srcCount[%k];
 		
-		// Check if we already have this item
+		// Attempt to add this item to our internal list
 		%found = false;
+		%newString = "";
+		
+		// 1. Update internal array first (simulate the add)
+		%addedToIndex = -1;
+		%originalCountAtIdx = 0;
+		
 		for(%j = 0; %j < %itemCount; %j++)
 		{
-			if(%tmpItem[%j] == %item)
+			if(%tmpItem[%j] == %addItem)
 			{
-				%tmpCount[%j] = %tmpCount[%j] + %count;
+				%originalCountAtIdx = %tmpCount[%j];
+				%tmpCount[%j] = %tmpCount[%j] + %addCount;
+				%addedToIndex = %j;
 				%found = true;
 				break;
 			}
@@ -94415,31 +94600,50 @@ function MergeLootContents(%contents1, %contents2)
 		
 		if(!%found)
 		{
-			%tmpItem[%itemCount] = %item;
-			%tmpCount[%itemCount] = %count;
+			%tmpItem[%itemCount] = %addItem;
+			%tmpCount[%itemCount] = %addCount;
+			%addedToIndex = %itemCount;
 			%itemCount++;
 		}
-	}
-	
-	// Build the merged string
-	%result = "";
-	for(%i = 0; %i < %itemCount; %i++)
-	{
-		// CRITICAL: Check string length to prevent truncation and item loss
-		if(String::len(%result) > 200)
-			break; // Stop adding items if we're approaching the limit
 		
-		if(%tmpItem[%i] != "" && %tmpCount[%i] > 0)
+		// 2. Generate the string
+		for(%i = 0; %i < %itemCount; %i++)
 		{
-			%result = %result @ %tmpItem[%i] @ " " @ %tmpCount[%i] @ " ";
+			if(%tmpItem[%i] != "" && %tmpCount[%i] > 0)
+			{
+				%newString = %newString @ %tmpItem[%i] @ " " @ %tmpCount[%i] @ " ";
+			}
+		}
+		%newString = Trim(%newString);
+		
+		// 3. Check length (Limit is 255, keep safe buffer ~240)
+		if(String::len(%newString) > 240)
+		{
+			// Too long! Revert this item
+			if(%found)
+			{
+				%tmpCount[%addedToIndex] = %originalCountAtIdx; // Restore original count
+			}
+			else
+			{
+				%itemCount--; // Remove the new item
+				%tmpItem[%addedToIndex] = "";
+				%tmpCount[%addedToIndex] = "";
+			}
+			
+			// Add to remaining string
+			%remainingString = %remainingString @ %addItem @ " " @ %addCount @ " ";
+		}
+		else
+		{
+			// Fits! Keep it.
+			%currentString = %newString;
 		}
 	}
 	
-	// Trim trailing space
-	if(String::len(%result) > 0)
-		%result = String::getSubStr(%result, 0, String::len(%result) - 1);
+	%remainingString = Trim(%remainingString);
 	
-	return %result;
+	return %currentString @ "|" @ %remainingString;
 }
 
 // Merge two namelists (who can pick up the lootbag)
@@ -95291,9 +95495,13 @@ function GetBotIdList()
 				if(%clientId == -1 || %clientId == "")
 				{
 					// Search for the client ID that owns this Player object (reverse lookup)
+					// FIXED: Use ClientGroup iteration to find ANY bot ID, not just 2049-2200
 					%botClientId = "";
-					for(%checkId = 2049; %checkId <= 2200; %checkId++)
+					
+					%cCount = ClientGroup.getCount();
+					for(%cIdx = 0; %cIdx < %cCount; %cIdx++)
 					{
+						%checkId = ClientGroup.getObject(%cIdx);
 						%ownedPlayerObj = Client::getOwnedObject(%checkId);
 						if(%ownedPlayerObj == %tempItem)
 						{
@@ -96965,15 +97173,18 @@ function SetStuffString(%stuff, %item, %amount)
 		// Validate extracted count - if it's "0", empty, or not a valid number, the string is corrupted
 		// Try to find the actual count by looking for the next word that's a number
 		%amtNum = %amt * 1;
-		if(%amt == "" || %amt == -1 || %amt == "0" || (%amtNum == 0 && %amt != "0"))
+		
+		// CRITICAL FIX: Use String::findSubStr to safely check for invalid values like "False" without triggering TorqueScript boolean evaluation issues
+		// Also strict check against 0/empty/invalid
+		if(%amt == "" || %amt == -1 || String::findSubStr(%amt, "False") != -1 || String::findSubStr(%amt, "Msg") != -1 || (%amtNum == 0 && %amt != "0"))
 		{
 			//echo("DEBUG SetStuffString: WARNING - Extracted count '" @ %amt @ "' is invalid! String may be corrupted. Trying to find actual count...");
 			// Try to get the next word as the count
 			%amt = GetWord(%a, 1);
 			%amtNum = %amt * 1;
-			if(%amt == "" || %amt == -1 || %amt == "0" || (%amtNum == 0 && %amt != "0"))
+			if(%amt == "" || %amt == -1 || String::findSubStr(%amt, "False") != -1 || String::findSubStr(%amt, "Msg") != -1 || (%amtNum == 0 && %amt != "0"))
 			{
-				//echo("DEBUG SetStuffString: ERROR - Cannot find valid count for item '" @ %item @ "' in corrupted string. Skipping operation.");
+				echo("DEBUG SetStuffString: ERROR - Cannot find valid count for item '" @ %item @ "' in corrupted string '" @ %stuff @ "'. Skipping operation.");
 				return %stuff; // Return original string unchanged if we can't parse it
 			}
 		}
@@ -97939,6 +98150,23 @@ function LTrim(%s)
 	return %s;
 }
 
+function RTrim(%s)
+{
+	// Simple RTrim implementation
+	if(%s == "") return "";
+	%len = String::len(%s);
+	%end = %len - 1;
+	while(%end >= 0 && String::getSubStr(%s, %end, 1) == " ")
+		%end--;
+		
+	return String::getSubStr(%s, 0, %end + 1);
+}
+
+function Trim(%s)
+{
+	return RTrim(LTrim(%s));
+}
+
 function InitObjectives()
 {
 	dbecho($dbechoMode, "InitObjectives()");
@@ -98852,23 +99080,11 @@ function AFKZone_GetCap(%desc)
 {
 	if(%desc == "" || %desc == -1)
 		return "";
-	for(%k = 0; (%key = getWord("Pig Den Ogre Skybase Ogre Stronghold Ghost Town Minotaur Tomb Stone Henge Demon Incubus", %k)) != -1; %k++)
-	{
-		if(String::ICompare(%key, %desc) == 0)
-			return $AFKZoneCap[%key];
-		// Case-insensitive contains match by scanning substrings of %desc
-		%klen = String::len(%key);
-		%dlen = String::len(%desc);
-		for(%i = 0; %i <= (%dlen - %klen); %i++)
-		{
-			%sub = String::getSubStr(%desc, %i, %klen);
-			if(String::ICompare(%sub, %key) == 0)
-				return $AFKZoneCap[%key];
-		}
-	}
-	// Fallback: direct lookup if exact key exists
+
+	// Direct lookup (Priority)
 	if($AFKZoneCap[%desc] != "")
 		return $AFKZoneCap[%desc];
+
 	return "";
 }
 
@@ -98901,6 +99117,10 @@ function AFKZone_Tick()
 		if(%id == "" || %id == -1)
 			continue;
 		if(isRPGAI(%id) || Player::isAiControlled(%id))
+			continue;
+		
+		// Admin Override: Admins > 5 are immune to AFK checks
+		if(%id.adminLevel > 5)
 			continue;
 		
 		%obj = Client::getOwnedObject(%id);
@@ -99003,10 +99223,11 @@ function AFKZone_Tick()
 		}
 		
 		// Issue warning if overlevel, inactive, and in zone long enough
-		if(%zoneTimeMs >= ($AFKOverLevelMinZoneTime * 1000) && %inactivityMs >= ($AFKOverLevelInactivity * 1000))
+		// Issue warning if overlevel, inactive, and in zone long enough
+		if(%zoneTimeMs >= $AFKOverLevelMinZoneTime && %inactivityMs >= $AFKOverLevelInactivity)
 		{
 			$AFKZoneWarnPos[%id] = %pos;
-			$AFKZoneWarnUntil[%id] = %now + ($AFKOverLevelWarnWindow * 1000);
+			$AFKZoneWarnUntil[%id] = %now + $AFKOverLevelWarnWindow;
 			$AFKZoneWarnAck[%id] = "";
 			
 			// Generate random 4-digit verification code (1000-9999)
@@ -99530,13 +99751,8 @@ function fetchData(%clientId, %type)
 	}
 	else
 	{
-		// Use temp variable to safely check if ClientData exists before accessing
-		// This prevents debug warnings for accessing non-existent variables
-		%tempData = $ClientData[%clientId, %type];
-		if(%tempData != "")
-			return %tempData;
-		else
-			return "";
+		// Use GetDataFromArray to properly handle player/townbot/enemybot data sources
+		return GetDataFromArray(%clientId, %type);
 	}
 
 	return False;
@@ -119205,7 +119421,6 @@ $worldTypes[5, time, 3]       = Night;
 
 
 === FILE START: zone.cs ===
-
 function InitZones()
 {
 	dbecho($dbechoMode, "InitZones()");
@@ -119471,7 +119686,28 @@ function UpdateZone(%object)
 		%clientPos = GameBase::getPosition(%clientId);
 		%maxInteractionDist = $maxAIdistVec + 50;  // Same distance as used in comchat.cs
 		%maxDistSq = %maxInteractionDist * %maxInteractionDist;
+		
+		// OPTIMIZATION: Position caching - skip check if player hasn't moved significantly (works for both inRange and tooFar)
+		%lastPos = $LastTownBotCheckPos[%clientId];
+		%lastResult = $LastTownBotCheckResult[%clientId];
+		
+		// If position hasn't changed much, skip entire check (regardless of previous result)
+		if(%lastPos != "")
+		{
+			%distMoved = Vector::getDistance(%lastPos, %clientPos);
+			if(%distMoved < 10)  // Player hasn't moved more than 10 units
+			{
+				// Skip check - state hasn't changed
+				return;  // Early return to avoid unnecessary processing
+			}
+		}
+		
+		// Player moved significantly or first check - need to recalculate
 		%tooFarFromAll = True;
+		%previousResult = %lastResult;
+		
+		if($DebugTownBotDistance)
+			echo("[TOWNBOT DEBUG] UpdateZone - Checking distance from townbots for player " @ %clientId);
 		
 		// Check distance to all town bots
 		for(%i = 0; (%id = GetWord($TownBotList, %i)) != -1; %i++)
@@ -119479,26 +119715,53 @@ function UpdateZone(%object)
 			%botPos = GameBase::getPosition(%id);
 			if(%botPos != "" && %botPos != -1)
 			{
+				if($DebugTownBotDistance)
+					echo("[TOWNBOT DEBUG] UpdateZone - Checking bot " @ %id);
+				
 				// Quick distance check using squared distance (avoids sqrt calculation)
 				%dx = GetWord(%clientPos, 0) - GetWord(%botPos, 0);
 				%dy = GetWord(%clientPos, 1) - GetWord(%botPos, 1);
 				%dz = GetWord(%clientPos, 2) - GetWord(%botPos, 2);
 				%distSq = %dx * %dx + %dy * %dy + %dz * %dz;
 				
+				if($DebugTownBotDistance)
+				{
+					%dist = Vector::getDistance(%clientPos, %botPos);
+					echo("[TOWNBOT DEBUG] UpdateZone - Bot " @ %id @ " distance: " @ %dist @ " (max: " @ %maxInteractionDist @ ")");
+				}
+				
 				// If player is within range of at least one bot, don't reset
 				if(%distSq <= %maxDistSq)
 				{
 					%tooFarFromAll = False;
+					if($DebugTownBotDistance)
+						echo("[TOWNBOT DEBUG] UpdateZone - Player within range of bot " @ %id @ " - NOT resetting states");
 					break;
 				}
 			}
+			else if($DebugTownBotDistance)
+			{
+				echo("[TOWNBOT DEBUG] UpdateZone - Bot " @ %id @ " has invalid position, skipping");
+			}
 		}
 		
-		// If player is too far from ALL town bots, reset all dialogue states
+		// Update cache
+		$LastTownBotCheckPos[%clientId] = %clientPos;
 		if(%tooFarFromAll)
 		{
-			for(%i = 0; (%id = GetWord($TownBotList, %i)) != -1; %i++)
-				$state[%id, %clientId] = "";
+			$LastTownBotCheckResult[%clientId] = "tooFar";
+			// Only reset if state changed from inRange to tooFar (not if already tooFar)
+			if(%previousResult == "inRange" || %previousResult == "")
+			{
+				for(%i = 0; (%id = GetWord($TownBotList, %i)) != -1; %i++)
+				{
+					$state[%id, %clientId] = "";
+				}
+			}
+		}
+		else
+		{
+			$LastTownBotCheckResult[%clientId] = "inRange";
 		}
 	}
 	
@@ -119757,7 +120020,7 @@ function UpdateZone(%object)
 					{
 						// DEBUG: Commented out to reduce server lag
 					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") is now empty - despawning bots in 1.5 seconds");
-						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 1.5);
+						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 10);
 					}
 				}
 			}
@@ -120720,7 +120983,6 @@ function Zone::getPlayerList(%z, %type)
 
 // Start it once after mission init (e.g., in onMissionLoadDone)
 //schedule("EmptyZoneCheckLoop();", 20);
-
 
 === FILE END: zone.cs ===
 

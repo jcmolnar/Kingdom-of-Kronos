@@ -23,7 +23,18 @@ function ReserveSpawnSlot(%spawnPoint)
 	// Check if spawn point is already at max capacity
 	if(%currentCounter >= %maxs)
 	{
-		echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): FAILED - Already at max (" @ %currentCounter @ "/" @ %maxs @ ")");
+		// Throttle failure messages to reduce console spam (only log once per 10 seconds per spawn point)
+		%currentTime = getIntegerTime(true);
+		%lastFailLogTime = $ReserveSpawnSlotLastFailLog[%spawnPoint];
+		if(%lastFailLogTime == "" || %lastFailLogTime == "0" || %lastFailLogTime == -1)
+			%lastFailLogTime = 0;
+		
+		%timeSinceLastLog = %currentTime - %lastFailLogTime;
+		if(%timeSinceLastLog >= 10000) // 10 seconds (in milliseconds)
+		{
+			echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): FAILED - Already at max (" @ %currentCounter @ "/" @ %maxs @ ")");
+			$ReserveSpawnSlotLastFailLog[%spawnPoint] = %currentTime;
+		}
 		return false;
 	}
 	
@@ -197,7 +208,8 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): ATTEMPTING SPAWN - calling AI::helper()");
 		
 		// Pass spawn point ID to helper so it can handle Rollback on failure
-		%AIname = AI::helper($spawnIndex[%index], $spawnIndex[%index], "SpawnPoint " @ %this);
+		// CRITICAL FIX: Added missing arguments (loadout="", spawnPointId=%this)
+		%AIname = AI::helper($spawnIndex[%index], $spawnIndex[%index], "SpawnPoint " @ %this, "", %this);
 		echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): AI::helper returned: " @ %AIname);
 		
 		// CRITICAL FIX: If spawning failed, rollback the reserved slot

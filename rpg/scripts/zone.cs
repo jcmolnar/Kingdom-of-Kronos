@@ -423,12 +423,12 @@ function UpdateZone(%object)
 				if(%oldCount > 0)
 					$ZonePlayerCount[%oldZoneIndex] = %oldCount - 1;
 				
-				// If no players left in old zone, despawn bots immediately
+				// If no players left in old zone, despawn bots after 30 seconds
 				if($ZonePlayerCount[%oldZoneIndex] <= 0)
 				{
 					// DEBUG: Commented out to reduce server lag
-					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ $Zone::Desc[%oldZoneIndex] @ ") is now empty - despawning bots immediately");
-					DespawnZoneBots(%oldZoneIndex);
+					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ $Zone::Desc[%oldZoneIndex] @ ") is now empty - despawning bots in 30 seconds");
+					schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
 				}
 			}
 		}
@@ -592,12 +592,12 @@ function UpdateZone(%object)
 					// DEBUG: Commented out to reduce server lag
 					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") now has " @ ($ZonePlayerCount[%oldZoneIndex]) @ " player(s)");
 					
-					// If no players left in old zone, despawn bots after a delay (prevents crash from too many operations at once)
+					// If no players left in old zone, despawn bots after 30 seconds (prevents crash from too many operations at once)
 					if($ZonePlayerCount[%oldZoneIndex] <= 0)
 					{
 						// DEBUG: Commented out to reduce server lag
-					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") is now empty - despawning bots in 1.5 seconds");
-						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 1.5);
+					echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") is now empty - despawning bots in 30 seconds");
+						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
 					}
 				}
 			}
@@ -779,21 +779,26 @@ function UpdateZone(%object)
 		if(%currentZone != "")
 		{
 			%oldZoneIndex = Zone::getIndex(%currentZone);
-			Zone::DoExit(%oldZoneIndex, %clientId);
-			
-			// Decrement player count for old zone (skip AI bots)
-			if(!Player::isAiControlled(%clientId))
+			// CRITICAL: Only process if zone index is valid (> 0)
+			// Zone::getIndex() returns -1 for invalid zones (like "Unknown" zone)
+			if(%oldZoneIndex > 0)
 			{
-				%oldCount = $ZonePlayerCount[%oldZoneIndex];
-				if(%oldCount > 0)
-					$ZonePlayerCount[%oldZoneIndex] = %oldCount - 1;
+				Zone::DoExit(%oldZoneIndex, %clientId);
 				
-				// If no players left in old zone, despawn bots immediately
-				if($ZonePlayerCount[%oldZoneIndex] <= 0)
+				// Decrement player count for old zone (skip AI bots)
+				if(!Player::isAiControlled(%clientId))
 				{
-					// DEBUG: Commented out to reduce server lag
-					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ $Zone::Desc[%oldZoneIndex] @ ") is now empty - despawning bots immediately");
-					DespawnZoneBots(%oldZoneIndex);
+					%oldCount = $ZonePlayerCount[%oldZoneIndex];
+					if(%oldCount > 0)
+						$ZonePlayerCount[%oldZoneIndex] = %oldCount - 1;
+					
+					// If no players left in old zone, despawn bots after 30 seconds
+					if($ZonePlayerCount[%oldZoneIndex] <= 0)
+					{
+						// DEBUG: Commented out to reduce server lag
+						//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ $Zone::Desc[%oldZoneIndex] @ ") is now empty - despawning bots in 30 seconds");
+						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
+					}
 				}
 			}
 		}
@@ -1032,7 +1037,7 @@ function Zone::DoExit(%z, %clientId)
 	{
 		%msg = "You have left " @ $Zone::Desc[%z] @ ".";
 		%color = $MsgBeige;
-		schedule("WipeFromZone(" @ %z @ ");",120);
+		//schedule("WipeFromZone(" @ %z @ ");",120);
 	}
 	else if($Zone::Type[%z] == "WATER")
 	{

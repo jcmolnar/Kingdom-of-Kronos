@@ -346,13 +346,8 @@ function fetchData(%clientId, %type)
 	}
 	else
 	{
-		// Use temp variable to safely check if ClientData exists before accessing
-		// This prevents debug warnings for accessing non-existent variables
-		%tempData = $ClientData[%clientId, %type];
-		if(%tempData != "")
-			return %tempData;
-		else
-			return "";
+		// Use GetDataFromArray to properly handle player/townbot/enemybot data sources
+		return GetDataFromArray(%clientId, %type);
 	}
 
 	return False;
