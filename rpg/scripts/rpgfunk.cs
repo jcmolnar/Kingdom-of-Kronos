@@ -2951,7 +2951,7 @@ function AggregateLootbags()
 	schedule("AggregateLootbags();", $LootbagAggregateInterval);
 }
 
-// Merge the contents of bag2 into bag1, then delete bag2
+// Merge the contents of bag2 into bag1, then delete bag2 if fully merged
 function MergeLootbags(%bag1, %bag2)
 {
 	dbecho($dbechoMode, "MergeLootbags(" @ %bag1 @ ", " @ %bag2 @ ")");
@@ -2981,52 +2981,64 @@ function MergeLootbags(%bag1, %bag2)
 	%namelist2 = GetWord(%loot2, 1);
 	%contents2 = String::getSubStr(%loot2, String::len(%owner2) + String::len(%namelist2) + 2, 99999);
 	
-	// Merge the item lists
-	%mergedContents = MergeLootContents(%contents1, %contents2);
+	// Merge the item lists (supports partial merges)
+	// Returns: "MergedContents | RemainingContents"
+	%mergeResult = MergeLootContents(%contents1, %contents2);
 	
-	// CRITICAL: Check if merge was complete (not truncated due to length limit)
-	// Estimate expected length: sum of both contents plus some overhead
-	%expectedMinLength = String::len(%contents1) + String::len(%contents2) - 10; // Allow some overhead
-	%actualLength = String::len(%mergedContents);
-	// FIX: Do NOT accept hitting the limit (200) as success.
-	// If it hits 200 but expected 300, it means we truncated, so %mergeComplete should be false.
-	// Only consider merge complete if actual length meets or exceeds expected minimum
-	%mergeComplete = (%actualLength >= %expectedMinLength);
-	
-	// Only proceed with merge and deletion if merge was complete
-	if(!%mergeComplete)
+	// Split result
+	%splitPos = String::findSubStr(%mergeResult, "|");
+	if(%splitPos == -1)
 	{
-		echo("[LOOTBAG AGGREGATE DEBUG] Merge incomplete (Limit Hit?) - Merged: " @ %actualLength @ " vs Expected: ~" @ %expectedMinLength @ ". Keeping Bag2 to prevent item loss.");
-		return false; // Don't delete bag2 - items would be lost
+		// Should not happen with new function, but fallback
+		%mergedContents = %mergeResult;
+		%remainingContents = "";
 	}
+	else
+	{
+		%mergedContents = String::getSubStr(%mergeResult, 0, %splitPos);
+		%remainingContents = String::getSubStr(%mergeResult, %splitPos + 1, 99999);
+	}
+	
+	%mergedContents = String::trim(%mergedContents);
+	%remainingContents = String::trim(%remainingContents);
 	
 	// Merge namelists (combine who can pick up)
 	%mergedNamelist = MergeNamelists(%namelist1, %namelist2);
 	
 	// Use the older/primary bag's owner, but with merged namelist
-	%newLoot = %owner1 @ " " @ %mergedNamelist @ " " @ %mergedContents;
+	%newLoot1 = %owner1 @ " " @ %mergedNamelist @ " " @ %mergedContents;
 	
 	// Update bag1 with merged contents
-	$loot[%bag1] = %newLoot;
+	$loot[%bag1] = %newLoot1;
 	echo("[LOOTBAG AGGREGATE DEBUG] After merge: bag1=" @ %bag1 @ " loot='" @ $loot[%bag1] @ "'");
 	
-	// CRITICAL: Only delete bag2 if merge was successful
-	// Delete bag2
-	$loot[%bag2] = "";
-	$lootbagTime[%bag2] = "";
-	deleteObject(%bag2);
-	
-	return true;
+	if(%remainingContents == "")
+	{
+		// Full merge success - delete bag2
+		echo("[LOOTBAG AGGREGATE DEBUG] Full merge successful. Deleting bag2=" @ %bag2);
+		$loot[%bag2] = "";
+		$lootbagTime[%bag2] = "";
+		deleteObject(%bag2);
+		return true;
+	}
+	else
+	{
+		// Partial merge - update bag2 with leftovers
+		// Keep original owner/namelist for bag2
+		%newLoot2 = %owner2 @ " " @ %namelist2 @ " " @ %remainingContents;
+		$loot[%bag2] = %newLoot2;
+		echo("[LOOTBAG AGGREGATE DEBUG] Partial merge. Updated bag2=" @ %bag2 @ " leftovers='" @ $loot[%bag2] @ "'");
+		return true; // Return true as we successfully merged *something* (or tried)
+	}
 }
 
-// Merge two loot content strings (the part after owner and namelist)
-// Format: "COINS X Item1 Y Item2 Z ..."
+// Merge two loot content strings with partial merge support
+// Returns "MergedString|RemainingString"
 function MergeLootContents(%contents1, %contents2)
 {
 	dbecho($dbechoMode, "MergeLootContents(" @ %contents1 @ ", " @ %contents2 @ ")");
 	
 	// Parse contents1 into an associative array
-	// We'll use global temp vars for simplicity
 	%itemCount = 0;
 	
 	// Parse contents1
@@ -3041,28 +3053,17 @@ function MergeLootContents(%contents1, %contents2)
 		%count = %count * 1; // Convert to number
 		if(%count <= 0)
 			continue;
-		
-		// Check if we already have this item
-		%found = false;
-		for(%j = 0; %j < %itemCount; %j++)
-		{
-			if(%tmpItem[%j] == %item)
-			{
-				%tmpCount[%j] = %tmpCount[%j] + %count;
-				%found = true;
-				break;
-			}
-		}
-		
-		if(!%found)
-		{
-			%tmpItem[%itemCount] = %item;
-			%tmpCount[%itemCount] = %count;
-			%itemCount++;
-		}
+			
+		%tmpItem[%itemCount] = %item;
+		%tmpCount[%itemCount] = %count;
+		%itemCount++;
 	}
 	
-	// Parse contents2 and add to the array
+	// Store initial state string for length checking
+	%currentString = %contents1;
+	
+	// Parse contents2 into a list to process
+	%srcItemCount = 0;
 	for(%i = 0; GetWord(%contents2, %i) != -1; %i += 2)
 	{
 		%item = GetWord(%contents2, %i);
@@ -3070,18 +3071,39 @@ function MergeLootContents(%contents1, %contents2)
 		
 		if(%item == -1 || %item == "" || %count == -1 || %count == "")
 			continue;
-		
+			
 		%count = %count * 1;
 		if(%count <= 0)
 			continue;
+			
+		%srcItem[%srcItemCount] = %item;
+		%srcCount[%srcItemCount] = %count;
+		%srcItemCount++;
+	}
+	
+	%remainingString = "";
+	
+	// Process source items one by one
+	for(%k = 0; %k < %srcItemCount; %k++)
+	{
+		%addItem = %srcItem[%k];
+		%addCount = %srcCount[%k];
 		
-		// Check if we already have this item
+		// Attempt to add this item to our internal list
 		%found = false;
+		%newString = "";
+		
+		// 1. Update internal array first (simulate the add)
+		%addedToIndex = -1;
+		%originalCountAtIdx = 0;
+		
 		for(%j = 0; %j < %itemCount; %j++)
 		{
-			if(%tmpItem[%j] == %item)
+			if(%tmpItem[%j] == %addItem)
 			{
-				%tmpCount[%j] = %tmpCount[%j] + %count;
+				%originalCountAtIdx = %tmpCount[%j];
+				%tmpCount[%j] = %tmpCount[%j] + %addCount;
+				%addedToIndex = %j;
 				%found = true;
 				break;
 			}
@@ -3089,31 +3111,50 @@ function MergeLootContents(%contents1, %contents2)
 		
 		if(!%found)
 		{
-			%tmpItem[%itemCount] = %item;
-			%tmpCount[%itemCount] = %count;
+			%tmpItem[%itemCount] = %addItem;
+			%tmpCount[%itemCount] = %addCount;
+			%addedToIndex = %itemCount;
 			%itemCount++;
 		}
-	}
-	
-	// Build the merged string
-	%result = "";
-	for(%i = 0; %i < %itemCount; %i++)
-	{
-		// CRITICAL: Check string length to prevent truncation and item loss
-		if(String::len(%result) > 200)
-			break; // Stop adding items if we're approaching the limit
 		
-		if(%tmpItem[%i] != "" && %tmpCount[%i] > 0)
+		// 2. Generate the string
+		for(%i = 0; %i < %itemCount; %i++)
 		{
-			%result = %result @ %tmpItem[%i] @ " " @ %tmpCount[%i] @ " ";
+			if(%tmpItem[%i] != "" && %tmpCount[%i] > 0)
+			{
+				%newString = %newString @ %tmpItem[%i] @ " " @ %tmpCount[%i] @ " ";
+			}
+		}
+		%newString = String::trim(%newString);
+		
+		// 3. Check length (Limit is 255, keep safe buffer ~240)
+		if(String::len(%newString) > 240)
+		{
+			// Too long! Revert this item
+			if(%found)
+			{
+				%tmpCount[%addedToIndex] = %originalCountAtIdx; // Restore original count
+			}
+			else
+			{
+				%itemCount--; // Remove the new item
+				%tmpItem[%addedToIndex] = "";
+				%tmpCount[%addedToIndex] = "";
+			}
+			
+			// Add to remaining string
+			%remainingString = %remainingString @ %addItem @ " " @ %addCount @ " ";
+		}
+		else
+		{
+			// Fits! Keep it.
+			%currentString = %newString;
 		}
 	}
 	
-	// Trim trailing space
-	if(String::len(%result) > 0)
-		%result = String::getSubStr(%result, 0, String::len(%result) - 1);
+	%remainingString = String::trim(%remainingString);
 	
-	return %result;
+	return %currentString @ "|" @ %remainingString;
 }
 
 // Merge two namelists (who can pick up the lootbag)
@@ -7526,23 +7567,11 @@ function AFKZone_GetCap(%desc)
 {
 	if(%desc == "" || %desc == -1)
 		return "";
-	for(%k = 0; (%key = getWord("Pig Den Ogre Skybase Ogre Stronghold Ghost Town Minotaur Tomb Stone Henge Demon Incubus", %k)) != -1; %k++)
-	{
-		if(String::ICompare(%key, %desc) == 0)
-			return $AFKZoneCap[%key];
-		// Case-insensitive contains match by scanning substrings of %desc
-		%klen = String::len(%key);
-		%dlen = String::len(%desc);
-		for(%i = 0; %i <= (%dlen - %klen); %i++)
-		{
-			%sub = String::getSubStr(%desc, %i, %klen);
-			if(String::ICompare(%sub, %key) == 0)
-				return $AFKZoneCap[%key];
-		}
-	}
-	// Fallback: direct lookup if exact key exists
+
+	// Direct lookup (Priority)
 	if($AFKZoneCap[%desc] != "")
 		return $AFKZoneCap[%desc];
+
 	return "";
 }
 
