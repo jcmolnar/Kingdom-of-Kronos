@@ -4006,9 +4006,13 @@ function GetBotIdList()
 				if(%clientId == -1 || %clientId == "")
 				{
 					// Search for the client ID that owns this Player object (reverse lookup)
+					// FIXED: Use ClientGroup iteration to find ANY bot ID, not just 2049-2200
 					%botClientId = "";
-					for(%checkId = 2049; %checkId <= 2200; %checkId++)
+					
+					%cCount = getNumClients();
+					for(%cIdx = 0; %cIdx < %cCount; %cIdx++)
 					{
+						%checkId = getClientByIndex(%cIdx);
 						%ownedPlayerObj = Client::getOwnedObject(%checkId);
 						if(%ownedPlayerObj == %tempItem)
 						{
@@ -5680,15 +5684,18 @@ function SetStuffString(%stuff, %item, %amount)
 		// Validate extracted count - if it's "0", empty, or not a valid number, the string is corrupted
 		// Try to find the actual count by looking for the next word that's a number
 		%amtNum = %amt * 1;
-		if(%amt == "" || %amt == -1 || %amt == "0" || (%amtNum == 0 && %amt != "0"))
+		
+		// CRITICAL FIX: Use String::findSubStr to safely check for invalid values like "False" without triggering TorqueScript boolean evaluation issues
+		// Also strict check against 0/empty/invalid
+		if(%amt == "" || %amt == -1 || String::findSubStr(%amt, "False") != -1 || String::findSubStr(%amt, "Msg") != -1 || (%amtNum == 0 && %amt != "0"))
 		{
 			//echo("DEBUG SetStuffString: WARNING - Extracted count '" @ %amt @ "' is invalid! String may be corrupted. Trying to find actual count...");
 			// Try to get the next word as the count
 			%amt = GetWord(%a, 1);
 			%amtNum = %amt * 1;
-			if(%amt == "" || %amt == -1 || %amt == "0" || (%amtNum == 0 && %amt != "0"))
+			if(%amt == "" || %amt == -1 || String::findSubStr(%amt, "False") != -1 || String::findSubStr(%amt, "Msg") != -1 || (%amtNum == 0 && %amt != "0"))
 			{
-				//echo("DEBUG SetStuffString: ERROR - Cannot find valid count for item '" @ %item @ "' in corrupted string. Skipping operation.");
+				echo("DEBUG SetStuffString: ERROR - Cannot find valid count for item '" @ %item @ "' in corrupted string '" @ %stuff @ "'. Skipping operation.");
 				return %stuff; // Return original string unchanged if we can't parse it
 			}
 		}

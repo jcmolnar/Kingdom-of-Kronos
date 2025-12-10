@@ -519,6 +519,10 @@ function Server::finishMissionLoad()
    // Load house objectives AFTER LoadWorld (so MissionGroup exists and is populated)
    LoadHouseObjectives();
    
+   // CRITICAL: Ensure all turrets are on team 1 (enemy of team 0 players) to activate targeting
+   // This fixes turrets that were initialized from mission file with wrong team (0 or -1)
+   EnsureAllTurretsOnTeam1();
+   
    // Activate generators again after LoadHouseObjectives in case any were deactivated
    // This ensures generators power turrets even after world loads
    ActivateAllGenerators();

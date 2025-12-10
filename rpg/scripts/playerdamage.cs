@@ -920,7 +920,11 @@ function Player::onKilled(%this)
 					if(%b.className == "Equipped")
 						%b = String::getSubStr(%b, 0, String::len(%b)-1);
 
-					%tmploot = SetStuffString(%tmploot, %b, %dropItemCount);
+					%newTmploot = SetStuffString(%tmploot, %b, %dropItemCount);
+					if(%newTmploot != "False" && %newTmploot != "")
+						%tmploot = %newTmploot;
+					else
+						echo("WARNING: playerdamage.cs - SetStuffString returned invalid data ('" @ %newTmploot @ "'). Keeping original loot string.");
 					
 					if(!isRPGAI(%clientId))	
 						Player::setItemCount(%clientId, %a, 0);
