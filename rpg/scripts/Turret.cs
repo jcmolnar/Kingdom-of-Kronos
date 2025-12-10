@@ -322,9 +322,32 @@ function Turret::verifyTarget(%this, %target)
 {
 	%Id = Player::getClient(%target);
 	
+	// DEBUG: Log verifyTarget calls to diagnose team 0 targeting issue
+	%turretTeam = GameBase::getTeam(%this);
+	%playerTeam = GameBase::getTeam(%target);
+	%playerName = Client::getName(%Id);
+	
+	// Throttle debug output (only log once per 5 seconds per turret)
+	%currentTime = getIntegerTime(true);
+	%lastLogTime = $TurretVerifyTargetLastLog[%this];
+	if(%lastLogTime == "" || %lastLogTime == "0" || %lastLogTime == -1)
+		%lastLogTime = 0;
+	%timeSinceLastLog = %currentTime - %lastLogTime;
+	%shouldLog = false;
+	if(%timeSinceLastLog >= 5000) // 5 seconds
+		%shouldLog = true;
+	
+	if(%shouldLog)
+	{
+		echo("[TURRET DEBUG] verifyTarget() called - Turret team=" @ %turretTeam @ ", Player team=" @ %playerTeam @ ", Player=" @ %playerName);
+		$TurretVerifyTargetLastLog[%this] = %currentTime;
+	}
+	
 	// Check if target is a valid player
 	if(%Id == -1 || %Id == "")
 	{
+		if(%shouldLog)
+			echo("[TURRET DEBUG] verifyTarget() - Invalid target (no client ID)");
 		return "False"; // Invalid target
 	}
 	
@@ -334,6 +357,8 @@ function Turret::verifyTarget(%this, %target)
 	// If player has no house, they're always a valid target
 	if(%House == "" || %House == -1)
 	{
+		if(%shouldLog)
+			echo("[TURRET DEBUG] verifyTarget() - Player has no house, APPROVED");
 		return "True";
 	}
 	
@@ -343,17 +368,90 @@ function Turret::verifyTarget(%this, %target)
 	// If turret has no house assigned (neutral), target all players
 	if(%turretHouse == "" || %turretHouse == -1)
 	{
+		if(%shouldLog)
+			echo("[TURRET DEBUG] verifyTarget() - Turret has no house (neutral), APPROVED");
 		return "True";
 	}
 	
 	// Only target players from opposing houses (different house)
 	if(%turretHouse == %House)
 	{
+		if(%shouldLog)
+			echo("[TURRET DEBUG] verifyTarget() - Same house (" @ %turretHouse @ "), REJECTED");
 		return "False"; // Same house - don't target
 	}
 	
 	// Different house - valid target
+	if(%shouldLog)
+		echo("[TURRET DEBUG] verifyTarget() - Different house (turret=" @ %turretHouse @ ", player=" @ %House @ "), APPROVED");
 	return "True";
+}
+
+// Ensure all turrets in the mission are on team 1 (enemy of team 0 players)
+// This function should be called after mission load to fix any turrets that were initialized with wrong team
+function EnsureAllTurretsOnTeam1()
+{
+	%missionGroup = nameToID("MissionGroup");
+	if(%missionGroup == -1)
+	{
+		echo("[TURRET FIX] ERROR: MissionGroup not found, cannot fix turret teams");
+		return;
+	}
+	
+	%turretCount = 0;
+	%fixedCount = 0;
+	
+	// Recursively search for all turrets
+	%objCount = Group::objectCount(%missionGroup);
+	for(%i = 0; %i < %objCount; %i++)
+	{
+		%obj = Group::getObject(%missionGroup, %i);
+		if(%obj == -1 || %obj == "")
+			continue;
+		
+		%dataName = GameBase::getDataName(%obj);
+		
+		// Check if this is a turret
+		if(String::findSubStr(%dataName, "Turret") != -1)
+		{
+			%turretCount++;
+			%currentTeam = GameBase::getTeam(%obj);
+			if(%currentTeam != 1)
+			{
+				GameBase::setTeam(%obj, 1);
+				%fixedCount++;
+				echo("[TURRET FIX] Fixed turret " @ %obj @ " (" @ %dataName @ ") - was team " @ %currentTeam @ ", set to team 1");
+			}
+		}
+		
+		// Also check sub-groups recursively
+		if(getObjectType(%obj) == "SimGroup")
+		{
+			%subObjCount = Group::objectCount(%obj);
+			for(%j = 0; %j < %subObjCount; %j++)
+			{
+				%subObj = Group::getObject(%obj, %j);
+				if(%subObj == -1 || %subObj == "")
+					continue;
+				
+				%subDataName = GameBase::getDataName(%subObj);
+				if(String::findSubStr(%subDataName, "Turret") != -1)
+				{
+					%turretCount++;
+					%subCurrentTeam = GameBase::getTeam(%subObj);
+					if(%subCurrentTeam != 1)
+					{
+						GameBase::setTeam(%subObj, 1);
+						%fixedCount++;
+						echo("[TURRET FIX] Fixed turret " @ %subObj @ " (" @ %subDataName @ ") - was team " @ %subCurrentTeam @ ", set to team 1");
+					}
+				}
+			}
+		}
+	}
+	
+	if(%turretCount > 0)
+		echo("[TURRET FIX] Checked " @ %turretCount @ " turret(s), fixed " @ %fixedCount @ " turret(s) to team 1");
 }
 //**
 
@@ -362,6 +460,16 @@ function Turret::onAdd(%this)
 	if (GameBase::getMapName(%this) == "")
 	{
 		GameBase::setMapName (%this, "Turret");
+	}
+	
+	// CRITICAL: Ensure all turrets are on team 1 (enemy of team 0 players) to activate targeting
+	// The engine's built-in targeting system requires turrets to be on a different team than players
+	// Team 0 = players (citizens), Team 1 = enemy team for turrets
+	%currentTeam = GameBase::getTeam(%this);
+	if(%currentTeam != 1)
+	{
+		GameBase::setTeam(%this, 1);
+		echo("[TURRET INIT] Turret " @ %this @ " was on team " @ %currentTeam @ ", set to team 1 for targeting");
 	}
 }
 

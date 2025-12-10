@@ -593,7 +593,13 @@ function UpdateZone(%object)
 					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") now has " @ ($ZonePlayerCount[%oldZoneIndex]) @ " player(s)");
 					
 					// If no players left in old zone, despawn bots after 30 seconds (prevents crash from too many operations at once)
+<<<<<<< HEAD
 					if($ZonePlayerCount[%oldZoneIndex] <= 0)
+=======
+					// CRITICAL: Only process if zone index is valid (> 0)
+					// Zone::getIndex() returns -1 for invalid zones (like "Unknown" zone)
+					if($ZonePlayerCount[%oldZoneIndex] <= 0 && %oldZoneIndex > 0)
+>>>>>>> origin/fix-turret-targeting-and-despawn
 					{
 						// DEBUG: Commented out to reduce server lag
 					echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") is now empty - despawning bots in 30 seconds");
