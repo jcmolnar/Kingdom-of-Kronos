@@ -366,7 +366,7 @@ function RegisterBot(%clientId, %spawnPointId, %team, %aiName)
 			$BotRegistryList = $BotRegistryList @ " " @ %clientId;
 	}
 	
-	echo("[BOT REGISTRY] Registered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", team=" @ %team @ ", name=" @ %aiName);
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT REGISTRY] Registered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", team=" @ %team @ ", name=" @ %aiName);
 }
 
 // Unregister a bot from the centralized registry
@@ -398,7 +398,7 @@ function UnregisterBot(%clientId)
 	}
 	$BotRegistryList = %newList;
 	
-	echo("[BOT REGISTRY] Unregistered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName);
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT REGISTRY] Unregistered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName);
 }
 
 // Get spawn point for a bot from registry
@@ -1642,13 +1642,13 @@ function createAIPostSpawn(%aiName, %armor, %group)
 	if(%playerObj == -1 || %playerObj == "")
 	{
 		// DEBUG: Log when createAIPostSpawn is called for a bot with no player object
-		echo("[BOT SHELL DEBUG] createAIPostSpawn(): WARNING - Bot " @ %aiName @ " (clientId=" @ %AiId @ ") has NO player object! Display name: '" @ %playerName @ "'. This may become a shell bot.");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] createAIPostSpawn(): WARNING - Bot " @ %aiName @ " (clientId=" @ %AiId @ ") has NO player object! Display name: '" @ %playerName @ "'. This may become a shell bot.");
 		// Bot may have died - silently return without cleanup attempts
 		return;
 	}
 	else
 	{
-		echo("[BOT SHELL DEBUG] createAIPostSpawn(): Bot " @ %aiName @ " (clientId=" @ %AiId @ ") has valid player object. Display name: '" @ %playerName @ "'");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] createAIPostSpawn(): Bot " @ %aiName @ " (clientId=" @ %AiId @ ") has valid player object. Display name: '" @ %playerName @ "'");
 	}
 	
 	// CRITICAL: Check for ghost client ID (empty name Player object)
@@ -1697,7 +1697,7 @@ function createAIPostSpawn(%aiName, %armor, %group)
 		%botInfoExists = "no";
 		if($BotInfo[%aiName, ITEMS] != "")
 			%botInfoExists = "yes";
-		echo("[BOT SHELL DEBUG] createAIPostSpawn(): SKIPPED - bot " @ %aiName @ " is an enemy bot (displayName='" @ %displayName @ "', team=" @ %botTeam @ ", BotInfo exists=" @ %botInfoExists @ ")");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] createAIPostSpawn(): SKIPPED - bot " @ %aiName @ " is an enemy bot (displayName='" @ %displayName @ "', team=" @ %botTeam @ ", BotInfo exists=" @ %botInfoExists @ ")");
 		return;
 	}
 	
@@ -1723,7 +1723,7 @@ function createAIPostSpawn(%aiName, %armor, %group)
 	else
 		$TownBotList = $TownBotList @ " " @ %AiId;
 	
-	echo("[BOT TRACK] Town bot spawned: " @ %aiName @ " (clientId=" @ %AiId @ ") | Total Town: " @ $ActiveTownBots @ " | Total All: " @ $TotalActiveBots);
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT TRACK] Town bot spawned: " @ %aiName @ " (clientId=" @ %AiId @ ") | Total Town: " @ $ActiveTownBots @ " | Total All: " @ $TotalActiveBots);
 	
 	storeData(%AiId, "RACE", $ArmorTypeToRace[%armor]);
 	storeData(%AiId, "LCKconsequence", "miss");
@@ -1927,7 +1927,7 @@ function AI::setWeapons(%aiName, %loadout)
 			%playerObjForTeam = Client::getOwnedObject(%aiId);
 			if(%playerObjForTeam != -1 && %playerObjForTeam != "")
 				GameBase::setTeam(%playerObjForTeam, %storedBotTeam);
-			echo("[BOT TEAM DEBUG] AI::setWeapons - Set team to " @ %storedBotTeam @ " for " @ %aiName @ " (clientId=" @ %aiId @ ", was " @ %currentTeam @ ") before GiveThisStuff()");
+			if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] AI::setWeapons - Set team to " @ %storedBotTeam @ " for " @ %aiName @ " (clientId=" @ %aiId @ ", was " @ %currentTeam @ ") before GiveThisStuff()");
 		}
 	}
 	else
@@ -1945,7 +1945,7 @@ function AI::setWeapons(%aiName, %loadout)
 				%playerObjForTeam = Client::getOwnedObject(%aiId);
 				if(%playerObjForTeam != -1 && %playerObjForTeam != "")
 					GameBase::setTeam(%playerObjForTeam, %botInfoTeam);
-				echo("[BOT TEAM DEBUG] AI::setWeapons - Set team to " @ %botInfoTeam @ " for " @ %aiName @ " (clientId=" @ %aiId @ ", was " @ %currentTeam @ ") from BotInfo before GiveThisStuff()");
+				if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] AI::setWeapons - Set team to " @ %botInfoTeam @ " for " @ %aiName @ " (clientId=" @ %aiId @ ", was " @ %currentTeam @ ") from BotInfo before GiveThisStuff()");
 			}
 		}
 		else
@@ -3557,7 +3557,7 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 	else
 	{
 		// createAI() failed - rollback reserved slot
-		echo("[SPAWN FLOW] SpawnAI(): WARNING - createAI() failed for " @ %newName @ ", rolling back reserved slot");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAI(): WARNING - createAI() failed for " @ %newName @ ", rolling back reserved slot");
 		// CRITICAL FIX #2: Rollback reserved slot if spawn failed
 		if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 		{
@@ -3572,7 +3572,7 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 // This circumvents the engine bug where Client::getOwnedObject() returns -1
 function FindPlayerInBotGroup(%clientId)
 {
-	echo("[INERT DEBUG] FindPlayerInBotGroup: Called for clientId=" @ %clientId);
+	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] FindPlayerInBotGroup: Called for clientId=" @ %clientId);
 	
 	// CRITICAL: Check if this is a shell bot (bot with no player object) before searching
 	// This prevents unnecessary searches and reduces debug spam
@@ -3586,37 +3586,37 @@ function FindPlayerInBotGroup(%clientId)
 	if(%hasBotData && (%playerObj == -1 || %playerObj == ""))
 	{
 		// Shell bot detected - return -1 immediately to prevent unnecessary BotGroup search
-		echo("[INERT DEBUG] FindPlayerInBotGroup: Shell bot detected (clientId=" @ %clientId @ ", BotInfoAiName='" @ %botInfoAiName @ "', no player object) - returning -1");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] FindPlayerInBotGroup: Shell bot detected (clientId=" @ %clientId @ ", BotInfoAiName='" @ %botInfoAiName @ "', no player object) - returning -1");
 		return -1;
 	}
 	
 	if(!isObject(BotGroup))
 	{
-		echo("[INERT DEBUG] FindPlayerInBotGroup: BotGroup does not exist - returning -1");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] FindPlayerInBotGroup: BotGroup does not exist - returning -1");
 		return -1;
 	}
 	
 	%count = Group::objectCount(BotGroup);
-	echo("[INERT DEBUG] FindPlayerInBotGroup: BotGroup exists with " @ %count @ " objects");
+	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] FindPlayerInBotGroup: BotGroup exists with " @ %count @ " objects");
 	
 	for(%i = 0; %i < %count; %i++)
 	{
 		%obj = Group::getObject(BotGroup, %i);
 		%objClientId = Player::getClient(%obj);
-		echo("[INERT DEBUG] FindPlayerInBotGroup: Checking object " @ %i @ " (obj=" @ %obj @ ", clientId=" @ %objClientId @ ")");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] FindPlayerInBotGroup: Checking object " @ %i @ " (obj=" @ %obj @ ", clientId=" @ %objClientId @ ")");
 		if(%objClientId == %clientId)
 		{
-			echo("[INERT DEBUG] FindPlayerInBotGroup: Found match! Returning obj=" @ %obj);
+			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] FindPlayerInBotGroup: Found match! Returning obj=" @ %obj);
 			return %obj;
 		}
 	}
-	echo("[INERT DEBUG] FindPlayerInBotGroup: No match found for clientId=" @ %clientId @ " - returning -1");
+	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] FindPlayerInBotGroup: No match found for clientId=" @ %clientId @ " - returning -1");
 	return -1;
 }
 
 function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId)
 {
-	echo("[SPAWN DEBUG] SpawnAIGetClientId: ENTRY spawnPointId='" @ %spawnPointId @ "' for " @ %newName);
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] SpawnAIGetClientId: ENTRY spawnPointId='" @ %spawnPointId @ "' for " @ %newName);
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 		echo("[SPAWN FLOW] SpawnAIGetClientId(): ENTRY - newName=" @ %newName @ ", displayName=" @ %displayName @ ", spawnPointId=" @ %spawnPointId @ " @ " @ getSimTime());
 	
@@ -3644,7 +3644,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				if(%playerCount <= 0)
 				{
 					// Zone is empty - abort spawn and clean up bot object
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Zone " @ %zoneIndex @ " is empty, aborting spawn for " @ %newName);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Zone " @ %zoneIndex @ " is empty, aborting spawn for " @ %newName);
 					
 					// Find and delete bot object using %newName (safer than %displayName)
 					%ghostBotId = AI::getClientIdFromName(%newName);
@@ -3700,7 +3700,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			if(Player::isAiControlled(%aiIdFromGetId))
 			{
 				%aiId = %aiIdFromGetId;
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via AI::getId() (fastest method)");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via AI::getId() (fastest method)");
 				
 				// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
 				if(%spawnPointId != "" && %spawnPointId != -1)
@@ -3717,7 +3717,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
 						storeData(%aiId, "SpawnOriginZoneID", %markerZone);
 						
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
 					}
 				}
 			}
@@ -3748,7 +3748,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					if(%existingBotInfoAiName == "" || %existingBotInfoAiName == -1 || %existingBotInfoAiName == "0" || %existingBotInfoAiName == %newName)
 					{
 						// Safe to use - this is our newly-spawned bot
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via NEWgetClientByName()");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via NEWgetClientByName()");
 						
 						// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
 						if(%spawnPointId != "" && %spawnPointId != -1)
@@ -3765,7 +3765,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
 								storeData(%aiId, "SpawnOriginZoneID", %markerZone);
 								
-								echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
 							}
 						}
 					}
@@ -3790,7 +3790,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						// If the old BotInfoAiName doesn't match the new bot name, we must clear it
 						if(%existingBotInfoAiName != "" && %existingBotInfoAiName != -1 && %existingBotInfoAiName != "0" && %existingBotInfoAiName != %newName)
 						{
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Clearing stale bot data from client ID " @ %aiId @ " (old BotInfoAiName='" @ %existingBotInfoAiName @ "', new='" @ %newName @ "')");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Clearing stale bot data from client ID " @ %aiId @ " (old BotInfoAiName='" @ %existingBotInfoAiName @ "', new='" @ %newName @ "')");
 							// Clear all bot data to prevent shell bot detection
 							storeData(%aiId, "BotInfoAiName", "");
 							storeData(%aiId, "SpawnBotInfo", "");
@@ -3808,7 +3808,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						%existingBotInfoAiName = fetchData(%aiId, "BotInfoAiName");
 						if(%existingBotInfoAiName == "" || %existingBotInfoAiName == -1 || %existingBotInfoAiName == "0" || %existingBotInfoAiName == %newName)
 						{
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via NEWgetClientByName() (was recently freed but enough time passed, old data cleared)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via NEWgetClientByName() (was recently freed but enough time passed, old data cleared)");
 
 							// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
 							if(%spawnPointId != "" && %spawnPointId != -1)
@@ -3825,14 +3825,14 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 									$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
 									storeData(%aiId, "SpawnOriginZoneID", %markerZone);
 									
-									echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
 								}
 							}
 						}
 						else
 						{
 							// Still has conflicting bot data after cleanup attempt - skip this client ID
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Client ID " @ %aiId @ " still has conflicting BotInfoAiName='" @ %existingBotInfoAiName @ "' after cleanup attempt. Skipping.");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Client ID " @ %aiId @ " still has conflicting BotInfoAiName='" @ %existingBotInfoAiName @ "' after cleanup attempt. Skipping.");
 							%aiId = "";
 						}
 					}
@@ -3854,13 +3854,13 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	// Priority 2: If NEWgetClientByName() failed, use Client::getFirst/getNext (CRITICAL FIX #3)
 	if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
 	{
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): NEWgetClientByName() failed, using Client::getFirst/getNext iteration");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): NEWgetClientByName() failed, using Client::getFirst/getNext iteration");
 		// CRITICAL FIX #3: Replace brute-force loop with Client::getFirst/getNext
 		// Hard Rule: Never touch a ClientID unless Player::isAiControlled(%id) returns true
 		// The isFile check is insufficient for players in char-select
 		if(%displayName != "" && %displayName != -1)
 		{
-			echo("[SPAWN FLOW] SpawnAIGetClientId(): Iterating through connected clients for displayName '" @ %displayName @ "'");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Iterating through connected clients for displayName '" @ %displayName @ "'");
 			%foundCount = 0;
 			for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
 			{
@@ -3874,7 +3874,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				// CRITICAL FIX #1: Check if this clientId is in the graveyard
 				if(IsInGraveyard(%checkId))
 				{
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - In graveyard (dying bot)");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - In graveyard (dying bot)");
 					continue;
 				}
 				%checkName = Client::getName(%checkId);
@@ -3887,7 +3887,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				// DEBUG: Log first few valid client IDs to see what we're finding
 				if(%foundCount < 5 && %playerObj != -1 && %playerObj != "" && isObject(%playerObj))
 				{
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): DEBUG - clientId " @ %checkId @ " has name='" @ %checkName @ "', playerObj=" @ %playerObj);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): DEBUG - clientId " @ %checkId @ " has name='" @ %checkName @ "', playerObj=" @ %playerObj);
 					%foundCount++;
 				}
 				
@@ -3909,12 +3909,12 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					
 					if(%isLikelyBot)
 					{
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): Player object missing for client ID " @ %checkId @ " but bot markers exist (" @ %existingBotInfoAiName @ "/" @ %existingSpawnInfo @ "/registry=" @ %registrySpawn @ "). Cleaning up shell.");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Player object missing for client ID " @ %checkId @ " but bot markers exist (" @ %existingBotInfoAiName @ "/" @ %existingSpawnInfo @ "/registry=" @ %registrySpawn @ "). Cleaning up shell.");
 						CleanupBot(%checkId, %existingBotInfoAiName);
 					}
 					else
 					{
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object is missing (likely freed or not ready yet, no bot markers).");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object is missing (likely freed or not ready yet, no bot markers).");
 					}
 					
 					continue; // Skip this client ID, player object not ready
@@ -3923,7 +3923,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				// Player object exists - check if it's actually valid
 				if(!isObject(%playerObj))
 				{
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object exists but is invalid (shell bot cleanup in progress)");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object exists but is invalid (shell bot cleanup in progress)");
 					
 					// If this ID is tracked as a bot, clean it aggressively to avoid lingering shells
 					%existingBotInfoAiName = fetchData(%checkId, "BotInfoAiName");
@@ -3939,7 +3939,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					
 					if(%isLikelyBot)
 					{
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleaning shell for client ID " @ %checkId @ " (invalid playerObj, bot markers present).");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleaning shell for client ID " @ %checkId @ " (invalid playerObj, bot markers present).");
 						CleanupBot(%checkId, %existingBotInfoAiName);
 					}
 					continue; // Skip this client ID, it's a shell bot being cleaned up
@@ -3948,7 +3948,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				%isDead = %playerObj.dead;
 				if(%isDead == "1" || %isDead == 1)
 				{
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object still exists and is marked as dead (cleanup in progress)");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object still exists and is marked as dead (cleanup in progress)");
 					continue; // Skip this client ID, it's still being cleaned up
 				}
 				
@@ -3971,7 +3971,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							{
 								// No existing bot assigned - this is our fresh bot whose name hasn't replicated yet
 								%aiId = %checkId;
-								echo("[SPAWN FLOW] SpawnAIGetClientId(): Found nameless AI client " @ %checkId @ " - Assuming it is " @ %displayName @ " (name lag)");
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found nameless AI client " @ %checkId @ " - Assuming it is " @ %displayName @ " (name lag)");
 								
 								// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
 								if(%spawnPointId != "" && %spawnPointId != -1)
@@ -3988,7 +3988,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 										$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
 										storeData(%aiId, "SpawnOriginZoneID", %markerZone);
 										
-										echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+										if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
 									}
 								}
 								break;
@@ -4006,7 +4006,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					// Clear the "recently freed" flag since this IS our bot
 					$ClientIdRecentlyFreed[%checkId] = "";
 					%isOurNewBot = true;
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Found newly-spawned bot " @ %newName @ " at clientId " @ %checkId @ " - cleared recently freed flag");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found newly-spawned bot " @ %newName @ " at clientId " @ %checkId @ " - cleared recently freed flag");
 					
 					// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
 					if(%spawnPointId != "" && %spawnPointId != -1)
@@ -4023,7 +4023,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							$EnemyBotData[%checkId, "SpawnOriginZoneID"] = %markerZone;
 							storeData(%checkId, "SpawnOriginZoneID", %markerZone);
 							
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %checkId @ ")");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %checkId @ ")");
 						}
 					}
 				}
@@ -4039,14 +4039,14 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						%timeSinceFreed = %currentTime - %recentlyFreed;
 						if(%timeSinceFreed < 5) // 5 seconds for cleanup
 						{
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - was recently freed " @ %timeSinceFreed @ "s ago (freed at " @ %recentlyFreed @ ", current time " @ %currentTime @ ", need 5s delay for cleanup)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - was recently freed " @ %timeSinceFreed @ "s ago (freed at " @ %recentlyFreed @ ", current time " @ %currentTime @ ", need 5s delay for cleanup)");
 							continue; // Skip this client ID, cleanup still in progress
 						}
 						else
 						{
 							// Enough time has passed, clear the flag
 							$ClientIdRecentlyFreed[%checkId] = "";
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleared recently freed flag for client ID " @ %checkId @ " (freed " @ %timeSinceFreed @ "s ago)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleared recently freed flag for client ID " @ %checkId @ " (freed " @ %timeSinceFreed @ "s ago)");
 						}
 					}
 				}
@@ -4062,7 +4062,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						if(%existingBotInfoAiName == "" || %existingBotInfoAiName == -1 || %existingBotInfoAiName == "0")
 						{
 							%aiId = %checkId;
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via brute-force search (no existing BotInfoAiName)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via brute-force search (no existing BotInfoAiName)");
 							
 							// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
 							if(%spawnPointId != "" && %spawnPointId != -1)
@@ -4079,7 +4079,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 									$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
 									storeData(%aiId, "SpawnOriginZoneID", %markerZone);
 									
-									echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
 								}
 							}
 							break;
@@ -4087,14 +4087,14 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						else if(%existingBotInfoAiName == %newName)
 						{
 							%aiId = %checkId;
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via brute-force search (matches BotInfoAiName)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via brute-force search (matches BotInfoAiName)");
 							break;
 						}
 						else
 						{
 							// Display name matches but BotInfoAiName doesn't - this is our newly-spawned bot with stale BotInfoAiName
 							// Clear the stale data and use this client ID
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %checkId @ " via brute-force search (display name matches but BotInfoAiName='" @ %existingBotInfoAiName @ "' is stale, clearing)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %checkId @ " via brute-force search (display name matches but BotInfoAiName='" @ %existingBotInfoAiName @ "' is stale, clearing)");
 							// Clear stale bot data
 							storeData(%checkId, "BotInfoAiName", "");
 							storeData(%checkId, "SpawnBotInfo", "");
@@ -4123,7 +4123,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 									$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
 									storeData(%aiId, "SpawnOriginZoneID", %markerZone);
 									
-									echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
 								}
 							}
 							break;
@@ -4147,7 +4147,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						{
 							// No existing bot assigned - this is likely our newly spawned bot
 							%aiId = %checkId;
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Found unnamed AI client ID " @ %checkId @ " - assuming it is " @ %newName @ " (Player object exists, AI-controlled, no BotInfoAiName)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Found unnamed AI client ID " @ %checkId @ " - assuming it is " @ %newName @ " (Player object exists, AI-controlled, no BotInfoAiName)");
 							break;
 						}
 					}
@@ -4164,13 +4164,13 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						if(%existingBotInfoAiName == "" || %existingBotInfoAiName == -1 || %existingBotInfoAiName == "0")
 						{
 							%aiId = %checkId;
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via Player object name fallback (playerObj.name='" @ %playerObjName @ "', Client::getName not ready yet)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via Player object name fallback (playerObj.name='" @ %playerObjName @ "', Client::getName not ready yet)");
 							break;
 						}
 						else if(%existingBotInfoAiName == %newName)
 						{
 							%aiId = %checkId;
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via Player object name fallback (matches BotInfoAiName)");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via Player object name fallback (matches BotInfoAiName)");
 							break;
 						}
 					}
@@ -4178,9 +4178,9 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			}
 			if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
 			{
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): Brute-force search failed");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Brute-force search failed");
 				// DEBUG: Try one more time with a small delay to see if names are ready now
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): DEBUG - Attempting final check with GetEveryoneIdList()");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): DEBUG - Attempting final check with GetEveryoneIdList()");
 				%idList = GetEveryoneIdList();
 				if(%idList != "")
 				{
@@ -4190,7 +4190,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						if(%checkName != "" && %checkName != -1 && String::ICompare(%displayName, %checkName) == 0)
 						{
 							%aiId = %checkId;
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via GetEveryoneIdList() fallback");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via GetEveryoneIdList() fallback");
 							break;
 						}
 					}
@@ -4200,7 +4200,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	}
 	else
 	{
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - displayName is empty, cannot search for client ID");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - displayName is empty, cannot search for client ID");
 	}
 	
 	// CRITICAL FIX #2: Use spawnPointId from parameter if provided, otherwise extract from commandIssuer
@@ -4231,7 +4231,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			if(isFile(%characterFile))
 			{
 				// This is a real player with a save file - abort immediately
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): CRITICAL SAFEGUARD - clientId " @ %aiId @ " is a real player (" @ %playerNameCheck @ ") with save file. Aborting to prevent data loss.");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): CRITICAL SAFEGUARD - clientId " @ %aiId @ " is a real player (" @ %playerNameCheck @ ") with save file. Aborting to prevent data loss.");
 				%aiId = -1; // Reset to force retry with different client ID
 			}
 		}
@@ -4253,7 +4253,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					if(isFile(%characterFileCheck))
 					{
 						// This is a real player - abort immediately
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): CRITICAL SAFEGUARD - Found real player " @ %existingName @ " (clientId=" @ %aiId @ ") with save file. Aborting to prevent data loss.");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): CRITICAL SAFEGUARD - Found real player " @ %existingName @ " (clientId=" @ %aiId @ ") with save file. Aborting to prevent data loss.");
 						%aiId = -1; // Reset to force retry
 					}
 				}
@@ -4273,7 +4273,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							%finalCharacterFile = "temp\\" @ %finalNameCheck @ ".cs";
 							if(isFile(%finalCharacterFile))
 							{
-								echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Real player " @ %finalNameCheck @ " (clientId=" @ %aiId @ ") detected immediately before deletion. Aborting to prevent data loss.");
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Real player " @ %finalNameCheck @ " (clientId=" @ %aiId @ ") detected immediately before deletion. Aborting to prevent data loss.");
 								%aiId = -1; // Reset to force retry
 								return -1; // Exit immediately
 							}
@@ -4294,7 +4294,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								%doubleCheckFile = "temp\\" @ %finalNameCheck @ ".cs";
 								if(isFile(%doubleCheckFile))
 								{
-									echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Name '" @ %finalNameCheck @ "' has save file. This is a REAL PLAYER. Aborting deletion.");
+									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Name '" @ %finalNameCheck @ "' has save file. This is a REAL PLAYER. Aborting deletion.");
 									%aiId = -1;
 									return -1;
 								}
@@ -4315,7 +4315,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						// If connected but no save file yet, check if it's a real player by checking if it's NOT AI-controlled
 						if(%isConnected && !Player::isAiControlled(%aiId))
 						{
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Connected client " @ %aiId @ " is NOT AI-controlled. This is a real player. Aborting deletion.");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Connected client " @ %aiId @ " is NOT AI-controlled. This is a real player. Aborting deletion.");
 							%aiId = -1;
 							return -1;
 						}
@@ -4331,12 +4331,12 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							
 							if(%oldAiName != "" && %oldAiName != -1 && %oldAiName != "0")
 							{
-								echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting old bot via AI::delete: " @ %oldAiName);
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting old bot via AI::delete: " @ %oldAiName);
 								AI::delete(%oldAiName);
 							}
 							else
 							{
-								echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - No AI name for old bot, using deleteObject fallback");
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - No AI name for old bot, using deleteObject fallback");
 								deleteObject(%existingPlayerObj);
 								Client::setOwnedObject(%aiId, -1);
 							}
@@ -4362,7 +4362,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				// This is our newly-spawned bot - clear the "recently freed" flag
 				$ClientIdRecentlyFreed[%aiId] = "";
 				%isValidNewBot = true;
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): Found newly-spawned bot " @ %newName @ " at clientId " @ %aiId @ " - cleared recently freed flag");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found newly-spawned bot " @ %newName @ " at clientId " @ %aiId @ " - cleared recently freed flag");
 			}
 		}
 		
@@ -4378,7 +4378,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				%timeSinceFreed = %currentTime - %recentlyFreed;
 				if(%timeSinceFreed < 5) // 5 seconds for cleanup
 				{
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Client ID " @ %aiId @ " was recently freed " @ %timeSinceFreed @ "s ago (freed at " @ %recentlyFreed @ ", current time " @ %currentTime @ "). Bot " @ %newName @ " died during spawn! Skipping this client ID.");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Client ID " @ %aiId @ " was recently freed " @ %timeSinceFreed @ "s ago (freed at " @ %recentlyFreed @ ", current time " @ %currentTime @ "). Bot " @ %newName @ " died during spawn! Skipping this client ID.");
 					%aiId = -1; // Reset to force retry with different client ID
 				}
 			}
@@ -4434,7 +4434,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						if(!%isRealPlayer)
 						{
 							// This is a shell bot - clean it up
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Detected shell bot at clientId " @ %aiId @ " (Player object exists but bot is dead/invalid). Cleaning up...");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Detected shell bot at clientId " @ %aiId @ " (Player object exists but bot is dead/invalid). Cleaning up...");
 							
 							// CRITICAL: Get AI name BEFORE clearing data for proper engine deletion
 							%shellAiName = $BotInfoAiName[%aiId];
@@ -4458,12 +4458,12 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							// Delete using AI::delete if we have the name
 							if(%shellAiName != "" && %shellAiName != -1 && %shellAiName != "0")
 							{
-								echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting shell bot via AI::delete: " @ %shellAiName);
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting shell bot via AI::delete: " @ %shellAiName);
 								AI::delete(%shellAiName);
 							}
 							else
 							{
-								echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - No AI name for shell bot, using deleteObject fallback");
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - No AI name for shell bot, using deleteObject fallback");
 								deleteObject(%playerObj);
 								Client::setOwnedObject(%aiId, -1);
 							}
@@ -4471,7 +4471,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							// Mark as recently freed to prevent immediate reuse
 							$ClientIdRecentlyFreed[%aiId] = getSimTime();
 							
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleaned up shell bot at clientId " @ %aiId);
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleaned up shell bot at clientId " @ %aiId);
 							// After cleanup, reset aiId to force retry with different client ID
 							%aiId = -1;
 						}
@@ -4491,19 +4491,19 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				%timeSinceFreed = getSimTime() - %recentlyFreed;
 				if(%timeSinceFreed < 5)
 				{
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ " was recently freed " @ %timeSinceFreed @ "s ago. Bot died during spawn! Skipping.");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ " was recently freed " @ %timeSinceFreed @ "s ago. Bot died during spawn! Skipping.");
 					// CRITICAL: Rollback spawn slot if this was a spawn point call
 					if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 					{
 						RollbackSpawnSlot(%spawnPointId);
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): Rolled back spawn slot for SpawnPoint " @ %spawnPointId @ " (bot died during spawn)");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Rolled back spawn slot for SpawnPoint " @ %spawnPointId @ " (bot died during spawn)");
 					}
 					%aiId = -1; // Reset to force retry
 				}
 				else
 				{
 					// Enough time has passed, try to clean up shell bot
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ ", Display name: '" @ %displayName @ "'. This bot will become a SHELL! Cleaning up...");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ ", Display name: '" @ %displayName @ "'. This bot will become a SHELL! Cleaning up...");
 					%escapedName = String::replace(%newName, "\"", "\\\"");
 					AI::delete(%escapedName);
 					// Reset aiId so we retry
@@ -4512,7 +4512,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			else
 			{
 				// Not recently freed, but player object is invalid - shell bot
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ ", Display name: '" @ %displayName @ "'. This bot will become a SHELL! Cleaning up...");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ ", Display name: '" @ %displayName @ "'. This bot will become a SHELL! Cleaning up...");
 				%escapedName = String::replace(%newName, "\"", "\\\"");
 				AI::delete(%escapedName);
 				// Reset aiId so we retry
@@ -4521,7 +4521,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 				{
 					RollbackSpawnSlot(%spawnPointId);
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Rolled back spawn slot for SpawnPoint " @ %spawnPointId @ " (invalid player object)");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Rolled back spawn slot for SpawnPoint " @ %spawnPointId @ " (invalid player object)");
 				}
 			}
 		}
@@ -4535,13 +4535,13 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		%retryCount = $EnemyBotClientIdRetry[%newName];
 		if(%retryCount == "")
 			%retryCount = 0;
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Could not get client ID for bot " @ %newName @ " (displayName: " @ %displayName @ "). Retry count: " @ %retryCount @ "/3");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Could not get client ID for bot " @ %newName @ " (displayName: " @ %displayName @ "). Retry count: " @ %retryCount @ "/3");
 		if(%retryCount < 3)
 		{
 			$EnemyBotClientIdRetry[%newName] = %retryCount + 1;
 			// Progressive retry delays: 0.5s, 1.0s, 1.5s (increasing delay for later retries)
 			%retryDelay = 0.5 + (%retryCount * 0.5);
-			echo("[SPAWN FLOW] SpawnAIGetClientId(): Scheduling retry #" @ (%retryCount + 1) @ " in " @ %retryDelay @ "s");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Scheduling retry #" @ (%retryCount + 1) @ " in " @ %retryDelay @ "s");
 			// CRITICAL FIX #2: Pass spawnPointId to retry call for proper transaction handling
 			%spawnPointIdForRetry = "";
 			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
@@ -4554,13 +4554,13 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		else
 		{
 			// Max retries reached - give up
-			echo("[SPAWN FLOW] SpawnAIGetClientId(): Max retries reached, giving up");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Max retries reached, giving up");
 			
 			// CRITICAL: Rollback spawn slot if this was a spawn point call
 			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 			{
 				RollbackSpawnSlot(%spawnPointId);
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): Rolled back spawn slot for SpawnPoint " @ %spawnPointId @ " (max retries reached)");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Rolled back spawn slot for SpawnPoint " @ %spawnPointId @ " (max retries reached)");
 			}
 			
 			// CRITICAL: Before cleaning up as "ghost bot", try AI::getId() one more time
@@ -4583,7 +4583,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						// This is a valid bot - use it instead of deleting it!
 						%aiId = %ghostBotId2;
 						%useBotInsteadOfCleanup = true;
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): Found bot " @ %newName @ " via AI::getId() (id=" @ %aiId @ ") - using it instead of cleaning up");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found bot " @ %newName @ " via AI::getId() (id=" @ %aiId @ ") - using it instead of cleaning up");
 					}
 				}
 			}
@@ -4596,7 +4596,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				if(%ghostBotId != -1 && %ghostBotId != "" && %ghostBotId != "False" && %ghostBotId != "false")
 				{
 					%ghostFound = true;
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Bot " @ %newName @ " exists via getClientIdFromName() (clientId=" @ %ghostBotId @ ") but couldn't be found during lookup. Cleaning up ghost bot...");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Bot " @ %newName @ " exists via getClientIdFromName() (clientId=" @ %ghostBotId @ ") but couldn't be found during lookup. Cleaning up ghost bot...");
 				}
 				else
 				{
@@ -4606,7 +4606,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					{
 						%ghostBotId = %checkId;
 						%ghostFound = true;
-						echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Bot " @ %newName @ " exists via display name lookup (clientId=" @ %ghostBotId @ ") but couldn't be found during lookup. Cleaning up ghost bot...");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Bot " @ %newName @ " exists via display name lookup (clientId=" @ %ghostBotId @ ") but couldn't be found during lookup. Cleaning up ghost bot...");
 					}
 				}
 			}
@@ -4616,7 +4616,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			{
 				// We found a valid bot via AI::getId() - skip cleanup and continue with normal registration
 				// %aiId is already set above, so we can proceed with the rest of the function
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): Using bot found via AI::getId(), skipping cleanup");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Using bot found via AI::getId(), skipping cleanup");
 			}
 			// Clean up ghost bot if found (and we didn't find a valid bot to use)
 			else if(%ghostFound)
@@ -4635,7 +4635,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						if(isFile(%characterFile))
 						{
 							%isActuallyPlayer = true;
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): CRITICAL SAFEGUARD - Client ID " @ %ghostBotId @ " has character save file (" @ %ghostName @ ") - this is a REAL PLAYER! Skipping cleanup to prevent player deletion.");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): CRITICAL SAFEGUARD - Client ID " @ %ghostBotId @ " has character save file (" @ %ghostName @ ") - this is a REAL PLAYER! Skipping cleanup to prevent player deletion.");
 						}
 					}
 					
@@ -4646,7 +4646,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						if(%hasLoadedAndSpawned == "True" || %hasLoadedAndSpawned == "true" || %hasLoadedAndSpawned == "1")
 						{
 							%isActuallyPlayer = true;
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): SAFETY CHECK - Client ID " @ %ghostBotId @ " has HasLoadedAndSpawned flag - this is a PLAYER, not a bot! Skipping cleanup to prevent player deletion.");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SAFETY CHECK - Client ID " @ %ghostBotId @ " has HasLoadedAndSpawned flag - this is a PLAYER, not a bot! Skipping cleanup to prevent player deletion.");
 						}
 					}
 					
@@ -4700,12 +4700,12 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				// Only proceed with cleanup if we confirmed it's a bot and NOT a player
 				if(%isActuallyPlayer)
 				{
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Attempted to clean up client ID " @ %ghostBotId @ " but it's a PLAYER! Aborting cleanup to prevent player deletion.");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Attempted to clean up client ID " @ %ghostBotId @ " but it's a PLAYER! Aborting cleanup to prevent player deletion.");
 					%ghostFound = false; // Prevent cleanup
 				}
 				else if(!%isActuallyBot)
 				{
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Could not confirm client ID " @ %ghostBotId @ " is a bot. Skipping cleanup to be safe.");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Could not confirm client ID " @ %ghostBotId @ " is a bot. Skipping cleanup to be safe.");
 					%ghostFound = false; // Prevent cleanup
 				}
 				
@@ -4728,7 +4728,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								%finalCharacterFile = "temp\\" @ %finalNameCheck @ ".cs";
 								if(isFile(%finalCharacterFile))
 								{
-									echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Client ID " @ %ghostBotId @ " has character save file (" @ %finalNameCheck @ ") - this is a REAL PLAYER! Aborting Player object deletion.");
+									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Client ID " @ %ghostBotId @ " has character save file (" @ %finalNameCheck @ ") - this is a REAL PLAYER! Aborting Player object deletion.");
 									return -1; // Exit immediately
 								}
 							}
@@ -4737,7 +4737,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							%finalCheck = fetchData(%ghostBotId, "HasLoadedAndSpawned");
 							if(%finalCheck == "True" || %finalCheck == "true" || %finalCheck == "1")
 							{
-								echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Client ID " @ %ghostBotId @ " has HasLoadedAndSpawned flag - this is a PLAYER! Aborting Player object deletion.");
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Client ID " @ %ghostBotId @ " has HasLoadedAndSpawned flag - this is a PLAYER! Aborting Player object deletion.");
 								return -1; // Exit immediately
 							}
 							
@@ -4750,7 +4750,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							$ClientIdRecentlyFreed[%ghostBotId] = getSimTime();
 							schedule("if($ClientIdRecentlyFreedToken[" @ %ghostBotId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %ghostBotId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %ghostBotId @ "] = \"\"; }", 10.0);
 							deleteObject(%ghostPlayerObj);
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleted ghost Player object for " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleted ghost Player object for " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
 						}
 						
 						// Clean up any bot data arrays (safe even if it's a player - just clears empty data)
@@ -4764,12 +4764,12 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						$ClientIdRecentlyFreed[%ghostBotId] = "";
 					}
 					
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleaned up ghost bot " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleaned up ghost bot " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
 				}
 			}
 			else
 			{
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): Bot " @ %newName @ " was never created - no cleanup needed");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Bot " @ %newName @ " was never created - no cleanup needed");
 			}
 			// Clear both retry counters on failure
 			$EnemyBotClientIdRetry[%newName] = "";
@@ -4784,10 +4784,10 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	}
 		
 		// VALIDATE: Check if player object actually exists
-	echo("[SPAWN FLOW] SpawnAIGetClientId(): Got client ID " @ %aiId @ ", validating player object...");
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Got client ID " @ %aiId @ ", validating player object...");
 		%playerObj = Client::getOwnedObject(%aiId);
 	%playerName = Client::getName(%aiId);
-	echo("[SPAWN FLOW] SpawnAIGetClientId(): Client::getOwnedObject(" @ %aiId @ ") returned: " @ %playerObj);
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Client::getOwnedObject(" @ %aiId @ ") returned: " @ %playerObj);
 	echo("[SPAWN FLOW] SpawnAIGetClientId(): Client::getName(" @ %aiId @ ") returned: '" @ %playerName @ "'");
 
 	// SAFETY: If this clientId is registered as a town bot, abort enemy spawn and clean up
@@ -4801,7 +4801,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		// CRITICAL: Delete the already-spawned enemy bot to prevent shell bot
 		// AI::spawn() succeeded and created the Player object, but we're aborting the spawn
 		// We must delete it using AI::delete() for proper cleanup
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting aborted enemy bot " @ %newName @ " due to town bot conflict");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting aborted enemy bot " @ %newName @ " due to town bot conflict");
 		AI::delete(%newName);
 		
 		// CRITICAL FIX #2: Rollback reserved slot if town bot conflict detected
@@ -4821,7 +4821,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 
 		if(%playerObj == -1 || %playerObj == "")
 		{
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ ", Display name: '" @ %playerName @ "'. This bot will become a SHELL! Cleaning up...");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ ", Display name: '" @ %playerName @ "'. This bot will become a SHELL! Cleaning up...");
 			// Clean up the broken bot - use escaped name to prevent syntax errors
 		%escapedName = String::replace(%newName, "\"", "\\\"");
 		AI::delete(%escapedName);
@@ -4834,7 +4834,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	}
 	else
 	{
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): Bot " @ %newName @ " spawned successfully. clientId=" @ %aiId @ ", Display name: '" @ %playerName @ "', Player object: VALID");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Bot " @ %newName @ " spawned successfully. clientId=" @ %aiId @ ", Display name: '" @ %playerName @ "', Player object: VALID");
 	}
 	
 	// CRITICAL: Set team IMMEDIATELY after validating player object to prevent RefreshAll() from seeing team -1
@@ -4858,7 +4858,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		GameBase::setTeam(%playerObj, %botTeam);
 		// Also set using client ID as backup
 		GameBase::setTeam(%aiId, %botTeam);
-		echo("[BOT TEAM DEBUG] SpawnAIGetClientId - Set team IMMEDIATELY to " @ %botTeam @ " for " @ %newName @ " (clientId=" @ %aiId @ ")");
+		if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] SpawnAIGetClientId - Set team IMMEDIATELY to " @ %botTeam @ " for " @ %newName @ " (clientId=" @ %aiId @ ")");
 		
 		// CRITICAL: Verify team was actually set - if still -1, retry
 		%verifyTeam = GameBase::getTeam(%playerObj);
@@ -4869,7 +4869,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			%verifyTeam2 = GameBase::getTeam(%aiId);
 			if(%verifyTeam2 == -1)
 			{
-				echo("[BOT TEAM DEBUG] WARNING - Team still -1 after setting for " @ %newName @ " (clientId=" @ %aiId @ "). Scheduling retry...");
+				if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] WARNING - Team still -1 after setting for " @ %newName @ " (clientId=" @ %aiId @ "). Scheduling retry...");
 				// Schedule a retry to set team again after a short delay
 				schedule("GameBase::setTeam(" @ %aiId @ ", " @ %botTeam @ "); GameBase::setTeam(" @ %playerObj @ ", " @ %botTeam @ ");", 0.05);
 			}
@@ -4879,7 +4879,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	{
 		// Player object not ready yet - use GameBase::setTeam with client ID
 		GameBase::setTeam(%aiId, %botTeam);
-		echo("[BOT TEAM DEBUG] SpawnAIGetClientId - Set team IMMEDIATELY to " @ %botTeam @ " for " @ %newName @ " (clientId=" @ %aiId @ ", using client ID)");
+		if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] SpawnAIGetClientId - Set team IMMEDIATELY to " @ %botTeam @ " for " @ %newName @ " (clientId=" @ %aiId @ ", using client ID)");
 	}
 		
 		// CRITICAL: Check if this client ID is already in use by a REAL PLAYER (not a bot)
@@ -4895,7 +4895,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			if(%checkSpawnBotInfo != "" && %checkSpawnBotInfo != -1 && %checkSpawnBotInfo != "0")
 			{
 				%isBotName = true;  // SpawnBotInfo is set, so it's definitely a bot
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by SpawnBotInfo='" @ %checkSpawnBotInfo @ "' for clientId=" @ %aiId);
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by SpawnBotInfo='" @ %checkSpawnBotInfo @ "' for clientId=" @ %aiId);
 			}
 			
 			// PRIORITY 2: Check if internal name (%newName) matches the bot we're currently spawning
@@ -4906,7 +4906,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				if(%checkBotInfoAiName != "" && %checkBotInfoAiName != -1 && %checkBotInfoAiName != "0" && %checkBotInfoAiName == %newName)
 				{
 					%isBotName = true;  // BotInfoAiName matches the bot we're spawning, so it's our bot
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by BotInfoAiName match (expected=" @ %newName @ ", found=" @ %checkBotInfoAiName @ ") for clientId=" @ %aiId);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by BotInfoAiName match (expected=" @ %newName @ ", found=" @ %checkBotInfoAiName @ ") for clientId=" @ %aiId);
 				}
 			}
 			
@@ -4941,7 +4941,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				   String::findSubStr(%newName, "Enemy") == 0)
 				{
 					%isBotName = true;  // Internal name matches bot patterns
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by internal name pattern (newName=" @ %newName @ ") for clientId=" @ %aiId);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by internal name pattern (newName=" @ %newName @ ") for clientId=" @ %aiId);
 				}
 			}
 			
@@ -4973,7 +4973,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				   String::findSubStr(%playerName, "roundThree") != -1)
 				{
 					%isBotName = true;
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by explicit Colloseum/Seal Battle display name (playerName=" @ %playerName @ ") for clientId=" @ %aiId);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by explicit Colloseum/Seal Battle display name (playerName=" @ %playerName @ ") for clientId=" @ %aiId);
 				}
 				// Standard bot name patterns
 				else if(String::findSubStr(%playerName, "Alien") == 0 || 
@@ -4993,7 +4993,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				   String::findSubStr(%playerName, "Round") != -1)  // Changed from == 0 to != -1 (check for "Round" anywhere, not just prefix)
 				{
 					%isBotName = true;
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by display name pattern (playerName=" @ %playerName @ ") for clientId=" @ %aiId);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by display name pattern (playerName=" @ %playerName @ ") for clientId=" @ %aiId);
 				}
 			}
 			
@@ -5004,7 +5004,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				if(%checkBotInfoAiName != "" && %checkBotInfoAiName != -1 && %checkBotInfoAiName != "0")
 				{
 					%isBotName = true;  // BotInfoAiName is set, so it's a bot
-					echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by BotInfoAiName (BotInfoAiName=" @ %checkBotInfoAiName @ ") for clientId=" @ %aiId);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by BotInfoAiName (BotInfoAiName=" @ %checkBotInfoAiName @ ") for clientId=" @ %aiId);
 				}
 			}
 			
@@ -5012,7 +5012,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			if(!%isBotName && isRPGAI(%aiId))
 			{
 				%isBotName = true;  // Bot data exists, so it's a bot
-				echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by isRPGAI() for clientId=" @ %aiId);
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by isRPGAI() for clientId=" @ %aiId);
 			}
 			
 			// If it's not a bot name pattern and not a bot, it's a real player
@@ -5576,7 +5576,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						GameBase::setTeam(%playerObj, %botTeam);
 					else
 						GameBase::setTeam(%aiId, %botTeam);
-					echo("[BOT TEAM DEBUG] SpawnAIGetClientId - Updated team from RACE to " @ %botTeam @ " for " @ %newName @ " (clientId=" @ %aiId @ ")");
+					if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] SpawnAIGetClientId - Updated team from RACE to " @ %botTeam @ " for " @ %newName @ " (clientId=" @ %aiId @ ")");
 				}
 			}
 		}
@@ -5595,17 +5595,17 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		// CRITICAL: Store BotInfoAiName for ALL enemy bots (TempSpawn, MarkerSpawn, and SpawnPoint)
 		// This must be outside the SpawnPoint-specific block so it runs for all enemy bot types
 		// Store the AI name (%newName) so we can identify this bot later
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): Setting BotInfoAiName for clientId " @ %aiId @ " to '" @ %newName @ "'");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Setting BotInfoAiName for clientId " @ %aiId @ " to '" @ %newName @ "'");
 		storeData(%aiId, "BotInfoAiName", %newName);
 		$BotInfoAiName[%aiId] = %newName;  // Also store in direct array for fast lookup
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): BotInfoAiName set successfully");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): BotInfoAiName set successfully");
 		
 		AI::SetVar(%newName, spotDist, $AIspotDist);
 		
 		// CRITICAL: Increment enemy bot tracking counters
 		$ActiveEnemyBots++;
 		$TotalActiveBots++;
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): Incremented counters - Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots);
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Incremented counters - Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots);
 		echo("[BOT TRACK] Enemy bot spawned: " @ %newName @ " (clientId=" @ %aiId @ ") | Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots);
 		
 		// CRITICAL: Register bot in centralized registry for reliable spawn counter management
@@ -5641,22 +5641,22 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		storeData(%aiId, "noDropLootbagFlag", "");
 		$EnemyBotData[%aiId, "noDropLootbagFlag"] = "";
 		$ClientData[%aiId, "noDropLootbagFlag"] = "";
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): Set HasLoadedAndSpawned flag for enemy bot " @ %newName @ " (clientId=" @ %aiId @ ")");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Set HasLoadedAndSpawned flag for enemy bot " @ %newName @ " (clientId=" @ %aiId @ ")");
 		
 		// Schedule AI::setWeapons() with a small delay to ensure bot is fully initialized
 		// This ensures the player object exists when GiveThisStuff() is called
 		// CRITICAL: Increased delay from 0.15s to 0.2s to give engine time to process team change
 		// This prevents RefreshAll() (called from HardcodeAIskills) from seeing team -1
 		%currentTime = getSimTime();
-		echo("[INERT DEBUG] SpawnAIGetClientId: Scheduling AI::setWeapons(" @ %newName @ ") in 0.2s @ " @ %currentTime);
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): Scheduling AI::setWeapons() in 0.2s");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] SpawnAIGetClientId: Scheduling AI::setWeapons(" @ %newName @ ") in 0.2s @ " @ %currentTime);
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Scheduling AI::setWeapons() in 0.2s");
 		schedule("AI::setWeapons(\"" @ %newName @ "\", \"" @ %loadout @ "\");", 0.2);
 		
 		// Clear scheduled flag on successful spawn
 		$SpawnAIScheduled[%newName] = "";
 		%completionTime = getSimTime();
-		echo("[INERT DEBUG] SpawnAIGetClientId: COMPLETED @ " @ %completionTime @ " - returning " @ %newName);
-		echo("[SPAWN FLOW] SpawnAIGetClientId(): Spawn completed successfully, returning " @ %newName);
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] SpawnAIGetClientId: COMPLETED @ " @ %completionTime @ " - returning " @ %newName);
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Spawn completed successfully, returning " @ %newName);
 		
 		// CRITICAL: Clear client ID retry counter on successful spawn
 		$EnemyBotClientIdRetry[%newName] = "";
@@ -5665,7 +5665,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 		{
 			$SpawnPointInProgress[%spawnPointId] = "";
-			echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleared $SpawnPointInProgress flag for SpawnPoint " @ %spawnPointId);
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Cleared $SpawnPointInProgress flag for SpawnPoint " @ %spawnPointId);
 		}
 		
 		return %newName;
@@ -5925,7 +5925,7 @@ function AI::onDroneKilled(%aiName)
       
       	if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
       	{
-	      	echo("[BOT SHELL DEBUG] AI::onDroneKilled(): ERROR - Could not get AI ID for " @ %aiName @ " (may be shell bot)");
+	      	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] AI::onDroneKilled(): ERROR - Could not get AI ID for " @ %aiName @ " (may be shell bot)");
       		return;
       	}
       	
@@ -5936,7 +5936,7 @@ function AI::onDroneKilled(%aiName)
       		%characterFile = "temp\\" @ %playerNameCheck @ ".cs";
       		if(isFile(%characterFile))
       		{
-      			echo("[BOT SHELL DEBUG] AI::onDroneKilled(): CRITICAL SAFEGUARD - Detected real player " @ %playerNameCheck @ " (clientId=" @ %aiId @ ") with save file. Skipping bot cleanup to prevent data loss.");
+      			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] AI::onDroneKilled(): CRITICAL SAFEGUARD - Detected real player " @ %playerNameCheck @ " (clientId=" @ %aiId @ ") with save file. Skipping bot cleanup to prevent data loss.");
       			// Clear any stale bot data that might have caused this false positive
       			$EnemyBotData[%aiId, "BotInfoAiName"] = "";
       			$EnemyBotData[%aiId, "SpawnBotInfo"] = "";
@@ -6002,7 +6002,7 @@ function AI::onDroneKilled(%aiName)
       	if(%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1)
       	{
       		$SpawnAIScheduled[%botInfoAiName] = "";
-      		echo("[BOT SHELL DEBUG] AI::onDroneKilled(): Cleared $SpawnAIScheduled flag for bot " @ %botInfoAiName);
+      		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] AI::onDroneKilled(): Cleared $SpawnAIScheduled flag for bot " @ %botInfoAiName);
       	}
       	
       	// Re-check botInfoAiName after potential array lookup
@@ -6865,7 +6865,7 @@ function HardcodeAIskills(%aiId)
 			%playerObjForTeam = Client::getOwnedObject(%aiId);
 			if(%playerObjForTeam != -1 && %playerObjForTeam != "")
 				GameBase::setTeam(%playerObjForTeam, %storedBotTeam);
-			echo("[BOT TEAM DEBUG] HardcodeAIskills - Set team to " @ %storedBotTeam @ " for clientId " @ %aiId @ " (was " @ %currentTeam @ ") before RefreshAllEnemyBot()");
+			if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] HardcodeAIskills - Set team to " @ %storedBotTeam @ " for clientId " @ %aiId @ " (was " @ %currentTeam @ ") before RefreshAllEnemyBot()");
 		}
 	}
 	else
@@ -6886,7 +6886,7 @@ function HardcodeAIskills(%aiId)
 					%playerObjForTeam = Client::getOwnedObject(%aiId);
 					if(%playerObjForTeam != -1 && %playerObjForTeam != "")
 						GameBase::setTeam(%playerObjForTeam, %botInfoTeam);
-					echo("[BOT TEAM DEBUG] HardcodeAIskills - Set team to " @ %botInfoTeam @ " for clientId " @ %aiId @ " (was " @ %currentTeam @ ") from BotInfo before RefreshAllEnemyBot()");
+					if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] HardcodeAIskills - Set team to " @ %botInfoTeam @ " for clientId " @ %aiId @ " (was " @ %currentTeam @ ") from BotInfo before RefreshAllEnemyBot()");
 				}
 			}
 		}
@@ -7086,7 +7086,7 @@ function HardcodeAIskills(%aiId)
 	
 	if(%playerObj == -1 || %playerObj == "")
 	{
-		echo("[BOT SHELL DEBUG] HardcodeAIskills(): WARNING - Bot " @ %botName @ " (clientId=" @ %aiId @ ") has NO player object after skills initialization! Display name: '" @ %playerName @ "'. This may become a shell bot.");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] HardcodeAIskills(): WARNING - Bot " @ %botName @ " (clientId=" @ %aiId @ ") has NO player object after skills initialization! Display name: '" @ %playerName @ "'. This may become a shell bot.");
 	}
 	else
 	{
@@ -7094,7 +7094,7 @@ function HardcodeAIskills(%aiId)
 		%spawnBotInfo = fetchData(%aiId, "SpawnBotInfo");
 		if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
 		{
-			echo("[BOT SHELL DEBUG] HardcodeAIskills(): Bot " @ %botName @ " (clientId=" @ %aiId @ ") skills initialized successfully. Display name: '" @ %playerName @ "', Player object: VALID");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] HardcodeAIskills(): Bot " @ %botName @ " (clientId=" @ %aiId @ ") skills initialized successfully. Display name: '" @ %playerName @ "', Player object: VALID");
 		}
 	}
 	
@@ -7159,7 +7159,7 @@ function HardcodeAIskills(%aiId)
 					{
 						%storedBotTeam = %botInfoTeam;
 						storeData(%aiId, "botTeam", %botInfoTeam);
-						echo("[BOT TEAM DEBUG] HardcodeAIskills - Retrieved botTeam from BotInfo: " @ %botInfoTeam @ " for " @ %botInfoAiName);
+						if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] HardcodeAIskills - Retrieved botTeam from BotInfo: " @ %botInfoTeam @ " for " @ %botInfoAiName);
 					}
 				}
 				
@@ -7186,7 +7186,7 @@ function HardcodeAIskills(%aiId)
 				// We set the team above, so we trust it's set and proceed with RefreshAllEnemyBot()
 				// The team will be verified later by VerifyEnemyBotTeam if needed
 				// Don't check immediately after setting - it's unreliable due to timing
-				echo("[BOT TEAM DEBUG] HardcodeAIskills - Set team to " @ %storedBotTeam @ " for " @ %botName @ " (clientId=" @ %aiId @ ") before RefreshAllEnemyBot()");
+				if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] HardcodeAIskills - Set team to " @ %storedBotTeam @ " for " @ %botName @ " (clientId=" @ %aiId @ ") before RefreshAllEnemyBot()");
 				// Call RefreshAllEnemyBot() instead of RefreshAll() - it does NOT touch team
 				RefreshAllEnemyBot(%aiId);
 				
@@ -7211,7 +7211,7 @@ function HardcodeAIskills(%aiId)
 			}
 			else
 			{
-				echo("[BOT TEAM DEBUG] WARNING - HardcodeAIskills - No stored botTeam for " @ %botName @ " (clientId=" @ %aiId @ ")");
+				if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] WARNING - HardcodeAIskills - No stored botTeam for " @ %botName @ " (clientId=" @ %aiId @ ")");
 				// No stored team - call RefreshAllEnemyBot() anyway (it does NOT touch team)
 				RefreshAllEnemyBot(%aiId);
 				
@@ -7237,12 +7237,12 @@ function HardcodeAIskills(%aiId)
 		}
 		else
 		{
-			echo("[BOT SHELL DEBUG] HardcodeAIskills(): Bot " @ %botName @ " (clientId=" @ %aiId @ ") player object became invalid right before RefreshAll call. Skipping RefreshAll to prevent errors.");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] HardcodeAIskills(): Bot " @ %botName @ " (clientId=" @ %aiId @ ") player object became invalid right before RefreshAll call. Skipping RefreshAll to prevent errors.");
 		}
 	}
 		else
 		{
-			echo("[BOT SHELL DEBUG] HardcodeAIskills(): Bot " @ %botName @ " (clientId=" @ %aiId @ ") has NO player object before RefreshAll call. Skipping RefreshAll to prevent errors.");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] HardcodeAIskills(): Bot " @ %botName @ " (clientId=" @ %aiId @ ") has NO player object before RefreshAll call. Skipping RefreshAll to prevent errors.");
 		}
 }
 
@@ -7257,7 +7257,7 @@ function VerifyTeamAfterHardcodeAIskills(%clientId, %expectedTeam, %botName)
 		%playerObj = Client::getOwnedObject(%clientId);
 		if(%playerObj != -1 && %playerObj != "")
 			GameBase::setTeam(%playerObj, %expectedTeam);
-		echo("[BOT TEAM DEBUG] VerifyTeamAfterHardcodeAIskills - Team still " @ %currentTeam @ " for " @ %botName @ " (clientId=" @ %clientId @ "), retried setting to " @ %expectedTeam);
+		if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] VerifyTeamAfterHardcodeAIskills - Team still " @ %currentTeam @ " for " @ %botName @ " (clientId=" @ %clientId @ "), retried setting to " @ %expectedTeam);
 	}
 }
 
@@ -7802,7 +7802,7 @@ function PeriodicShellBotCheck()
 					if(%playerObj == -1 || %playerObj == "" || !isObject(%playerObj))
 					{
 						%shellCount++;
-						echo("[BOT SHELL DEBUG] PeriodicShellBotCheck: SHELL BOT DETECTED - clientId=" @ %checkId @ ", Display name: '" @ %name @ "', BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'. Bot has no player object!");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] PeriodicShellBotCheck: SHELL BOT DETECTED - clientId=" @ %checkId @ ", Display name: '" @ %name @ "', BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'. Bot has no player object!");
 					}
 				}
 			}
@@ -7827,7 +7827,7 @@ function PeriodicShellBotCheck()
 					if(%playerObj == -1 || %playerObj == "" || !isObject(%playerObj))
 					{
 						%shellCount++;
-						echo("[BOT SHELL DEBUG] PeriodicShellBotCheck: SHELL TOWN BOT DETECTED - clientId=" @ %checkId @ ", Name: '" @ %botName @ "', BotInfoAiName='" @ %botInfoAiName @ "'. Bot has no player object!");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] PeriodicShellBotCheck: SHELL TOWN BOT DETECTED - clientId=" @ %checkId @ ", Name: '" @ %botName @ "', BotInfoAiName='" @ %botInfoAiName @ "'. Bot has no player object!");
 					}
 				}
 			}
@@ -7836,7 +7836,7 @@ function PeriodicShellBotCheck()
 	
 	if(%shellCount > 0)
 	{
-		echo("[BOT SHELL DEBUG] PeriodicShellBotCheck: Found " @ %shellCount @ " shell bot(s) (bots with no player object)");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] PeriodicShellBotCheck: Found " @ %shellCount @ " shell bot(s) (bots with no player object)");
 	}
 	
 	// Schedule next check in 30 seconds
@@ -11666,7 +11666,7 @@ function EnforceEnemyBotTeam(%clientId, %expectedTeam, %attempts)
 	if(%currentTeam != %expectedTeam)
 	{
 		// Team is wrong - enforce the correct team
-		echo("[TEAM ENFORCE] EnforceEnemyBotTeam: clientId=" @ %clientId @ ", attempt=" @ %attempts @ ", current=" @ %currentTeam @ ", expected=" @ %expectedTeam @ " - FIXING");
+		if($AI_DEBUG_ENABLED) echo("[TEAM ENFORCE] EnforceEnemyBotTeam: clientId=" @ %clientId @ ", attempt=" @ %attempts @ ", current=" @ %currentTeam @ ", expected=" @ %expectedTeam @ " - FIXING");
 		
 		// Set team on BOTH Player object AND client ID
 		GameBase::setTeam(%playerObj, %expectedTeam);
@@ -11684,7 +11684,7 @@ function EnforceEnemyBotTeam(%clientId, %expectedTeam, %attempts)
 		}
 		else
 		{
-			echo("[TEAM ENFORCE] EnforceEnemyBotTeam: Max attempts reached for clientId=" @ %clientId @ ". Final team=" @ GameBase::getTeam(%playerObj));
+			if($AI_DEBUG_ENABLED) echo("[TEAM ENFORCE] EnforceEnemyBotTeam: Max attempts reached for clientId=" @ %clientId @ ". Final team=" @ GameBase::getTeam(%playerObj));
 		}
 	}
 }
@@ -11695,11 +11695,11 @@ function ScheduleTeamEnforcement(%clientId, %expectedTeam)
 	// CRITICAL: Also reject -1 and 0 as invalid teams (0 is observer team, -1 is invalid)
 	if(%clientId == -1 || %clientId == "" || %expectedTeam == "" || %expectedTeam == -1 || %expectedTeam == 0)
 	{
-		echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Invalid parameters - clientId=" @ %clientId @ ", expectedTeam=" @ %expectedTeam @ " - Using default team 1");
+		if($AI_DEBUG_ENABLED) echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Invalid parameters - clientId=" @ %clientId @ ", expectedTeam=" @ %expectedTeam @ " - Using default team 1");
 		%expectedTeam = 1; // Default to team 1 (enemy) if invalid
 	}
 	
-	echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Scheduling enforcement for clientId=" @ %clientId @ " with expectedTeam=" @ %expectedTeam);
+	if($AI_DEBUG_ENABLED) echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Scheduling enforcement for clientId=" @ %clientId @ " with expectedTeam=" @ %expectedTeam);
 	
 	// Schedule multiple enforcement attempts at different intervals
 	schedule("EnforceEnemyBotTeam(" @ %clientId @ ", " @ %expectedTeam @ ", 0);", 0.1);
@@ -11777,7 +11777,7 @@ function VerifyEnemyBotTeam(%clientId, %botName, %expectedTeam)
 	}
 	else
 	{
-		echo("[BOT TEAM DEBUG] VerifyEnemyBotTeam - Enemy bot " @ %botName @ " (clientId=" @ %clientId @ ") has correct team " @ %expectedTeam);
+		if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] VerifyEnemyBotTeam - Enemy bot " @ %botName @ " (clientId=" @ %clientId @ ") has correct team " @ %expectedTeam);
 	}
 }
 
