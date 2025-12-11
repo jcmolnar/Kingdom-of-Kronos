@@ -283,7 +283,7 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): SLOT RESERVED @ " @ floor(getSimTime()) @ ", delay=" @ %delay @ ", max=" @ %maxs @ ", counter=" @ %reservedCounter @ ", idx=" @ %index);
 		
-		echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): ATTEMPTING SPAWN - calling AI::helper()");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): ATTEMPTING SPAWN - calling AI::helper()");
 		
 		// Pass spawn point ID to helper so it can handle Rollback on failure
 		// CRITICAL FIX: Added missing arguments (loadout="", spawnPointId=%this)

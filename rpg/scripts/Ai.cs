@@ -4788,7 +4788,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		%playerObj = Client::getOwnedObject(%aiId);
 	%playerName = Client::getName(%aiId);
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Client::getOwnedObject(" @ %aiId @ ") returned: " @ %playerObj);
-	echo("[SPAWN FLOW] SpawnAIGetClientId(): Client::getName(" @ %aiId @ ") returned: '" @ %playerName @ "'");
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Client::getName(" @ %aiId @ ") returned: '" @ %playerName @ "'");
 
 	// SAFETY: If this clientId is registered as a town bot, abort enemy spawn and clean up
 	for(%tbIdx = 0; (%tbName = GetWord($TownBotRegistry, %tbIdx)) != -1; %tbIdx++)
@@ -5606,7 +5606,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		$ActiveEnemyBots++;
 		$TotalActiveBots++;
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Incremented counters - Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots);
-		echo("[BOT TRACK] Enemy bot spawned: " @ %newName @ " (clientId=" @ %aiId @ ") | Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots);
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT TRACK] Enemy bot spawned: " @ %newName @ " (clientId=" @ %aiId @ ") | Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots);
 		
 		// CRITICAL: Register bot in centralized registry for reliable spawn counter management
 		// Get spawn point and team from earlier in the function
