@@ -1,6 +1,7 @@
 // Helper function to get client ID from a Player object
 // For real players, Player::getClient() returns their client ID
 // For enemy bots, Player::getClient() returns -1, so we need to do a reverse lookup
+// PHASE 2 FIX: Added reverse verification to prevent client ID misidentification
 function GetClientIdFromPlayerObject(%playerObj)
 {
 	if(!isObject(%playerObj))
@@ -9,19 +10,331 @@ function GetClientIdFromPlayerObject(%playerObj)
 	// Try Player::getClient() first (works for real players)
 	%clientId = Player::getClient(%playerObj);
 	if(%clientId != -1 && %clientId != "")
-		return %clientId;
+	{
+		// PHASE 2 FIX: Reverse verification - verify the client ID actually owns this Player object
+		%verifyPlayerObj = Client::getOwnedObject(%clientId);
+		if(%verifyPlayerObj == %playerObj)
+		{
+			// PHASE 2 FIX: Additional validation - check if client ID was recently freed
+			// BUT: Allow it if reverse verification passes (we're processing this specific entity)
+			%recentlyFreed = $ClientIdRecentlyFreed[%clientId];
+			if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+			{
+				%currentTime = getSimTime();
+				%timeSinceFreed = %currentTime - %recentlyFreed;
+				if(%timeSinceFreed < 10)
+				{
+					// Client ID was recently freed, but reverse verification passed
+					// This means we're processing this specific entity's death/cleanup
+					// Allow it to proceed (e.g., during Player::onKilled() for bot despawn)
+					// Only warn if it's been more than 1 second (to avoid spam during immediate cleanup)
+					if(%timeSinceFreed > 1)
+					{
+						echo("WARNING: GetClientIdFromPlayerObject - Client ID " @ %clientId @ " was recently freed " @ %timeSinceFreed @ "s ago, but reverse verification passed. Allowing for entity cleanup.");
+					}
+					return %clientId; // Allow it - we're processing this entity
+				}
+				else
+				{
+					// Enough time has passed, clear the flag
+					$ClientIdRecentlyFreed[%clientId] = "";
+					return %clientId; // Valid client ID
+				}
+			}
+			else
+			{
+				return %clientId; // Valid client ID (no recently freed flag)
+			}
+		}
+		else
+		{
+			// Reverse verification failed - Player::getClient() returned wrong ID
+			// This could be a timing issue (Player object not fully registered) or a real collision
+			// TWO-TIER APPROACH: Use Client::getFirst()/getNext() first (most reliable), then range loop as fallback
+			%foundCorrectId = -1;
+			
+			// Tier 1: Use Client::getFirst()/getNext() (most reliable method)
+			for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
+			{
+				%checkPlayerObj = Client::getOwnedObject(%checkId);
+				if(%checkPlayerObj == %playerObj)
+				{
+					%foundCorrectId = %checkId;
+					break;
+				}
+			}
+			
+			// Tier 2: Range loop fallback (2049-2200) - only if Tier 1 didn't find a match
+			if(%foundCorrectId == -1)
+			{
+				for(%checkId = 2049; %checkId <= 2200; %checkId++)
+				{
+					%checkPlayerObj = Client::getOwnedObject(%checkId);
+					if(%checkPlayerObj == %playerObj)
+					{
+						%foundCorrectId = %checkId;
+						break;
+					}
+				}
+			}
+			
+			if(%foundCorrectId != -1)
+			{
+				// Found the correct client ID via brute-force - use it instead
+				// Only warn once per Player object to reduce spam
+				%warningKey = "PlayerObj_" @ %playerObj;
+				if($GetClientIdFromPlayerObject_Warning[%warningKey] == "")
+				{
+					echo("WARNING: GetClientIdFromPlayerObject - Player::getClient() returned incorrect client ID " @ %clientId @ " (owned by Player object " @ %verifyPlayerObj @ "). Corrected to client ID " @ %foundCorrectId @ " via brute-force search.");
+					$GetClientIdFromPlayerObject_Warning[%warningKey] = getSimTime();
+					// Clear warning flag after 30 seconds
+					schedule("$GetClientIdFromPlayerObject_Warning[" @ %warningKey @ "] = \"\";", 30);
+				}
+				return %foundCorrectId; // Return the correct client ID
+			}
+			else
+			{
+				// Brute-force also failed
+				// Check for "Ghost Object" scenario:
+				// 1. Player::getClient(%playerObj) returned an ID (%clientId)
+				// 2. That ID exists but owns a DIFFERENT object (%verifyPlayerObj)
+				// 3. No other client owns the current object (%playerObj)
+				
+				if(%clientId != -1 && %clientId != "" && %verifyPlayerObj != -1 && %verifyPlayerObj != "")
+				{
+					// This is a "Ghost Object" - a stale player object that hasn't been fully deleted yet
+					// but the client has already spawned a new player object.
+					// This happens frequently during ReconcileSpawnCounters cleanup.
+					// Log as info/debug only to prevent console spam
+					if($GetClientIdFromPlayerObject_Warning[%clientId] == "")
+					{
+						// echo("INFO: GetClientIdFromPlayerObject - Detected Ghost/Stale Object " @ %playerObj @ " for client " @ %clientId @ " (current owned object is " @ %verifyPlayerObj @ "). Ignoring.");
+						$GetClientIdFromPlayerObject_Warning[%clientId] = getSimTime();
+						schedule("$GetClientIdFromPlayerObject_Warning[" @ %clientId @ "] = \"\";", 10);
+					}
+					return -1;
+				}
+				
+				// CRITICAL FIX: If verifyPlayerObj is -1, this is likely a timing issue during bot spawn
+				// The Player object exists and Player::getClient() returned a client ID, but
+				// Client::getOwnedObject() returns -1 because the Player object isn't fully registered yet.
+				// In this case, trust Player::getClient() and return the client ID anyway
+				if(%verifyPlayerObj == -1 || %verifyPlayerObj == "")
+				{
+					// Timing issue - Player object not fully registered yet
+					// Player::getClient() returned a client ID, so trust it
+					// Only warn once per client ID to reduce spam
+					if($GetClientIdFromPlayerObject_Warning[%clientId] == "")
+					{
+						echo("WARNING: GetClientIdFromPlayerObject - Timing issue detected for client ID " @ %clientId @ ". Player object exists but Client::getOwnedObject returns -1 (Player object not fully registered yet). Using client ID from Player::getClient() anyway.");
+						$GetClientIdFromPlayerObject_Warning[%clientId] = getSimTime();
+						schedule("$GetClientIdFromPlayerObject_Warning[" @ %clientId @ "] = \"\";", 30);
+					}
+					return %clientId; // Trust Player::getClient() - timing issue, not a real collision
+				}
+				
+				// Real error: Brute-force failed and it's not a clear ghost case or timing issue
+				// Only warn once per client ID to reduce spam
+				if($GetClientIdFromPlayerObject_Warning[%clientId] == "")
+				{
+					echo("WARNING: GetClientIdFromPlayerObject - Reverse verification failed for client ID " @ %clientId @ ". Player object mismatch (Player::getClient returned " @ %clientId @ " but Client::getOwnedObject returned " @ %verifyPlayerObj @ "). Brute-force search also failed to find correct client ID.");
+					$GetClientIdFromPlayerObject_Warning[%clientId] = getSimTime();
+					// Clear warning flag after 10 seconds to allow re-warning if issue persists
+					schedule("$GetClientIdFromPlayerObject_Warning[" @ %clientId @ "] = \"\";", 10);
+				}
+				// Fall through to brute-force search anyway (might find it on retry)
+				%clientId = -1;
+			}
+		}
+	}
 	
 	// For enemy bots, Player::getClient() returns -1
-	// Enemy bots have client IDs (2049-2200 range), but Player::getClient() doesn't return them
+	// Enemy bots have client IDs, but Player::getClient() doesn't return them
 	// We need to find the client ID that owns this Player object (reverse lookup)
-	for(%checkId = 2049; %checkId <= 2200; %checkId++)
+	// TWO-TIER APPROACH: Use Client::getFirst()/getNext() first (most reliable), then range loop as fallback
+	%foundClientId = -1;
+	
+	// Tier 1: Use Client::getFirst()/getNext() (most reliable method)
+	for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
 	{
+		// PHASE 2 FIX: Skip client IDs that were recently freed
+		%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
+		if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+		{
+			%currentTime = getSimTime();
+			%timeSinceFreed = %currentTime - %recentlyFreed;
+			if(%timeSinceFreed < 10)
+			{
+				continue; // Skip recently freed client IDs
+			}
+			else
+			{
+				// Enough time has passed, clear the flag
+				$ClientIdRecentlyFreed[%checkId] = "";
+			}
+		}
+		
 		%ownedPlayerObj = Client::getOwnedObject(%checkId);
 		if(%ownedPlayerObj == %playerObj)
 		{
-			return %checkId; // Found client ID for enemy bot
+			// PHASE 2 FIX: Reverse verification - double-check the client ID owns this Player object
+			%verifyPlayerObj = Client::getOwnedObject(%checkId);
+			if(%verifyPlayerObj == %playerObj)
+			{
+				// PHASE 2 FIX: If this client ID was recently freed but reverse verification passes,
+				// allow it (we're processing this specific entity's cleanup/death)
+				%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
+				if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+				{
+					%currentTime = getSimTime();
+					%timeSinceFreed = %currentTime - %recentlyFreed;
+					if(%timeSinceFreed < 10)
+					{
+						// Recently freed but reverse verification passed - allow it for cleanup
+						// Only warn if it's been more than 1 second (to avoid spam during immediate cleanup)
+						if(%timeSinceFreed > 1)
+						{
+							echo("WARNING: GetClientIdFromPlayerObject - Client ID " @ %checkId @ " was recently freed " @ %timeSinceFreed @ "s ago, but reverse verification passed. Allowing for entity cleanup.");
+						}
+						// Continue to return this ID - we're processing this entity
+					}
+					else
+					{
+						// Enough time has passed, clear the flag
+						$ClientIdRecentlyFreed[%checkId] = "";
+					}
+				}
+				
+				// PHASE 2 FIX: Entity type validation - verify client ID matches expected entity type
+				// PRIORITY: Check bot indicators FIRST (bots can have HasLoadedAndSpawned set, so don't use it for player detection)
+				%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
+				%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
+				%isBot = ((%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1) || 
+				          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) ||
+				          Player::isAiControlled(%checkId) || isRPGAI(%checkId));
+				
+				// Only check for player indicators if NOT a bot
+				%isPlayer = false;
+				if(!%isBot)
+				{
+					%playerName = Client::getName(%checkId);
+					if(%playerName != "" && %playerName != -1)
+					{
+						%characterFile = "temp\\" @ %playerName @ ".cs";
+						if(isFile(%characterFile))
+						{
+							%isPlayer = true;
+						}
+					}
+					// HasLoadedAndSpawned is NOT a reliable player indicator (bots set it too)
+				}
+				
+				// If entity type validation fails, log warning but still return ID (better than returning -1)
+				// This should rarely trigger now since we prioritize bot detection
+				if(%isPlayer && %isBot)
+				{
+					echo("ERROR: GetClientIdFromPlayerObject - Client ID " @ %checkId @ " has conflicting entity type indicators (both player and bot). This may indicate a collision.");
+				}
+				
+				%foundClientId = %checkId; // Found client ID for enemy bot or player
+				break;
+			}
 		}
 	}
+	
+	// Tier 2: Range loop fallback (2049-2200) - only if Tier 1 didn't find a match
+	if(%foundClientId == -1)
+	{
+		for(%checkId = 2049; %checkId <= 2200; %checkId++)
+		{
+			// PHASE 2 FIX: Skip client IDs that were recently freed
+			%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
+			if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+			{
+				%currentTime = getSimTime();
+				%timeSinceFreed = %currentTime - %recentlyFreed;
+				if(%timeSinceFreed < 10)
+				{
+					continue; // Skip recently freed client IDs
+				}
+				else
+				{
+					// Enough time has passed, clear the flag
+					$ClientIdRecentlyFreed[%checkId] = "";
+				}
+			}
+			
+			%ownedPlayerObj = Client::getOwnedObject(%checkId);
+			if(%ownedPlayerObj == %playerObj)
+			{
+				// PHASE 2 FIX: Reverse verification - double-check the client ID owns this Player object
+				%verifyPlayerObj = Client::getOwnedObject(%checkId);
+				if(%verifyPlayerObj == %playerObj)
+				{
+					// PHASE 2 FIX: If this client ID was recently freed but reverse verification passes,
+					// allow it (we're processing this specific entity's cleanup/death)
+					%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
+					if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+					{
+						%currentTime = getSimTime();
+						%timeSinceFreed = %currentTime - %recentlyFreed;
+						if(%timeSinceFreed < 10)
+						{
+							// Recently freed but reverse verification passed - allow it for cleanup
+							// Only warn if it's been more than 1 second (to avoid spam during immediate cleanup)
+							if(%timeSinceFreed > 1)
+							{
+								echo("WARNING: GetClientIdFromPlayerObject - Client ID " @ %checkId @ " was recently freed " @ %timeSinceFreed @ "s ago, but reverse verification passed. Allowing for entity cleanup.");
+							}
+							// Continue to return this ID - we're processing this entity
+						}
+						else
+						{
+							// Enough time has passed, clear the flag
+							$ClientIdRecentlyFreed[%checkId] = "";
+						}
+					}
+					
+					// PHASE 2 FIX: Entity type validation - verify client ID matches expected entity type
+					// PRIORITY: Check bot indicators FIRST (bots can have HasLoadedAndSpawned set, so don't use it for player detection)
+					%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
+					%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
+					%isBot = ((%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1) || 
+					          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) ||
+					          Player::isAiControlled(%checkId) || isRPGAI(%checkId));
+					
+					// Only check for player indicators if NOT a bot
+					%isPlayer = false;
+					if(!%isBot)
+					{
+						%playerName = Client::getName(%checkId);
+						if(%playerName != "" && %playerName != -1)
+						{
+							%characterFile = "temp\\" @ %playerName @ ".cs";
+							if(isFile(%characterFile))
+							{
+								%isPlayer = true;
+							}
+						}
+						// HasLoadedAndSpawned is NOT a reliable player indicator (bots set it too)
+					}
+					
+					// If entity type validation fails, log warning but still return ID (better than returning -1)
+					// This should rarely trigger now since we prioritize bot detection
+					if(%isPlayer && %isBot)
+					{
+						echo("ERROR: GetClientIdFromPlayerObject - Client ID " @ %checkId @ " has conflicting entity type indicators (both player and bot). This may indicate a collision.");
+					}
+					
+					%foundClientId = %checkId; // Found client ID for enemy bot or player
+					break;
+				}
+			}
+		}
+	}
+	
+	if(%foundClientId != -1)
+		return %foundClientId;
 	
 	// Fallback: return -1 if not found (shouldn't happen for valid bots)
 	return -1;
@@ -527,13 +840,13 @@ function Player::onKilled(%this)
 									{
 										// Bot has extras - drop ALL weapons (original passed roll + extras from lootbags always drop)
 										%weaponDropCount = %eamnt;
-										echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | Percentage: " @ %perc @ "% | Roll: SUCCESS | Dropping all " @ %eamnt @ " weapons (original: " @ %originalWeaponCount @ ", extras: " @ (%eamnt - %originalWeaponCount) @ ")");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | Percentage: " @ %perc @ "% | Roll: SUCCESS | Dropping all " @ %eamnt @ " weapons (original: " @ %originalWeaponCount @ ", extras: " @ (%eamnt - %originalWeaponCount) @ ")");
 									}
 									else
 									{
 										// No extras - drop only the original count
 										%weaponDropCount = %originalWeaponCount;
-										echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | Percentage: " @ %perc @ "% | Roll: SUCCESS | Dropping " @ %weaponDropCount @ " weapons");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | Percentage: " @ %perc @ "% | Roll: SUCCESS | Dropping " @ %weaponDropCount @ " weapons");
 									}
 									%shouldDropWeapon = true;
 									%weaponDropRoll = true;
@@ -544,13 +857,13 @@ function Player::onKilled(%this)
 									if(%hasExtras)
 									{
 										%weaponDropCount = %eamnt - %originalWeaponCount;
-										echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | Percentage: " @ %perc @ "% | Roll: FAILED | Dropping only extras: " @ %weaponDropCount @ " weapons");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | Percentage: " @ %perc @ "% | Roll: FAILED | Dropping only extras: " @ %weaponDropCount @ " weapons");
 										%shouldDropWeapon = true;
 										%weaponDropRoll = true;
 									}
 									else
 									{
-										echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | Percentage: " @ %perc @ "% | Roll: FAILED | Not dropping weapon");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | Percentage: " @ %perc @ "% | Roll: FAILED | Not dropping weapon");
 										%shouldDropWeapon = false;
 										%weaponDropRoll = false;
 									}
@@ -569,7 +882,7 @@ function Player::onKilled(%this)
 										%weaponDropCount = %originalWeaponCount;
 									%shouldDropWeapon = true;
 									%weaponDropRoll = true;
-									echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | No percentage format - defaulting to 15% | Roll: " @ %roll @ " (need <= 15) | SUCCESS | Dropping " @ %weaponDropCount @ " weapons");
+									if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | No percentage format - defaulting to 15% | Roll: " @ %roll @ " (need <= 15) | SUCCESS | Dropping " @ %weaponDropCount @ " weapons");
 								}
 								else
 								{
@@ -579,13 +892,13 @@ function Player::onKilled(%this)
 										%weaponDropCount = %eamnt - %originalWeaponCount;
 										%shouldDropWeapon = true;
 										%weaponDropRoll = true;
-										echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | No percentage format - defaulting to 15% | Roll: " @ %roll @ " (need <= 15) | FAILED | Dropping only extras: " @ %weaponDropCount @ " weapons");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | No percentage format - defaulting to 15% | Roll: " @ %roll @ " (need <= 15) | FAILED | Dropping only extras: " @ %weaponDropCount @ " weapons");
 									}
 									else
 									{
 										%shouldDropWeapon = false;
 										%weaponDropRoll = false;
-										echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | No percentage format - defaulting to 15% | Roll: " @ %roll @ " (need <= 15) | FAILED | Not dropping weapon");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Weapon: " @ %eitem @ " | No percentage format - defaulting to 15% | Roll: " @ %roll @ " (need <= 15) | FAILED | Not dropping weapon");
 									}
 								}
 							}
@@ -596,7 +909,7 @@ function Player::onKilled(%this)
 							%weaponDropCount = %eamnt;
 							%shouldDropWeapon = true;
 							%weaponDropRoll = true;
-							echo("[LOOT DEBUG] Weapon " @ %eitem @ " is from lootbag (not in OriginalLootString). Dropping all " @ %weaponDropCount @ " weapons (100% drop).");
+							if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Weapon " @ %eitem @ " is from lootbag (not in OriginalLootString). Dropping all " @ %weaponDropCount @ " weapons (100% drop).");
 						}
 					}
 					else
@@ -803,15 +1116,15 @@ function Player::onKilled(%this)
 								%chance = %minPerc + floor(getRandom() * (%maxPerc - %minPerc + 1));
 								if(%chance > %maxPerc) %chance = %maxPerc;
 								%roll = floor(getRandom() * 100) + 1;
-								echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Percentage: " @ %minPerc @ "-" @ %maxPerc @ "% (range) | Roll: " @ %roll @ " (need roll <= " @ %chance @ ")");
+								if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Percentage: " @ %minPerc @ "-" @ %maxPerc @ "% (range) | Roll: " @ %roll @ " (need roll <= " @ %chance @ ")");
 								if(%roll <= %chance)
 								{
 									%rollSucceeded = true;
-									echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " <= " @ %chance @ ")");
+									if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " <= " @ %chance @ ")");
 								}
 								else
 								{
-									echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " > " @ %chance @ ")");
+									if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " > " @ %chance @ ")");
 								}
 							}
 							else if(%perc < 0)
@@ -821,15 +1134,15 @@ function Player::onKilled(%this)
 								%roll = floor(getRandom() * 100) + 1;
 								%minRoll = 100 - %absPerc + 1;
 								if(%absPerc >= 100) %minRoll = 100;
-								echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Percentage: -" @ %absPerc @ "% (negative) | Roll: " @ %roll @ " (need roll >= " @ %minRoll @ ")");
+								if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Percentage: -" @ %absPerc @ "% (negative) | Roll: " @ %roll @ " (need roll >= " @ %minRoll @ ")");
 								if(%roll >= %minRoll)
 								{
 									%rollSucceeded = true;
-									echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " >= " @ %minRoll @ ")");
+									if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " >= " @ %minRoll @ ")");
 								}
 								else
 								{
-									echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " < " @ %minRoll @ ")");
+									if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " < " @ %minRoll @ ")");
 								}
 							}
 							else
@@ -841,15 +1154,15 @@ function Player::onKilled(%this)
 								{
 									// "1 in X" format
 									%roll = floor(getRandom() * %percNum) + 1;
-									echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Format: 1 in " @ %percNum @ " | Roll: " @ %roll @ " (need roll == 1)");
+									if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Format: 1 in " @ %percNum @ " | Roll: " @ %roll @ " (need roll == 1)");
 									if(%roll == 1)
 									{
 										%rollSucceeded = true;
-										echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " == 1)");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " == 1)");
 									}
 									else
 									{
-										echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " != 1)");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " != 1)");
 									}
 								}
 								else if(%percNum < 1)
@@ -857,30 +1170,30 @@ function Player::onKilled(%this)
 									// Decimal percentage
 									%roll = floor(getRandom() * 100000) + 1;
 									%target = %percNum * 1000;
-									echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Percentage: " @ %percNum @ "% (decimal) | Roll: " @ %roll @ " (need roll <= " @ %target @ ")");
+									if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Percentage: " @ %percNum @ "% (decimal) | Roll: " @ %roll @ " (need roll <= " @ %target @ ")");
 									if(%roll <= %target)
 									{
 										%rollSucceeded = true;
-										echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " <= " @ %target @ ")");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " <= " @ %target @ ")");
 									}
 									else
 									{
-										echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " > " @ %target @ ")");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " > " @ %target @ ")");
 									}
 								}
 								else
 								{
 									// Normal percentage
 									%roll = floor(getRandom() * 100) + 1;
-									echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " (need roll <= " @ %percNum @ ")");
+									if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " (need roll <= " @ %percNum @ ")");
 									if(%roll <= %percNum)
 									{
 										%rollSucceeded = true;
-										echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " <= " @ %percNum @ ")");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] SUCCESS - " @ %itemName @ " will drop (roll " @ %roll @ " <= " @ %percNum @ ")");
 									}
 									else
 									{
-										echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " > " @ %percNum @ ")");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] FAILED - " @ %itemName @ " will not drop (roll " @ %roll @ " > " @ %percNum @ ")");
 									}
 								}
 							}
@@ -896,7 +1209,7 @@ function Player::onKilled(%this)
 						else
 						{
 							// No percentage format - guaranteed drop
-							echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | No percentage format - guaranteed drop (100%)");
+							if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | No percentage format - guaranteed drop (100%)");
 							%rollSucceeded = true;
 							%shouldDropItem = true;
 						}
@@ -904,7 +1217,7 @@ function Player::onKilled(%this)
 					else
 					{
 						// Item not in OriginalLootString - likely picked up from lootbag, drop 100%
-						echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | NOT found in OriginalLootString - treating as lootbag pickup, drop 100%");
+						if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %itemName @ " | NOT found in OriginalLootString - treating as lootbag pickup, drop 100%");
 						%rollSucceeded = true;
 						%shouldDropItem = true;
 					}
@@ -963,7 +1276,7 @@ function Player::onKilled(%this)
 			%questItems = fetchData(%clientId, "QuestItems");
 			%keyItems = fetchData(%clientId, "KeyItems");
 			%consumables = fetchData(%clientId, "Consumables");
-			echo("[LOOT DEBUG] Bot " @ %botName @ " (clientId=" @ %clientId @ ") died. OriginalLootString='" @ %originalLootString @ "'");
+			if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Bot " @ %botName @ " (clientId=" @ %clientId @ ") died. OriginalLootString='" @ %originalLootString @ "'");
 			if(%questItems != "" && %questItems != "0") echo("[LOOT DEBUG]   QuestItems: '" @ %questItems @ "'");
 			if(%keyItems != "" && %keyItems != "0") echo("[LOOT DEBUG]   KeyItems: '" @ %keyItems @ "'");
 			if(%consumables != "" && %consumables != "0") echo("[LOOT DEBUG]   Consumables: '" @ %consumables @ "'");
@@ -1113,11 +1426,11 @@ function Player::onKilled(%this)
 									if(%beltItemCount > %originalCount)
 									{
 										%hasExtras = true;
-										echo("[LOOT DEBUG] Item " @ %beltItemName @ " found in OriginalLootString with original count: " @ %originalCount @ ", belt count: " @ %beltItemCount @ " - HAS EXTRAS");
+										if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Item " @ %beltItemName @ " found in OriginalLootString with original count: " @ %originalCount @ ", belt count: " @ %beltItemCount @ " - HAS EXTRAS");
 									}
 									else
 									{
-										echo("[LOOT DEBUG] Item " @ %beltItemName @ " found in OriginalLootString with original count: " @ %originalCount @ ", belt count: " @ %beltItemCount @ " - NO EXTRAS");
+										if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Item " @ %beltItemName @ " found in OriginalLootString with original count: " @ %originalCount @ ", belt count: " @ %beltItemCount @ " - NO EXTRAS");
 									}
 									
 									break;
@@ -1126,13 +1439,13 @@ function Player::onKilled(%this)
 							
 							if(!%isInOriginalLootString)
 							{
-								echo("[LOOT DEBUG] Item " @ %beltItemName @ " NOT found in OriginalLootString. OriginalLootString='" @ %originalLootString @ "'. Treating as lootbag pickup (100% drop).");
+								if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Item " @ %beltItemName @ " NOT found in OriginalLootString. OriginalLootString='" @ %originalLootString @ "'. Treating as lootbag pickup (100% drop).");
 							}
 						}
 						else
 						{
 							// OriginalLootString is empty - all items in belt are from lootbags
-							echo("[LOOT DEBUG] OriginalLootString is empty for bot " @ %clientId @ ". All items in belt are from lootbags (100% drop).");
+							if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] OriginalLootString is empty for bot " @ %clientId @ ". All items in belt are from lootbags (100% drop).");
 						}
 						
 						// Determine drop behavior based on whether item is in OriginalLootString
@@ -1162,9 +1475,9 @@ function Player::onKilled(%this)
 									if(%roll <= %chance)
 										%rollSucceeded = true;
 									if(%rollSucceeded)
-										echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %perc @ "% (range: " @ %minPerc @ "-" @ %maxPerc @ "%) | Roll: " @ %roll @ " (need roll <= " @ %chance @ ") | SUCCESS");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %perc @ "% (range: " @ %minPerc @ "-" @ %maxPerc @ "%) | Roll: " @ %roll @ " (need roll <= " @ %chance @ ") | SUCCESS");
 									else
-										echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %perc @ "% (range: " @ %minPerc @ "-" @ %maxPerc @ "%) | Roll: " @ %roll @ " (need roll <= " @ %chance @ ") | FAILED");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %perc @ "% (range: " @ %minPerc @ "-" @ %maxPerc @ "%) | Roll: " @ %roll @ " (need roll <= " @ %chance @ ") | FAILED");
 								}
 								else if(%perc < 0)
 								{
@@ -1176,9 +1489,9 @@ function Player::onKilled(%this)
 									if(%roll >= %minRoll)
 										%rollSucceeded = true;
 									if(%rollSucceeded)
-										echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %perc @ "% (negative) | Roll: " @ %roll @ " (need roll >= " @ %minRoll @ ") | SUCCESS");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %perc @ "% (negative) | Roll: " @ %roll @ " (need roll >= " @ %minRoll @ ") | SUCCESS");
 									else
-										echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %perc @ "% (negative) | Roll: " @ %roll @ " (need roll >= " @ %minRoll @ ") | FAILED");
+										if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %perc @ "% (negative) | Roll: " @ %roll @ " (need roll >= " @ %minRoll @ ") | FAILED");
 								}
 								else
 								{
@@ -1192,9 +1505,9 @@ function Player::onKilled(%this)
 										if(%roll == 1)
 											%rollSucceeded = true;
 										if(%rollSucceeded)
-											echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: 1 in " @ %percNum @ " | Roll: " @ %roll @ " (need roll == 1) | SUCCESS");
+											if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: 1 in " @ %percNum @ " | Roll: " @ %roll @ " (need roll == 1) | SUCCESS");
 										else
-											echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: 1 in " @ %percNum @ " | Roll: " @ %roll @ " (need roll == 1) | FAILED");
+											if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: 1 in " @ %percNum @ " | Roll: " @ %roll @ " (need roll == 1) | FAILED");
 									}
 									else if(%percNum < 1)
 									{
@@ -1204,9 +1517,9 @@ function Player::onKilled(%this)
 										if(%roll <= %target)
 											%rollSucceeded = true;
 										if(%rollSucceeded)
-											echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %percNum @ "% (decimal) | Roll: " @ %roll @ " (need roll <= " @ %target @ ") | SUCCESS");
+											if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %percNum @ "% (decimal) | Roll: " @ %roll @ " (need roll <= " @ %target @ ") | SUCCESS");
 										else
-											echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %percNum @ "% (decimal) | Roll: " @ %roll @ " (need roll <= " @ %target @ ") | FAILED");
+											if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %percNum @ "% (decimal) | Roll: " @ %roll @ " (need roll <= " @ %target @ ") | FAILED");
 									}
 									else
 									{
@@ -1215,9 +1528,9 @@ function Player::onKilled(%this)
 										if(%roll <= %percNum)
 											%rollSucceeded = true;
 										if(%rollSucceeded)
-											echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " (need roll <= " @ %percNum @ ") | SUCCESS");
+											if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " (need roll <= " @ %percNum @ ") | SUCCESS");
 										else
-											echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " (need roll <= " @ %percNum @ ") | FAILED");
+											if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " (need roll <= " @ %percNum @ ") | FAILED");
 									}
 								}
 							}
@@ -1225,7 +1538,7 @@ function Player::onKilled(%this)
 							{
 								// No percentage format - guaranteed drop (100%)
 								%rollSucceeded = true;
-								echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | No percentage format - guaranteed drop (100%)");
+								if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | No percentage format - guaranteed drop (100%)");
 							}
 							
 							if(%rollSucceeded)
@@ -1238,14 +1551,14 @@ function Player::onKilled(%this)
 									// Bot has extras - drop ALL items (original passed roll + extras from lootbags always drop)
 									%shouldDrop = true;
 									%dropCount = %beltItemCount;
-									echo("[LOOT DEBUG] Item " @ %beltItemName @ " passed drop roll and bot has extras. Dropping all " @ %beltItemCount @ " items (original: " @ %originalCount @ ", extras: " @ (%beltItemCount - %originalCount) @ ")");
+									if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Item " @ %beltItemName @ " passed drop roll and bot has extras. Dropping all " @ %beltItemCount @ " items (original: " @ %originalCount @ ", extras: " @ (%beltItemCount - %originalCount) @ ")");
 								}
 								else
 								{
 									// No extras - drop only the original count (that passed the roll)
 									%shouldDrop = true;
 									%dropCount = %originalCount;
-									echo("[LOOT DEBUG] Item " @ %beltItemName @ " passed drop roll. Dropping " @ %dropCount @ " items (original count from spawn).");
+									if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Item " @ %beltItemName @ " passed drop roll. Dropping " @ %dropCount @ " items (original count from spawn).");
 								}
 							}
 							else
@@ -1255,13 +1568,13 @@ function Player::onKilled(%this)
 								{
 									%shouldDrop = true;
 									%dropCount = %beltItemCount - %originalCount;
-									echo("[LOOT DEBUG] Item " @ %beltItemName @ " failed drop roll but bot has extras. Dropping only extras: " @ %dropCount @ " items (belt: " @ %beltItemCount @ ", original: " @ %originalCount @ ")");
+									if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Item " @ %beltItemName @ " failed drop roll but bot has extras. Dropping only extras: " @ %dropCount @ " items (belt: " @ %beltItemCount @ ", original: " @ %originalCount @ ")");
 								}
 								else
 								{
 									%shouldDrop = false;
 									%dropCount = 0;
-									echo("[LOOT DEBUG] Item " @ %beltItemName @ " failed drop roll. Not dropping item. Belt count: " @ %beltItemCount @ ", original count: " @ %originalCount);
+									if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Item " @ %beltItemName @ " failed drop roll. Not dropping item. Belt count: " @ %beltItemCount @ ", original count: " @ %originalCount);
 								}
 							}
 						}
@@ -1270,7 +1583,7 @@ function Player::onKilled(%this)
 							// Item NOT in OriginalLootString - it's from a lootbag, always drop 100%
 							%shouldDrop = true;
 							%dropCount = %beltItemCount;
-							echo("[LOOT DEBUG] Item " @ %beltItemName @ " is from lootbag (not in OriginalLootString). Dropping all " @ %dropCount @ " items (100% drop).");
+							if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Item " @ %beltItemName @ " is from lootbag (not in OriginalLootString). Dropping all " @ %dropCount @ " items (100% drop).");
 						}
 					}
 					else
@@ -1364,7 +1677,9 @@ function Player::onKilled(%this)
 				
 				if(%shouldDropLoot)
 				{
+					if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Calling TossLootbag for bot (clientId=" @ %clientId @ ", tmploot='" @ %tmploot @ "')");
 					TossLootbag(%clientId, %tmploot, 1, "*", 300);
+					if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] TossLootbag returned for bot (clientId=" @ %clientId @ ")");
 				}
 			}
 			else
@@ -1631,8 +1946,14 @@ function Player::onKilled(%this)
 			if(%aiName != "" && %aiName != -1 && %aiName != "0")
 			{
 				%aiNumber = $tmpbotn[%aiName];
-				if(%aiNumber != "" && %aiNumber != -1 && %aiNumber != "0")
+				// CRITICAL: Check if AI number exists and is valid (including 0)
+				// setAInumber() always stores a numeric value (never string "0" as sentinel)
+				// The old check `%aiNumber != "0"` failed when %aiNumber was the number 0
+				// because TorqueScript may treat 0 == "0" as true, causing number 0 to be skipped
+				// Solution: If it exists (not empty, not -1), it's a valid number to free (including 0)
+				if(%aiNumber != "" && %aiNumber != -1)
 				{
+					// Valid number (including 0) - free it
 					$aiNumTable[%aiNumber] = "";
 					$tmpbotn[%aiName] = "";
 					%numberFreed = true;
@@ -1683,9 +2004,12 @@ function Player::onKilled(%this)
 							if(%tryName != "" && %tryName != -1)
 							{
 								%tryNumber = $tmpbotn[%tryName];
-								if(%tryNumber != "" && %tryNumber != -1 && %tryNumber != "0")
+								// CRITICAL: Check if AI number exists and is valid (including 0)
+								// setAInumber() always stores a numeric value, so if it exists, it's valid (including 0)
+								// The old check `%tryNumber != "0"` failed when %tryNumber was the number 0
+								if(%tryNumber != "" && %tryNumber != -1)
 								{
-									// Found it! Free the number
+									// Found it! Free the number (including 0)
 									$aiNumTable[%tryNumber] = "";
 									$tmpbotn[%tryName] = "";
 									%numberFreed = true;
@@ -1719,13 +2043,17 @@ function Player::onKilled(%this)
 							{
 								%tryName = %prefix @ %n;
 								%tryNumber = $tmpbotn[%tryName];
-								if(%tryNumber != "" && %tryNumber != -1 && %tryNumber != "0")
+								// CRITICAL: Check if AI number exists and is valid (including 0)
+								// setAInumber() always stores a numeric value, so if it exists, it's valid (including 0)
+								// The old check `%tryNumber != "0"` failed when %tryNumber was the number 0
+								if(%tryNumber != "" && %tryNumber != -1)
 								{
 									// Check if this number matches what we'd expect from the display name
 									// If display name ends with this number, it's likely a match
 									%expectedSuffix = %n;
 									if(String::findSubStr(%displayName, %expectedSuffix) != -1)
 									{
+										// Found it! Free the number (including 0)
 										$aiNumTable[%tryNumber] = "";
 										$tmpbotn[%tryName] = "";
 										%numberFreed = true;
@@ -1769,7 +2097,7 @@ function Player::onKilled(%this)
 			if(%spawnPointId != "" && %spawnPointId != -1)
 			{
 				$SpawnPointCooldownUntil[%spawnPointId] = getSimTime() + 5; // 5s cooldown after death
-				echo("[SPAWN COOL] Applied 5s cooldown to SpawnPoint " @ %spawnPointId @ " after bot death (clientId=" @ %clientId @ ")");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COOL] Applied 5s cooldown to SpawnPoint " @ %spawnPointId @ " after bot death (clientId=" @ %clientId @ ")");
 			}
 			
 			// CRITICAL: Must be scheduled with a very short delay to prevent crashes during death processing
@@ -2243,6 +2571,55 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 		if(%damagedClient == -1 || %damagedClient == "")
 		{
 			%damagedClient = %this;
+		}
+		
+		// PHASE 4 FIX: Validate client ID belongs to correct entity before processing damage
+		if(%damagedClient != -1 && %damagedClient != "" && isObject(%this))
+		{
+			// Reverse verification - ensure the client ID actually owns this Player object
+			if(%damagedClient != %this)
+			{
+				// Only verify if we got a different client ID (not using %this as fallback)
+				%verifyPlayerObj = Client::getOwnedObject(%damagedClient);
+				if(%verifyPlayerObj != %this && %verifyPlayerObj != -1 && %verifyPlayerObj != "")
+				{
+					// Client ID doesn't own this Player object - this is a collision!
+					echo("ERROR: Player::onDamage - Client ID " @ %damagedClient @ " does not own Player object " @ %this @ ". Player object belongs to client ID with Player object " @ %verifyPlayerObj @ ". Rejecting damage to prevent routing to wrong entity.");
+					return; // Reject damage to prevent routing to wrong entity
+				}
+				
+				// Entity type validation - verify client ID matches expected entity type
+				// PRIORITY: Check bot indicators FIRST (bots can have HasLoadedAndSpawned set, so don't use it for player detection)
+				%spawnBotInfo = fetchData(%damagedClient, "SpawnBotInfo");
+				%botInfoAiName = fetchData(%damagedClient, "BotInfoAiName");
+				%isBot = ((%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1) || 
+				          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) ||
+				          Player::isAiControlled(%damagedClient) || isRPGAI(%damagedClient));
+				
+				// Only check for player indicators if NOT a bot
+				%isPlayer = false;
+				if(!%isBot)
+				{
+					%playerName = Client::getName(%damagedClient);
+					if(%playerName != "" && %playerName != -1)
+					{
+						%characterFile = "temp\\" @ %playerName @ ".cs";
+						if(isFile(%characterFile))
+						{
+							%isPlayer = true;
+						}
+					}
+					// HasLoadedAndSpawned is NOT a reliable player indicator (bots set it too)
+				}
+				
+				// If entity type indicators conflict, reject damage to prevent routing to wrong entity
+				// This should rarely trigger now since we prioritize bot detection
+				if(%isPlayer && %isBot)
+				{
+					echo("ERROR: Player::onDamage - Client ID " @ %damagedClient @ " has conflicting entity type indicators (both player and bot). Rejecting damage to prevent collision.");
+					return; // Reject damage
+				}
+			}
 		}
 		
 		// Early-initialization guard: if AI bot not fully initialized or spawn-invuln is on, ignore all damage

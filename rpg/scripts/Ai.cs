@@ -78,7 +78,7 @@ function InitializeGraveyard()
 	if(%graveyardId == -1)
 	{
 		%graveyardId = newObject("GraveyardSet", SimSet, true);
-		echo("[GRAVEYARD] Created GraveyardSet SimSet");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD] Created GraveyardSet SimSet");
 	}
 	$GraveyardSet = "GraveyardSet";
 	$GraveyardInitialized = true;
@@ -130,7 +130,7 @@ function AddToGraveyard(%aiName, %clientId)
 	// Note: AI::rename may not work for Player objects, but marking in our system is sufficient
 	// The important part is that SpawnAIGetClientId will check IsInGraveyard() before reusing IDs
 	
-	echo("[GRAVEYARD] AddToGraveyard: Marked bot " @ %aiName @ " (clientId=" @ %clientId @ ") as dead -> " @ %deadName @ " @ " @ %timestamp);
+	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD] AddToGraveyard: Marked bot " @ %aiName @ " (clientId=" @ %clientId @ ") as dead -> " @ %deadName @ " @ " @ %timestamp);
 	
 	// Schedule periodic cleanup check (runs every 30 seconds)
 	// Note: CleanupOldGraveyardEntries() now always reschedules itself, so we only need to start it once
@@ -175,9 +175,9 @@ function RemoveFromGraveyard(%aiName, %clientId)
 	
 	// Log removal with age if available
 	if(%age >= 0)
-		echo("[GRAVEYARD] RemoveFromGraveyard: Removed bot " @ %aiName @ " (clientId=" @ %clientId @ ") after " @ %age @ "s");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD] RemoveFromGraveyard: Removed bot " @ %aiName @ " (clientId=" @ %clientId @ ") after " @ %age @ "s");
 	else
-		echo("[GRAVEYARD] RemoveFromGraveyard: Removed bot " @ %aiName @ " (clientId=" @ %clientId @ ")");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD] RemoveFromGraveyard: Removed bot " @ %aiName @ " (clientId=" @ %clientId @ ")");
 }
 
 // CleanupOldGraveyardEntries: Automatically removes graveyard entries older than 10 seconds
@@ -271,7 +271,7 @@ function CleanupOldGraveyardEntries()
 					{
 						RemoveFromGraveyard(%aiName, %id);
 						%cleanedCount++;
-						echo("[GRAVEYARD CLEANUP] Auto-cleaned old entry: clientId=" @ %id @ ", name=" @ %aiName @ ", age=" @ %age @ "s");
+						if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD CLEANUP] Auto-cleaned old entry: clientId=" @ %id @ ", name=" @ %aiName @ ", age=" @ %age @ "s");
 					}
 					else
 					{
@@ -284,7 +284,7 @@ function CleanupOldGraveyardEntries()
 						// Iterate through possible dead names (format: "DEAD_timestamp_name")
 						// This is a best-effort cleanup since we don't have the name
 						%cleanedCount++;
-						echo("[GRAVEYARD CLEANUP] Auto-cleaned old entry (no name found): clientId=" @ %id @ ", age=" @ %age @ "s");
+						if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD CLEANUP] Auto-cleaned old entry (no name found): clientId=" @ %id @ ", age=" @ %age @ "s");
 					}
 				}
 			}
@@ -306,7 +306,7 @@ function CleanupOldGraveyardEntries()
 				{
 					RemoveFromGraveyard(%aiName, %id);
 					%cleanedCount++;
-					echo("[GRAVEYARD CLEANUP] Auto-cleaned orphaned entry (no timestamp): clientId=" @ %id @ ", name=" @ %aiName);
+					if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD CLEANUP] Auto-cleaned orphaned entry (no timestamp): clientId=" @ %id @ ", name=" @ %aiName);
 				}
 				else
 				{
@@ -314,18 +314,18 @@ function CleanupOldGraveyardEntries()
 					$GraveyardClientId[%id] = "";
 					$GraveyardTimestamp[%id] = "";
 					%cleanedCount++;
-					echo("[GRAVEYARD CLEANUP] Auto-cleaned orphaned entry (no timestamp, no name): clientId=" @ %id);
+					if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD CLEANUP] Auto-cleaned orphaned entry (no timestamp, no name): clientId=" @ %id);
 				}
 			}
 		}
 	}
 	
 	if(%cleanedCount > 0)
-		echo("[GRAVEYARD CLEANUP] Cleaned " @ %cleanedCount @ " old entries (total was " @ %totalEntries @ ", oldest age was " @ %oldestAge @ "s)");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD CLEANUP] Cleaned " @ %cleanedCount @ " old entries (total was " @ %totalEntries @ ", oldest age was " @ %oldestAge @ "s)");
 	
 	// Warn if graveyard has too many entries
 	if(%totalEntries > 50)
-		echo("[GRAVEYARD WARNING] Graveyard has " @ %totalEntries @ " entries (threshold: 50) - possible accumulation issue");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[GRAVEYARD WARNING] Graveyard has " @ %totalEntries @ " entries (threshold: 50) - possible accumulation issue");
 	
 	// Always schedule next cleanup (runs every 30 seconds regardless of entry count)
 	// This ensures periodic cleanup even if entries are added between cleanup cycles
@@ -443,7 +443,7 @@ function DecrementSpawnCounter(%clientId)
 {
 	if(%clientId == "" || %clientId == -1)
 	{
-		echo("[SPAWN COUNTER] DecrementSpawnCounter: Invalid clientId");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] DecrementSpawnCounter: Invalid clientId");
 		return false;
 	}
 	
@@ -500,11 +500,11 @@ function DecrementSpawnCounter(%clientId)
 		if(%oldCounter > 0)
 		{
 			$numAIperSpawnPoint[%spawnPointId]--;
-			echo("[SPAWN COUNTER] Decremented counter for SpawnPoint " @ %spawnPointId @ " (was: " @ %oldCounter @ ", now: " @ $numAIperSpawnPoint[%spawnPointId] @ ") - source: " @ %source @ ", clientId: " @ %clientId);
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] Decremented counter for SpawnPoint " @ %spawnPointId @ " (was: " @ %oldCounter @ ", now: " @ $numAIperSpawnPoint[%spawnPointId] @ ") - source: " @ %source @ ", clientId: " @ %clientId);
 		}
 		else
 		{
-			echo("[SPAWN COUNTER] WARNING: Counter already 0 for SpawnPoint " @ %spawnPointId @ " - cannot decrement (source: " @ %source @ ", clientId: " @ %clientId @ ")");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] WARNING: Counter already 0 for SpawnPoint " @ %spawnPointId @ " - cannot decrement (source: " @ %source @ ", clientId: " @ %clientId @ ")");
 		}
 		
 		// Ensure counter never goes below 0
@@ -537,7 +537,7 @@ function DecrementSpawnCounter(%clientId)
 	
 	// Only show warning if it's NOT a TempSpawn bot (TempSpawn bots don't use spawn point counters)
 	if(!%isTempSpawn)
-		echo("[SPAWN COUNTER] WARNING: Could not find spawn point for clientId " @ %clientId @ " - counter NOT decremented");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] WARNING: Could not find spawn point for clientId " @ %clientId @ " - counter NOT decremented");
 	
 	// Still unregister even if we couldn't find spawn point
 	UnregisterBot(%clientId);
@@ -556,7 +556,7 @@ function IncrementSpawnCounter(%spawnPointId)
 		%oldCounter = 0;
 	
 	$numAIperSpawnPoint[%spawnPointId]++;
-	echo("[SPAWN COUNTER] Incremented counter for SpawnPoint " @ %spawnPointId @ " (was: " @ %oldCounter @ ", now: " @ $numAIperSpawnPoint[%spawnPointId] @ ")");
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] Incremented counter for SpawnPoint " @ %spawnPointId @ " (was: " @ %oldCounter @ ", now: " @ $numAIperSpawnPoint[%spawnPointId] @ ")");
 }
 
 // ============================================================================
@@ -566,7 +566,7 @@ function IncrementSpawnCounter(%spawnPointId)
 
 function ReconcileSpawnCounters()
 {
-	echo("[RECONCILE] Starting spawn counter reconciliation...");
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Starting spawn counter reconciliation...");
 	
 	%totalFixed = 0;
 	%totalChecked = 0;
@@ -607,7 +607,7 @@ function ReconcileSpawnCounters()
 			// Check for discrepancy
 			if(%actualCount != %counterValue)
 			{
-				echo("[RECONCILE] DISCREPANCY FOUND: SpawnPoint " @ %spawnPoint @ " - Counter=" @ %counterValue @ ", Actual=" @ %actualCount @ " - FIXING");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] DISCREPANCY FOUND: SpawnPoint " @ %spawnPoint @ " - Counter=" @ %counterValue @ ", Actual=" @ %actualCount @ " - FIXING");
 				$numAIperSpawnPoint[%spawnPoint] = %actualCount;
 				%totalFixed++;
 			}
@@ -628,7 +628,7 @@ function ReconcileSpawnCounters()
 			
 			if(%actualCount != %counterValue)
 			{
-				echo("[RECONCILE] DISCREPANCY FOUND: SpawnPoint " @ %sp @ " - Counter=" @ %counterValue @ ", Actual=" @ %actualCount @ " - FIXING");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] DISCREPANCY FOUND: SpawnPoint " @ %sp @ " - Counter=" @ %counterValue @ ", Actual=" @ %actualCount @ " - FIXING");
 				$numAIperSpawnPoint[%sp] = %actualCount;
 				%totalFixed++;
 			}
@@ -686,7 +686,7 @@ function ReconcileSpawnCounters()
 			}
 			
 			// Bot missing beyond grace: clean up registry
-			echo("[RECONCILE] Removing dead bot from registry: clientId=" @ %clientId @ " (missing " @ %age @ " ms)");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Removing dead bot from registry: clientId=" @ %clientId @ " (missing " @ %age @ " ms)");
 			
 			// Proactively delete any lingering player object to prevent shells
 			// CRITICAL: Check for save file before deletion to prevent deleting real players
@@ -698,7 +698,7 @@ function ReconcileSpawnCounters()
 					%reconcileCharacterFile = "temp\\" @ %reconcileNameCheck @ ".cs";
 					if(isFile(%reconcileCharacterFile))
 					{
-						echo("[RECONCILE] CRITICAL SAFEGUARD - Real player " @ %reconcileNameCheck @ " (clientId=" @ %clientId @ ") detected. Skipping deletion to prevent data loss.");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] CRITICAL SAFEGUARD - Real player " @ %reconcileNameCheck @ " (clientId=" @ %clientId @ ") detected. Skipping deletion to prevent data loss.");
 						continue; // Skip this client ID
 					}
 				}
@@ -717,7 +717,7 @@ function ReconcileSpawnCounters()
 				// If connected but no save file yet, check if it's a real player by checking if it's NOT AI-controlled
 				if(%isReconcileConnected && !Player::isAiControlled(%clientId))
 				{
-					echo("[RECONCILE] CRITICAL SAFEGUARD - Connected client " @ %clientId @ " is NOT AI-controlled. This is a real player. Skipping deletion.");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] CRITICAL SAFEGUARD - Connected client " @ %clientId @ " is NOT AI-controlled. This is a real player. Skipping deletion.");
 					continue; // Skip this client ID
 				}
 				
@@ -729,13 +729,13 @@ function ReconcileSpawnCounters()
 				
 				if(%aiName != "" && %aiName != -1 && %aiName != "0")
 				{
-					echo("[RECONCILE] Deleting lingering bot via AI::delete: " @ %aiName @ " (clientId=" @ %clientId @ ")");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Deleting lingering bot via AI::delete: " @ %aiName @ " (clientId=" @ %clientId @ ")");
 					AI::delete(%aiName);
 				}
 				else
 				{
 					// Fallback: No AI name found, delete player object directly (may create shell)
-					echo("[RECONCILE] WARNING: No AI name found for clientId " @ %clientId @ ", using deleteObject fallback");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] WARNING: No AI name found for clientId " @ %clientId @ ", using deleteObject fallback");
 					deleteObject(%playerObj);
 					Client::setOwnedObject(%clientId, -1);
 				}
@@ -770,7 +770,7 @@ function ReconcileSpawnCounters()
 	
 	if(%totalFixed > 0 || %removedCount > 0)
 	{
-		echo("[RECONCILE] Completed: Checked " @ %totalChecked @ " spawn points, Fixed " @ %totalFixed @ " discrepancies, Removed " @ %removedCount @ " dead bots");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Completed: Checked " @ %totalChecked @ " spawn points, Fixed " @ %totalFixed @ " discrepancies, Removed " @ %removedCount @ " dead bots");
 	}
 	
 	// Schedule next reconciliation in 30 seconds
@@ -780,7 +780,7 @@ function ReconcileSpawnCounters()
 // Start the reconciliation loop (call this from server init)
 function StartSpawnCounterReconciliation()
 {
-	echo("[RECONCILE] Starting spawn counter reconciliation loop (every 30 seconds)");
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Starting spawn counter reconciliation loop (every 30 seconds)");
 	schedule("ReconcileSpawnCounters();", 30);
 }
 

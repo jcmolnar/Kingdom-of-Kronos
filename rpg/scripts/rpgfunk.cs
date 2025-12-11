@@ -4150,7 +4150,7 @@ function GetBotIdList()
 		}
 	}
 	
-	echo("[GETBOTIDLIST DEBUG] Using BaseRep iteration, found " @ %botsFound @ " bots");
+	if($AI_DEBUG_ENABLED) echo("[GETBOTIDLIST DEBUG] Using BaseRep iteration, found " @ %botsFound @ " bots");
 	
 	return Trim(%list);
 }
@@ -4728,7 +4728,7 @@ function round(%n)
 
 function RefreshAll(%clientId, %fromSkillUpgrade)
 {
-	echo("[DOT_OP_DEBUG] RefreshAll: ENTRY - clientId=" @ %clientId @ ", fromSkillUpgrade=" @ %fromSkillUpgrade);
+	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] RefreshAll: ENTRY - clientId=" @ %clientId @ ", fromSkillUpgrade=" @ %fromSkillUpgrade);
 	dbecho($dbechoMode, "RefreshAll(" @ %clientId @ ", " @ %fromSkillUpgrade @ ")");
 
 	// DEBUG: Log when RefreshAll is called from a skill upgrade to track frequency and identify spam
@@ -5432,17 +5432,17 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 						// "1 in X" format - roll 1 to X, need exactly 1
 						%roll = floor(getRandom() * %percNum) + 1;  // Roll 1 to %percNum
 						
-						echo("[DROP RATE DEBUG] Item: " @ %w @ " | Format: 1 in " @ %percNum @ " | Roll: " @ %roll @ " (need roll == 1)");
+						if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %w @ " | Format: 1 in " @ %percNum @ " | Roll: " @ %roll @ " (need roll == 1)");
 						
 						if(%roll == 1)
 						{
 							%w2 = %original;
-							echo("[DROP RATE DEBUG] SUCCESS - " @ %w @ " will drop (roll " @ %roll @ " == 1)");
+							if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] SUCCESS - " @ %w @ " will drop (roll " @ %roll @ " == 1)");
 						}
 						else
 						{
 							%w2 = 0;
-							echo("[DROP RATE DEBUG] FAILED - " @ %w @ " will not drop (roll " @ %roll @ " != 1)");
+							if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] FAILED - " @ %w @ " will not drop (roll " @ %roll @ " != 1)");
 						}
 					}
 					else if(%percNum < 1)
@@ -5452,17 +5452,17 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 						%roll = floor(getRandom() * 100000) + 1;  // Roll 1-100000
 						%target = %percNum * 1000;  // Convert 0.001 to 1 (for 0.001% = 1 in 100000)
 						
-						echo("[DROP RATE DEBUG] Item: " @ %w @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " | Target: " @ %target @ " (need roll <= " @ %target @ ")");
+						if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %w @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " | Target: " @ %target @ " (need roll <= " @ %target @ ")");
 						
 						if(%roll <= %target)
 						{
 							%w2 = %original;
-							echo("[DROP RATE DEBUG] SUCCESS - " @ %w @ " will drop (roll " @ %roll @ " <= " @ %target @ ")");
+							if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] SUCCESS - " @ %w @ " will drop (roll " @ %roll @ " <= " @ %target @ ")");
 						}
 						else
 						{
 							%w2 = 0;
-							echo("[DROP RATE DEBUG] FAILED - " @ %w @ " will not drop (roll " @ %roll @ " > " @ %target @ ")");
+							if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] FAILED - " @ %w @ " will not drop (roll " @ %roll @ " > " @ %target @ ")");
 						}
 					}
 					else
@@ -5470,17 +5470,17 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 						// For normal percentages (>= 1%), roll 1-100
 						%roll = floor(getRandom() * 100) + 1;  // Roll 1-100
 						
-						echo("[DROP RATE DEBUG] Item: " @ %w @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " (need roll <= " @ %percNum @ ")");
+						if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %w @ " | Percentage: " @ %percNum @ "% | Roll: " @ %roll @ " (need roll <= " @ %percNum @ ")");
 						
 						if(%roll <= %percNum)
 						{
 							%w2 = %original;
-							echo("[DROP RATE DEBUG] SUCCESS - " @ %w @ " will drop (roll " @ %roll @ " <= " @ %percNum @ ")");
+							if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] SUCCESS - " @ %w @ " will drop (roll " @ %roll @ " <= " @ %percNum @ ")");
 						}
 						else
 						{
 							%w2 = 0;
-							echo("[DROP RATE DEBUG] FAILED - " @ %w @ " will not drop (roll " @ %roll @ " > " @ %percNum @ ")");
+							if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] FAILED - " @ %w @ " will not drop (roll " @ %roll @ " > " @ %percNum @ ")");
 						}
 					}
 				}

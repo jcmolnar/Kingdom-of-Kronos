@@ -289,8 +289,19 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 {
 	dbecho($dbechoMode2, "Game::playerSpawned(" @ %pl @ ", " @ %clientId @ ", " @ %armor @ ")");
 
+	%currentTime = getSimTime();
+	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: ENTRY - pl=" @ %pl @ ", clientId=" @ %clientId @ ", armor=" @ %armor);
+	
+	%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+	%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+	%isBot = (Player::isAiControlled(%clientId) || 
+	          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) || 
+	          (%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1));
+	echo("[INERT DEBUG] Game::playerSpawned: ENTRY @ " @ %currentTime @ " - clientId=" @ %clientId @ ", isBot=" @ %isBot @ ", BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'");
 
+	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: About to call storeData");
 	storeData(%clientId, "HasLoadedAndSpawned", True);
+	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: storeData completed");
 
 	if(%clientId.RespawnMeInArena)
 	{
@@ -345,12 +356,63 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 	// Bots don't need RefreshAll() here as their stats come from $BotInfo, not player data
 	%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
 	%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
-	%isBot = ((%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) || 
+	%isBot = (Player::isAiControlled(%clientId) || 
+	          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) || 
 	          (%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1));
 	
 	if(!%isBot)
 	{
-		RefreshAll(%clientId, "Game::playerSpawned");
+		// NOTE: RefreshAll() is already called by GiveThisStuff() (line 5619 in rpgfunk.cs)
+		// No need to call it again here to avoid redundant network packets and state sync issues
+		// echo("[DOT_OP_DEBUG] Game::playerSpawned: RefreshAll already called by GiveThisStuff, skipping redundant call");
+		
+		// SAFETY ARCHITECTURE: Register Human Players
+		if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: About to check/create PlayerGroup");
+		if(!isObject("PlayerGroup"))
+		{
+			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: Creating PlayerGroup SimSet");
+			newObject("PlayerGroup", SimGroup, true);
+		}
+		if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: PlayerGroup exists, validating player object before add");
+		echo("[DOT_OP_DEBUG] Game::playerSpawned: pl=" @ %pl @ ", isObject(pl)=" @ isObject(%pl) @ ", PlayerGroup type=" @ getObjectType(PlayerGroup));
+		if(isObject(%pl))
+		{
+			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: About to add player to PlayerGroup using addToSet (pl=" @ %pl @ ")");
+			// Use addToSet() instead of .add() to avoid potential TorqueScript parsing issues
+			addToSet(PlayerGroup, %pl);
+			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: addToSet(PlayerGroup, pl) completed");
+		}
+		else
+		{
+			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: ERROR - Player object is invalid (pl=" @ %pl @ "), cannot add to PlayerGroup");
+		}
+	}
+	else
+	{
+		// SAFETY ARCHITECTURE: Register AI Bots
+		if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: About to check/create BotGroup");
+		if(!isObject("BotGroup"))
+		{
+			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: Creating BotGroup SimSet");
+			newObject("BotGroup", SimGroup, true);
+			echo("[INERT DEBUG] Game::playerSpawned: Created BotGroup SimSet");
+		}
+		if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: BotGroup exists, validating player object before add");
+		echo("[DOT_OP_DEBUG] Game::playerSpawned: pl=" @ %pl @ ", isObject(pl)=" @ isObject(%pl) @ ", BotGroup type=" @ getObjectType(BotGroup));
+		%countBefore = Group::objectCount(BotGroup);
+		if(isObject(%pl))
+		{
+			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: About to add bot to BotGroup using addToSet (pl=" @ %pl @ ")");
+			// Use addToSet() instead of .add() to avoid potential TorqueScript parsing issues
+			addToSet(BotGroup, %pl);
+			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: addToSet(BotGroup, pl) completed");
+		}
+		else
+		{
+			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: ERROR - Player object is invalid (pl=" @ %pl @ "), cannot add to BotGroup");
+		}
+		%countAfter = Group::objectCount(BotGroup);
+		echo("[INERT DEBUG] Game::playerSpawned: Adding bot to BotGroup (obj=" @ %pl @ ", clientId=" @ %clientId @ ", count before=" @ %countBefore @ ", count after=" @ %countAfter @ ")");
 	}
 	
 	// CRITICAL: After RefreshAll(), remount the weapon if it was unmounted
