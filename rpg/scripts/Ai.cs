@@ -719,10 +719,23 @@ function ReconcileSpawnCounters()
 					continue; // Skip this client ID
 				}
 				
-				// All checks passed - safe to delete
-				echo("[RECONCILE] Deleting lingering player object " @ %playerObj @ " for clientId " @ %clientId);
-				deleteObject(%playerObj);
-				Client::setOwnedObject(%clientId, -1);
+				// All checks passed - safe to delete using AI::delete (proper engine cleanup)
+				%aiName = $BotInfoAiName[%clientId];
+				if(%aiName == "") %aiName = $EnemyBotData[%clientId, "BotInfoAiName"];
+				if(%aiName == "") %aiName = fetchData(%clientId, "BotInfoAiName");
+				
+				if(%aiName != "" && %aiName != -1 && %aiName != "0")
+				{
+					echo("[RECONCILE] Deleting lingering bot via AI::delete: " @ %aiName @ " (clientId=" @ %clientId @ ")");
+					AI::delete(%aiName);
+				}
+				else
+				{
+					// Fallback: No AI name found, delete player object directly (may create shell)
+					echo("[RECONCILE] WARNING: No AI name found for clientId " @ %clientId @ ", using deleteObject fallback");
+					deleteObject(%playerObj);
+					Client::setOwnedObject(%clientId, -1);
+				}
 			}
 
 			// Decrement counter for this bot's spawn point
@@ -829,10 +842,23 @@ function PreSpawnCleanup(%clientId)
 			return; // Abort immediately
 		}
 		
-		// All checks passed - safe to delete
-		echo("[PRE-SPAWN CLEANUP] Deleting existing player object " @ %pobj @ " for clientId " @ %clientId @ " to prevent shells.");
-		deleteObject(%pobj);
-		Client::setOwnedObject(%clientId, -1);
+		// All checks passed - safe to delete using AI::delete (proper engine cleanup)
+		%aiName = $BotInfoAiName[%clientId];
+		if(%aiName == "") %aiName = $EnemyBotData[%clientId, "BotInfoAiName"];
+		if(%aiName == "") %aiName = fetchData(%clientId, "BotInfoAiName");
+		
+		if(%aiName != "" && %aiName != -1 && %aiName != "0")
+		{
+			echo("[PRE-SPAWN CLEANUP] Deleting bot via AI::delete: " @ %aiName @ " (clientId=" @ %clientId @ ")");
+			AI::delete(%aiName);
+		}
+		else
+		{
+			// Fallback: No AI name found, delete player object directly
+			echo("[PRE-SPAWN CLEANUP] WARNING: No AI name found, using deleteObject fallback for clientId " @ %clientId);
+			deleteObject(%pobj);
+			Client::setOwnedObject(%clientId, -1);
+		}
 	}
 	
 	// Clear bot registry entry if exists
@@ -1372,12 +1398,25 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 							continue; // Skip this client ID
 						}
 						
-						// All checks passed - safe to delete stale bot object
-						// Old player object still exists - delete it to prevent shell
-						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-							echo("[SPAWN FLOW] createAI(): WARNING - Found stale player object " @ %stalePlayerObj @ " for recently freed bot clientId " @ %checkId @ " (freed " @ %timeSinceFreed @ "s ago). Deleting to prevent shell bot.");
-						deleteObject(%stalePlayerObj);
-						Client::setOwnedObject(%checkId, -1);
+						// All checks passed - safe to delete stale bot using AI::delete
+						%staleAiName = $BotInfoAiName[%checkId];
+						if(%staleAiName == "") %staleAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
+						if(%staleAiName == "") %staleAiName = fetchData(%checkId, "BotInfoAiName");
+						
+						if(%staleAiName != "" && %staleAiName != -1 && %staleAiName != "0")
+						{
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+								echo("[SPAWN FLOW] createAI(): Deleting stale bot via AI::delete: " @ %staleAiName @ " (clientId=" @ %checkId @ ")");
+							AI::delete(%staleAiName);
+						}
+						else
+						{
+							// Fallback: No AI name found
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+								echo("[SPAWN FLOW] createAI(): WARNING - No AI name for stale bot, using deleteObject fallback");
+							deleteObject(%stalePlayerObj);
+							Client::setOwnedObject(%checkId, -1);
+						}
 						PreSpawnCleanup(%checkId);
 						%cleanupPerformed = true;
 					}
@@ -3615,8 +3654,9 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							// Clear spawn flags
 							$SpawnAIScheduled[%newName] = "";
 							storeData(%ghostBotId, "SpawnBotInfo", "");
-							// Delete bot object
-							deleteObject(%ghostPlayerObj);
+							// Delete bot using AI::delete (proper engine cleanup)
+							echo("[SPAWN AI] Deleting ghost bot via AI::delete: " @ %newName);
+							AI::delete(%newName);
 						}
 					}
 					
@@ -4275,13 +4315,25 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							return -1;
 						}
 						
-						// All safeguards passed - safe to delete old bot object
+						// All safeguards passed - safe to delete old bot using AI::delete
 						if(%aiId != -1 && %aiId != "" && %aiId != "False" && %aiId != "false")
 						{
-							// This is an old player object from a previous bot - delete it to prevent shell
-							echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Found old player object " @ %existingPlayerObj @ " for clientId " @ %aiId @ " (name='" @ %existingName @ "', BotInfoAiName='" @ %existingBotInfoAiName @ "'). Deleting to prevent shell bot.");
-							deleteObject(%existingPlayerObj);
-							Client::setOwnedObject(%aiId, -1);
+							// Get AI name for proper deletion
+							%oldAiName = %existingBotInfoAiName;
+							if(%oldAiName == "" || %oldAiName == -1) %oldAiName = $BotInfoAiName[%aiId];
+							if(%oldAiName == "" || %oldAiName == -1) %oldAiName = $EnemyBotData[%aiId, "BotInfoAiName"];
+							
+							if(%oldAiName != "" && %oldAiName != -1 && %oldAiName != "0")
+							{
+								echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting old bot via AI::delete: " @ %oldAiName);
+								AI::delete(%oldAiName);
+							}
+							else
+							{
+								echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - No AI name for old bot, using deleteObject fallback");
+								deleteObject(%existingPlayerObj);
+								Client::setOwnedObject(%aiId, -1);
+							}
 							// Run cleanup to clear any stale data
 							PreSpawnCleanup(%aiId);
 						}
@@ -4378,6 +4430,11 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							// This is a shell bot - clean it up
 							echo("[SPAWN FLOW] SpawnAIGetClientId(): Detected shell bot at clientId " @ %aiId @ " (Player object exists but bot is dead/invalid). Cleaning up...");
 							
+							// CRITICAL: Get AI name BEFORE clearing data for proper engine deletion
+							%shellAiName = $BotInfoAiName[%aiId];
+							if(%shellAiName == "") %shellAiName = $EnemyBotData[%aiId, "BotInfoAiName"];
+							if(%shellAiName == "") %shellAiName = fetchData(%aiId, "BotInfoAiName");
+							
 							// Clear bot data
 							storeData(%aiId, "BotInfoAiName", "");
 							storeData(%aiId, "SpawnBotInfo", "");
@@ -4391,9 +4448,18 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							// Unregister from bot registry
 							UnregisterBot(%aiId);
 							
-							// Delete the Player object
-							deleteObject(%playerObj);
-							Client::setOwnedObject(%aiId, -1);
+							// Delete using AI::delete if we have the name
+							if(%shellAiName != "" && %shellAiName != -1 && %shellAiName != "0")
+							{
+								echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting shell bot via AI::delete: " @ %shellAiName);
+								AI::delete(%shellAiName);
+							}
+							else
+							{
+								echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - No AI name for shell bot, using deleteObject fallback");
+								deleteObject(%playerObj);
+								Client::setOwnedObject(%aiId, -1);
+							}
 							
 							// Mark as recently freed to prevent immediate reuse
 							$ClientIdRecentlyFreed[%aiId] = getSimTime();
