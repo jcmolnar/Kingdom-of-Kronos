@@ -36,10 +36,11 @@ $AIattackMode = 1;
 
 // Debug output control flags
 // Set to 1 to enable debug output, 0 to disable (reduces server load and log spam)
-$AI_DEBUG_ENABLED = 0;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
-$AI_SPAWN_DEBUG = 0;          // Controls [SPAWN FLOW] messages specifically
-$AI_PERIODIC_DEBUG = 0;       // Controls [INERT DEBUG] AI::Periodic messages
+$AI_DEBUG_ENABLED = 1;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
+$AI_SPAWN_DEBUG = 1;          // Controls [SPAWN FLOW] messages specifically
+$AI_PERIODIC_DEBUG = 1;       // Controls [INERT DEBUG] AI::Periodic messages
 $LOOTBAG_DEBUG = 0;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
+$Debug::SafeGuards = 1;       // Controls [SAFEGUARD] player protection logging
 
 
 // Bot tracking counters
@@ -430,6 +431,223 @@ function GetRegisteredBotCount(%spawnPointId)
 			%count++;
 	}
 	return %count;
+}
+
+// ============================================================================
+// UNIFIED PLAYER SAFEGUARD FUNCTIONS
+// ============================================================================
+// These functions consolidate all player protection checks into a single, 
+// reliable API. They should be used instead of scattered individual checks.
+// 
+// Check ordering (fastest to slowest):
+// 1. Player::isAiControlled() - Engine-level, very fast
+// 2. Client ID range check - Simple comparison  
+// 3. isFile("temp\\name.cs") - Filesystem access, slowest but most reliable
+//
+// Debug output controlled by: $Debug::SafeGuards
+// ============================================================================
+
+// $Debug::SafeGuards is defined at the top of the file with other debug flags
+
+// IsRealPlayer: Quick check to determine if a client ID belongs to a real player
+// Returns: true if real player, false if bot
+// Use this for fast checks where you only need to know if something is a player
+function IsRealPlayer(%clientId)
+{
+	if(%clientId == "" || %clientId == -1)
+		return false;
+	
+	// Priority 1: Engine check (fastest) - if NOT AI-controlled, it's a player
+	if(!Player::isAiControlled(%clientId))
+	{
+		if($Debug::SafeGuards)
+			echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " is NOT AI-controlled = REAL PLAYER");
+		return true;
+	}
+	
+	// Priority 2: Client ID in player range (2048 and below)
+	if(%clientId <= 2048)
+	{
+		if($Debug::SafeGuards)
+			echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " is in player range (<= 2048) = REAL PLAYER");
+		return true;
+	}
+	
+	// Priority 3: Save file check (mod-specific, most reliable for RPG)
+	// Check cache first, then filesystem
+	%playerName = Client::getName(%clientId);
+	if(%playerName != "" && %playerName != -1)
+	{
+		// Check cache first (set at connection time)
+		if($PlayerHasSaveFile[%clientId] == true || $PlayerHasSaveFile[%clientId] == "1")
+		{
+			if($Debug::SafeGuards)
+				echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " has cached save file = REAL PLAYER");
+			return true;
+		}
+		
+		// Fallback to filesystem check
+		if(isFile("temp\\" @ %playerName @ ".cs"))
+		{
+			// Update cache for future checks
+			$PlayerHasSaveFile[%clientId] = true;
+			echo("[CRITICAL] IsRealPlayer: Client " @ %clientId @ " (" @ %playerName @ ") has save file = REAL PLAYER");
+			return true;
+		}
+	}
+	
+	// Not a real player
+	return false;
+}
+
+// IsSafeToModify: Master safeguard function - checks if safe to modify a client ID
+// Returns: true if safe to modify (is a bot), false if real player detected (UNSAFE)
+// Use this before ANY operation that could affect a player's game state
+function IsSafeToModify(%clientId, %operation)
+{
+	if(%clientId == "" || %clientId == -1)
+	{
+		if($Debug::SafeGuards)
+			echo("[SAFEGUARD] IsSafeToModify [" @ %operation @ "]: Invalid clientId - returning false (safe, no target)");
+		return false; // Nothing to modify
+	}
+	
+	// Layer 1: Engine check (fastest, most reliable)
+	if(!Player::isAiControlled(%clientId))
+	{
+		echo("[BLOCKED] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " is NOT AI-controlled - REAL PLAYER PROTECTED");
+		return false;
+	}
+	
+	// Layer 2: Client ID range (bot range is 2049+)
+	if(%clientId <= 2048)
+	{
+		echo("[BLOCKED] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " is in player range (<= 2048) - REAL PLAYER PROTECTED");
+		return false;
+	}
+	
+	// Layer 3: Save file check (mod-specific, most reliable for RPG)
+	%playerName = Client::getName(%clientId);
+	if(%playerName != "" && %playerName != -1)
+	{
+		// Check cache first
+		if($PlayerHasSaveFile[%clientId] == true || $PlayerHasSaveFile[%clientId] == "1")
+		{
+			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " (" @ %playerName @ ") has CACHED save file - REAL PLAYER PROTECTED");
+			return false;
+		}
+		
+		// Fallback to filesystem check
+		if(isFile("temp\\" @ %playerName @ ".cs"))
+		{
+			// Update cache
+			$PlayerHasSaveFile[%clientId] = true;
+			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " (" @ %playerName @ ") has save file - REAL PLAYER PROTECTED");
+			return false;
+		}
+	}
+	
+	// All checks passed - safe to modify (is a bot)
+	if($Debug::SafeGuards)
+		echo("[SAFEGUARD] IsSafeToModify [" @ %operation @ "]: Client " @ %clientId @ " is a BOT - OK to modify");
+	return true;
+}
+
+// IsSafeToDeletePlayerObject: Specific safeguard for player object deletion
+// This is the most critical safeguard - used before deleteObject() on player objects
+// Returns: true if safe to delete (object belongs to a bot), false if UNSAFE
+function IsSafeToDeletePlayerObject(%playerObj, %clientId, %operation)
+{
+	// Validate object exists
+	if(%playerObj == -1 || %playerObj == "" || !isObject(%playerObj))
+	{
+		if($Debug::SafeGuards)
+			echo("[SAFEGUARD] IsSafeToDeletePlayerObject [" @ %operation @ "]: Object doesn't exist - returning false");
+		return false; // Nothing to delete
+	}
+	
+	// Layer 1: Engine check on player object directly (most reliable)
+	if(!Player::isAiControlled(%playerObj))
+	{
+		echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: PlayerObj " @ %playerObj @ " is NOT AI-controlled - REAL PLAYER OBJECT PROTECTED");
+		return false;
+	}
+	
+	// Layer 2: If clientId provided, verify it's in bot range
+	if(%clientId != "" && %clientId != -1)
+	{
+		if(%clientId <= 2048)
+		{
+			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: ClientId " @ %clientId @ " is in player range - REAL PLAYER PROTECTED");
+			return false;
+		}
+		
+		// Double-check: client should also be AI-controlled
+		if(!Player::isAiControlled(%clientId))
+		{
+			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: ClientId " @ %clientId @ " is NOT AI-controlled - REAL PLAYER PROTECTED");
+			return false;
+		}
+	}
+	
+	// Layer 3: Save file check - try multiple ways to get player name
+	%playerName = "";
+	
+	// Method 1: Get name from client ID
+	if(%clientId != "" && %clientId != -1)
+		%playerName = Client::getName(%clientId);
+	
+	// Method 2: Get control client from object
+	if(%playerName == "" || %playerName == -1)
+	{
+		%controlClient = GameBase::getControlClient(%playerObj);
+		if(%controlClient != "" && %controlClient != -1)
+			%playerName = Client::getName(%controlClient);
+	}
+	
+	// Method 3: Get from stored data
+	if(%playerName == "" || %playerName == -1)
+	{
+		if(%clientId != "" && %clientId != -1)
+			%playerName = fetchData(%clientId, "name");
+	}
+	
+	// Check save file if we have a name
+	if(%playerName != "" && %playerName != -1)
+	{
+		// Check cache first
+		if($PlayerHasSaveFile[%clientId] == true || $PlayerHasSaveFile[%clientId] == "1")
+		{
+			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Player " @ %playerName @ " has CACHED save file - REAL PLAYER OBJECT PROTECTED");
+			return false;
+		}
+		
+		// Fallback to filesystem
+		if(isFile("temp\\" @ %playerName @ ".cs"))
+		{
+			if(%clientId != "" && %clientId != -1)
+				$PlayerHasSaveFile[%clientId] = true;
+			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Player " @ %playerName @ " has save file - REAL PLAYER OBJECT PROTECTED");
+			return false;
+		}
+	}
+	
+	// All checks passed - safe to delete (belongs to a bot)
+	if($Debug::SafeGuards)
+		echo("[SAFEGUARD] IsSafeToDeletePlayerObject [" @ %operation @ "]: PlayerObj " @ %playerObj @ " (clientId=" @ %clientId @ ") is a BOT OBJECT - OK to delete");
+	return true;
+}
+
+// ClearPlayerSaveFileCache: Clears the save file cache for a client
+// Call this when a player disconnects to clean up cache
+function ClearPlayerSaveFileCache(%clientId)
+{
+	if(%clientId != "" && %clientId != -1)
+	{
+		$PlayerHasSaveFile[%clientId] = "";
+		if($Debug::SafeGuards)
+			echo("[SAFEGUARD] Cleared save file cache for clientId " @ %clientId);
+	}
 }
 
 // ============================================================================
@@ -3202,12 +3420,29 @@ function DetermineBotTeam(%botName, %displayName, %commandIssuer, %clientId)
 		return 1; // Default to team 1 (enemy)
 	}
 	
-	// Priority 3: BotInfo TEAM setting
+	// Priority 3: Direct lookup via $NameForRace → $TeamForRace (most reliable for enemy bots)
+	// This is the standard way teams are defined in enemyarmors.cs
+	%guardtype = StripTrailingDigits(%botName);
+	if(%guardtype != "" && %guardtype != -1)
+	{
+		%botRace = $NameForRace[%guardtype];
+		if(%botRace != "" && %botRace != -1)
+		{
+			%teamFromRace = $TeamForRace[%botRace];
+			if(%teamFromRace != "" && %teamFromRace != -1 && %teamFromRace != "0" && %teamFromRace != 0)
+			{
+				if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] DetermineBotTeam: Found team " @ %teamFromRace @ " via $NameForRace→$TeamForRace (guardtype=" @ %guardtype @ ", race=" @ %botRace @ ")");
+				return %teamFromRace;
+			}
+		}
+	}
+	
+	// Priority 4: Fall back to $BotInfo TEAM setting (for custom bot definitions)
 	%botTeam = $BotInfo[%botName, TEAM];
 	if(%botTeam != "" && %botTeam != -1 && %botTeam != "0" && %botTeam != 0)
 		return %botTeam;
 	
-	// Priority 4: Determine from race (if clientId provided)
+	// Priority 5: Determine from race stored on client (if clientId provided)
 	%botRace = "";
 	if(%clientId != -1 && %clientId != "")
 	{
@@ -3216,26 +3451,6 @@ function DetermineBotTeam(%botName, %displayName, %commandIssuer, %clientId)
 		{
 			// Try to get race from armor type
 			%armor = Player::getArmor(%clientId);
-			if(%armor != "" && %armor != -1 && $ArmorTypeToRace[%armor] != "")
-				%botRace = $ArmorTypeToRace[%armor];
-		}
-	}
-	
-	// If still no race, try to get from bot name
-	if((%botRace == "" || %botRace == -1) && %botName != "")
-	{
-		// Extract guardtype by removing trailing digits using global function
-		%guardtype = StripTrailingDigits(%botName);
-		
-		if($BotInfo[%botName, RACE] != "")
-		{
-			%armor = $RaceToArmorType[$BotInfo[%botName, RACE]];
-			if(%armor != "" && %armor != -1 && $ArmorTypeToRace[%armor] != "")
-				%botRace = $ArmorTypeToRace[%armor];
-		}
-		else
-		{
-			%armor = $RaceToArmorType[$NameForRace[%guardtype]];
 			if(%armor != "" && %armor != -1 && $ArmorTypeToRace[%armor] != "")
 				%botRace = $ArmorTypeToRace[%armor];
 		}
@@ -3791,6 +4006,33 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						if(%existingBotInfoAiName != "" && %existingBotInfoAiName != -1 && %existingBotInfoAiName != "0" && %existingBotInfoAiName != %newName)
 						{
 							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Clearing stale bot data from client ID " @ %aiId @ " (old BotInfoAiName='" @ %existingBotInfoAiName @ "', new='" @ %newName @ "')");
+							
+							// CRITICAL FIX: Delete any existing player object before reusing the client ID
+							// This prevents shell bots (orphaned player objects with no data/name)
+							%oldPlayerObj = Client::getOwnedObject(%aiId);
+							if(%oldPlayerObj != -1 && %oldPlayerObj != "" && isObject(%oldPlayerObj))
+							{
+								// Use unified safeguard function - replaces 5 nested safeguard checks
+								if(IsSafeToDeletePlayerObject(%oldPlayerObj, %aiId, "SpawnAIGetClientId-OldBotCleanup"))
+								{
+									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting old bot player object " @ %oldPlayerObj @ " for client ID " @ %aiId @ " to prevent shell bot");
+									Client::setOwnedObject(%aiId, -1);
+									deleteObject(%oldPlayerObj);
+								}
+							}
+							
+							// CRITICAL FIX: Decrement spawn counter BEFORE clearing SpawnBotInfo
+							DecrementSpawnCounter(%aiId);
+							
+							// CRITICAL FIX: Free AI number BEFORE clearing BotInfoAiName
+							%aiNumber = $tmpbotn[%existingBotInfoAiName];
+							if(%aiNumber != "" && %aiNumber != -1)
+							{
+								$aiNumTable[%aiNumber] = "";
+								$tmpbotn[%existingBotInfoAiName] = "";
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Freed AI number " @ %aiNumber @ " for bot " @ %existingBotInfoAiName @ " (via pre-clear cleanup)");
+							}
+							
 							// Clear all bot data to prevent shell bot detection
 							storeData(%aiId, "BotInfoAiName", "");
 							storeData(%aiId, "SpawnBotInfo", "");
@@ -3817,14 +4059,10 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								if(%markerZone != "" && %markerZone != -1)
 								{
 									storeData(%aiId, "zone", %markerZone);
-									storeData(%aiId, "tmpzone", %markerZone); // Set tmpzone too just in case
-									
-									// CRITICAL: Explicitly write to EnemyBotData as well, since storeData() might default to ClientData
-									// because SpawnBotInfo isn't set yet (so isRPGAI returns false)
+									storeData(%aiId, "tmpzone", %markerZone);
 									$EnemyBotData[%aiId, "zone"] = %markerZone;
 									$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
 									storeData(%aiId, "SpawnOriginZoneID", %markerZone);
-									
 									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
 								}
 							}
@@ -3846,18 +4084,18 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			else
 			{
 				// Player object invalid - skip and continue to brute-force
-				%aiId = "";
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object is missing (likely freed or not ready yet, no bot markers).");
+				continue; // Skip this client ID, player object not ready
 			}
 		}
 	}
 	
-	// Priority 2: If NEWgetClientByName() failed, use Client::getFirst/getNext (CRITICAL FIX #3)
+	// Priority 3: If NEWgetClientByName() failed, use Client::getFirst/getNext (CRITICAL FIX #3)
 	if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
 	{
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): NEWgetClientByName() failed, using Client::getFirst/getNext iteration");
 		// CRITICAL FIX #3: Replace brute-force loop with Client::getFirst/getNext
 		// Hard Rule: Never touch a ClientID unless Player::isAiControlled(%id) returns true
-		// The isFile check is insufficient for players in char-select
 		if(%displayName != "" && %displayName != -1)
 		{
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Iterating through connected clients for displayName '" @ %displayName @ "'");
@@ -3892,10 +4130,9 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				}
 				
 				// CRITICAL: Check if Player object exists and is valid BEFORE checking name match
-				// If the player object is missing or invalid, this client ID is not safe to reuse yet
 				if(%playerObj == -1 || %playerObj == "")
 				{
-					// Player object is gone. If this ID still carries bot markers, clean it up instead of leaving a shell.
+					// Player object is gone - check for shell bots
 					%existingBotInfoAiName = fetchData(%checkId, "BotInfoAiName");
 					%existingSpawnInfo = fetchData(%checkId, "SpawnBotInfo");
 					%registrySpawn = $BotRegistry[%checkId];
@@ -3909,15 +4146,14 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					
 					if(%isLikelyBot)
 					{
-						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Player object missing for client ID " @ %checkId @ " but bot markers exist (" @ %existingBotInfoAiName @ "/" @ %existingSpawnInfo @ "/registry=" @ %registrySpawn @ "). Cleaning up shell.");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Player object missing for client ID " @ %checkId @ " but bot markers exist. Cleaning up shell.");
 						CleanupBot(%checkId, %existingBotInfoAiName);
 					}
 					else
 					{
-						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object is missing (likely freed or not ready yet, no bot markers).");
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object is missing (no bot markers).");
 					}
-					
-					continue; // Skip this client ID, player object not ready
+					continue;
 				}
 				
 				// Player object exists - check if it's actually valid
