@@ -232,11 +232,13 @@ function CleanupOldGraveyardEntries()
 						}
 					}
 					
-					// METHOD 4: Iterate through all clients and check reverse mapping
+					// METHOD 4: Iterate through all clients AND bots to check reverse mapping
 					// This handles cases where bot isn't in registry but graveyard entry exists
+					// CRITICAL: Use BaseRep::getFirst/getNext which includes AI bots
+					// (Client::getFirst only returns real players, not AI bots)
 					if(%aiName == "")
 					{
-						for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
+						for(%checkId = BaseRep::getFirst(); %checkId != -1; %checkId = BaseRep::getNext(%checkId))
 						{
 							// Check if this clientId has a name that maps to our target ID
 							%checkName = Client::getName(%checkId);
