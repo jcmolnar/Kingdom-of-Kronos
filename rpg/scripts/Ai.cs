@@ -7363,29 +7363,12 @@ function AI::AddBotToBotGroup(%aiId, %group)
 //------ remastered directives ------------------------------
 
 // Helper function to get client ID from AI name or bot name
-// Works for Player objects (enemy bots) via engine AI::getId() lookup
-// AI::getId(%aiName) returns the repId (client ID) directly from the engine's AIManager
-// Falls back to BotInfoAiName lookup for edge cases where AI name differs from stored name
+// Works for Player objects (enemy bots) via multiple lookup methods
+// Uses SILENT methods first to avoid console error spam from AI::getId()
 function AI::getClientIdFromName(%aiName)
 {
-	// PRIMARY: Use engine-native AI::getId() - instant lookup from AIManager
-	// This is the proper way to get client ID from AI name
-	%aiId = AI::getId(%aiName);
-	
-	// AI::getId returns "False" on failure, not -1
-	if(%aiId != "False" && %aiId != "" && %aiId != -1)
-	{
-		// Validate player object exists
-		%playerObj = Client::getOwnedObject(%aiId);
-		if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
-		{
-			return %aiId;
-		}
-	}
-	
-	// FALLBACK: Search by BotInfoAiName using BaseRep iteration
-	// Needed when AI name stored in $BotInfoAiName differs from engine AI name
-	// (e.g., town bots with "TownBot_" prefix vs display name)
+	// SILENT METHOD 1: Search by BotInfoAiName using BaseRep iteration
+	// This is checked FIRST because AI::getId() prints error messages when AI not found
 	for(%id = BaseRep::getFirst(); %id != -1; %id = BaseRep::getNext(%id))
 	{
 		// Check BotInfoAiName in all arrays
@@ -7404,7 +7387,7 @@ function AI::getClientIdFromName(%aiName)
 			}
 		}
 		
-		// Also check display name as final fallback
+		// Also check display name
 		%displayName = Client::getName(%id);
 		if(%displayName != "" && %displayName != -1 && String::ICompare(%displayName, %aiName) == 0)
 		{
@@ -7412,6 +7395,21 @@ function AI::getClientIdFromName(%aiName)
 			{
 				return %id;
 			}
+		}
+	}
+	
+	// FALLBACK: Use engine-native AI::getId() - may print error if AI not found
+	// Only use this as last resort because it prints "Could not find drone" messages
+	%aiId = AI::getId(%aiName);
+	
+	// AI::getId returns "False" on failure, not -1
+	if(%aiId != "False" && %aiId != "" && %aiId != -1)
+	{
+		// Validate player object exists
+		%playerObj = Client::getOwnedObject(%aiId);
+		if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
+		{
+			return %aiId;
 		}
 	}
 	
