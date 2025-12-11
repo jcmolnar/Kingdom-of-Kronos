@@ -7412,21 +7412,6 @@ function AI::getClientIdFromName(%aiName)
 		}
 	}
 	
-	// FALLBACK: Use engine-native AI::getId() - may print error if AI not found
-	// Only use this as last resort because it prints "Could not find drone" messages
-	%aiId = AI::getId(%aiName);
-	
-	// AI::getId returns "False" on failure, not -1
-	if(%aiId != "False" && %aiId != "" && %aiId != -1)
-	{
-		// Validate player object exists
-		%playerObj = Client::getOwnedObject(%aiId);
-		if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
-		{
-			return %aiId;
-		}
-	}
-	
 	// Bot doesn't exist - return -1
 	return -1;
 }
