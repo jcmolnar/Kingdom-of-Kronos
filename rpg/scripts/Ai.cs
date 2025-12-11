@@ -4795,18 +4795,25 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		if(%tbClient != "" && %tbClient != -1 && %tbClient == %aiId)
 		{
 			echo("ERROR: SpawnAI - ClientId " @ %aiId @ " belongs to active town bot " @ %tbName @ ". Aborting enemy spawn for " @ %newName @ ".");
-			// CRITICAL FIX #2: Rollback reserved slot if town bot conflict detected
-			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
-			{
-				RollbackSpawnSlot(%spawnPointId);
-			}
-			// Clear enemy registry entries
-			$BotRegistry[%aiId] = "";
-			$BotRegistry[%aiId, "team"] = "";
-			$BotRegistry[%aiId, "name"] = "";
-			$BotRegistryLastSeen[%aiId] = "";
-			// Do not proceed
-			return;
+		
+		// CRITICAL: Delete the already-spawned enemy bot to prevent shell bot
+		// AI::spawn() succeeded and created the Player object, but we're aborting the spawn
+		// We must delete it using AI::delete() for proper cleanup
+		echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting aborted enemy bot " @ %newName @ " due to town bot conflict");
+		AI::delete(%newName);
+		
+		// CRITICAL FIX #2: Rollback reserved slot if town bot conflict detected
+		if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
+		{
+			RollbackSpawnSlot(%spawnPointId);
+		}
+		// Clear enemy registry entries
+		$BotRegistry[%aiId] = "";
+		$BotRegistry[%aiId, "team"] = "";
+		$BotRegistry[%aiId, "name"] = "";
+		$BotRegistryLastSeen[%aiId] = "";
+		// Do not proceed
+		return;
 		}
 	}
 
