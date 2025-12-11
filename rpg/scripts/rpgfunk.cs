@@ -7846,7 +7846,7 @@ function AFKZone_Tick()
 			%lvl = 0;
 		
 		%name = Client::getName(%id);
-		echo("AFKDebug: Player " @ %name @ " is in " @ %zoneDesc @ " (Cap: " @ %cap @ ")");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("AFKDebug: Player " @ %name @ " is in " @ %zoneDesc @ " (Cap: " @ %cap @ ")");
 		
 		// Overlevel check
 		if(%lvl <= (%cap + $AFKOverLevelBuffer))
@@ -7856,7 +7856,7 @@ function AFKZone_Tick()
 		}
 		
 		// Debug overlevel status before warning triggers
-		echo("[AFKZONE DEBUG] id=" @ %id @ " zone='" @ %zoneDesc @ "' cap=" @ %cap @ " lvl=" @ %lvl @ " inactivity=" @ %inactivityMs @ "ms zonetime=" @ %zoneTimeMs @ "ms warnUntil=" @ $AFKZoneWarnUntil[%id] @ " lastMove=" @ %lastMove @ " lastPos=" @ $AFKZoneLastPos[%id]);
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[AFKZONE DEBUG] id=" @ %id @ " zone='" @ %zoneDesc @ "' cap=" @ %cap @ " lvl=" @ %lvl @ " inactivity=" @ %inactivityMs @ "ms zonetime=" @ %zoneTimeMs @ "ms warnUntil=" @ $AFKZoneWarnUntil[%id] @ " lastMove=" @ %lastMove @ " lastPos=" @ $AFKZoneLastPos[%id]);
 		
 		%warnUntil = $AFKZoneWarnUntil[%id];
 		if(%warnUntil != "")

@@ -32,7 +32,7 @@ function ReserveSpawnSlot(%spawnPoint)
 		%timeSinceLastLog = %currentTime - %lastFailLogTime;
 		if(%timeSinceLastLog >= 10000) // 10 seconds (in milliseconds)
 		{
-			echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): FAILED - Already at max (" @ %currentCounter @ "/" @ %maxs @ ")");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): FAILED - Already at max (" @ %currentCounter @ "/" @ %maxs @ ")");
 			$ReserveSpawnSlotLastFailLog[%spawnPoint] = %currentTime;
 		}
 		return false;
@@ -44,8 +44,10 @@ function ReserveSpawnSlot(%spawnPoint)
 	
 	// Mark this spawn point as having a reserved slot (prevents double-reservation)
 	$SpawnSlotReserved[%spawnPoint] = "true";
+	// Store reservation timestamp for timeout detection
+	$SpawnSlotReservedTime[%spawnPoint] = getSimTime();
 	
-	echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): SUCCESS - Reserved slot (" @ %currentCounter @ " -> " @ %newCounter @ "/" @ %maxs @ ")");
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): SUCCESS - Reserved slot (" @ %currentCounter @ " -> " @ %newCounter @ "/" @ %maxs @ ") @ " @ $SpawnSlotReservedTime[%spawnPoint]);
 	return true;
 }
 
@@ -54,12 +56,24 @@ function ReserveSpawnSlot(%spawnPoint)
 function CommitSpawnSlot(%spawnPoint)
 {
 	if(%spawnPoint == "" || %spawnPoint == -1)
+	{
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot: ERROR - Invalid spawnPoint (" @ %spawnPoint @ ")");
 		return;
+	}
+	
+	// Check if slot was actually reserved
+	if($SpawnSlotReserved[%spawnPoint] != "true")
+	{
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot(" @ %spawnPoint @ "): WARNING - Slot was not reserved (possible double-commit or missing reservation)");
+	}
 	
 	// Clear the reservation flag - spawn was successful
 	$SpawnSlotReserved[%spawnPoint] = "";
 	
-	echo("[SPAWN TRANSACTION] CommitSpawnSlot(" @ %spawnPoint @ "): Committed - Counter now: " @ $numAIperSpawnPoint[%spawnPoint]);
+	// Clear reservation timestamp if it exists
+	$SpawnSlotReservedTime[%spawnPoint] = "";
+	
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot(" @ %spawnPoint @ "): Committed - Counter now: " @ $numAIperSpawnPoint[%spawnPoint]);
 }
 
 // RollbackSpawnSlot: Reverts a reserved slot (decrements counter)
@@ -67,24 +81,44 @@ function CommitSpawnSlot(%spawnPoint)
 function RollbackSpawnSlot(%spawnPoint)
 {
 	if(%spawnPoint == "" || %spawnPoint == -1)
+	{
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot: ERROR - Invalid spawnPoint (" @ %spawnPoint @ ")");
 		return;
+	}
 	
 	%currentCounter = $numAIperSpawnPoint[%spawnPoint];
 	if(%currentCounter == "" || %currentCounter == 0)
 	{
-		echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): WARNING - Counter already 0, cannot rollback");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): WARNING - Counter already 0, cannot rollback");
 		$SpawnSlotReserved[%spawnPoint] = "";
+		$SpawnSlotReservedTime[%spawnPoint] = "";
 		return;
+	}
+	
+	// Check reservation age for timeout detection
+	%reservedTime = $SpawnSlotReservedTime[%spawnPoint];
+	%reservationAge = -1;
+	if(%reservedTime != "" && %reservedTime != -1)
+	{
+		%reservationAge = getSimTime() - %reservedTime;
+		if(%reservationAge > 15)
+		{
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): WARNING - Rolling back reservation that was " @ %reservationAge @ "s old (possible timeout/stuck reservation)");
+		}
 	}
 	
 	// Atomically decrement counter
 	$numAIperSpawnPoint[%spawnPoint]--;
 	%newCounter = $numAIperSpawnPoint[%spawnPoint];
 	
-	// Clear the reservation flag
+	// Clear the reservation flag and timestamp
 	$SpawnSlotReserved[%spawnPoint] = "";
+	$SpawnSlotReservedTime[%spawnPoint] = "";
 	
-	echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): Rolled back (" @ %currentCounter @ " -> " @ %newCounter @ ")");
+	if(%reservationAge >= 0)
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): Rolled back (" @ %currentCounter @ " -> " @ %newCounter @ ", reservation age: " @ %reservationAge @ "s)");
+	else
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): Rolled back (" @ %currentCounter @ " -> " @ %newCounter @ ")");
 }
 
 function InitSpawnPoints()
@@ -176,7 +210,7 @@ function SpawnLoop(%this)
 %cooldownUntil = $SpawnPointCooldownUntil[%this];
 if(%cooldownUntil != "" && %cooldownUntil > getSimTime())
 {
-		echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): cooldown active until " @ floor(%cooldownUntil) @ " (now=" @ floor(getSimTime()) @ "), skipping");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): cooldown active until " @ floor(%cooldownUntil) @ " (now=" @ floor(getSimTime()) @ "), skipping");
 	// Schedule next loop and return
 	schedule("SpawnLoop(" @ %this @ ");", %delay + 1);
 	return;
@@ -184,7 +218,7 @@ if(%cooldownUntil != "" && %cooldownUntil > getSimTime())
 // Clear expired cooldown
 if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 	{
-		echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): cooldown expired (was " @ floor(%cooldownUntil) @ ", now=" @ floor(getSimTime()) @ "), clearing");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): cooldown expired (was " @ floor(%cooldownUntil) @ ", now=" @ floor(getSimTime()) @ "), clearing");
 	$SpawnPointCooldownUntil[%this] = "";
 	}
 
@@ -192,7 +226,51 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		%flagStr = "true";
 	else
 		%flagStr = "false";
-	//echo("[SPAWN DEBUG] SpawnLoop(" @ %this @ "): counter=" @ %currentCounter @ ", max=" @ %maxs @ ", flag=" @ %flagStr @ ", index=" @ %index @ ", inProgress=" @ %spawnInProgress);
+	
+	// Enhanced debug logging to show spawnpoint state
+	%registeredCount = GetRegisteredBotCount(%this);
+	%reservedStatus = $SpawnSlotReserved[%this];
+	if(%reservedStatus == "")
+		%reservedStatus = "none";
+	%reservedAge = "none";
+	if($SpawnSlotReservedTime[%this] != "" && $SpawnSlotReservedTime[%this] != -1)
+	{
+		%reservedAge = getSimTime() - $SpawnSlotReservedTime[%this];
+		%reservedAge = %reservedAge @ "s";
+	}
+	
+	// Fix inProgress display - show explicit true/false
+	%inProgressStr = "false";
+	if(%spawnInProgress == "true")
+		%inProgressStr = "true";
+	
+	// Get zone information for flag explanation
+	%zoneInfo = "";
+	if($SelectiveZoneBotSpawning)
+	{
+		%zoneId = $MarkerZone[%this];
+		%zonePlayerCount = Zone::getNumPlayers(%zoneId);
+		if(%zoneId != "" && %zoneId != -1)
+			%zoneInfo = ", zone=" @ %zoneId @ ", zonePlayers=" @ %zonePlayerCount;
+		else
+			%zoneInfo = ", zone=unknown";
+	}
+	
+	// Get cooldown information
+	%cooldownInfo = "";
+	if(%cooldownUntil != "" && %cooldownUntil != -1)
+	{
+		%cooldownRemaining = %cooldownUntil - getSimTime();
+		if(%cooldownRemaining > 0)
+			%cooldownInfo = ", cooldown=" @ floor(%cooldownRemaining) @ "s";
+		else
+			%cooldownInfo = ", cooldown=expired";
+	}
+	else
+		%cooldownInfo = ", cooldown=none";
+	
+	// Debug logging removed to reduce console spam
+	//echo("[SPAWN DEBUG] SpawnLoop(" @ %this @ "): counter=" @ %currentCounter @ "/" @ %maxs @ ", registered=" @ %registeredCount @ ", flag=" @ %flagStr @ %zoneInfo @ ", inProgress=" @ %inProgressStr @ ", reserved=" @ %reservedStatus @ ", reservedAge=" @ %reservedAge @ %cooldownInfo);
 	
 	// CRITICAL FIX: Atomically reserve the slot. This increments the counter IMMEDIATELY.
 	if(%flag && %spawnInProgress != "true" && ReserveSpawnSlot(%this))
@@ -203,19 +281,19 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		// Get the NEW counter value after reservation for logging
 		%reservedCounter = $numAIperSpawnPoint[%this];
 		
-		echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): SLOT RESERVED @ " @ floor(getSimTime()) @ ", delay=" @ %delay @ ", max=" @ %maxs @ ", counter=" @ %reservedCounter @ ", idx=" @ %index);
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): SLOT RESERVED @ " @ floor(getSimTime()) @ ", delay=" @ %delay @ ", max=" @ %maxs @ ", counter=" @ %reservedCounter @ ", idx=" @ %index);
 		
 		echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): ATTEMPTING SPAWN - calling AI::helper()");
 		
 		// Pass spawn point ID to helper so it can handle Rollback on failure
 		// CRITICAL FIX: Added missing arguments (loadout="", spawnPointId=%this)
 		%AIname = AI::helper($spawnIndex[%index], $spawnIndex[%index], "SpawnPoint " @ %this, "", %this);
-		echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): AI::helper returned: " @ %AIname);
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): AI::helper returned: " @ %AIname);
 		
 		// CRITICAL FIX: If spawning failed, rollback the reserved slot
 		if(%AIname == -1 || %AIname == "")
 		{
-			echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): SPAWN FAILED - Rolling back reserved slot");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): SPAWN FAILED - Rolling back reserved slot");
 			RollbackSpawnSlot(%this);
 			$SpawnPointInProgress[%this] = "";
 		}
@@ -229,8 +307,7 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 	}
 	else
 	{
-		// Skip debug messages for zone flag, counter, and spawn in progress to reduce console spam
-		// Only log skip messages every 10 seconds to reduce frequency
+		// Enhanced debug logging to show WHY ReserveSpawnSlot() failed
 		%currentTime = getIntegerTime(true);
 		%lastSkipLogTime = $SpawnLoopLastSkipLog[%this];
 		if(%lastSkipLogTime == "" || %lastSkipLogTime == "0" || %lastSkipLogTime == -1)
@@ -241,16 +318,24 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		if(%timeSinceLastLog >= 10000) // 10 seconds (in milliseconds)
 			%shouldLog = true;
 		
-		// if(!%flag)
-		//	echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): SKIP - zone flag=false");
-		if(%currentCounter >= %maxs && %shouldLog)
+		// Detailed failure reasons
+		%failureReasons = "";
+		if(!%flag)
+			%failureReasons = %failureReasons @ "zone_flag=false ";
+		if(%spawnInProgress == "true")
+			%failureReasons = %failureReasons @ "inProgress=true ";
+		if(%currentCounter >= %maxs)
+			%failureReasons = %failureReasons @ "counter(" @ %currentCounter @ ")>=max(" @ %maxs @ ") ";
+		
+		// Check if ReserveSpawnSlot would fail
+		if(%flag && %spawnInProgress != "true" && %currentCounter >= %maxs)
 		{
-			echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): SKIP - counter(" @ %currentCounter @ ") >= max(" @ %maxs @ ") @ " @ floor(getSimTime()));
-			$SpawnLoopLastSkipLog[%this] = %currentTime;
+			%failureReasons = %failureReasons @ "ReserveSpawnSlot()=FULL ";
 		}
-		if(%spawnInProgress == "true" && %shouldLog)
+		
+		if(%shouldLog && %failureReasons != "")
 		{
-			echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): SKIP - spawn already in progress @ " @ floor(getSimTime()));
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] SpawnLoop(" @ %this @ "): SKIP - " @ %failureReasons @ "@ " @ floor(getSimTime()));
 			$SpawnLoopLastSkipLog[%this] = %currentTime;
 		}
 	}
