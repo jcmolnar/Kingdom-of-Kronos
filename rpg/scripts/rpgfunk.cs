@@ -2822,7 +2822,7 @@ function AggregateLootbags()
 	{
 		%group = nameToID("LootbagGroup");
 		%count = Group::objectCount(%group);
-		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] LootbagGroup found with " @ %count @ " objects");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] LootbagGroup found with " @ %count @ " objects");
 		
 		for(%i = 0; %i < %count; %i++)
 		{
@@ -2840,7 +2840,7 @@ function AggregateLootbags()
 			%lootData = $loot[%obj];
 			if(%lootData == "" || %lootData == -1)
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip (empty loot) obj=" @ %obj);
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Skip (empty loot) obj=" @ %obj);
 				continue;
 			}
 
@@ -2862,20 +2862,20 @@ function AggregateLootbags()
 
 			if(%isPlayerOwned)
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip player pack obj=" @ %obj @ " owner=" @ %ownerName);
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Skip player pack obj=" @ %obj @ " owner=" @ %ownerName);
 				continue;
 			}
 
 			// Include bot/neutral lootbag
 			%mapName = GameBase::getMapName(%obj);
-			if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Include bot pack obj=" @ %obj @ " owner=" @ %ownerName @ " botOwner=" @ %isBotOwner @ " map=" @ %mapName @ " loot='" @ %lootData @ "' (from LootbagGroup)");
+			if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Include bot pack obj=" @ %obj @ " owner=" @ %ownerName @ " botOwner=" @ %isBotOwner @ " map=" @ %mapName @ " loot='" @ %lootData @ "' (from LootbagGroup)");
 			%lootbagList = %lootbagList @ %obj @ " ";
 			%lootbagCount++;
 		}
 	}
 	else
 	{
-		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] LootbagGroup does not exist, creating it");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] LootbagGroup does not exist, creating it");
 		newObject("LootbagGroup", SimGroup, true);
 	}
 	
@@ -2883,10 +2883,10 @@ function AggregateLootbags()
 	// This handles cases where Lootbag::onAdd() failed or lootbags weren't added to LootbagGroup
 	if(isObject("MissionCleanup"))
 	{
-		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Scanning MissionCleanup for additional lootbags (LootbagGroup had " @ %lootbagCount @ " lootbags)");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Scanning MissionCleanup for additional lootbags (LootbagGroup had " @ %lootbagCount @ " lootbags)");
 		%missionGroup = nameToID("MissionCleanup");
 		%missionCount = Group::objectCount(%missionGroup);
-		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] MissionCleanup has " @ %missionCount @ " objects");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] MissionCleanup has " @ %missionCount @ " objects");
 		
 		for(%i = 0; %i < %missionCount; %i++)
 		{
@@ -2898,7 +2898,7 @@ function AggregateLootbags()
 			// Skip if already processed from LootbagGroup
 			if(String::findSubStr(%processedObjects, %obj @ " ") != -1)
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip (already processed from LootbagGroup) obj=" @ %obj);
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Skip (already processed from LootbagGroup) obj=" @ %obj);
 				continue;
 			}
 			
@@ -2914,7 +2914,7 @@ function AggregateLootbags()
 			// Skip if empty loot
 			if(%lootData == "" || %lootData == -1)
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip (empty loot) obj=" @ %obj);
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Skip (empty loot) obj=" @ %obj);
 				continue;
 			}
 			
@@ -2943,12 +2943,12 @@ function AggregateLootbags()
 
 			if(%isPlayerOwned)
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip player pack obj=" @ %obj @ " owner=" @ %ownerName);
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Skip player pack obj=" @ %obj @ " owner=" @ %ownerName);
 				continue;
 			}
 
 			// Include bot/neutral lootbag
-			if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Include bot pack obj=" @ %obj @ " owner=" @ %ownerName @ " botOwner=" @ %isBotOwner @ " map=" @ %mapName @ " loot='" @ %lootData @ "' (from MissionCleanup)");
+			if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Include bot pack obj=" @ %obj @ " owner=" @ %ownerName @ " botOwner=" @ %isBotOwner @ " map=" @ %mapName @ " loot='" @ %lootData @ "' (from MissionCleanup)");
 			%lootbagList = %lootbagList @ %obj @ " ";
 			%lootbagCount++;
 		}
@@ -2960,7 +2960,7 @@ function AggregateLootbags()
 	if(%lootbagCount < 2)
 	{
 		// Schedule next run (log for visibility even when no merge happens)
-		echo("[LOOTBAG AGGREGATE] Run complete - lootbags found: " @ %lootbagCount @ " (no merge needed)");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE] Run complete - lootbags found: " @ %lootbagCount @ " (no merge needed)");
 		schedule("AggregateLootbags();", $LootbagAggregateInterval);
 		return;
 	}
@@ -2982,11 +2982,11 @@ function AggregateLootbags()
 		%pos1 = GameBase::getPosition(%bag1);
 		if(%pos1 == "" || %pos1 == -1)
 		{
-			if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag1=" @ %bag1 @ " - invalid position: '" @ %pos1 @ "'");
+			if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag1=" @ %bag1 @ " - invalid position: '" @ %pos1 @ "'");
 			continue;
 		}
 		
-		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Checking bag1=" @ %bag1 @ " at position " @ %pos1);
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Checking bag1=" @ %bag1 @ " at position " @ %pos1);
 		
 		// Find all nearby lootbags to merge into this one
 		for(%j = %i + 1; %j < %lootbagCount; %j++)
@@ -2998,52 +2998,52 @@ function AggregateLootbags()
 			// Skip if already merged
 			if(String::findSubStr(%merged, %bag2 @ " ") != -1)
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag2=" @ %bag2 @ " - already merged");
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag2=" @ %bag2 @ " - already merged");
 				continue;
 			}
 			
 			%pos2 = GameBase::getPosition(%bag2);
 			if(%pos2 == "" || %pos2 == -1)
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag2=" @ %bag2 @ " - invalid position: '" @ %pos2 @ "'");
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag2=" @ %bag2 @ " - invalid position: '" @ %pos2 @ "'");
 				continue;
 			}
 			
 			// Check distance
 			%dist = Vector::getDistance(%pos1, %pos2);
-			if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Distance check: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " dist=" @ %dist @ " radius=" @ $LootbagAggregateRadius);
+			if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Distance check: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " dist=" @ %dist @ " radius=" @ $LootbagAggregateRadius);
 			
 			if(%dist <= $LootbagAggregateRadius)
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Attempting merge: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " (dist=" @ %dist @ " <= radius=" @ $LootbagAggregateRadius @ ")");
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Attempting merge: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " (dist=" @ %dist @ " <= radius=" @ $LootbagAggregateRadius @ ")");
 				// Merge bag2 into bag1
 				%result = MergeLootbags(%bag1, %bag2);
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Merge result: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " result=" @ %result);
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Merge result: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " result=" @ %result);
 				if(%result)
 				{
 					%merged = %merged @ %bag2 @ " ";
 					%totalMerged++;
-					if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Merge successful: bag2=" @ %bag2 @ " merged into bag1=" @ %bag1);
+					if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Merge successful: bag2=" @ %bag2 @ " merged into bag1=" @ %bag1);
 				}
 				else
 				{
-					if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Merge failed: bag1=" @ %bag1 @ " bag2=" @ %bag2);
+					if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Merge failed: bag1=" @ %bag1 @ " bag2=" @ %bag2);
 				}
 			}
 			else
 			{
-				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Distance too far: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " dist=" @ %dist @ " > radius=" @ $LootbagAggregateRadius);
+				if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Distance too far: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " dist=" @ %dist @ " > radius=" @ $LootbagAggregateRadius);
 			}
 		}
 	}
 	
 	if(%totalMerged > 0)
 	{
-		echo("[LOOTBAG AGGREGATE] Merged " @ %totalMerged @ " lootbags (from " @ %totalLootbags @ " total)");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE] Merged " @ %totalMerged @ " lootbags (from " @ %totalLootbags @ " total)");
 	}
 	else
 	{
-		echo("[LOOTBAG AGGREGATE] Run complete - lootbags found: " @ %totalLootbags @ " (no merge performed)");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE] Run complete - lootbags found: " @ %totalLootbags @ " (no merge performed)");
 	}
 
 	// After aggregation, schedule a deployable-only world save to persist merged lootbags
@@ -3052,7 +3052,7 @@ function AggregateLootbags()
 	{
 		$LootbagAggregateSaveScheduled = true;
 		schedule("SaveWorldDeployables(); $LootbagAggregateSaveScheduled = \"\";", 30);
-		echo("[LOOTBAG AGGREGATE] Scheduled SaveWorldDeployables in 30s after aggregation");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE] Scheduled SaveWorldDeployables in 30s after aggregation");
 	}
 	
 	// Schedule next run
@@ -3068,12 +3068,12 @@ function MergeLootbags(%bag1, %bag2)
 	// First validate objects exist before checking type
 	if(%bag1 == -1 || %bag1 == "" || !isObject(%bag1))
 	{
-		echo("[LOOTBAG AGGREGATE DEBUG] ERROR: bag1 is invalid (" @ %bag1 @ ") - ABORTING");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] ERROR: bag1 is invalid (" @ %bag1 @ ") - ABORTING");
 		return false;
 	}
 	if(%bag2 == -1 || %bag2 == "" || !isObject(%bag2))
 	{
-		echo("[LOOTBAG AGGREGATE DEBUG] ERROR: bag2 is invalid (" @ %bag2 @ ") - ABORTING");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] ERROR: bag2 is invalid (" @ %bag2 @ ") - ABORTING");
 		return false;
 	}
 	
@@ -3081,14 +3081,14 @@ function MergeLootbags(%bag1, %bag2)
 	%bag2Type = getObjectType(%bag2);
 	if(%bag1Type == "Player" || %bag2Type == "Player")
 	{
-		echo("[LOOTBAG AGGREGATE DEBUG] CRITICAL ERROR: Attempted to merge Player objects! bag1=" @ %bag1 @ " (type=" @ %bag1Type @ "), bag2=" @ %bag2 @ " (type=" @ %bag2Type @ ") - ABORTING");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] CRITICAL ERROR: Attempted to merge Player objects! bag1=" @ %bag1 @ " (type=" @ %bag1Type @ "), bag2=" @ %bag2 @ " (type=" @ %bag2Type @ ") - ABORTING");
 		return false;
 	}
 	
 	// Get contents of both bags
 	%loot1 = $loot[%bag1];
 	%loot2 = $loot[%bag2];
-	echo("[LOOTBAG AGGREGATE DEBUG] Before merge: bag1=" @ %bag1 @ " loot='" @ %loot1 @ "' | bag2=" @ %bag2 @ " loot='" @ %loot2 @ "'");
+	if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Before merge: bag1=" @ %bag1 @ " loot='" @ %loot1 @ "' | bag2=" @ %bag2 @ " loot='" @ %loot2 @ "'");
 	
 	if(%loot2 == "" || %loot2 == -1)
 	{
@@ -3139,13 +3139,13 @@ function MergeLootbags(%bag1, %bag2)
 	
 	// Update bag1 with merged contents
 	$loot[%bag1] = %newLoot1;
-	echo("[LOOTBAG AGGREGATE DEBUG] After merge: bag1=" @ %bag1 @ " loot='" @ $loot[%bag1] @ "'");
+	if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] After merge: bag1=" @ %bag1 @ " loot='" @ $loot[%bag1] @ "'");
 	
 	if(%remainingContents == "")
 	{
 		// Full merge success - delete bag2
 		// Full merge success - safe delete bag2
-		echo("[LOOTBAG AGGREGATE DEBUG] Full merge successful. Deleting bag2=" @ %bag2);
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Full merge successful. Deleting bag2=" @ %bag2);
 		$loot[%bag2] = "";
 		$lootbagTime[%bag2] = "";
 		SafeDeleteLootbag(%bag2);
@@ -3157,7 +3157,7 @@ function MergeLootbags(%bag1, %bag2)
 		// Keep original owner/namelist for bag2
 		%newLoot2 = %owner2 @ " " @ %namelist2 @ " " @ %remainingContents;
 		$loot[%bag2] = %newLoot2;
-		echo("[LOOTBAG AGGREGATE DEBUG] Partial merge. Updated bag2=" @ %bag2 @ " leftovers='" @ $loot[%bag2] @ "'");
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Partial merge. Updated bag2=" @ %bag2 @ " leftovers='" @ $loot[%bag2] @ "'");
 		return true; // Return true as we successfully merged *something* (or tried)
 	}
 }
@@ -3312,7 +3312,7 @@ function StartLootbagAggregation(%initialDelay)
 	if(%initialDelay == "" || %initialDelay < 0)
 		%initialDelay = 30; // default 30s after server start
 	$LootbagAggregateStarted = true;
-	echo("[LOOTBAG AGGREGATE] Scheduling first run in " @ %initialDelay @ "s (interval " @ $LootbagAggregateInterval @ "s, radius " @ $LootbagAggregateRadius @ ")");
+	if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE] Scheduling first run in " @ %initialDelay @ "s (interval " @ $LootbagAggregateInterval @ "s, radius " @ $LootbagAggregateRadius @ ")");
 	schedule("AggregateLootbags();", %initialDelay);
 }
 

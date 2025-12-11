@@ -38,7 +38,9 @@ $AIattackMode = 1;
 // Set to 1 to enable debug output, 0 to disable (reduces server load and log spam)
 $AI_DEBUG_ENABLED = 0;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
 $AI_SPAWN_DEBUG = 0;          // Controls [SPAWN FLOW] messages specifically
-$AI_PERIODIC_DEBUG = 1;       // Controls [INERT DEBUG] AI::Periodic messages
+$AI_PERIODIC_DEBUG = 0;       // Controls [INERT DEBUG] AI::Periodic messages
+$LOOTBAG_DEBUG = 0;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
+
 
 // Bot tracking counters
 $TotalActiveBots = 0;      // Total count of all active bots (enemy + town)
