@@ -722,6 +722,7 @@ function ReconcileSpawnCounters()
 				// All checks passed - safe to delete using AI::delete (proper engine cleanup)
 				%aiName = $BotInfoAiName[%clientId];
 				if(%aiName == "") %aiName = $EnemyBotData[%clientId, "BotInfoAiName"];
+				if(%aiName == "") %aiName = $TownBotData[%clientId, "BotInfoAiName"];
 				if(%aiName == "") %aiName = fetchData(%clientId, "BotInfoAiName");
 				
 				if(%aiName != "" && %aiName != -1 && %aiName != "0")
@@ -845,6 +846,7 @@ function PreSpawnCleanup(%clientId)
 		// All checks passed - safe to delete using AI::delete (proper engine cleanup)
 		%aiName = $BotInfoAiName[%clientId];
 		if(%aiName == "") %aiName = $EnemyBotData[%clientId, "BotInfoAiName"];
+		if(%aiName == "") %aiName = $TownBotData[%clientId, "BotInfoAiName"];
 		if(%aiName == "") %aiName = fetchData(%clientId, "BotInfoAiName");
 		
 		if(%aiName != "" && %aiName != -1 && %aiName != "0")
@@ -1401,6 +1403,7 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 						// All checks passed - safe to delete stale bot using AI::delete
 						%staleAiName = $BotInfoAiName[%checkId];
 						if(%staleAiName == "") %staleAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
+						if(%staleAiName == "") %staleAiName = $TownBotData[%checkId, "BotInfoAiName"];
 						if(%staleAiName == "") %staleAiName = fetchData(%checkId, "BotInfoAiName");
 						
 						if(%staleAiName != "" && %staleAiName != -1 && %staleAiName != "0")
@@ -4322,6 +4325,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							%oldAiName = %existingBotInfoAiName;
 							if(%oldAiName == "" || %oldAiName == -1) %oldAiName = $BotInfoAiName[%aiId];
 							if(%oldAiName == "" || %oldAiName == -1) %oldAiName = $EnemyBotData[%aiId, "BotInfoAiName"];
+							if(%oldAiName == "" || %oldAiName == -1) %oldAiName = $TownBotData[%aiId, "BotInfoAiName"];
 							
 							if(%oldAiName != "" && %oldAiName != -1 && %oldAiName != "0")
 							{
@@ -4433,6 +4437,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							// CRITICAL: Get AI name BEFORE clearing data for proper engine deletion
 							%shellAiName = $BotInfoAiName[%aiId];
 							if(%shellAiName == "") %shellAiName = $EnemyBotData[%aiId, "BotInfoAiName"];
+							if(%shellAiName == "") %shellAiName = $TownBotData[%aiId, "BotInfoAiName"];
 							if(%shellAiName == "") %shellAiName = fetchData(%aiId, "BotInfoAiName");
 							
 							// Clear bot data
