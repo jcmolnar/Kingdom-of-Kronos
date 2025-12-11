@@ -7297,205 +7297,60 @@ function AI::AddBotToBotGroup(%aiId, %group)
 //------ remastered directives ------------------------------
 
 // Helper function to get client ID from AI name or bot name
-// Works for Player objects (enemy bots) via BotInfoAiName lookup
-// CRITICAL: We do NOT call AI::getId() here to avoid "Could not find drone" error spam
-// AI::getId() should ONLY be called ONCE at spawn time, and the result stored in BotInfoAiName
-// If BotInfoAiName lookup fails, the bot doesn't exist - return -1 without calling AI::getId()
+// Works for Player objects (enemy bots) via engine AI::getId() lookup
+// AI::getId(%aiName) returns the repId (client ID) directly from the engine's AIManager
+// Falls back to BotInfoAiName lookup for edge cases where AI name differs from stored name
 function AI::getClientIdFromName(%aiName)
 {
-	%aiId = "";
+	// PRIMARY: Use engine-native AI::getId() - instant lookup from AIManager
+	// This is the proper way to get client ID from AI name
+	%aiId = AI::getId(%aiName);
 	
-	// DEBUG: Track if we're looking for a God/Insurrector bot
-	%isDebugBot = (String::findSubStr(%aiName, "God") != -1 || String::findSubStr(%aiName, "Insurrector") != -1);
-	
-	// Find client ID by looking up BotInfoAiName (for Player objects like enemy bots)
-	// This is the ONLY way we look up bots - we don't call AI::getId() here
-	%clientList = GetEveryoneIdList();
-	%clientListCount = 0;
-	for(%i = 0; (%clientId = GetWord(%clientList, %i)) != -1; %i++)
+	// AI::getId returns "False" on failure, not -1
+	if(%aiId != "False" && %aiId != "" && %aiId != -1)
 	{
-		%clientListCount++;
-		%isBot = isRPGAI(%clientId);
-		%isAiControlled = Player::isAiControlled(%clientId);
-		
-		// CRITICAL FIX: Check BotInfoAiName directly from arrays (like isRPGAI() does)
-		// Newly spawned bots might not be recognized by isRPGAI() yet, but BotInfoAiName is set immediately
-		// fetchData() uses isRPGAI() internally, so it might look in the wrong array - check all arrays directly
-		%botInfoAiName = $EnemyBotData[%clientId, "BotInfoAiName"];
-		if(%botInfoAiName == "")
-			%botInfoAiName = $TownBotData[%clientId, "BotInfoAiName"];
-		if(%botInfoAiName == "")
-			%botInfoAiName = $ClientData[%clientId, "BotInfoAiName"];
-		if(%botInfoAiName == "")
-			%botInfoAiName = $BotInfoAiName[%clientId];  // Direct array access (fastest)
-		%hasBotInfoAiName = (%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0");
-		
-		// Consider it a bot if isRPGAI() returns true OR if BotInfoAiName matches OR if isAiControlled
-		%shouldCheck = (%isBot || %hasBotInfoAiName || %isAiControlled);
-		
-		// DEBUG: Log why a client wasn't recognized as a bot (for debugging God bots)
-		if(%isDebugBot && !%isBot)
+		// Validate player object exists
+		%playerObj = Client::getOwnedObject(%aiId);
+		if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
 		{
-			%checkDisplayName = Client::getName(%clientId);
-			if(String::findSubStr(%checkDisplayName, "God") != -1 || String::findSubStr(%checkDisplayName, "Insurrector") != -1)
+			return %aiId;
+		}
+	}
+	
+	// FALLBACK: Search by BotInfoAiName using BaseRep iteration
+	// Needed when AI name stored in $BotInfoAiName differs from engine AI name
+	// (e.g., town bots with "TownBot_" prefix vs display name)
+	for(%id = BaseRep::getFirst(); %id != -1; %id = BaseRep::getNext(%id))
+	{
+		// Check BotInfoAiName in all arrays
+		%botInfoAiName = $EnemyBotData[%id, "BotInfoAiName"];
+		if(%botInfoAiName == "") %botInfoAiName = $TownBotData[%id, "BotInfoAiName"];
+		if(%botInfoAiName == "") %botInfoAiName = $BotInfoAiName[%id];
+		if(%botInfoAiName == "") %botInfoAiName = $ClientData[%id, "BotInfoAiName"];
+		
+		if(%botInfoAiName == %aiName)
+		{
+			// Validate player object exists
+			%playerObj = Client::getOwnedObject(%id);
+			if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
 			{
-				echo("[AI DEBUG] getClientIdFromName - Client " @ %clientId @ " (" @ %checkDisplayName @ ") NOT recognized as bot by isRPGAI()!");
-				%checkSpawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
-				echo("[AI DEBUG]   BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %checkSpawnBotInfo @ "', isAiControlled=" @ %isAiControlled);
+				return %id;
 			}
 		}
 		
-		if(%shouldCheck)
+		// Also check display name as final fallback
+		%displayName = Client::getName(%id);
+		if(%displayName != "" && %displayName != -1 && String::ICompare(%displayName, %aiName) == 0)
 		{
-			// Check BotInfoAiName first (most reliable for newly spawned bots)
-			if(%hasBotInfoAiName && %botInfoAiName == %aiName)
+			if(Player::isAiControlled(%id))
 			{
-				echo("[INERT DEBUG] AI::getClientIdFromName: Found " @ %aiName @ " via BotInfoAiName in GetEveryoneIdList (clientId=" @ %clientId @ ", isRPGAI=" @ %isBot @ ", isAiControlled=" @ %isAiControlled @ ")");
-				%aiId = %clientId;
-				break;
-			}
-			// CRITICAL: Also check display name as fallback (for seal battle bots, Colloseum bots, etc.)
-			// Some bots might not have BotInfoAiName set, but we can find them by display name
-			if(%aiId == "")
-			{
-				%displayName = Client::getName(%clientId);
-				if(%displayName != "" && %displayName != -1 && String::ICompare(%displayName, %aiName) == 0)
-				{
-					echo("[INERT DEBUG] AI::getClientIdFromName: Found " @ %aiName @ " via display name in GetEveryoneIdList (clientId=" @ %clientId @ ")");
-					%aiId = %clientId;
-					break;
-				}
+				return %id;
 			}
 		}
 	}
 	
-	// CRITICAL FIX: Brute-force fallback if bot not found in GetEveryoneIdList()
-	// Newly spawned bots might not be in BotGroup yet, so GetEveryoneIdList() won't find them
-	// But BotInfoAiName is set immediately, so we can find them by checking client IDs directly
-	if(%aiId == "" || %aiId == -1)
-	{
-		// Throttled logging: only log once per bot per 30 seconds to reduce spam
-		%lastLogTime = $AIgetClientIdFromNameLastLog[%aiName];
-		%currentTime = getSimTime();
-		if(%lastLogTime == "" || (%currentTime - %lastLogTime) > 30.0)
-		{
-			echo("[INERT DEBUG] AI::getClientIdFromName: Bot " @ %aiName @ " not found in GetEveryoneIdList (count=" @ %clientListCount @ "), trying brute-force fallback...");
-			$AIgetClientIdFromNameLastLog[%aiName] = %currentTime;
-		}
-		// TWO-TIER FALLBACK: Try Client::getFirst()/getNext() first (most reliable), then range loop as last resort
-		// Tier 1: Use Client::getFirst()/getNext() (most reliable method)
-		%tier1Found = false;
-		for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
-		{
-			// Skip recently freed IDs (cleanup still in progress)
-			%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
-			if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
-			{
-				%currentTime = getSimTime();
-				%timeSinceFreed = %currentTime - %recentlyFreed;
-				if(%timeSinceFreed < 5) // 5 seconds for cleanup
-					continue; // Skip this client ID, cleanup still in progress
-			}
-			
-			// Check BotInfoAiName in all arrays (prioritize EnemyBotData and direct array)
-			%checkBotInfoAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
-			if(%checkBotInfoAiName == "")
-				%checkBotInfoAiName = $BotInfoAiName[%checkId];  // Direct array access (fastest)
-			if(%checkBotInfoAiName == "")
-				%checkBotInfoAiName = $TownBotData[%checkId, "BotInfoAiName"];
-			if(%checkBotInfoAiName == "")
-				%checkBotInfoAiName = $ClientData[%checkId, "BotInfoAiName"];
-			
-			if(%checkBotInfoAiName == %aiName)
-			{
-				// Validate player object exists before returning
-				%playerObj = Client::getOwnedObject(%checkId);
-				if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
-				{
-					%aiId = %checkId;
-					%tier1Found = true;
-					// Only log on first successful find to reduce spam
-					%lastFoundLog = $AIgetClientIdFromNameFoundLog[%aiName];
-					if(%lastFoundLog == "" || (%currentTime - %lastFoundLog) > 30.0)
-					{
-						%isBotCheck = isRPGAI(%checkId);
-						%isAiControlledCheck = Player::isAiControlled(%checkId);
-						echo("[INERT DEBUG] AI::getClientIdFromName: Found " @ %aiName @ " via brute-force (clientId=" @ %checkId @ ", isRPGAI=" @ %isBotCheck @ ", isAiControlled=" @ %isAiControlledCheck @ ", playerObj=" @ %playerObj @ ")");
-						$AIgetClientIdFromNameFoundLog[%aiName] = %currentTime;
-					}
-					%aiId = %checkId;
-					break;
-				}
-			}
-		}
-		
-		// Tier 2: Range loop fallback (2049-2200) - only if Tier 1 didn't find the bot
-		// This is a last resort if Client::getFirst()/getNext() fails or doesn't find the bot
-		if(!%tier1Found && (%aiId == "" || %aiId == -1))
-		{
-			// Throttled logging: only log once per bot per 30 seconds to reduce spam
-			%lastLogTime = $AIgetClientIdFromNameLastLog[%aiName];
-			%currentTime = getSimTime();
-			if(%lastLogTime == "" || (%currentTime - %lastLogTime) > 30.0)
-			{
-				echo("[INERT DEBUG] AI::getClientIdFromName: Tier 1 failed, trying Tier 2 range loop fallback (2049-2200) for " @ %aiName);
-				$AIgetClientIdFromNameLastLog[%aiName] = %currentTime;
-			}
-			
-			// Range loop: iterate client IDs 2049-2200 (where bots typically spawn)
-			for(%checkId = 2049; %checkId <= 2200; %checkId++)
-			{
-				// Skip recently freed IDs (cleanup still in progress)
-				%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
-				if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
-				{
-					%currentTime = getSimTime();
-					%timeSinceFreed = %currentTime - %recentlyFreed;
-					if(%timeSinceFreed < 5) // 5 seconds for cleanup
-						continue; // Skip this client ID, cleanup still in progress
-				}
-				
-				// Check BotInfoAiName in all arrays (prioritize EnemyBotData and direct array)
-				%checkBotInfoAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
-				if(%checkBotInfoAiName == "")
-					%checkBotInfoAiName = $BotInfoAiName[%checkId];  // Direct array access (fastest)
-				if(%checkBotInfoAiName == "")
-					%checkBotInfoAiName = $TownBotData[%checkId, "BotInfoAiName"];
-				if(%checkBotInfoAiName == "")
-					%checkBotInfoAiName = $ClientData[%checkId, "BotInfoAiName"];
-				
-				if(%checkBotInfoAiName == %aiName)
-				{
-					// Validate player object exists before returning
-					%playerObj = Client::getOwnedObject(%checkId);
-					if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
-					{
-						%aiId = %checkId;
-						// Only log on first successful find to reduce spam
-						%lastFoundLog = $AIgetClientIdFromNameFoundLog[%aiName];
-						if(%lastFoundLog == "" || (%currentTime - %lastFoundLog) > 30.0)
-						{
-							%isBotCheck = isRPGAI(%checkId);
-							%isAiControlledCheck = Player::isAiControlled(%checkId);
-							echo("[INERT DEBUG] AI::getClientIdFromName: Found " @ %aiName @ " via Tier 2 range loop fallback (clientId=" @ %checkId @ ", isRPGAI=" @ %isBotCheck @ ", isAiControlled=" @ %isAiControlledCheck @ ", playerObj=" @ %playerObj @ ")");
-							$AIgetClientIdFromNameFoundLog[%aiName] = %currentTime;
-						}
-						break;
-					}
-				}
-			}
-		}
-	}
-	
-	// DEBUG: Log if we still couldn't find a bot after brute-force fallback
-	if((%aiId == "" || %aiId == -1) && %isDebugBot)
-	{
-		echo("[AI DEBUG] getClientIdFromName - Could NOT find bot with aiName='" @ %aiName @ "' after brute-force search");
-	}
-	
-	// If not found, bot doesn't exist - return -1 without calling AI::getId()
-	// This prevents error spam when bots die and periodic callbacks try to find them
-	return %aiId;
+	// Bot doesn't exist - return -1
+	return -1;
 }
 
 function AI::newDirectiveFollow(%aiName, %idNum, %rad, %directive)
