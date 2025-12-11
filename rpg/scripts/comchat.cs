@@ -3064,6 +3064,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 			{
 				%botList = GetBotIdList();
 				%count = 0;
+				%enemyBotCount = 0;
 				// Count town bots separately
 				%townBotCount = 0;
 				for(%tb = 0; (%townBotName = GetWord($TownBotRegistry, %tb)) != -1; %tb++)
@@ -3071,9 +3072,22 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 					if(%townBotName != "" && %townBotName != "0" && $TownBotSpawned[%townBotName] != "")
 						%townBotCount++;
 				}
-				%totalBots = $numAI + %townBotCount;
-				%message = "Spawned Bots (" @ %totalBots @ " total - " @ $numAI @ " enemy, " @ %townBotCount @ " town):";
+				
+				// Count actual enemy bots from bot list (more accurate than $numAI)
+				if(%botList != "")
+				{
+					for(%i = 0; (%botId = GetWord(%botList, %i)) != -1; %i++)
+					{
+						%spawnBotInfo = fetchData(%botId, "SpawnBotInfo");
+						if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
+							%enemyBotCount++;
+					}
+				}
+				
+				%totalBots = %enemyBotCount + %townBotCount;
+				%message = "Spawned Bots (" @ %totalBots @ " total - " @ %enemyBotCount @ " enemy, " @ %townBotCount @ " town):";
 				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[#listbots] " @ %message);
 				
 				if(%botList != "")
 				{
@@ -3107,13 +3121,117 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 							}
 						}
 						%pos = GameBase::getPosition(%botId);
-						Client::sendMessage(%TrueClientId, 0, "  " @ %count @ ". " @ %botName @ " (ID: " @ %botId @ ", AI: " @ %aiName @ ", Team: " @ %team @ ", Pos: " @ GetWord(%pos, 0) @ " " @ GetWord(%pos, 1) @ " " @ GetWord(%pos, 2) @ ")");
+						%botInfo = "  " @ %count @ ". " @ %botName @ " (ID: " @ %botId @ ", AI: " @ %aiName @ ", Team: " @ %team @ ", Pos: " @ GetWord(%pos, 0) @ " " @ GetWord(%pos, 1) @ " " @ GetWord(%pos, 2) @ ")";
+						Client::sendMessage(%TrueClientId, 0, %botInfo);
+						echo("[#listbots] " @ %botInfo);
 					}
-					Client::sendMessage(%TrueClientId, 0, "Total bots found: " @ %count);
+					%totalMessage = "Total bots found: " @ %count;
+					Client::sendMessage(%TrueClientId, 0, %totalMessage);
+					echo("[#listbots] " @ %totalMessage);
 				}
 				else
 				{
 					Client::sendMessage(%TrueClientId, 0, "No bots are currently spawned.");
+					echo("[#listbots] No bots are currently spawned.");
+				}
+			}
+			return;
+		}
+		if(%w1 == "#graveyard" || %w1 == "#graveyardstatus")
+		{
+			if(%clientToServerAdminLevel >= 1)
+			{
+				%currentTime = getSimTime();
+				%totalEntries = 0;
+				%oldestAge = 0;
+				%oldestClientId = -1;
+				%entryList = "";
+				
+				// Count graveyard entries and find oldest
+				for(%id = 2049; %id <= 2200; %id++)
+				{
+					if($GraveyardClientId[%id] == "true" || $GraveyardClientId[%id] == "1")
+					{
+						%totalEntries++;
+						%timestamp = $GraveyardTimestamp[%id];
+						if(%timestamp != "" && %timestamp != -1)
+						{
+							%age = %currentTime - %timestamp;
+							if(%age > %oldestAge)
+							{
+								%oldestAge = %age;
+								%oldestClientId = %id;
+							}
+							
+							// Find AI name for this client ID
+							%aiName = "";
+							for(%checkName = 0; %checkName <= 200 && %aiName == ""; %checkName++)
+							{
+								%testNames = "Liquifier Obliterator Abolisher Banisher Crucifier Devourer Incarnate MoonBreaker Invader Holocaust Corrupter Protector";
+								for(%i = 0; (%prefix = GetWord(%testNames, %i)) != -1; %i++)
+								{
+									%testName = %prefix @ %checkName;
+									if($GraveyardClientId[%testName] == %id)
+									{
+										%aiName = %testName;
+										break;
+									}
+								}
+							}
+							
+							%nameSuffix = "";
+							if(%aiName != "")
+								%nameSuffix = ", " @ %aiName;
+							
+							if(%entryList == "")
+								%entryList = %id @ " (" @ %age @ "s" @ %nameSuffix @ ")";
+							else
+								%entryList = %entryList @ ", " @ %id @ " (" @ %age @ "s" @ %nameSuffix @ ")";
+						}
+						else
+						{
+							// Entry without timestamp
+							if(%entryList == "")
+								%entryList = %id @ " (no timestamp)";
+							else
+								%entryList = %entryList @ ", " @ %id @ " (no timestamp)";
+						}
+					}
+				}
+				
+				%message = "=== GRAVEYARD STATUS ===";
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[#graveyard] " @ %message);
+				
+				%message = "Total entries: " @ %totalEntries;
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[#graveyard] " @ %message);
+				
+				if(%oldestAge > 0)
+				{
+					%message = "Oldest entry: clientId " @ %oldestClientId @ " (age: " @ %oldestAge @ "s)";
+					Client::sendMessage(%TrueClientId, 0, %message);
+					echo("[#graveyard] " @ %message);
+				}
+				
+				if(%totalEntries > 50)
+				{
+					%message = "WARNING: Graveyard has " @ %totalEntries @ " entries (threshold: 50) - possible accumulation issue";
+					Client::sendMessage(%TrueClientId, $MsgRed, %message);
+					echo("[#graveyard] " @ %message);
+				}
+				
+				if(%entryList != "")
+				{
+					%message = "Entries: " @ %entryList;
+					Client::sendMessage(%TrueClientId, 0, %message);
+					echo("[#graveyard] " @ %message);
+				}
+				else if(%totalEntries == 0)
+				{
+					%message = "Graveyard is empty";
+					Client::sendMessage(%TrueClientId, 0, %message);
+					echo("[#graveyard] " @ %message);
 				}
 			}
 			return;
@@ -6854,6 +6972,7 @@ if(%w1 == "#deletebot")
 		if(%clientToServerAdminLevel >= 1)
 		{
 			%resetCount = 0;
+			%reconciledCount = 0;
 			%group = nameToID("MissionGroup\\SpawnPoints");
 			
 			if(%group != -1)
@@ -6863,7 +6982,19 @@ if(%w1 == "#deletebot")
 					%spawnPoint = Group::getObject(%group, %i);
 					if(%spawnPoint != -1 && %spawnPoint != "")
 					{
-						$numAIperSpawnPoint[%spawnPoint] = 0;
+						// Get actual bot count from registry before resetting
+						%actualCount = GetRegisteredBotCount(%spawnPoint);
+						if(%actualCount > 0)
+						{
+							// Set counter to actual count (reconcile)
+							$numAIperSpawnPoint[%spawnPoint] = %actualCount;
+							%reconciledCount++;
+						}
+						else
+						{
+							// No bots registered - reset to 0
+							$numAIperSpawnPoint[%spawnPoint] = 0;
+						}
 						$SpawnPointInProgress[%spawnPoint] = "";
 						%resetCount++;
 					}
@@ -6873,16 +7004,186 @@ if(%w1 == "#deletebot")
 			// Also reset any spawn points that might be in the range 8650-8700 (common spawn point IDs)
 			for(%sp = 8650; %sp <= 8700; %sp++)
 			{
-				if($numAIperSpawnPoint[%sp] > 0)
+				if($numAIperSpawnPoint[%sp] > 0 || $SpawnPointInProgress[%sp] != "")
 				{
-					$numAIperSpawnPoint[%sp] = 0;
+					// Get actual bot count from registry before resetting
+					%actualCount = GetRegisteredBotCount(%sp);
+					if(%actualCount > 0)
+					{
+						// Set counter to actual count (reconcile)
+						$numAIperSpawnPoint[%sp] = %actualCount;
+						%reconciledCount++;
+					}
+					else
+					{
+						// No bots registered - reset to 0
+						$numAIperSpawnPoint[%sp] = 0;
+					}
 					$SpawnPointInProgress[%sp] = "";
 					%resetCount++;
 				}
 			}
 			
-			Client::sendMessage(%TrueClientId, 0, "Reset " @ %resetCount @ " spawn point counters.");
-			echo("[ADMIN]: " @ %TCsenderName @ " reset " @ %resetCount @ " spawn point counters.");
+			%message = "Reset " @ %resetCount @ " spawn point counters";
+			if(%reconciledCount > 0)
+				%message = %message @ " (reconciled " @ %reconciledCount @ " to actual bot counts)";
+			%message = %message @ ".";
+			Client::sendMessage(%TrueClientId, 0, %message);
+			echo("[ADMIN]: " @ %TCsenderName @ " " @ %message);
+		}
+		return;
+	}
+	if(%w1 == "#spawnpointdebug")
+	{
+		if(%clientToServerAdminLevel >= 1)
+		{
+			%spawnPointId = %w2;
+			if(%spawnPointId == "" || %spawnPointId == -1)
+			{
+				Client::sendMessage(%TrueClientId, 0, "Usage: #spawnpointdebug <spawnPointId>");
+				echo("[#spawnpointdebug] Usage: #spawnpointdebug <spawnPointId>");
+				return;
+			}
+			
+			%info = Object::getName(%spawnPointId);
+			%currentCounter = $numAIperSpawnPoint[%spawnPointId];
+			if(%currentCounter == "")
+				%currentCounter = 0;
+			%maxs = Cap(round(GetWord(%info, 0) * $spawnMultiplier), 0, "inf");
+			%registeredCount = GetRegisteredBotCount(%spawnPointId);
+			%spawnInProgress = $SpawnPointInProgress[%spawnPointId];
+			%cooldownUntil = $SpawnPointCooldownUntil[%spawnPointId];
+			%reservedStatus = $SpawnSlotReserved[%spawnPointId];
+			%reservedTime = $SpawnSlotReservedTime[%spawnPointId];
+			
+			%message = "=== SPAWNPOINT DEBUG: " @ %spawnPointId @ " ===";
+			Client::sendMessage(%TrueClientId, 0, %message);
+			echo("[#spawnpointdebug] " @ %message);
+			
+			%message = "Counter: " @ %currentCounter @ "/" @ %maxs @ " (registered bots: " @ %registeredCount @ ")";
+			Client::sendMessage(%TrueClientId, 0, %message);
+			echo("[#spawnpointdebug] " @ %message);
+			
+			%inProgressStatus = "NO";
+			if(%spawnInProgress == "true")
+				%inProgressStatus = "YES";
+			%message = "Spawn in progress: " @ %inProgressStatus;
+			Client::sendMessage(%TrueClientId, 0, %message);
+			echo("[#spawnpointdebug] " @ %message);
+			
+			if(%cooldownUntil != "" && %cooldownUntil != -1)
+			{
+				%cooldownRemaining = %cooldownUntil - getSimTime();
+				if(%cooldownRemaining > 0)
+				{
+					%message = "Cooldown: Active (" @ %cooldownRemaining @ "s remaining, expires @ " @ floor(%cooldownUntil) @ ")";
+					Client::sendMessage(%TrueClientId, 0, %message);
+					echo("[#spawnpointdebug] " @ %message);
+				}
+				else
+				{
+					%message = "Cooldown: Expired (was " @ floor(%cooldownUntil) @ ", now " @ floor(getSimTime()) @ ")";
+					Client::sendMessage(%TrueClientId, 0, %message);
+					echo("[#spawnpointdebug] " @ %message);
+				}
+			}
+			else
+			{
+				%message = "Cooldown: None";
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[#spawnpointdebug] " @ %message);
+			}
+			
+			if(%reservedStatus == "true")
+			{
+				%reservedAge = "";
+				if(%reservedTime != "" && %reservedTime != -1)
+				{
+					%reservedAge = getSimTime() - %reservedTime;
+					%message = "Reserved slot: YES (age: " @ %reservedAge @ "s, reserved @ " @ floor(%reservedTime) @ ")";
+				}
+				else
+				{
+					%message = "Reserved slot: YES (no timestamp)";
+				}
+				if(%reservedAge != "" && %reservedAge > 15)
+				{
+					Client::sendMessage(%TrueClientId, $MsgRed, %message @ " - WARNING: Stuck reservation!");
+					echo("[#spawnpointdebug] " @ %message @ " - WARNING: Stuck reservation!");
+				}
+				else
+				{
+					Client::sendMessage(%TrueClientId, 0, %message);
+					echo("[#spawnpointdebug] " @ %message);
+				}
+			}
+			else
+			{
+				%message = "Reserved slot: NO";
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[#spawnpointdebug] " @ %message);
+			}
+			
+			// Show registered bots for this spawn point
+			%botList = "";
+			%botCount = 0;
+			for(%i = 0; GetWord($BotRegistryList, %i) != -1; %i++)
+			{
+				%clientId = GetWord($BotRegistryList, %i);
+				if($BotRegistry[%clientId] == %spawnPointId)
+				{
+					%botCount++;
+					%botName = $BotRegistry[%clientId, "name"];
+					if(%botName == "")
+						%botName = "Unknown";
+					%displayName = Client::getName(%clientId);
+					if(%displayName == "")
+						%displayName = "N/A";
+					if(%botList == "")
+						%botList = %clientId @ " (" @ %botName @ ", " @ %displayName @ ")";
+					else
+						%botList = %botList @ ", " @ %clientId @ " (" @ %botName @ ", " @ %displayName @ ")";
+				}
+			}
+			
+			if(%botCount > 0)
+			{
+				%message = "Registered bots (" @ %botCount @ "): " @ %botList;
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[#spawnpointdebug] " @ %message);
+			}
+			else
+			{
+				%message = "Registered bots: None";
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[#spawnpointdebug] " @ %message);
+			}
+			
+			// Diagnosis
+			%diagnosis = "";
+			if(%currentCounter >= %maxs)
+				%diagnosis = %diagnosis @ "Counter at max. ";
+			if(%spawnInProgress == "true")
+				%diagnosis = %diagnosis @ "Spawn in progress. ";
+			if(%cooldownUntil != "" && %cooldownUntil > getSimTime())
+				%diagnosis = %diagnosis @ "Cooldown active. ";
+			if(%reservedStatus == "true" && %reservedAge != "" && %reservedAge > 15)
+				%diagnosis = %diagnosis @ "Stuck reservation. ";
+			if(%currentCounter != %registeredCount)
+				%diagnosis = %diagnosis @ "Counter mismatch (counter=" @ %currentCounter @ ", registered=" @ %registeredCount @ "). ";
+			
+			if(%diagnosis != "")
+			{
+				%message = "Diagnosis: " @ %diagnosis;
+				Client::sendMessage(%TrueClientId, $MsgRed, %message);
+				echo("[#spawnpointdebug] " @ %message);
+			}
+			else
+			{
+				%message = "Diagnosis: No issues detected";
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[#spawnpointdebug] " @ %message);
+			}
 		}
 		return;
 	}
@@ -10485,10 +10786,9 @@ if(%w1 == "#deletebot")
 
 function teamMessages(%mtype, %team1, %message1, %team2, %message2, %message3)
 {
-	%numPlayers = getNumClients();
-	for(%i = 0; %i < %numPlayers; %i = %i + 1)
+	// Use Client::getFirst()/getNext() for reliable iteration
+	for(%id = Client::getFirst(); %id != -1; %id = Client::getNext(%id))
 	{
-		%id = getClientByIndex(%i);
 		if(Client::getTeam(%id) == %team1)
 		{
 			Client::sendMessage(%id, %mtype, %message1);

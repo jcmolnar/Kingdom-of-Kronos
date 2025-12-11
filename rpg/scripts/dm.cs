@@ -42,6 +42,27 @@ function Game::playerSpawned(%pl, %clientId, %armor)
       DMTEAM::checkMissionObjectives();
       DMTEAM::echoScores();
    }
+   
+   // SAFETY ARCHITECTURE: Register Bots/Players correctly
+   // This ensures FindPlayerInBotGroup works even if dm.cs overrides playerspawn.cs
+   %botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+   %spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+   %isBot = (Player::isAiControlled(%clientId) || 
+             (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) || 
+             (%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1));
+             
+   if(%isBot)
+   {
+      if(!isObject("BotGroup")) newObject("BotGroup", SimGroup, true);
+      // Use addToSet() instead of .add() to avoid potential TorqueScript parsing issues
+      addToSet(BotGroup, %pl);
+   }
+   else
+   {
+      if(!isObject("PlayerGroup")) newObject("PlayerGroup", SimGroup, true);
+      // Use addToSet() instead of .add() to avoid potential TorqueScript parsing issues
+      addToSet(PlayerGroup, %pl);
+   }
 }
 
 //Player has a total of 10 seconds per life allowed outside designated mission area.
@@ -152,9 +173,13 @@ function DM::checkMissionObjectives(%playerId)
 
 function DM::missionObjectives()
 {
-	%numClients = getNumClients();
-	for(%i = 0 ; %i < %numClients ; %i++) 
-		%clientList[%i] = getClientByIndex(%i);
+	// Use Client::getFirst()/getNext() for reliable iteration
+	%numClients = 0;
+	for(%clientId = Client::getFirst(); %clientId != -1; %clientId = Client::getNext(%clientId))
+	{
+		%clientList[%numClients] = %clientId;
+		%numClients++;
+	}
 	%doIt = 1;
 	while(%doIt == 1) {
 		%doIt = "";
@@ -218,7 +243,6 @@ function DM::missionObjectives()
 	   //print out top 5 scores
 		%index = 0;
 		while(%index < %numClients && %clientList[%index].ratio != 0 && (%index < 5 || (%clientList[%index].ratio == %lastRatio && %lastRatio != 0))) {
-	  		%client = getClientByIndex(%count);
 	  	   Team::setObjective(%l, %lineNum++,"<Bskull_small.bmp>" @ Client::getName(%clientList[%index]) @ " <L31>" @ (%clientList[%index]).scoreKills @ "<L53>" @ (%clientList[%index]).scoreDeaths @ "<L72>" @ (%clientList[%index]).ratio @ ".0%");
 			%lastRatio = (%clientList[%index]).ratio;
 			%index++;

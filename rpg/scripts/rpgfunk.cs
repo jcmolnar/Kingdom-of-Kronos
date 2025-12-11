@@ -2141,9 +2141,11 @@ function LoadCharacter(%clientId)
 		// Reapply belt item stat bonuses from equipped armor and accessories
 		Belt::ReapplyEquippedStats(%clientId);
 		
-		// CRITICAL: Call RefreshAll() after loading character data to ensure stats are calculated correctly
-		// This ensures DEF, MDEF, MaxHP, MaxMANA, etc. are calculated from loaded skills and equipment
-		RefreshAll(%clientId);
+		// NOTE: RefreshAll() is NOT called here because:
+		// 1. LoadCharacter() runs BEFORE player spawn (no Player object exists yet)
+		// 2. RefreshAll() requires a valid Player object and would just return early anyway
+		// 3. RefreshAll() is already called by GiveThisStuff() during Game::playerSpawned() after spawn
+		// This prevents redundant calls and potential client crashes from calling RefreshAll before spawn
 		
 		//echo("===== DEBUG LoadCharacter: COMPLETE =====");
 		echo("Load complete.");
@@ -2246,10 +2248,11 @@ function LoadCharacter(%clientId)
 		// This ensures COINS is set to 0 initially (will be set properly when class is chosen)
 		storeData(%clientId, "COINS", 0);
 		
-		// CRITICAL: Call RefreshAll() after initializing new character data to ensure stats are calculated correctly
-		// This ensures DEF, MDEF, MaxHP, MaxMANA, etc. are calculated from initialized skills and equipment
-		// Note: For new characters, GROUP and CLASS are not set yet (set when player chooses), so some stats may be 0
-		RefreshAll(%clientId);
+		// NOTE: RefreshAll() is NOT called here because:
+		// 1. LoadCharacter() runs BEFORE player spawn (no Player object exists yet)
+		// 2. RefreshAll() requires a valid Player object and would just return early anyway
+		// 3. RefreshAll() is already called by GiveThisStuff() during Game::playerSpawned() after spawn
+		// This prevents redundant calls and potential client crashes from calling RefreshAll before spawn
 		
 		//echo("===== DEBUG LoadCharacter: NEW CHARACTER CREATION COMPLETE =====");
 	}
@@ -2439,11 +2442,23 @@ function SaveWorldDeployables() {
     %othercnt = 0;
     %lootbagCount = 0;
     
-    // First, scan MissionCleanup group for lootbags (more reliable than sequential ID scan)
-    %missionCleanup = nameToID("MissionCleanup");
+    // Optimized: Scan LootbagGroup for lootbags (safer and much faster than MissionCleanup)
+    // CRITICAL FIX: Use isObject() instead of nameToID() for more reliable group lookup
     %currentTime = GetPersistentTime(); // Use persistent time instead of getSimTime()
     %maxAge = 86400; // 24 hours in seconds
     %expiredCount = 0;
+    
+    %missionCleanup = -1;
+    if(isObject("LootbagGroup"))
+    {
+        %missionCleanup = nameToID("LootbagGroup");
+    }
+    
+    // FALLBACK: If LootbagGroup doesn't exist, use MissionCleanup
+    if(%missionCleanup == -1 && isObject("MissionCleanup"))
+    {
+        %missionCleanup = nameToID("MissionCleanup");
+    }
     
     if(%missionCleanup != -1)
     {
@@ -2459,6 +2474,8 @@ function SaveWorldDeployables() {
                 continue;
             }
             
+            // If scanning MissionCleanup, only process Lootbag items
+            // If scanning LootbagGroup, all items should be lootbags
             if(%obj == "Lootbag")
             {
                 // Skip lootbags that have been picked up/deleted (empty loot string)
@@ -2468,28 +2485,8 @@ function SaveWorldDeployables() {
                     continue;
                 }
                 
-                // Check if lootbag is older than 24 hours
-                // If no timestamp exists (old lootbag), treat as expired to clean up
-                if($lootbagTime[%objID] == "")
-                {
-                    %expiredCount++;
-                    // Actually delete the expired lootbag object
-                    $loot[%objID] = "";
-                    $lootbagTime[%objID] = "";
-                    deleteObject(%objID);
-                    continue;
-                }
-                
-                %lootbagAge = %currentTime - $lootbagTime[%objID];
-                if(%lootbagAge > %maxAge)
-                {
-                    %expiredCount++;
-                    // Actually delete the expired lootbag object
-                    $loot[%objID] = "";
-                    $lootbagTime[%objID] = "";
-                    deleteObject(%objID);
-                    continue;
-                }
+                // 24h Cleanup: DISABLED per user request (logic removed)
+                // Merging logic is sufficient to keep counts low.
                 
                 // CRITICAL: Skip lootbags owned by bots (enemy or town bots)
                 // Extract owner name from loot string (first word is owner name)
@@ -2817,56 +2814,143 @@ function AggregateLootbags()
 	// First, collect all lootbag objects
 	%lootbagList = "";
 	%lootbagCount = 0;
+	%processedObjects = ""; // Track objects we've already processed to avoid duplicates
 	
-	// Iterate through MissionCleanup group to find all lootbags
-	%group = nameToID("MissionCleanup");
-	if(%group != -1)
+	// CRITICAL FIX: Use isObject() instead of nameToID() for more reliable group lookup
+	// Scan LootbagGroup first (if it exists)
+	if(isObject("LootbagGroup"))
 	{
+		%group = nameToID("LootbagGroup");
 		%count = Group::objectCount(%group);
+		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] LootbagGroup found with " @ %count @ " objects");
+		
 		for(%i = 0; %i < %count; %i++)
 		{
 			%obj = Group::getObject(%group, %i);
-			if(%obj == -1 || %obj == "")
+			
+			// Basic existence check
+			if(!isObject(%obj)) continue;
+			
+			// Track this object as processed
+			%processedObjects = %processedObjects @ %obj @ " ";
+			
+			// Optional: Double check it's not a player (should differ be in this group)
+			// But we keep SafeDeleteLootbag later anyway.
+			
+			%lootData = $loot[%obj];
+			if(%lootData == "" || %lootData == -1)
+			{
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip (empty loot) obj=" @ %obj);
+				continue;
+			}
+
+			// Parse owner/namelist to distinguish player-owned packs
+			%ownerName = GetWord(%lootData, 0);
+			%namelist = GetWord(%lootData, 1);
+
+			// Determine if player-owned (bots are allowed)
+			%isPlayerOwned = false;
+			%isBotOwner = IsLootOwnerBot(%ownerName);
+
+			if(!%isBotOwner)
+			{
+				if(%ownerName != "" && %ownerName != "*" && %ownerName != "COINS")
+					%isPlayerOwned = true;
+				else if(%ownerName == "*" && %namelist != "" && %namelist != "*")
+					%isPlayerOwned = true;
+			}
+
+			if(%isPlayerOwned)
+			{
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip player pack obj=" @ %obj @ " owner=" @ %ownerName);
+				continue;
+			}
+
+			// Include bot/neutral lootbag
+			%mapName = GameBase::getMapName(%obj);
+			if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Include bot pack obj=" @ %obj @ " owner=" @ %ownerName @ " botOwner=" @ %isBotOwner @ " map=" @ %mapName @ " loot='" @ %lootData @ "' (from LootbagGroup)");
+			%lootbagList = %lootbagList @ %obj @ " ";
+			%lootbagCount++;
+		}
+	}
+	else
+	{
+		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] LootbagGroup does not exist, creating it");
+		newObject("LootbagGroup", SimGroup, true);
+	}
+	
+	// ALWAYS scan MissionCleanup (not just as fallback) to catch lootbags that weren't added to LootbagGroup
+	// This handles cases where Lootbag::onAdd() failed or lootbags weren't added to LootbagGroup
+	if(isObject("MissionCleanup"))
+	{
+		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Scanning MissionCleanup for additional lootbags (LootbagGroup had " @ %lootbagCount @ " lootbags)");
+		%missionGroup = nameToID("MissionCleanup");
+		%missionCount = Group::objectCount(%missionGroup);
+		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] MissionCleanup has " @ %missionCount @ " objects");
+		
+		for(%i = 0; %i < %missionCount; %i++)
+		{
+			%obj = Group::getObject(%missionGroup, %i);
+			
+			// Basic existence check
+			if(!isObject(%obj)) continue;
+			
+			// Skip if already processed from LootbagGroup
+			if(String::findSubStr(%processedObjects, %obj @ " ") != -1)
+			{
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip (already processed from LootbagGroup) obj=" @ %obj);
+				continue;
+			}
+			
+			// Check if it's a lootbag (Item with mapName "Backpack" or has $loot data)
+			%objType = getObjectType(%obj);
+			%mapName = GameBase::getMapName(%obj);
+			%lootData = $loot[%obj];
+			
+			// Skip if not a lootbag (not an Item, or not Backpack mapName, or no loot data)
+			if(%objType != "Item" || (%mapName != "Backpack" && %lootData == ""))
 				continue;
 			
-			// Check if this is a lootbag
-			%mapName = GameBase::getMapName(%obj);
-			if(%mapName == "Backpack" || %mapName == "Lootbag")
+			// Skip if empty loot
+			if(%lootData == "" || %lootData == -1)
 			{
-				%lootData = $loot[%obj];
-				if(%lootData == "" || %lootData == -1)
-				{
-					echo("[LOOTBAG AGGREGATE DEBUG] Skip (empty loot) obj=" @ %obj @ " map=" @ %mapName);
-					continue;
-				}
-
-				// Parse owner/namelist to distinguish player-owned packs
-				%ownerName = GetWord(%lootData, 0);
-				%namelist = GetWord(%lootData, 1);
-
-				// Determine if player-owned (bots are allowed)
-				%isPlayerOwned = false;
-				%isBotOwner = IsLootOwnerBot(%ownerName);
-
-				if(!%isBotOwner)
-				{
-					if(%ownerName != "" && %ownerName != "*" && %ownerName != "COINS")
-						%isPlayerOwned = true;
-					else if(%ownerName == "*" && %namelist != "" && %namelist != "*")
-						%isPlayerOwned = true;
-				}
-
-				if(%isPlayerOwned)
-				{
-					echo("[LOOTBAG AGGREGATE DEBUG] Skip player pack obj=" @ %obj @ " owner=" @ %ownerName @ " namelist=" @ %namelist @ " loot='" @ %lootData @ "'");
-					continue;
-				}
-
-				// Include bot/neutral lootbag
-				echo("[LOOTBAG AGGREGATE DEBUG] Include bot pack obj=" @ %obj @ " owner=" @ %ownerName @ " botOwner=" @ %isBotOwner @ " map=" @ %mapName @ " loot='" @ %lootData @ "'");
-				%lootbagList = %lootbagList @ %obj @ " ";
-				%lootbagCount++;
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip (empty loot) obj=" @ %obj);
+				continue;
 			}
+			
+			// Track this object as processed
+			%processedObjects = %processedObjects @ %obj @ " ";
+			
+			// Try to add to LootbagGroup for future runs
+			if(isObject("LootbagGroup"))
+				addToSet(LootbagGroup, %obj);
+
+			// Parse owner/namelist to distinguish player-owned packs
+			%ownerName = GetWord(%lootData, 0);
+			%namelist = GetWord(%lootData, 1);
+
+			// Determine if player-owned (bots are allowed)
+			%isPlayerOwned = false;
+			%isBotOwner = IsLootOwnerBot(%ownerName);
+
+			if(!%isBotOwner)
+			{
+				if(%ownerName != "" && %ownerName != "*" && %ownerName != "COINS")
+					%isPlayerOwned = true;
+				else if(%ownerName == "*" && %namelist != "" && %namelist != "*")
+					%isPlayerOwned = true;
+			}
+
+			if(%isPlayerOwned)
+			{
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip player pack obj=" @ %obj @ " owner=" @ %ownerName);
+				continue;
+			}
+
+			// Include bot/neutral lootbag
+			if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Include bot pack obj=" @ %obj @ " owner=" @ %ownerName @ " botOwner=" @ %isBotOwner @ " map=" @ %mapName @ " loot='" @ %lootData @ "' (from MissionCleanup)");
+			%lootbagList = %lootbagList @ %obj @ " ";
+			%lootbagCount++;
 		}
 	}
 	
@@ -2897,7 +2981,12 @@ function AggregateLootbags()
 		
 		%pos1 = GameBase::getPosition(%bag1);
 		if(%pos1 == "" || %pos1 == -1)
+		{
+			if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag1=" @ %bag1 @ " - invalid position: '" @ %pos1 @ "'");
 			continue;
+		}
+		
+		if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Checking bag1=" @ %bag1 @ " at position " @ %pos1);
 		
 		// Find all nearby lootbags to merge into this one
 		for(%j = %i + 1; %j < %lootbagCount; %j++)
@@ -2908,23 +2997,42 @@ function AggregateLootbags()
 			
 			// Skip if already merged
 			if(String::findSubStr(%merged, %bag2 @ " ") != -1)
+			{
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag2=" @ %bag2 @ " - already merged");
 				continue;
+			}
 			
 			%pos2 = GameBase::getPosition(%bag2);
 			if(%pos2 == "" || %pos2 == -1)
+			{
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Skip bag2=" @ %bag2 @ " - invalid position: '" @ %pos2 @ "'");
 				continue;
+			}
 			
 			// Check distance
 			%dist = Vector::getDistance(%pos1, %pos2);
+			if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Distance check: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " dist=" @ %dist @ " radius=" @ $LootbagAggregateRadius);
+			
 			if(%dist <= $LootbagAggregateRadius)
 			{
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Attempting merge: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " (dist=" @ %dist @ " <= radius=" @ $LootbagAggregateRadius @ ")");
 				// Merge bag2 into bag1
 				%result = MergeLootbags(%bag1, %bag2);
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Merge result: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " result=" @ %result);
 				if(%result)
 				{
 					%merged = %merged @ %bag2 @ " ";
 					%totalMerged++;
+					if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Merge successful: bag2=" @ %bag2 @ " merged into bag1=" @ %bag1);
 				}
+				else
+				{
+					if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Merge failed: bag1=" @ %bag1 @ " bag2=" @ %bag2);
+				}
+			}
+			else
+			{
+				if($dbechoMode) echo("[LOOTBAG AGGREGATE DEBUG] Distance too far: bag1=" @ %bag1 @ " bag2=" @ %bag2 @ " dist=" @ %dist @ " > radius=" @ $LootbagAggregateRadius);
 			}
 		}
 	}
@@ -2956,6 +3064,27 @@ function MergeLootbags(%bag1, %bag2)
 {
 	dbecho($dbechoMode, "MergeLootbags(" @ %bag1 @ ", " @ %bag2 @ ")");
 	
+	// CRITICAL SAFEGUARD: Never delete Player objects
+	// First validate objects exist before checking type
+	if(%bag1 == -1 || %bag1 == "" || !isObject(%bag1))
+	{
+		echo("[LOOTBAG AGGREGATE DEBUG] ERROR: bag1 is invalid (" @ %bag1 @ ") - ABORTING");
+		return false;
+	}
+	if(%bag2 == -1 || %bag2 == "" || !isObject(%bag2))
+	{
+		echo("[LOOTBAG AGGREGATE DEBUG] ERROR: bag2 is invalid (" @ %bag2 @ ") - ABORTING");
+		return false;
+	}
+	
+	%bag1Type = getObjectType(%bag1);
+	%bag2Type = getObjectType(%bag2);
+	if(%bag1Type == "Player" || %bag2Type == "Player")
+	{
+		echo("[LOOTBAG AGGREGATE DEBUG] CRITICAL ERROR: Attempted to merge Player objects! bag1=" @ %bag1 @ " (type=" @ %bag1Type @ "), bag2=" @ %bag2 @ " (type=" @ %bag2Type @ ") - ABORTING");
+		return false;
+	}
+	
 	// Get contents of both bags
 	%loot1 = $loot[%bag1];
 	%loot2 = $loot[%bag2];
@@ -2963,10 +3092,10 @@ function MergeLootbags(%bag1, %bag2)
 	
 	if(%loot2 == "" || %loot2 == -1)
 	{
-		// bag2 is empty, just delete it
+		// bag2 is empty, use safe delete wrapper
 		$loot[%bag2] = "";
 		$lootbagTime[%bag2] = "";
-		deleteObject(%bag2);
+		SafeDeleteLootbag(%bag2);
 		return true;
 	}
 	
@@ -3015,10 +3144,11 @@ function MergeLootbags(%bag1, %bag2)
 	if(%remainingContents == "")
 	{
 		// Full merge success - delete bag2
+		// Full merge success - safe delete bag2
 		echo("[LOOTBAG AGGREGATE DEBUG] Full merge successful. Deleting bag2=" @ %bag2);
 		$loot[%bag2] = "";
 		$lootbagTime[%bag2] = "";
-		deleteObject(%bag2);
+		SafeDeleteLootbag(%bag2);
 		return true;
 	}
 	else
@@ -3958,20 +4088,17 @@ function GetEveryoneIdList()
 {
 	dbecho($dbechoMode, "GetEveryoneIdList()");
 
-	// Initialize %list at the start to prevent debug warnings
-
+	// Use engine-native BaseRep::getFirst()/getNext() which includes BOTH players AND AI bots
+	// This is much more efficient than combining Client::getFirst() with brute-force bot searches
+	// From Tribes 1 engine source: "Like Client::getFirst(), but AI 'reps' are included."
 	%list = "";
-	%playerList = GetPlayerIdList();
-	%botList = GetBotIdList();
 	
-	// Ensure both lists are initialized (they should be, but be safe)
-	if(%playerList == "")
-		%playerList = "";
-	if(%botList == "")
-		%botList = "";
+	for(%id = BaseRep::getFirst(); %id != -1; %id = BaseRep::getNext(%id))
+	{
+		%list = %list @ %id @ " ";
+	}
 	
-	%list = %playerList @ %botList;
-	return %list;
+	return Trim(%list);
 }
 function GetEveryoneNameList()
 {
@@ -3987,86 +4114,48 @@ function GetBotIdList()
 {
 	dbecho($dbechoMode, "GetBotIdList()");
 
+	// Use engine-native BaseRep::getFirst()/getNext() which includes BOTH players AND AI bots
+	// Then filter for bots using Player::isAiControlled() and isRPGAI()
+	// This is much more efficient than our previous multi-method brute-force approach
 	%list = "";
-
-	%tempSet = nameToID("MissionCleanup");
-	if(%tempSet != -1)
+	%botsFound = 0;
+	
+	for(%id = BaseRep::getFirst(); %id != -1; %id = BaseRep::getNext(%id))
 	{
-		%num = Group::objectCount(%tempSet);
-		for(%i = 0; %i <= %num-1; %i++)
+		// Check if this is a bot using multiple methods
+		%isBot = false;
+		
+		// Method 1: Engine-level AI check
+		if(Player::isAiControlled(%id))
+			%isBot = true;
+		
+		// Method 2: Script-level RPGAI check (checks bot data arrays)
+		if(!%isBot && isRPGAI(%id))
+			%isBot = true;
+		
+		// Method 3: Direct BotInfoAiName check for newly spawned bots
+		if(!%isBot)
 		{
-			%tempItem = Group::getObject(%tempSet, %i);
-
-			if(getObjectType(%tempItem) == "Player")
-			{
-				%clientId = Player::getClient(%tempItem);
-				
-				// For enemy bots, Player::getClient() returns -1
-				// We need to do a reverse lookup to find the client ID
-				if(%clientId == -1 || %clientId == "")
-				{
-					// Search for the client ID that owns this Player object (reverse lookup)
-					// FIXED: Use ClientGroup iteration to find ANY bot ID, not just 2049-2200
-					%botClientId = "";
-					
-					%cCount = getNumClients();
-					for(%cIdx = 0; %cIdx < %cCount; %cIdx++)
-					{
-						%checkId = getClientByIndex(%cIdx);
-						%ownedPlayerObj = Client::getOwnedObject(%checkId);
-						if(%ownedPlayerObj == %tempItem)
-						{
-							%botClientId = %checkId;
-							break;
-						}
-					}
-					
-					if(%botClientId != "" && %botClientId != -1)
-					{
-						%clientId = %botClientId; // Found client ID for enemy bot
-					}
-					else
-					{
-						// Not an enemy bot - skip this entry
-						continue;
-					}
-				}
-				
-				// CRITICAL: Check if this is actually a bot (has BotInfoAiName or SpawnBotInfo)
-				// Also verify the player object is still valid (not deleted)
-				%playerObj = Client::getOwnedObject(%clientId);
-				if(%playerObj == -1 || %playerObj == "")
-				{
-					// Player object is invalid/deleted - skip this stale entry
-					continue;
-				}
-				
-				// CRITICAL: Check if player object position is valid (not -1 0 [large negative Z])
-				// Bots with invalid positions are likely dead/stale and should be excluded
-				%pos = GameBase::getPosition(%clientId);
-				%posX = GetWord(%pos, 0);
-				%posY = GetWord(%pos, 1);
-				%posZ = GetWord(%pos, 2);
-				
-				// Check for invalid positions (common pattern for dead/stale bots: -1 0 [large negative Z])
-				if(%posX == -1 && %posY == 0 && %posZ < -1000)
-				{
-					// Invalid position - likely a dead/stale bot, skip it
-					continue;
-				}
-				
-				// Check if this is a bot using isRPGAI() which checks BotInfoAiName and SpawnBotInfo
-				// Only include bots that are actually registered in our system
-				if(Player::isAiControlled(%clientId) && isRPGAI(%clientId))
-				{
-					%list = %list @ %clientId @ " ";
-				}
-			}
+			%botInfoAiName = $EnemyBotData[%id, "BotInfoAiName"];
+			if(%botInfoAiName == "") %botInfoAiName = $TownBotData[%id, "BotInfoAiName"];
+			if(%botInfoAiName == "") %botInfoAiName = $BotInfoAiName[%id];
+			if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0")
+				%isBot = true;
+		}
+		
+		if(%isBot)
+		{
+			%list = %list @ %id @ " ";
+			%botsFound++;
 		}
 	}
-
-	return %list;
+	
+	echo("[GETBOTIDLIST DEBUG] Using BaseRep iteration, found " @ %botsFound @ " bots");
+	
+	return Trim(%list);
 }
+}
+
 function GetBotNameList()
 {
 	dbecho($dbechoMode, "GetBotNameList()");
@@ -4089,8 +4178,10 @@ function GetBotNameList()
 				if(%clientId == -1 || %clientId == "")
 				{
 					// Search for the client ID that owns this Player object (reverse lookup)
+					// Use Client::getFirst()/getNext() instead of brute-force range loop
+					// This is more reliable and matches the pattern used in #listallclients and SpawnAIGetClientId()
 					%botClientId = "";
-					for(%checkId = 2049; %checkId <= 2200; %checkId++)
+					for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
 					{
 						%ownedPlayerObj = Client::getOwnedObject(%checkId);
 						if(%ownedPlayerObj == %tempItem)
@@ -4485,6 +4576,14 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 {
 	dbecho($dbechoMode2, "TossLootbag(" @ %clientId @ ", " @ %loot @ ", " @ %vel @ ", " @ %namelist @ ", " @ %t @ ")");
 
+	// CRITICAL: Validate loot string is not empty before proceeding
+	// Check if loot is empty, -1, or just whitespace (check first non-whitespace char)
+	if(%loot == "" || %loot == -1 || (GetWord(%loot, 0) == "" && GetWord(%loot, 1) == ""))
+	{
+		echo("ERROR: TossLootbag - Empty or invalid loot string for clientId " @ %clientId @ " (loot='" @ %loot @ "'), aborting");
+		return; // Abort if no loot to drop
+	}
+
 	%player = Client::getOwnedObject(%clientId);
 	%ownerName = Client::getName(%clientId);
 
@@ -4514,6 +4613,16 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 
 	%lootbag = newObject("", "Item", "Lootbag", 1, false);
 
+	// CRITICAL: Validate lootbag was created successfully before using it
+	if(%lootbag == "" || %lootbag == -1 || !isObject(%lootbag))
+	{
+		echo("ERROR: TossLootbag - Failed to create lootbag object for clientId " @ %clientId @ " (lootbag=" @ %lootbag @ ", loot='" @ %loot @ "')");
+		return; // Abort if lootbag creation failed
+	}
+
+	// DEBUG: Log successful lootbag creation (use echo so it always prints)
+	echo("[LOOTBAG DEBUG] TossLootbag - Created lootbag " @ %lootbag @ " for clientId " @ %clientId @ " with loot='" @ %loot @ "'");
+
 	if(%t > 0)
 		schedule("$loot[" @ %lootbag @ "] = \"" @ %ownerName @ " * " @ %loot @ "\";", %t, %lootbag);
 	else
@@ -4533,7 +4642,30 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 	$lootbagTime[%lootbag] = GetPersistentTime(); // Store creation timestamp for age checking (persistent across restarts)
 	storeData(%clientId, "lootbaglist", AddToCommaList(fetchData(%clientId, "lootbaglist"), %lootbag));
 
+	// CRITICAL: Validate MissionCleanup exists before adding lootbag
+	if(!isObject("MissionCleanup"))
+	{
+		echo("ERROR: TossLootbag - MissionCleanup SimSet does not exist, cannot add lootbag " @ %lootbag @ " for clientId " @ %clientId);
+		// MissionCleanup should exist, but if it doesn't, create it
+		newObject("MissionCleanup", SimGroup, true);
+		echo("ERROR: TossLootbag - Created MissionCleanup SimSet (should have existed at server startup)");
+	}
+
+	// CRITICAL: Re-validate lootbag is still valid before adding to MissionCleanup
+	if(%lootbag == "" || %lootbag == -1 || !isObject(%lootbag))
+	{
+		echo("ERROR: TossLootbag - Lootbag object became invalid before addToSet for clientId " @ %clientId @ " (lootbag=" @ %lootbag @ ", loot='" @ %loot @ "')");
+		return; // Abort if lootbag is no longer valid
+	}
+
+	// DEBUG: Log before addToSet (use echo so it always prints)
+	echo("[LOOTBAG DEBUG] TossLootbag - About to add lootbag " @ %lootbag @ " to MissionCleanup (clientId=" @ %clientId @ ", loot='" @ %loot @ "')");
+	echo("[LOOTBAG DEBUG] TossLootbag - lootbag type check: isObject=" @ isObject(%lootbag) @ ", getObjectType=" @ getObjectType(%lootbag));
+	
 	addToSet("MissionCleanup", %lootbag);
+	
+	// DEBUG: Log after addToSet (use echo so it always prints)
+	echo("[LOOTBAG DEBUG] TossLootbag - Successfully added lootbag " @ %lootbag @ " to MissionCleanup");
 	GameBase::setMapName(%lootbag, "Backpack");
 	GameBase::throw(%lootbag, %player, %vel, false);
 
@@ -4597,6 +4729,7 @@ function round(%n)
 
 function RefreshAll(%clientId, %fromSkillUpgrade)
 {
+	echo("[DOT_OP_DEBUG] RefreshAll: ENTRY - clientId=" @ %clientId @ ", fromSkillUpgrade=" @ %fromSkillUpgrade);
 	dbecho($dbechoMode, "RefreshAll(" @ %clientId @ ", " @ %fromSkillUpgrade @ ")");
 
 	// DEBUG: Log when RefreshAll is called from a skill upgrade to track frequency and identify spam
@@ -7112,11 +7245,10 @@ function RecalcHouseMemberCounts()
 	$HouseMember[HouseYuliple] = 0;
 	
 	// Count members from all currently connected clients
-	%numClients = getNumClients();
-	for(%i = 0; %i < %numClients; %i++)
+	// Use Client::getFirst()/getNext() for reliable iteration
+	for(%clientId = Client::getFirst(); %clientId != -1; %clientId = Client::getNext(%clientId))
 	{
-		%clientId = getClientByIndex(%i);
-		if(%clientId != -1 && Client::getOwnedObject(%clientId) != -1)
+		if(Client::getOwnedObject(%clientId) != -1)
 		{
 			%house = fetchData(%clientId, "MyHouse");
 			if(%house != "")
@@ -7442,11 +7574,10 @@ function RecalcHouseMemberCounts()
 	$HouseMember[HouseYuliple] = 0;
 	
 	// Count members from all currently connected clients
-	%numClients = getNumClients();
-	for(%i = 0; %i < %numClients; %i++)
+	// Use Client::getFirst()/getNext() for reliable iteration
+	for(%clientId = Client::getFirst(); %clientId != -1; %clientId = Client::getNext(%clientId))
 	{
-		%clientId = getClientByIndex(%i);
-		if(%clientId != -1 && Client::getOwnedObject(%clientId) != -1)
+		if(Client::getOwnedObject(%clientId) != -1)
 		{
 			%house = fetchData(%clientId, "MyHouse");
 			if(%house != "")
@@ -7566,7 +7697,7 @@ $AFKOverLevelBuffer = 5;
 $AFKOverLevelInactivity = 180;
 $AFKOverLevelWarnWindow = 30;
 $AFKOverLevelMinZoneTime = 60;
-$AFKOverLevelTeleportPos = "-186.9 -2576.22 51";
+$AFKOverLevelTeleportPos = "-202.374 -2231.03 186";
 
 // Hard caps by zone description (case-insensitive match)
 $AFKZoneCap["Pig Den"] = 30;
@@ -7616,6 +7747,18 @@ function AFKZone_Teleport(%id)
 	AFKZone_ClearWarning(%id);
 	$AFKZoneLastMove[%id] = getSimTime();
 	$AFKZoneLastPos[%id] = $AFKOverLevelTeleportPos;
+	
+	// CRITICAL: Reset zone folder tracking to force AFK zone system to detect zone change
+	// This ensures the next AFKZone_Tick() will recognize the new zone
+	$AFKZoneLastFolder[%id] = "";
+	$AFKZoneEnterTime[%id] = "";
+	
+	// Refresh player state (like FellOffMap does) to update zone and other player data
+	RefreshAll(%id);
+	
+	// Force immediate zone check so player's zone is updated right away
+	// This ensures zone tracking works immediately after teleport
+	schedule("DoZoneCheck(2, 0);", 0.1);
 }
 
 function AFKZone_Tick()
@@ -7633,6 +7776,14 @@ function AFKZone_Tick()
 		// Admin Override: Admins > 5 are immune to AFK checks
 		if(%id.adminLevel > 5)
 			continue;
+		
+		// Player Exclusion: Specific players can be excluded from AFK checks
+		%playerName = Client::getName(%id);
+		if(%playerName != "" && %playerName != -1)
+		{
+			if(String::ICompare(%playerName, "Jobo") == 0)
+				continue;
+		}
 		
 		%obj = Client::getOwnedObject(%id);
 		if(%obj == -1 || %obj == "" || !isObject(%obj))
@@ -7760,4 +7911,65 @@ function StartAFKZoneEnforcement()
 		return;
 	$AFKZoneEnforceStarted = true;
 	AFKZone_Tick();
+}
+
+// ============================================================
+// OBJECT SAFETY ARCHITECTURE
+// ============================================================
+
+// Global Safety Wrapper for object deletion
+// Prevents accidental deletion of Players/Bots when targeting generic IDs
+function SafeDeleteObject(%obj)
+{
+	// 1. Basic Validation
+	if(%obj == "" || %obj == -1) 
+		return;
+	
+	if(!isObject(%obj)) 
+		return;
+
+	// 2. Identify Object Type
+	%type = getObjectType(%obj);
+	
+	// 3. CRITICAL SAFEGUARDS
+	
+	// PROTECT PLAYERS / BOTS
+	if(%type == "Player")
+	{
+		%client = Player::getClient(%obj);
+		%name = Client::getName(%client);
+		echo("CRITICAL SAFEGUARD: Attempted to delete Player object " @ %obj @ " (" @ %name @ ") via generic SafeDeleteObject! Stack Trace:");
+		trace(1); trace(0); // Dump stack to console to catch the culprit
+		return; // ABORT DELETION
+	}
+	
+	// 4. Safe to Delete
+	deleteObject(%obj);
+}
+
+// Specialized wrapper for Lootbags to ensure we only delete actual lootbags
+function SafeDeleteLootbag(%obj)
+{
+	if(!isObject(%obj)) return;
+	
+	%type = getObjectType(%obj);
+	if(%type == "Player")
+	{
+		echo("CRITICAL SAFEGUARD: SafeDeleteLootbag called on Player object " @ %obj @ "! ABORTING.");
+		return;
+	}
+	
+	%mapName = GameBase::getMapName(%obj);
+	if(%mapName != "Backpack" && %mapName != "Lootbag")
+	{
+		// Not strictly a lootbag by name, but if it's an Item it might be okay.
+		// Asking for caution here.
+		if(%type != "Item")
+		{
+			echo("SAFETY WARNING: SafeDeleteLootbag called on non-Item object " @ %obj @ " (Type: " @ %type @ "). Skipping.");
+			return;
+		}
+	}
+	
+	deleteObject(%obj);
 }
