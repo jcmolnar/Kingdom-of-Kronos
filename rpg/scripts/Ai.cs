@@ -10495,7 +10495,7 @@ function addToSetMissionCleanup(%clientId)
 		// Double-check MissionCleanup exists
 		if(isObject("MissionCleanup"))
 		{
-			echo("[DEBUG] addToSetMissionCleanup - Adding player object " @ %playerObj @ " to MissionCleanup for clientId " @ %clientId);
+			if($AI_DEBUG_ENABLED) echo("[DEBUG] addToSetMissionCleanup - Adding player object " @ %playerObj @ " to MissionCleanup for clientId " @ %clientId);
 			addToSet("MissionCleanup", %playerObj);
 		}
 		else

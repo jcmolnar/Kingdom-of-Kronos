@@ -297,7 +297,7 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 	%isBot = (Player::isAiControlled(%clientId) || 
 	          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) || 
 	          (%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1));
-	echo("[INERT DEBUG] Game::playerSpawned: ENTRY @ " @ %currentTime @ " - clientId=" @ %clientId @ ", isBot=" @ %isBot @ ", BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'");
+	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] Game::playerSpawned: ENTRY @ " @ %currentTime @ " - clientId=" @ %clientId @ ", isBot=" @ %isBot @ ", BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'");
 
 	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: About to call storeData");
 	storeData(%clientId, "HasLoadedAndSpawned", True);
@@ -374,7 +374,7 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 			newObject("PlayerGroup", SimGroup, true);
 		}
 		if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: PlayerGroup exists, validating player object before add");
-		echo("[DOT_OP_DEBUG] Game::playerSpawned: pl=" @ %pl @ ", isObject(pl)=" @ isObject(%pl) @ ", PlayerGroup type=" @ getObjectType(PlayerGroup));
+		if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: pl=" @ %pl @ ", isObject(pl)=" @ isObject(%pl) @ ", PlayerGroup type=" @ getObjectType(PlayerGroup));
 		if(isObject(%pl))
 		{
 			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: About to add player to PlayerGroup using addToSet (pl=" @ %pl @ ")");
@@ -395,10 +395,10 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 		{
 			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: Creating BotGroup SimSet");
 			newObject("BotGroup", SimGroup, true);
-			echo("[INERT DEBUG] Game::playerSpawned: Created BotGroup SimSet");
+			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] Game::playerSpawned: Created BotGroup SimSet");
 		}
 		if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: BotGroup exists, validating player object before add");
-		echo("[DOT_OP_DEBUG] Game::playerSpawned: pl=" @ %pl @ ", isObject(pl)=" @ isObject(%pl) @ ", BotGroup type=" @ getObjectType(BotGroup));
+		if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: pl=" @ %pl @ ", isObject(pl)=" @ isObject(%pl) @ ", BotGroup type=" @ getObjectType(BotGroup));
 		%countBefore = Group::objectCount(BotGroup);
 		if(isObject(%pl))
 		{
@@ -412,7 +412,7 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 			if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: ERROR - Player object is invalid (pl=" @ %pl @ "), cannot add to BotGroup");
 		}
 		%countAfter = Group::objectCount(BotGroup);
-		echo("[INERT DEBUG] Game::playerSpawned: Adding bot to BotGroup (obj=" @ %pl @ ", clientId=" @ %clientId @ ", count before=" @ %countBefore @ ", count after=" @ %countAfter @ ")");
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] Game::playerSpawned: Adding bot to BotGroup (obj=" @ %pl @ ", clientId=" @ %clientId @ ", count before=" @ %countBefore @ ", count after=" @ %countAfter @ ")");
 	}
 	
 	// CRITICAL: After RefreshAll(), remount the weapon if it was unmounted

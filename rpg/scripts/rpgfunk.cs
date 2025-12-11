@@ -4620,7 +4620,7 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 	}
 
 	// DEBUG: Log successful lootbag creation (use echo so it always prints)
-	echo("[LOOTBAG DEBUG] TossLootbag - Created lootbag " @ %lootbag @ " for clientId " @ %clientId @ " with loot='" @ %loot @ "'");
+	if($LOOTBAG_DEBUG) echo("[LOOTBAG DEBUG] TossLootbag - Created lootbag " @ %lootbag @ " for clientId " @ %clientId @ " with loot='" @ %loot @ "'");
 
 	if(%t > 0)
 		schedule("$loot[" @ %lootbag @ "] = \"" @ %ownerName @ " * " @ %loot @ "\";", %t, %lootbag);
@@ -4658,13 +4658,13 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 	}
 
 	// DEBUG: Log before addToSet (use echo so it always prints)
-	echo("[LOOTBAG DEBUG] TossLootbag - About to add lootbag " @ %lootbag @ " to MissionCleanup (clientId=" @ %clientId @ ", loot='" @ %loot @ "')");
-	echo("[LOOTBAG DEBUG] TossLootbag - lootbag type check: isObject=" @ isObject(%lootbag) @ ", getObjectType=" @ getObjectType(%lootbag));
+	if($LOOTBAG_DEBUG) echo("[LOOTBAG DEBUG] TossLootbag - About to add lootbag " @ %lootbag @ " to MissionCleanup (clientId=" @ %clientId @ ", loot='" @ %loot @ "')");
+	if($LOOTBAG_DEBUG) echo("[LOOTBAG DEBUG] TossLootbag - lootbag type check: isObject=" @ isObject(%lootbag) @ ", getObjectType=" @ getObjectType(%lootbag));
 	
 	addToSet("MissionCleanup", %lootbag);
 	
 	// DEBUG: Log after addToSet (use echo so it always prints)
-	echo("[LOOTBAG DEBUG] TossLootbag - Successfully added lootbag " @ %lootbag @ " to MissionCleanup");
+	if($LOOTBAG_DEBUG) echo("[LOOTBAG DEBUG] TossLootbag - Successfully added lootbag " @ %lootbag @ " to MissionCleanup");
 	GameBase::setMapName(%lootbag, "Backpack");
 	GameBase::throw(%lootbag, %player, %vel, false);
 
