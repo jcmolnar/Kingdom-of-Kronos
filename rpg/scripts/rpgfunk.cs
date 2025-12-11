@@ -4154,7 +4154,6 @@ function GetBotIdList()
 	
 	return Trim(%list);
 }
-}
 
 function GetBotNameList()
 {
