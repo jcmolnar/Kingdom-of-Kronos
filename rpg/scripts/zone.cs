@@ -491,8 +491,8 @@ function UpdateZone(%object)
 				// If no players left in old zone, despawn bots after 30 seconds
 				if($ZonePlayerCount[%oldZoneIndex] <= 0)
 				{
-					// DEBUG: Commented out to reduce server lag
-					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ $Zone::Desc[%oldZoneIndex] @ ") is now empty - despawning bots in 30 seconds");
+					// Cancel any pending spawn (player left before 10s delay expired)
+					CancelPendingZoneSpawn(%oldZoneIndex);
 					schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
 				}
 			}
@@ -662,8 +662,8 @@ function UpdateZone(%object)
 					// Zone::getIndex() returns -1 for invalid zones (like "Unknown" zone)
 					if($ZonePlayerCount[%oldZoneIndex] <= 0 && %oldZoneIndex > 0)
 					{
-						// DEBUG: Commented out to reduce server lag
-					echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") is now empty - despawning bots in 30 seconds");
+						// Cancel any pending spawn (player left before 10s delay expired)
+						CancelPendingZoneSpawn(%oldZoneIndex);
 						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
 					}
 				}
@@ -702,14 +702,13 @@ function UpdateZone(%object)
 				// Clear any pending despawn schedule since a player entered the zone
 				$ZoneBotDespawnSchedule[%zoneflag] = "";
 				
-				// If this is the first player in the zone, spawn bots after a short delay
-				// (prevents crash from spawning while old zone bots are despawning)
+				// If this is the first player in the zone, schedule bot spawn after delay
+				// (Delay prevents spawns when players just pass through quickly)
 				if($ZonePlayerCount[%zoneflag] == 1)
 				{
-					// DEBUG: Commented out to reduce server lag
-					//echo("[ZONE DEBUG] First player in zone " @ %zoneflag @ " (" @ %zoneDesc @ ") - spawning town bots in 0.3 seconds");
-					// CRITICAL: Add 0.5 second delay to spawning to help code load properly and functions/variables be called more effectively
-					schedule("SpawnZoneBots(" @ %zoneflag @ ");", 0.5);
+					// Use ScheduleZoneSpawn for delayed verification
+					// Default 10 second delay, configurable via $ZoneSpawnDelay
+					ScheduleZoneSpawn(%zoneflag);
 				}
 			}
 			
@@ -862,8 +861,8 @@ function UpdateZone(%object)
 					// If no players left in old zone, despawn bots after 30 seconds
 					if($ZonePlayerCount[%oldZoneIndex] <= 0)
 					{
-						// DEBUG: Commented out to reduce server lag
-						//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ $Zone::Desc[%oldZoneIndex] @ ") is now empty - despawning bots in 30 seconds");
+						// Cancel any pending spawn (player left before 10s delay expired)
+						CancelPendingZoneSpawn(%oldZoneIndex);
 						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
 					}
 				}

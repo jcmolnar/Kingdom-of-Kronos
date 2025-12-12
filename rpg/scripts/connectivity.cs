@@ -153,8 +153,8 @@ function Server::onClientDisconnect(%clientId)
 				// If no players left in zone, despawn bots after 30 seconds (prevents crash from too many operations at once)
 				if($ZonePlayerCount[%zoneIndex] <= 0)
 				{
-					// DEBUG: Commented out to reduce server lag
-					//echo("[ZONE DEBUG] Zone " @ %zoneIndex @ " (" @ $Zone::Desc[%zoneIndex] @ ") is now empty - despawning bots in 30 seconds (player disconnected)");
+					// Cancel any pending spawn (player disconnected before 10s delay expired)
+					CancelPendingZoneSpawn(%zoneIndex);
 					schedule("DespawnZoneBots(" @ %zoneIndex @ ");", 30);
 				}
 			}

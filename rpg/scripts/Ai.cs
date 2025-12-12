@@ -10254,6 +10254,82 @@ function GetZoneShortName(%zoneDesc)
 	return %word0;
 }
 
+// ============================================================================
+// DELAYED ZONE SPAWN VERIFICATION
+// Prevents spawning bots when players quickly pass through a zone
+// ============================================================================
+$ZoneSpawnDelay = 10;  // Seconds to wait before spawning (set to 0 to disable delay)
+
+// Called when first player enters zone - schedules spawn verification
+function ScheduleZoneSpawn(%zoneIndex)
+{
+	if(%zoneIndex == 0 || %zoneIndex == "")
+		return;
+	
+	// Mark that we have a pending spawn for this zone
+	$ZoneSpawnPending[%zoneIndex] = getSimTime();
+	
+	// Get delay (0 = instant spawn like before)
+	%delay = $ZoneSpawnDelay;
+	if(%delay == "" || %delay < 0)
+		%delay = 10;  // Default to 10 seconds
+	
+	if(%delay == 0)
+	{
+		// No delay - spawn immediately (legacy behavior)
+		SpawnZoneBots(%zoneIndex);
+		$ZoneSpawnPending[%zoneIndex] = "";
+	}
+	else
+	{
+		// Schedule verification after delay
+		%zoneDesc = $Zone::Desc[%zoneIndex];
+		echo("[ZONE SPAWN] Scheduling spawn verification for zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") in " @ %delay @ " seconds");
+		schedule("VerifyAndSpawnZoneBots(" @ %zoneIndex @ ");", %delay);
+	}
+}
+
+// Called after delay - verifies players are still in zone before spawning
+function VerifyAndSpawnZoneBots(%zoneIndex)
+{
+	if(%zoneIndex == 0 || %zoneIndex == "")
+		return;
+	
+	%zoneDesc = $Zone::Desc[%zoneIndex];
+	
+	// Check if spawn was cancelled (player left before delay expired)
+	if($ZoneSpawnPending[%zoneIndex] == "")
+	{
+		echo("[ZONE SPAWN] Spawn cancelled for zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") - players left before delay expired");
+		return;
+	}
+	
+	// Verify players are still in zone
+	%playerCount = $ZonePlayerCount[%zoneIndex];
+	if(%playerCount <= 0)
+	{
+		echo("[ZONE SPAWN] Aborting spawn for zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") - zone is now empty");
+		$ZoneSpawnPending[%zoneIndex] = "";
+		return;
+	}
+	
+	// Players still in zone - proceed with spawn
+	echo("[ZONE SPAWN] Verified players in zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") - spawning bots now");
+	$ZoneSpawnPending[%zoneIndex] = "";
+	SpawnZoneBots(%zoneIndex);
+}
+
+// Cancel pending spawn when zone becomes empty
+function CancelPendingZoneSpawn(%zoneIndex)
+{
+	if($ZoneSpawnPending[%zoneIndex] != "")
+	{
+		%zoneDesc = $Zone::Desc[%zoneIndex];
+		echo("[ZONE SPAWN] Cancelling pending spawn for zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") - zone emptied");
+		$ZoneSpawnPending[%zoneIndex] = "";
+	}
+}
+
 // Spawn all bots for a specific zone
 function SpawnZoneBots(%zoneIndex)
 {
