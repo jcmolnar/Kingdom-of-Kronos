@@ -5873,32 +5873,70 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Client::getOwnedObject(" @ %aiId @ ") returned: " @ %playerObj);
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Client::getName(" @ %aiId @ ") returned: '" @ %playerName @ "'");
 
-	// SAFETY: If this clientId is registered as a town bot, abort enemy spawn and clean up
+	// SAFETY: If this clientId is registered as a town bot, check if it's ACTUALLY alive
 	for(%tbIdx = 0; (%tbName = GetWord($TownBotRegistry, %tbIdx)) != -1; %tbIdx++)
 	{
 		%tbClient = $TownBotSpawned[%tbName];
 		if(%tbClient != "" && %tbClient != -1 && %tbClient == %aiId)
 		{
-			echo("ERROR: SpawnAI - ClientId " @ %aiId @ " belongs to active town bot " @ %tbName @ ". Aborting enemy spawn for " @ %newName @ ".");
+			// Found matching clientId - but is the town bot ACTUALLY alive?
+			%tbPlayerObj = Client::getOwnedObject(%tbClient);
+			%tbPlayerName = Client::getName(%tbClient);
+			
+			// Verify town bot is alive: has valid player object AND name matches town bot pattern
+			%tbIsAlive = false;
+			if(%tbPlayerObj != -1 && %tbPlayerObj != "" && isObject(%tbPlayerObj))
+			{
+				// Player object exists - check if the name is still the town bot's name
+				// Town bots have specific display names, enemy bots have different patterns
+				if(%tbPlayerName != "" && %tbPlayerName != -1)
+				{
+					// Check if the current player name matches what we expect for a town bot
+					// NOT the enemy bot display name we're trying to spawn
+					if(%tbPlayerName != %displayName && %tbPlayerName != %playerName)
+					{
+						// The player object at this clientId doesn't match our new enemy bot
+						// It might still be the town bot - check $TownBotData
+						%tbStoredName = $TownBotData[%tbClient, "BotInfoAiName"];
+						if(%tbStoredName == %tbName || String::findSubStr(%tbPlayerName, %tbName) != -1)
+						{
+							%tbIsAlive = true;
+						}
+					}
+				}
+			}
+			
+			if(%tbIsAlive)
+			{
+				// Town bot IS alive - abort enemy spawn
+				echo("ERROR: SpawnAI - ClientId " @ %aiId @ " belongs to active town bot " @ %tbName @ ". Aborting enemy spawn for " @ %newName @ ".");
 		
-		// CRITICAL: Delete the already-spawned enemy bot to prevent shell bot
-		// AI::spawn() succeeded and created the Player object, but we're aborting the spawn
-		// We must delete it using AI::delete() for proper cleanup
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting aborted enemy bot " @ %newName @ " due to town bot conflict");
-		AI::delete(%newName);
-		
-		// CRITICAL FIX #2: Rollback reserved slot if town bot conflict detected
-		if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
-		{
-			RollbackSpawnSlot(%spawnPointId);
-		}
-		// Clear enemy registry entries
-		$BotRegistry[%aiId] = "";
-		$BotRegistry[%aiId, "team"] = "";
-		$BotRegistry[%aiId, "name"] = "";
-		$BotRegistryLastSeen[%aiId] = "";
-		// Do not proceed
-		return;
+				// CRITICAL: Delete the already-spawned enemy bot to prevent shell bot
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting aborted enemy bot " @ %newName @ " due to town bot conflict");
+				AI::delete(%newName);
+				
+				// Rollback reserved slot
+				if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
+				{
+					RollbackSpawnSlot(%spawnPointId);
+				}
+				// Clear enemy registry entries
+				$BotRegistry[%aiId] = "";
+				$BotRegistry[%aiId, "team"] = "";
+				$BotRegistry[%aiId, "name"] = "";
+				$BotRegistryLastSeen[%aiId] = "";
+				return;
+			}
+			else
+			{
+				// Town bot is DEAD/STALE - clear the stale data and allow enemy spawn
+				echo("[TOWN BOT CLEANUP] Town bot " @ %tbName @ " has stale data on clientId " @ %tbClient @ " but is not alive. Clearing stale data.");
+				$TownBotSpawned[%tbName] = "";
+				$TownBotData[%tbClient, "BotInfoAiName"] = "";
+				$TownBotData[%tbClient, "SpawnTime"] = "";
+				$BotType[%tbClient] = "";
+				// Continue with enemy spawn (don't return/abort)
+			}
 		}
 	}
 
