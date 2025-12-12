@@ -4220,6 +4220,11 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 			{
 				%spawnBotInfo = %commandIssuer;
 			}
+			
+			// CRITICAL: Set $BotType BEFORE any storeData() calls
+			// This ensures data routes to $EnemyBotData, not $ClientData
+			$BotType[%immediateClientId] = "enemy";
+			
 			storeData(%immediateClientId, "SpawnBotInfo", %spawnBotInfo);
 			$EnemyBotData[%immediateClientId, "SpawnBotInfo"] = %spawnBotInfo;
 			
@@ -6018,6 +6023,11 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				return -1;
 			}
 		}
+		
+		// CRITICAL: Set $BotType FIRST before any storeData() calls
+		// This ensures all data routes to $EnemyBotData, not $ClientData
+		// Without this, SpawnBotInfo gets stored in wrong array and EXP distribution breaks
+		$BotType[%aiId] = "enemy";
 		
 		// CRITICAL: Clear any stale SpawnBotInfo from previous bot using same clientId
 		// This ensures enemy bots don't inherit old spawn info from previous bots
