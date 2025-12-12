@@ -554,8 +554,7 @@ function UnregisterBot(%clientId)
 	if(%clientId == "" || %clientId == -1)
 		return;
 	
-	// PRIORITY 2: Clear $BotType cache FIRST (before any other cleanup)
-	$BotType[%clientId] = "";
+	// NOTE: $BotType is cleared by ClearAllBotData() at END of function
 	
 	// Remove from O(1) lookup index (call before clearing registry entries)
 	BotIndex_Remove(%clientId);
