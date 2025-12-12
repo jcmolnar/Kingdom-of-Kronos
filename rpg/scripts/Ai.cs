@@ -57,10 +57,13 @@ $Telemetry_SpawnSuccess = 0;         // Successful spawns
 $Telemetry_SpawnFailed = 0;          // Failed spawns
 $Telemetry_SpawnFailedTownBot = 0;   // Failed due to town bot conflict
 $Telemetry_SpawnFailedClientId = 0;  // Failed due to client ID issues
+$Telemetry_SpawnFailedZoneEmpty = 0; // Failed due to zone becoming empty
 $Telemetry_SpawnFailedOther = 0;     // Failed for other reasons
 $Telemetry_DeathsProcessed = 0;      // Bot deaths processed
 $Telemetry_AINumbersFreed = 0;       // AI numbers successfully freed
 $Telemetry_AINumberOrphans = 0;      // AI numbers that couldn't be freed
+$Telemetry_NumAI_Inc = 0;            // $numAI increment count
+$Telemetry_NumAI_Dec = 0;            // $numAI decrement count
 
 function Telemetry_RecordSpawnAttempt() { $Telemetry_SpawnAttempts++; }
 function Telemetry_RecordSpawnSuccess() { $Telemetry_SpawnSuccess++; }
@@ -71,6 +74,8 @@ function Telemetry_RecordSpawnFailed(%reason)
 		$Telemetry_SpawnFailedTownBot++;
 	else if(%reason == "clientid")
 		$Telemetry_SpawnFailedClientId++;
+	else if(%reason == "zoneempty")
+		$Telemetry_SpawnFailedZoneEmpty++;
 	else
 		$Telemetry_SpawnFailedOther++;
 }
@@ -2157,7 +2162,12 @@ function CleanupBot(%clientId, %aiName)
 		$TotalActiveBots--;
 		if($ActiveEnemyBots < 0) $ActiveEnemyBots = 0;
 		if($TotalActiveBots < 0) $TotalActiveBots = 0;
-		if($numAI > 0) $numAI--;
+		if($numAI > 0)
+		{
+			$numAI--;
+			$Telemetry_NumAI_Dec++;  // Track $numAI decrements
+		}
+		Telemetry_RecordDeath();  // Track bot death processed
 	}
 	else if(%isTown)
 	{
@@ -4355,6 +4365,8 @@ if(%aiName == %displayName)
 	}
 }
 $numAI++;
+$Telemetry_NumAI_Inc++;  // Track $numAI increments
+Telemetry_RecordSpawnAttempt();  // Track spawn attempt
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 		echo("[SPAWN FLOW] AI::helper(): newName=" @ %newName @ ", displayName=" @ %displayName @ ", calling SpawnAI()");
 	// CRITICAL: Delay moved to SpawnAI() itself to prevent multiple scheduled spawns when called from loops
@@ -4369,9 +4381,12 @@ $numAI++;
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 			echo("[SPAWN FLOW] AI::helper(): Spawn FAILED - rolling back reserved slot for spawnPoint " @ %spawnPointId);
 		RollbackSpawnSlot(%spawnPointId);
-		// CRITICAL FIX: Decrement $numAI since we incremented it before spawn attempt
 		if($numAI > 0)
+		{
 			$numAI--;
+			$Telemetry_NumAI_Dec++;  // Track $numAI decrements
+		}
+		Telemetry_RecordSpawnFailed("other");  // Spawn failed before AI::spawn
 		return -1;
 	}
 
@@ -4718,6 +4733,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					
 					// CRITICAL: Rollback spawn slot to prevent spawn point from being marked "busy" forever
 					RollbackSpawnSlot(%spawnPointId);
+					
+					Telemetry_RecordSpawnFailed("zoneempty");  // Track zone empty failure
 					
 					return; // Abort spawn
 				}
@@ -6744,6 +6761,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		%completionTime = getSimTime();
 		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] SpawnAIGetClientId: COMPLETED @ " @ %completionTime @ " - returning " @ %newName);
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Spawn completed successfully, returning " @ %newName);
+		
+		Telemetry_RecordSpawnSuccess();  // Track successful spawn
 		
 		// CRITICAL: Clear client ID retry counter on successful spawn
 		$EnemyBotClientIdRetry[%newName] = "";

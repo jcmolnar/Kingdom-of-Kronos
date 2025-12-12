@@ -7380,21 +7380,118 @@ if(%w1 == "#spawntelemetry")
 		if($Telemetry_SpawnAttempts > 0)
 			%successRate = floor(($Telemetry_SpawnSuccess / $Telemetry_SpawnAttempts) * 100);
 		
+		// Get current state
+		%botList = GetBotIdList();
+		%liveCount = 0;
+		for(%i = 0; GetWord(%botList, %i) != -1; %i++)
+			%liveCount++;
+		
+		// Count reserved AI numbers
+		%reservedCount = 0;
+		for(%n = 0; %n <= 500; %n++)
+		{
+			if($aiNumTable[%n] != "" && $aiNumTable[%n] != -1)
+				%reservedCount++;
+		}
+		
+		// Output to BOTH in-game chat AND console
+		echo("=== SPAWN TELEMETRY ===");
 		Client::sendMessage(%TrueClientId, 0, "=== SPAWN TELEMETRY ===");
-		Client::sendMessage(%TrueClientId, 0, "Spawn attempts: " @ $Telemetry_SpawnAttempts);
-		Client::sendMessage(%TrueClientId, 0, "  - Success: " @ $Telemetry_SpawnSuccess @ " (" @ %successRate @ "%)");
-		Client::sendMessage(%TrueClientId, 0, "  - Failed: " @ $Telemetry_SpawnFailed);
-		Client::sendMessage(%TrueClientId, 0, "    - Town bot conflict: " @ $Telemetry_SpawnFailedTownBot);
-		Client::sendMessage(%TrueClientId, 0, "    - Client ID issues: " @ $Telemetry_SpawnFailedClientId);
-		Client::sendMessage(%TrueClientId, 0, "    - Other: " @ $Telemetry_SpawnFailedOther);
-		Client::sendMessage(%TrueClientId, 0, "Deaths processed: " @ $Telemetry_DeathsProcessed);
-		Client::sendMessage(%TrueClientId, 0, "AI numbers freed: " @ $Telemetry_AINumbersFreed);
-		Client::sendMessage(%TrueClientId, 0, "AI number orphans: " @ $Telemetry_AINumberOrphans);
+		
+		%msg = "Spawn attempts: " @ $Telemetry_SpawnAttempts;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "  - Success: " @ $Telemetry_SpawnSuccess @ " (" @ %successRate @ "%)";
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "  - Failed: " @ $Telemetry_SpawnFailed;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "    - Town bot conflict: " @ $Telemetry_SpawnFailedTownBot;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "    - Client ID issues: " @ $Telemetry_SpawnFailedClientId;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "    - Zone empty: " @ $Telemetry_SpawnFailedZoneEmpty;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "    - Other: " @ $Telemetry_SpawnFailedOther;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "Deaths processed: " @ $Telemetry_DeathsProcessed;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "AI numbers freed: " @ $Telemetry_AINumbersFreed;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "AI number orphans: " @ $Telemetry_AINumberOrphans;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		// $numAI tracking
+		echo("=== $numAI TRACKING ===");
+		Client::sendMessage(%TrueClientId, 0, "=== $numAI TRACKING ===");
+		
+		%msg = "$numAI counter: " @ $numAI;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "$numAI increments: " @ $Telemetry_NumAI_Inc;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "$numAI decrements: " @ $Telemetry_NumAI_Dec;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "Net change: " @ ($Telemetry_NumAI_Inc - $Telemetry_NumAI_Dec);
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "Live bots now: " @ %liveCount;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%msg = "Reserved AI numbers: " @ %reservedCount;
+		echo("[TELEMETRY] " @ %msg);
+		Client::sendMessage(%TrueClientId, 0, %msg);
+		
+		%discrepancy = $numAI - %liveCount;
+		if(%discrepancy != 0)
+		{
+			%msg = "DISCREPANCY: $numAI is " @ %discrepancy @ " higher than live bots!";
+			echo("[TELEMETRY] WARNING: " @ %msg);
+			Client::sendMessage(%TrueClientId, $MsgRed, %msg);
+		}
 		
 		if(%w2 == "reset")
 		{
 			Telemetry_Reset();
-			Client::sendMessage(%TrueClientId, $MsgGreen, "Telemetry counters reset.");
+			$Telemetry_NumAI_Inc = 0;
+			$Telemetry_NumAI_Dec = 0;
+			$Telemetry_SpawnFailedZoneEmpty = 0;
+			%msg = "Telemetry counters reset.";
+			echo("[TELEMETRY] " @ %msg);
+			Client::sendMessage(%TrueClientId, $MsgGreen, %msg);
+		}
+		else if(%w2 == "fix")
+		{
+			// Fix $numAI to match live bots
+			%oldNumAI = $numAI;
+			$numAI = %liveCount;
+			%msg = "Fixed $numAI: " @ %oldNumAI @ " -> " @ %liveCount;
+			echo("[TELEMETRY] " @ %msg);
+			Client::sendMessage(%TrueClientId, $MsgGreen, %msg);
 		}
 		
 		echo("[ADMIN]: " @ %TCsenderName @ " ran #spawntelemetry");
