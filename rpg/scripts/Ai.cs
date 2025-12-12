@@ -574,25 +574,8 @@ function UnregisterBot(%clientId)
 	$BotRegistry[%clientId, "team"] = "";
 	$BotRegistry[%clientId, "name"] = "";
 	
-	// CRITICAL: Clear ALL storeData entries that identify this as a bot
-	// This prevents shell bot detection in FindPlayerInBotGroup
-	storeData(%clientId, "BotInfoAiName", "");
-	storeData(%clientId, "SpawnBotInfo", "");
-	storeData(%clientId, "SpawnTime", "");
-	
-	// CRITICAL: Clear $EnemyBotData arrays
-	$EnemyBotData[%clientId, "BotInfoAiName"] = "";
-	$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
-	$EnemyBotData[%clientId, "SpawnTime"] = "";
-	$EnemyBotData[%clientId, "zone"] = "";
-	
-	// CRITICAL: Clear $ClientData for backwards compatibility
-	$ClientData[%clientId, "BotInfoAiName"] = "";
-	$ClientData[%clientId, "SpawnBotInfo"] = "";
-	$ClientData[%clientId, "SpawnTime"] = "";
-	
-	// CRITICAL: Clear direct array for fast lookup
-	$BotInfoAiName[%clientId] = "";
+	// PRIORITY 1: Use unified ClearAllBotData() for all data clearing
+	ClearAllBotData(%clientId, false);
 	
 	// Remove from registry list
 	%newList = "";
@@ -657,6 +640,162 @@ function UnregisterBot(%clientId)
 	}
 	
 	echo("[BOT REGISTRY] Unregistered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName @ ", wasInList=" @ %foundInList);
+}
+
+// =============================================================================
+// PRIORITY 1: Unified bot data clearing function
+// Consolidates cleanup from: UnregisterBot, ClearVariables, connectivity.cs, #deletebot
+// Call this function to clear ALL bot data for a client ID
+// =============================================================================
+function ClearAllBotData(%clientId, %preserveBotInfoAiName)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+	
+	// -------------------------------------------------------------------------
+	// 1. Clear $BotType cache (enables O(1) bot type detection)
+	// -------------------------------------------------------------------------
+	$BotType[%clientId] = "";
+	
+	// -------------------------------------------------------------------------
+	// 2. Clear storeData fields (routes to appropriate array based on type)
+	// -------------------------------------------------------------------------
+	// Core bot identity
+	if(!%preserveBotInfoAiName)
+		storeData(%clientId, "BotInfoAiName", "");
+	storeData(%clientId, "SpawnBotInfo", "");
+	storeData(%clientId, "SpawnTime", "");
+	storeData(%clientId, "HasLoadedAndSpawned", "");
+	storeData(%clientId, "DeathProcessed", "");
+	storeData(%clientId, "ExpDistributed", "");
+	
+	// Location and team
+	storeData(%clientId, "zone", "");
+	storeData(%clientId, "tmpzone", "");
+	storeData(%clientId, "botTeam", "");
+	
+	// Belt items
+	storeData(%clientId, "QuestItems", "");
+	storeData(%clientId, "KeyItems", "");
+	storeData(%clientId, "Consumables", "");
+	storeData(%clientId, "Armor", "");
+	storeData(%clientId, "Accessories", "");
+	storeData(%clientId, "Other", "");
+	storeData(%clientId, "RemortStep", "");
+	
+	// Flags
+	storeData(%clientId, "noExperienceFlag", "");
+	storeData(%clientId, "noDropLootbagFlag", "");
+	storeData(%clientId, "dumbAIflag", "");
+	storeData(%clientId, "frozen", "");
+	storeData(%clientId, "noBotSniff", "");
+	
+	// AI behavior
+	storeData(%clientId, "SpellCastStep", "");
+	storeData(%clientId, "LCKconsequence", "");
+	storeData(%clientId, "AIattackMarker", "");
+	storeData(%clientId, "AITarget", "");
+	storeData(%clientId, "AILastDestination", "");
+	storeData(%clientId, "AILastLoggedDist", "");
+	storeData(%clientId, "AIMovementLoopRunning", "");
+	storeData(%clientId, "botAttackMode", "");
+	storeData(%clientId, "tmpbotdata", "");
+	
+	// Seal battle
+	storeData(%clientId, "SealBattleBot", "");
+	storeData(%clientId, "SealBattleTargetMaxHP", "");
+	storeData(%clientId, "SealBattleTargetMaxMANA", "");
+	
+	// Misc
+	storeData(%clientId, "ShovedByPlayer", "");
+	storeData(%clientId, "OriginalLootString", "");
+	storeData(%clientId, "Stance", "");
+	
+	// -------------------------------------------------------------------------
+	// 3. Clear $EnemyBotData arrays directly (belt items + flags)
+	// -------------------------------------------------------------------------
+	if(!%preserveBotInfoAiName)
+		$EnemyBotData[%clientId, "BotInfoAiName"] = "";
+	$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
+	$EnemyBotData[%clientId, "SpawnTime"] = "";
+	$EnemyBotData[%clientId, "zone"] = "";
+	$EnemyBotData[%clientId, "tmpzone"] = "";
+	$EnemyBotData[%clientId, "SpawnOriginZoneID"] = "";
+	$EnemyBotData[%clientId, "botTeam"] = "";
+	$EnemyBotData[%clientId, "RemortStep"] = "";
+	$EnemyBotData[%clientId, "QuestItems"] = "";
+	$EnemyBotData[%clientId, "KeyItems"] = "";
+	$EnemyBotData[%clientId, "Consumables"] = "";
+	$EnemyBotData[%clientId, "Armor"] = "";
+	$EnemyBotData[%clientId, "Accessories"] = "";
+	$EnemyBotData[%clientId, "Other"] = "";
+	$EnemyBotData[%clientId, "noExperienceFlag"] = "";
+	$EnemyBotData[%clientId, "noDropLootbagFlag"] = "";
+	$EnemyBotData[%clientId, "dumbAIflag"] = "";
+	$EnemyBotData[%clientId, "frozen"] = "";
+	$EnemyBotData[%clientId, "noBotSniff"] = "";
+	$EnemyBotData[%clientId, "SpellCastStep"] = "";
+	$EnemyBotData[%clientId, "LCKconsequence"] = "";
+	$EnemyBotData[%clientId, "AIattackMarker"] = "";
+	
+	// -------------------------------------------------------------------------
+	// 4. Clear $TownBotData arrays directly
+	// -------------------------------------------------------------------------
+	if(!%preserveBotInfoAiName)
+		$TownBotData[%clientId, "BotInfoAiName"] = "";
+	$TownBotData[%clientId, "SpawnBotInfo"] = "";
+	$TownBotData[%clientId, "SpawnTime"] = "";
+	$TownBotData[%clientId, "zone"] = "";
+	$TownBotData[%clientId, "QuestItems"] = "";
+	$TownBotData[%clientId, "KeyItems"] = "";
+	$TownBotData[%clientId, "Consumables"] = "";
+	$TownBotData[%clientId, "Armor"] = "";
+	$TownBotData[%clientId, "Accessories"] = "";
+	$TownBotData[%clientId, "Other"] = "";
+	
+	// -------------------------------------------------------------------------
+	// 5. Clear $ClientData arrays directly (backwards compatibility)
+	// -------------------------------------------------------------------------
+	if(!%preserveBotInfoAiName)
+		$ClientData[%clientId, "BotInfoAiName"] = "";
+	$ClientData[%clientId, "SpawnBotInfo"] = "";
+	$ClientData[%clientId, "SpawnTime"] = "";
+	$ClientData[%clientId, "zone"] = "";
+	
+	// -------------------------------------------------------------------------
+	// 6. Clear fast lookup arrays
+	// -------------------------------------------------------------------------
+	if(!%preserveBotInfoAiName)
+		$BotInfoAiName[%clientId] = "";
+	
+	// -------------------------------------------------------------------------
+	// 7. Clear $Belt::CachedList (prevents memory leaks)
+	// -------------------------------------------------------------------------
+	$Belt::CachedList[%clientId, "QuestItems"] = "";
+	$Belt::CachedList[%clientId, "KeyItems"] = "";
+	$Belt::CachedList[%clientId, "Consumables"] = "";
+	$Belt::CachedList[%clientId, "Armor"] = "";
+	$Belt::CachedList[%clientId, "Accessories"] = "";
+	$Belt::CachedList[%clientId, "Other"] = "";
+	
+	// -------------------------------------------------------------------------
+	// 8. Clear directive table entries (0-99)
+	// -------------------------------------------------------------------------
+	for(%d = 0; %d <= 99; %d++)
+		$aidirectiveTable[%clientId, %d] = "";
+	
+	// -------------------------------------------------------------------------
+	// 9. Clear EventCommand entries (0-99)
+	// -------------------------------------------------------------------------
+	for(%i = 0; %i <= 99; %i++)
+		$EventCommand[%clientId, %i] = "";
+	
+	// -------------------------------------------------------------------------
+	// 10. Clear LoadedProjectile for common weapons
+	// -------------------------------------------------------------------------
+	%commonWeapons = "Crossbow Bow Rifle Pistol Shotgun";
+	for(%i = 0; (%weapon = GetWord(%commonWeapons, %i)) != -1; %i++)
+		storeData(%clientId, "LoadedProjectile " @ %weapon, "");
 }
 
 // Get spawn point for a bot from registry

@@ -3954,56 +3954,9 @@ function ClearVariables(%clientId)
 
 	deleteVariables("ClientData" @ %clientId @ "*");
 	
-	// CRITICAL: Clear all enemy bot-specific data that might persist
-	// These fields are set during bot spawn/operation but must be cleared on cleanup
-	storeData(%clientId, "botAttackMode", "");
-	storeData(%clientId, "tmpbotdata", "");
-	storeData(%clientId, "AITarget", "");
-	storeData(%clientId, "AILastDestination", "");
-	storeData(%clientId, "AILastLoggedDist", "");
-	storeData(%clientId, "AIMovementLoopRunning", "");
-	storeData(%clientId, "SealBattleBot", "");
-	storeData(%clientId, "SealBattleTargetMaxHP", "");
-	storeData(%clientId, "SealBattleTargetMaxMANA", "");
-	storeData(%clientId, "SpawnBotInfo", "");
-	storeData(%clientId, "SpawnTime", "");
-	storeData(%clientId, "BotInfoAiName", "");
-	storeData(%clientId, "botTeam", "");
-	storeData(%clientId, "zone", "");
-	storeData(%clientId, "tmpzone", "");
-	storeData(%clientId, "DeathProcessed", "");
-	
-	// CRITICAL: Clear from $EnemyBotData array (new array system)
-	$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
-	$EnemyBotData[%clientId, "SpawnTime"] = "";
-	$EnemyBotData[%clientId, "BotInfoAiName"] = "";
-	$EnemyBotData[%clientId, "botTeam"] = "";
-	$EnemyBotData[%clientId, "RemortStep"] = "";
-	$EnemyBotData[%clientId, "QuestItems"] = "";
-	$EnemyBotData[%clientId, "KeyItems"] = "";
-	$EnemyBotData[%clientId, "Consumables"] = "";
-	$EnemyBotData[%clientId, "Armor"] = "";
-	$EnemyBotData[%clientId, "Accessories"] = "";
-	$EnemyBotData[%clientId, "Other"] = "";
-	$EnemyBotData[%clientId, "noExperienceFlag"] = "";
-	$EnemyBotData[%clientId, "noDropLootbagFlag"] = "";
-	$EnemyBotData[%clientId, "dumbAIflag"] = "";
-	$EnemyBotData[%clientId, "frozen"] = "";
-	$EnemyBotData[%clientId, "noBotSniff"] = "";
-	$EnemyBotData[%clientId, "SpellCastStep"] = "";
-	$EnemyBotData[%clientId, "LCKconsequence"] = "";
-	$EnemyBotData[%clientId, "AIattackMarker"] = "";
-	
-	// CRITICAL: Clear from direct array for fast lookup
-	$BotInfoAiName[%clientId] = "";
-	
-	// CRITICAL: Clear belt cached lists to prevent memory leaks
-	$Belt::CachedList[%clientId, "QuestItems"] = "";
-	$Belt::CachedList[%clientId, "KeyItems"] = "";
-	$Belt::CachedList[%clientId, "Consumables"] = "";
-	$Belt::CachedList[%clientId, "Armor"] = "";
-	$Belt::CachedList[%clientId, "Accessories"] = "";
-	$Belt::CachedList[%clientId, "Other"] = "";
+	// PRIORITY 1: Use unified ClearAllBotData() for all bot data clearing
+	// This consolidates cleanup from multiple locations and ensures nothing is missed
+	ClearAllBotData(%clientId, false);
 }
 function ClearFunkVar(%name)
 {

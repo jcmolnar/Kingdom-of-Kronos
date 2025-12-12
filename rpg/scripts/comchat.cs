@@ -6542,140 +6542,23 @@ if(%w1 == "#deletebot")
 					// CRITICAL: Clean up bot data - comprehensive cleanup for both types
 					// This cleanup handles both normal bots and shell bots (corrupted bots with wrong data)
 					// For shell bots, we clear ALL data by client ID, regardless of corrupted BotInfoAiName
-					// CRITICAL: DO NOT clear BotInfoAiName yet - AI::onDroneKilled() needs it to find the bot
-					// We'll clear it after AI::delete() is scheduled (which triggers AI::onDroneKilled())
-					storeData(%id, "noDropLootbagFlag", True);
-					storeData(%id, "SpawnBotInfo", "");
-					storeData(%id, "SpawnTime", "");
-					// NOTE: BotInfoAiName is preserved here - will be cleared after AI::delete() is scheduled
-					storeData(%id, "HasLoadedAndSpawned", ""); // Clear spawn flag for shell bots
-					storeData(%id, "RemortStep", "");
-					storeData(%id, "QuestItems", "");
-					storeData(%id, "KeyItems", "");
-					storeData(%id, "Consumables", "");
-					storeData(%id, "Armor", "");
-					storeData(%id, "Accessories", "");
-					storeData(%id, "Other", "");
-					storeData(%id, "noExperienceFlag", "");
-					storeData(%id, "dumbAIflag", "");
-					storeData(%id, "frozen", "");
-					storeData(%id, "noBotSniff", "");
-					storeData(%id, "SpellCastStep", "");
-					storeData(%id, "LCKconsequence", "");
-					storeData(%id, "AIattackMarker", "");
-					storeData(%id, "botTeam", "");
-					storeData(%id, "zone", "");
-					storeData(%id, "tmpzone", "");
-					storeData(%id, "AITarget", "");
-					storeData(%id, "AILastDestination", "");
-					storeData(%id, "AILastLoggedDist", "");
-					storeData(%id, "AIMovementLoopRunning", "");
-					storeData(%id, "ShovedByPlayer", ""); // Clear shove flag
-					storeData(%id, "botAttackMode", ""); // Clear bot attack mode
-					storeData(%id, "tmpbotdata", ""); // Clear bot targeting data
-					storeData(%id, "SealBattleBot", ""); // Clear seal battle bot flag
-					storeData(%id, "DeathProcessed", ""); // Clear death processed flag
-					storeData(%id, "ExpDistributed", ""); // Clear EXP distribution flag
-					storeData(%id, "OriginalLootString", ""); // Clear original loot string
+					// CRITICAL: Use preserveBotInfoAiName=true because AI::onDroneKilled() needs it
+					storeData(%id, "noDropLootbagFlag", True);  // Set BEFORE clearing (not cleared)
+					
+					// PRIORITY 1: Use unified ClearAllBotData() with preserveBotInfoAiName=true
+					ClearAllBotData(%id, true);
 					ClearEvents(%id);
 					
-					// CRITICAL: Clear all LoadedProjectile entries (could be multiple weapons)
-					%commonWeapons = "Crossbow Bow Rifle Pistol Shotgun";
-					for(%i = 0; (%weapon = GetWord(%commonWeapons, %i)) != -1; %i++)
-					{
-						storeData(%id, "LoadedProjectile " @ %weapon, "");
-					}
-					
-					// CRITICAL: Clear all EventCommand entries (0-99) to prevent stale event commands
-					for(%i = 0; %i <= 99; %i++)
-					{
-						$EventCommand[%id, %i] = "";
-					}
-					
-					// CRITICAL: Clear ALL directive table entries for this bot (by client ID)
-					// Shell bots might have stale directives that need to be cleared
-					for(%d = 0; %d <= 99; %d++)
-					{
-						$aidirectiveTable[%id, %d] = "";
-					}
-					
-					// CRITICAL: Clear from arrays based on bot type
-					// NOTE: BotInfoAiName arrays are preserved here - will be cleared after AI::delete() is scheduled
+					// Handle town bot specific cleanup
 					if(%isTownBot)
 					{
-						// Extract bot name from BotInfoAiName
 						%townBotName = %botInfoAiName;
 						if(String::findSubStr(%botInfoAiName, "TownBot_") == 0)
 							%townBotName = String::getSubStr(%botInfoAiName, 8, 999);
-						
-						// Clear town bot arrays (but preserve BotInfoAiName for AI::onDroneKilled())
-						// $TownBotData[%id, "BotInfoAiName"] = ""; // Preserved for AI::onDroneKilled()
-						$TownBotData[%id, "SpawnBotInfo"] = "";
-						$TownBotData[%id, "SpawnTime"] = "";
-						$TownBotData[%id, "QuestItems"] = "";
-						$TownBotData[%id, "KeyItems"] = "";
-						$TownBotData[%id, "Consumables"] = "";
-						$TownBotData[%id, "Armor"] = "";
-						$TownBotData[%id, "Accessories"] = "";
-						$TownBotData[%id, "Other"] = "";
-						
-						// Clear spawn tracking
 						if(%townBotName != "" && %townBotName != -1 && %townBotName != "0")
 							$TownBotSpawned[%townBotName] = "";
-						
-						// Remove from TownBotList
 						$TownBotList = RemoveFromCommaList($TownBotList, %id);
 					}
-					else if(%isEnemyBot)
-					{
-						// Clear enemy bot arrays (but preserve BotInfoAiName for AI::onDroneKilled())
-						$EnemyBotData[%id, "SpawnBotInfo"] = "";
-						$EnemyBotData[%id, "SpawnTime"] = "";
-						// $EnemyBotData[%id, "BotInfoAiName"] = ""; // Preserved for AI::onDroneKilled()
-						$EnemyBotData[%id, "RemortStep"] = "";
-						$EnemyBotData[%id, "QuestItems"] = "";
-						$EnemyBotData[%id, "KeyItems"] = "";
-						$EnemyBotData[%id, "Consumables"] = "";
-						$EnemyBotData[%id, "Armor"] = "";
-						$EnemyBotData[%id, "Accessories"] = "";
-						$EnemyBotData[%id, "Other"] = "";
-						$EnemyBotData[%id, "noExperienceFlag"] = "";
-						$EnemyBotData[%id, "noDropLootbagFlag"] = "";
-						$EnemyBotData[%id, "dumbAIflag"] = "";
-						$EnemyBotData[%id, "frozen"] = "";
-						$EnemyBotData[%id, "noBotSniff"] = "";
-						$EnemyBotData[%id, "SpellCastStep"] = "";
-						$EnemyBotData[%id, "LCKconsequence"] = "";
-						$EnemyBotData[%id, "AIattackMarker"] = "";
-						$EnemyBotData[%id, "ShovedByPlayer"] = "";
-						$EnemyBotData[%id, "botAttackMode"] = "";
-						$EnemyBotData[%id, "tmpbotdata"] = "";
-						$EnemyBotData[%id, "SealBattleBot"] = "";
-						$EnemyBotData[%id, "DeathProcessed"] = "";
-						$EnemyBotData[%id, "HasLoadedAndSpawned"] = "";
-					}
-					
-					// CRITICAL: Clear from $ClientData for backwards compatibility
-					$ClientData[%id, "SpawnBotInfo"] = "";
-					$ClientData[%id, "SpawnTime"] = "";
-					// $ClientData[%id, "BotInfoAiName"] = ""; // Preserved for AI::onDroneKilled()
-					$ClientData[%id, "ShovedByPlayer"] = "";
-					$ClientData[%id, "botAttackMode"] = "";
-					$ClientData[%id, "tmpbotdata"] = "";
-					$ClientData[%id, "SealBattleBot"] = "";
-					$ClientData[%id, "DeathProcessed"] = "";
-					$ClientData[%id, "HasLoadedAndSpawned"] = "";
-					
-					// CRITICAL: Preserve direct array for AI::onDroneKilled()
-					// $BotInfoAiName[%id] = ""; // Preserved for AI::onDroneKilled()
-					
-					// CRITICAL: Clear belt cached lists
-					$Belt::CachedList[%id, "QuestItems"] = "";
-					$Belt::CachedList[%id, "KeyItems"] = "";
-					$Belt::CachedList[%id, "Consumables"] = "";
-					$Belt::CachedList[%id, "Armor"] = "";
-					$Belt::CachedList[%id, "Accessories"] = "";
-					$Belt::CachedList[%id, "Other"] = "";
 					
 					// Clean up bot group if applicable
 					%b = AI::IsInWhichBotGroup(%id);

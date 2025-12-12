@@ -329,41 +329,13 @@ function Server::onClientConnect(%clientId)
 	{
 		echo("WARNING: Server::onClientConnect - Client ID " @ %clientId @ " (" @ %playerName @ ") has stale bot data from previous session. Wiping all data to prevent conflicts.");
 		
-		// Clean up all bot data to prevent conflicts
-		storeData(%clientId, "SpawnBotInfo", "");
-		storeData(%clientId, "SpawnTime", "");
-		storeData(%clientId, "BotInfoAiName", "");
-		storeData(%clientId, "botTeam", "");
-		storeData(%clientId, "zone", "");
-		storeData(%clientId, "tmpzone", "");
-		storeData(%clientId, "noDropLootbagFlag", ""); // Should be cleared too
-		storeData(%clientId, "noExperienceFlag", "");
-		
-		$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
-		$EnemyBotData[%clientId, "SpawnTime"] = "";
-		$EnemyBotData[%clientId, "BotInfoAiName"] = "";
-		$EnemyBotData[%clientId, "zone"] = "";
-		
-		$TownBotData[%clientId, "SpawnBotInfo"] = "";
-		$TownBotData[%clientId, "SpawnTime"] = "";
-		$TownBotData[%clientId, "BotInfoAiName"] = "";
-		$TownBotData[%clientId, "zone"] = "";
-		
-		$ClientData[%clientId, "SpawnBotInfo"] = "";
-		$ClientData[%clientId, "SpawnTime"] = "";
-		$ClientData[%clientId, "BotInfoAiName"] = "";
-		$ClientData[%clientId, "zone"] = "";
-		
-		$BotInfoAiName[%clientId] = "";
+		// PRIORITY 1: Use unified ClearAllBotData() for all bot data clearing
+		ClearAllBotData(%clientId, false);
 		
 		// Also clean registry for this ID if it exists
 		if($BotRegistry[%clientId] != "")
 		{
 			$BotRegistry[%clientId] = "";
-			// Note: We don't decrement counters here because onClientDrop usually handles it.
-			// If we decrement here, we might double-decrement if onClientDrop ran but didn't clear registry?
-			// But since we are reusing the ID, the previous bot is DEFINITELY gone.
-			// It's safer to just clear the registry entry so this new client isn't tracked as the old bot.
 			echo("Server::onClientConnect - Cleared stale BotRegistry for client " @ %clientId);
 		}
 		
