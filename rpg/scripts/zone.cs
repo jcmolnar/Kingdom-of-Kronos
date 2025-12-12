@@ -237,10 +237,75 @@ function UpdateZone(%object)
 
 	// Use helper function to get client ID from Player object (handles enemy bots)
 	%clientId = GetClientIdFromPlayerObject(%object);
+	%usingFallback = false;
 	
-	// If helper function returns -1, try using %object directly as client ID
+	// If helper function returns -1, try using %object directly as client ID (fallback)
 	if(%clientId == -1 || %clientId == "")
+	{
 		%clientId = %object;
+		%usingFallback = true; // Mark that we're using the Player object as fallback
+	}
+	
+	// CRITICAL: If using fallback and Player object isn't valid, skip zone update (timing issue during spawn)
+	// This happens when UpdateZone() is called during bot spawn before Player object is fully registered
+	if(%usingFallback && (!isObject(%object) || %object == -1 || %object == ""))
+	{
+		// Player object not valid yet - this is a timing issue, skip zone update
+		// Zone data will be set later when the bot is fully registered
+		return;
+	}
+	
+	// PHASE 3 FIX: Validate client ID belongs to correct entity before storing zone data
+	// Skip validation if we're using fallback (Player object as client ID) - validation won't work correctly
+	// BUT: Only skip if Player object is valid (fallback mode for bots with timing issues)
+	if(!%usingFallback && %clientId != -1 && %clientId != "" && isObject(%object))
+	{
+		// Reverse verification - ensure the client ID actually owns this Player object
+		%verifyPlayerObj = Client::getOwnedObject(%clientId);
+		if(%verifyPlayerObj != %object && %verifyPlayerObj != -1 && %verifyPlayerObj != "")
+		{
+			// Client ID doesn't own this Player object - this is a collision!
+			echo("ERROR: UpdateZone - Client ID " @ %clientId @ " does not own Player object " @ %object @ ". Player object belongs to client ID with Player object " @ %verifyPlayerObj @ ". Rejecting zone update to prevent data corruption.");
+			return; // Reject zone update to prevent storing zone data under wrong client ID
+		}
+		
+		// Entity type validation - verify client ID matches expected entity type
+		// PRIORITY: Check bot indicators FIRST (bots can have HasLoadedAndSpawned set, so don't use it for player detection)
+		%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+		%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+		%isBot = ((%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1) || 
+		          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) ||
+		          Player::isAiControlled(%clientId) || isRPGAI(%clientId));
+		
+		// Only check for player indicators if NOT a bot (bots can have character files in some edge cases)
+		%isPlayer = false;
+		if(!%isBot)
+		{
+			%playerName = Client::getName(%clientId);
+			if(%playerName != "" && %playerName != -1)
+			{
+				%characterFile = "temp\\" @ %playerName @ ".cs";
+				if(isFile(%characterFile))
+				{
+					%isPlayer = true;
+				}
+			}
+			// HasLoadedAndSpawned is NOT a reliable player indicator (bots set it too)
+		}
+		
+		// Only flag collision if we have BOTH bot and player indicators AND they're mutually exclusive
+		// Since we prioritize bot detection, this should rarely trigger, but it's a safety check
+		if(%isPlayer && %isBot)
+		{
+			echo("ERROR: UpdateZone - Client ID " @ %clientId @ " has conflicting entity type indicators (both player and bot). Clearing zone data to prevent collision.");
+			storeData(%clientId, "zone", "");
+			storeData(%clientId, "tmpzone", "");
+			$ClientData[%clientId, "zone"] = "";
+			$EnemyBotData[%clientId, "zone"] = "";
+			$TownBotData[%clientId, "zone"] = "";
+			return; // Reject zone update
+		}
+	}
 	
 	// Skip AI-controlled clients to prevent [TOWNBOT DEBUG] spam
 	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId)) return;
@@ -593,13 +658,9 @@ function UpdateZone(%object)
 					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") now has " @ ($ZonePlayerCount[%oldZoneIndex]) @ " player(s)");
 					
 					// If no players left in old zone, despawn bots after 30 seconds (prevents crash from too many operations at once)
-<<<<<<< HEAD
-					if($ZonePlayerCount[%oldZoneIndex] <= 0)
-=======
 					// CRITICAL: Only process if zone index is valid (> 0)
 					// Zone::getIndex() returns -1 for invalid zones (like "Unknown" zone)
 					if($ZonePlayerCount[%oldZoneIndex] <= 0 && %oldZoneIndex > 0)
->>>>>>> origin/fix-turret-targeting-and-despawn
 					{
 						// DEBUG: Commented out to reduce server lag
 					echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") is now empty - despawning bots in 30 seconds");
@@ -1479,6 +1540,21 @@ function Zone::getNumPlayers(%z, %all)
 	for(%i = 0; GetWord(%list, %i) != -1; %i++)
 	{
 		%id = GetWord(%list, %i);
+		
+		// CRITICAL: Skip shell bots (bots with no player object)
+		// Shell bots have bot data but no valid player object, and should not be counted
+		%playerObj = Client::getOwnedObject(%id);
+		%botInfoAiName = fetchData(%id, "BotInfoAiName");
+		%spawnBotInfo = fetchData(%id, "SpawnBotInfo");
+		%hasBotData = ((%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0") || 
+		               (%spawnBotInfo != "" && %spawnBotInfo != -1 && %spawnBotInfo != "0"));
+		
+		// If this is a bot (has bot data) but has no player object, it's a shell bot - skip it
+		if(%hasBotData && (%playerObj == -1 || %playerObj == ""))
+		{
+			// Shell bot detected - skip it to prevent FindPlayerInBotGroup() from being called
+			continue;
+		}
 
 		if(fetchData(%id, "zone") == %z)
 			%n++;

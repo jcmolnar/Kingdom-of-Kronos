@@ -73,6 +73,77 @@ $SealBattleRound1Multiplier = 2.0;
 $SealBattleRound2Multiplier = 2.6;  // 1.3x harder than Round 1
 $SealBattleRound3Multiplier = 3.2;  // 1.6x harder than Round 1
 
+// =====================================================
+// PER-BOT-TYPE STAT MULTIPLIERS
+// These are applied ON TOP OF the base TotalSealValue scaling
+// Format: $SealBotMult[BotType, StatName] = multiplier
+// Adjust these values to fine-tune bot difficulty by type
+// =====================================================
+
+// FIGHTER: High ATK, Medium HP (glass cannon melee)
+$SealBotMult["Fighter", "HP"]        = 1.0;   // Medium HP
+$SealBotMult["Fighter", "ATK"]       = 1.5;   // HIGH ATK
+$SealBotMult["Fighter", "DEF"]       = 0.8;   // Low DEF (glass cannon)
+$SealBotMult["Fighter", "MDEF"]      = 0.6;   // Low MDEF
+$SealBotMult["Fighter", "WeaponDmg"] = 1.5;   // HIGH weapon damage
+$SealBotMult["Fighter", "SpellDmg"]  = 0.5;   // Low spell damage
+
+// GUARDIAN: High HP, Medium ATK (tank)
+$SealBotMult["Guardian", "HP"]        = 1.8;  // HIGH HP (tank)
+$SealBotMult["Guardian", "ATK"]       = 1.0;  // Medium ATK
+$SealBotMult["Guardian", "DEF"]       = 1.5;  // HIGH DEF
+$SealBotMult["Guardian", "MDEF"]      = 1.2;  // Medium-high MDEF
+$SealBotMult["Guardian", "WeaponDmg"] = 1.0;  // Medium weapon damage
+$SealBotMult["Guardian", "SpellDmg"]  = 0.3;  // Very low spell damage
+
+// MAGE: High Spell Damage, Low HP (squishy caster)
+$SealBotMult["Mage", "HP"]        = 0.7;      // LOW HP (squishy)
+$SealBotMult["Mage", "ATK"]       = 0.5;      // Low ATK
+$SealBotMult["Mage", "DEF"]       = 0.5;      // Low DEF
+$SealBotMult["Mage", "MDEF"]      = 1.5;      // HIGH MDEF
+$SealBotMult["Mage", "WeaponDmg"] = 0.3;      // Very low weapon damage
+$SealBotMult["Mage", "SpellDmg"]  = 2.0;      // HIGH spell damage
+
+// Determine bot type (Fighter, Mage, Guardian) from internal/display name
+function SealBattle::GetBotType(%botName, %aiId)
+{
+    // Check internal name first (e.g., "RoundOne497" = Fighter, "RoundTwo497" = Mage, "RoundThree497" = Guardian)
+    if(String::findSubStr(%botName, "RoundOne") != -1)
+        return "Fighter";
+    else if(String::findSubStr(%botName, "RoundTwo") != -1)
+        return "Mage";
+    else if(String::findSubStr(%botName, "RoundThree") != -1)
+        return "Guardian";
+    
+    // Fallback: Check display name
+    %displayName = Client::getName(%aiId);
+    if(String::findSubStr(%displayName, "Fighter") != -1)
+        return "Fighter";
+    else if(String::findSubStr(%displayName, "Mage") != -1)
+        return "Mage";
+    else if(String::findSubStr(%displayName, "Guardian") != -1)
+        return "Guardian";
+    
+    // Default fallback
+    return "Fighter";
+}
+
+// Get the final multiplier for a specific bot type and stat
+// Combines: BaseMultiplier (from TotalSealValue) * RoundMultiplier * BotTypeMultiplier
+function SealBattle::GetStatMultiplier(%botType, %statName, %round)
+{
+    // Get base scaling (from TotalSealValue and Round)
+    %baseRoundMult = SealBattle::GetRoundMultiplier(%round);
+    
+    // Get bot-type-specific multiplier for this stat
+    %botTypeMult = $SealBotMult[%botType, %statName];
+    if(%botTypeMult == "" || %botTypeMult == 0)
+        %botTypeMult = 1.0;  // Default to 1.0 if not defined
+    
+    // Final multiplier = BaseRoundMultiplier * BotTypeMultiplier
+    return %baseRoundMult * %botTypeMult;
+}
+
 // Base multiplier that scales with TotalSealValue
 // Uses a more conservative scaling approach to keep bots challenging but killable
 // Formula: 1.0 + (sqrt(TotalSealValue / 20) * 0.3)
@@ -1667,8 +1738,11 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		%baseLCK = fetchData(%aiId, "LCK");
 		if(%baseLCK == "" || %baseLCK == -1)
 			%baseLCK = 0;
+			
+		// CRITICAL FIX: Clear ExpDistributed flag for new seal bots
+		storeData(%aiId, "ExpDistributed", "");
 		
-		// Get the round-specific multiplier
+		// Get the round-specific multiplier (kept for debug logging)
 		%mult = SealBattle::GetRoundMultiplier(%round);
 		// Calculate round multiplier for debug message (TorqueScript doesn't support ternary operators)
 		if(%round == 1)
@@ -1677,8 +1751,26 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 			%roundMult = $SealBattleRound2Multiplier;
 		else
 			%roundMult = $SealBattleRound3Multiplier;
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Using multiplier: " @ %mult @ " (baseMult=" @ SealBattle::GetBaseStrengthMultiplier() @ ", roundMult=" @ %roundMult @ ")");
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Base multiplier: " @ %mult @ " (baseMult=" @ SealBattle::GetBaseStrengthMultiplier() @ ", roundMult=" @ %roundMult @ ")");
 		
+		// CRITICAL: Determine bot type and get per-stat multipliers
+		%botType = SealBattle::GetBotType(%botName, %aiId);
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Bot type detected: " @ %botType @ " for " @ %botName);
+		
+		// Get stat-specific multipliers (BaseRoundMultiplier * BotTypeMultiplier)
+		%multHP        = SealBattle::GetStatMultiplier(%botType, "HP", %round);
+		%multATK       = SealBattle::GetStatMultiplier(%botType, "ATK", %round);
+		%multDEF       = SealBattle::GetStatMultiplier(%botType, "DEF", %round);
+		%multMDEF      = SealBattle::GetStatMultiplier(%botType, "MDEF", %round);
+		%multWeaponDmg = SealBattle::GetStatMultiplier(%botType, "WeaponDmg", %round);
+		%multSpellDmg  = SealBattle::GetStatMultiplier(%botType, "SpellDmg", %round);
+		
+		echo("[SEAL BATTLE] Stat multipliers for " @ %botType @ ": HP=" @ %multHP @ ", ATK=" @ %multATK @ ", DEF=" @ %multDEF @ ", MDEF=" @ %multMDEF @ ", WeaponDmg=" @ %multWeaponDmg @ ", SpellDmg=" @ %multSpellDmg);
+		
+		// Store SpellDmg multiplier for use by spell damage calculation functions
+		$SealBattleSpellDmgMult[%aiId] = %multSpellDmg;
+
+
 		// CRITICAL: Scale weapon damage BEFORE calculating/scaling ATK
 		// This ensures ATK is calculated from scaled weapon damage, not unscaled
 		// Check bot type using guardtype (determined from AI name) since %botName is now an internal name
@@ -1704,9 +1796,9 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 						%baseMin = String::getSubStr(%baseWeaponDamage, 0, %dashPos);
 						%baseMax = String::getSubStr(%baseWeaponDamage, %dashPos + 1, 99999);
 						
-						// Scale both min and max by the round multiplier
-						%scaledMin = floor(%baseMin * %mult);
-						%scaledMax = floor(%baseMax * %mult);
+						// Scale both min and max by the WeaponDmg multiplier (per-bot-type)
+						%scaledMin = floor(%baseMin * %multWeaponDmg);
+						%scaledMax = floor(%baseMax * %multWeaponDmg);
 						
 						// Ensure minimum values
 						if(%scaledMin < 1) %scaledMin = 1;
@@ -1720,7 +1812,7 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 						%baseDamage = %baseWeaponDamage + 0;  // Convert to number
 						if(%baseDamage > 0)
 						{
-							%scaledDamage = floor(%baseDamage * %mult);
+							%scaledDamage = floor(%baseDamage * %multWeaponDmg);
 							if(%scaledDamage < 1) %scaledDamage = 1;
 							%scaledWeaponDamage = %scaledDamage;
 						}
@@ -1740,7 +1832,7 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 					$SealBattleWeaponOwner[%weaponName] = %aiId;
 					
 					echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled weapon damage for " @ %botName @ " (weapon: " @ %weaponName @ ")");
-					echo("  Base damage: " @ %baseWeaponDamage @ " -> Scaled damage: " @ %scaledWeaponDamage @ " (multiplier: " @ %mult @ ")");
+					echo("  Base damage: " @ %baseWeaponDamage @ " -> Scaled damage: " @ %scaledWeaponDamage @ " (multWeaponDmg: " @ %multWeaponDmg @ ")");
 				}
 			}
 			else
@@ -1765,9 +1857,9 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		%baseLVL = %storedOriginalLVL;  // Use the restored original value
 		if(%baseLVL == "" || %baseLVL == -1 || %baseLVL == 0)
 			%baseLVL = 1;
-		%scaledLVL = floor(%baseLVL * %mult);
+		%scaledLVL = floor(%baseLVL * %multHP);
 		storeData(%aiId, "LVL", %scaledLVL);
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled LVL from " @ %baseLVL @ " to " @ %scaledLVL @ " (multiplier: " @ %mult @ ")");
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled LVL from " @ %baseLVL @ " to " @ %scaledLVL @ " (multHP: " @ %multHP @ ")");
 		
 		// 2. Scale RemortStep - affects HP, MANA, DEF, MDEF, ATK, MaxWeight
 		// CRITICAL: Use the restored original RemortStep value (storedOriginalRemortStep) instead of fetching again
@@ -1775,9 +1867,9 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		%baseRemortStep = %storedOriginalRemortStep;  // Use the restored original value
 		if(%baseRemortStep != "" && %baseRemortStep != -1 && %baseRemortStep != 0)
 		{
-			%scaledRemortStep = floor(%baseRemortStep * %mult);
+			%scaledRemortStep = floor(%baseRemortStep * %multATK);
 			storeData(%aiId, "RemortStep", %scaledRemortStep);
-			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled RemortStep from " @ %baseRemortStep @ " to " @ %scaledRemortStep @ " (multiplier: " @ %mult @ ")");
+			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled RemortStep from " @ %baseRemortStep @ " to " @ %scaledRemortStep @ " (multATK: " @ %multATK @ ")");
 		}
 		
 		// 3. Scale Endurance skill - affects MaxHP calculation
@@ -1786,9 +1878,9 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		%baseEndurance = %storedOriginalEndurance;  // Use the restored original value
 		if(%baseEndurance != "" && %baseEndurance != -1 && %baseEndurance != 0)
 		{
-			%scaledEndurance = floor(%baseEndurance * %mult);
+			%scaledEndurance = floor(%baseEndurance * %multHP);
 			$PlayerSkill[%aiId, $SkillEndurance] = %scaledEndurance;
-			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled Endurance skill from " @ %baseEndurance @ " to " @ %scaledEndurance @ " (multiplier: " @ %mult @ ")");
+			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled Endurance skill from " @ %baseEndurance @ " to " @ %scaledEndurance @ " (multHP: " @ %multHP @ ")");
 		}
 		
 		// 4. Scale Energy skill - affects MaxMANA calculation
@@ -1797,9 +1889,9 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		%baseEnergy = %storedOriginalEnergy;  // Use the restored original value
 		if(%baseEnergy != "" && %baseEnergy != -1 && %baseEnergy != 0)
 		{
-			%scaledEnergy = floor(%baseEnergy * %mult);
+			%scaledEnergy = floor(%baseEnergy * %multSpellDmg);
 			$PlayerSkill[%aiId, $SkillEnergy] = %scaledEnergy;
-			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled Energy skill from " @ %baseEnergy @ " to " @ %scaledEnergy @ " (multiplier: " @ %mult @ ")");
+			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled Energy skill from " @ %baseEnergy @ " to " @ %scaledEnergy @ " (multSpellDmg: " @ %multSpellDmg @ ")");
 		}
 		
 		// 5. Scale WeightCapacity skill - affects MaxWeight calculation
@@ -1810,7 +1902,7 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		{
 			%scaledWeightCapacity = floor(%baseWeightCapacity * %mult);
 			$PlayerSkill[%aiId, $SkillWeightCapacity] = %scaledWeightCapacity;
-			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled WeightCapacity skill from " @ %baseWeightCapacity @ " to " @ %scaledWeightCapacity @ " (multiplier: " @ %mult @ ")");
+			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled WeightCapacity skill from " @ %baseWeightCapacity @ " to " @ %scaledWeightCapacity @ " (mult: " @ %mult @ ")");
 		}
 		
 		// Call RefreshAll() to recalculate MaxHP, MaxMANA, MaxWeight from scaled underlying values
@@ -1848,25 +1940,26 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Stored scaled MaxMANA: " @ %maxMANA @ ", Set MANA to MaxMANA via setMANA()");
 		}
 		
-		// Scale DEF and MDEF directly (they're calculated by RefreshAll, but we override them)
-		%scaledDEF = floor(%baseDEF * %mult);
-		%scaledMDEF = floor(%baseMDEF * %mult);
+		// Scale DEF and MDEF directly using per-stat multipliers
+		%scaledDEF = floor(%baseDEF * %multDEF);
+		%scaledMDEF = floor(%baseMDEF * %multMDEF);
 		storeData(%aiId, "DEF", %scaledDEF);
 		$EnemyBotData[%aiId, "DEF"] = %scaledDEF;
 		$ClientData[%aiId, "DEF"] = %scaledDEF;
 		storeData(%aiId, "MDEF", %scaledMDEF);
 		$EnemyBotData[%aiId, "MDEF"] = %scaledMDEF;
 		$ClientData[%aiId, "MDEF"] = %scaledMDEF;
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled DEF from " @ %baseDEF @ " to " @ %scaledDEF @ " (multiplier: " @ %mult @ ")");
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled MDEF from " @ %baseMDEF @ " to " @ %scaledMDEF @ " (multiplier: " @ %mult @ ")");
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled DEF from " @ %baseDEF @ " to " @ %scaledDEF @ " (multDEF: " @ %multDEF @ ")");
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled MDEF from " @ %baseMDEF @ " to " @ %scaledMDEF @ " (multMDEF: " @ %multMDEF @ ")");
 		
-		// Scale ATK and DMG directly
-		// CRITICAL: Apply 50% additional ATK boost for seal battle bots
-		%scaledATK = floor(%baseATK * %mult * 1.5);
+		// Scale ATK directly using per-stat multiplier
+		%scaledATK = floor(%baseATK * %multATK);
 		storeData(%aiId, "ATK", %scaledATK);
 		$EnemyBotData[%aiId, "ATK"] = %scaledATK;
 		$ClientData[%aiId, "ATK"] = %scaledATK;
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled ATK from " @ %baseATK @ " to " @ %scaledATK @ " (multiplier: " @ %mult @ ")");
+		// Also store in the special array for seal battle bots
+		$SealBattleScaledStats[%aiId, "ATK"] = %scaledATK;
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled ATK from " @ %baseATK @ " to " @ %scaledATK @ " (multATK: " @ %multATK @ ")");
 		
 		// Handle DMG - if baseDMG is empty or invalid, set a minimum value based on ATK
 		if(%baseDMG == "" || %baseDMG == -1 || %baseDMG == 0)
@@ -1876,13 +1969,13 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 			else
 				%baseDMG = 1;
 		}
-		%scaledDMG = floor(%baseDMG * %mult);
+		%scaledDMG = floor(%baseDMG * %multATK);
 		if(%scaledDMG < 1)
 			%scaledDMG = 1;
 		storeData(%aiId, "DMG", %scaledDMG);
 		$EnemyBotData[%aiId, "DMG"] = %scaledDMG;
 		$ClientData[%aiId, "DMG"] = %scaledDMG;
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled DMG from " @ %baseDMG @ " to " @ %scaledDMG @ " (multiplier: " @ %mult @ ")");
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled DMG from " @ %baseDMG @ " to " @ %scaledDMG @ " (multATK: " @ %multATK @ ")");
 		
 		// CRITICAL: Call RefreshAll() one more time AFTER setting scaled stats to ensure they persist
 		// This ensures any subsequent RefreshAll() calls don't overwrite our scaled values
@@ -1913,13 +2006,17 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		$SealBattleScaledStats[%aiId, "round"] = %round;
 		%storedMaxHP = $SealBattleScaledStats[%aiId, "MaxHP"];
 		%storedMaxMANA = $SealBattleScaledStats[%aiId, "MaxMANA"];
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Stored scaled stats in global array for ReapplyScaledStats (clientId=" @ %aiId @ ", round=" @ %round @ ")");
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Stored scaled stats in global array (clientId=" @ %aiId @ ", botType=" @ %botType @ ", round=" @ %round @ ")");
 		echo("  DEF: " @ %scaledDEF @ ", MDEF: " @ %scaledMDEF @ ", ATK: " @ %scaledATK @ ", DMG: " @ %scaledDMG);
 		if(%storedMaxHP != "" && %storedMaxHP != -1)
 			echo("  MaxHP: " @ %storedMaxHP);
 		if(%storedMaxMANA != "" && %storedMaxMANA != -1)
 			echo("  MaxMANA: " @ %storedMaxMANA);
-		
+		echo("[SEAL BATTLE] ======================== FINAL STATS FOR " @ %botType @ " (Round " @ %round @ ") ========================");
+		echo("[SEAL BATTLE] HP: " @ %maxHP @ " | ATK: " @ %scaledATK @ " | DEF: " @ %scaledDEF @ " | MDEF: " @ %scaledMDEF);
+		echo("[SEAL BATTLE] Multipliers - HP:" @ %multHP @ " ATK:" @ %multATK @ " DEF:" @ %multDEF @ " MDEF:" @ %multMDEF @ " WeaponDmg:" @ %multWeaponDmg @ " SpellDmg:" @ %multSpellDmg);
+		echo("[SEAL BATTLE] ==========================================================================");
+
 		// Mark that stats have been scaled for this round
 		storeData(%aiId, "SealBattleScaledRound", %round);
 	}

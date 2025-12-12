@@ -2998,6 +2998,15 @@ function SpellDamage(%clientId, %targetId, %damageValue, %index)
 {
 	dbecho($dbechoMode, "SpellDamage(" @ %clientId @ ", " @ %targetId @ ", " @ %damageValue @ ", " @ %index @ ")");
 
+	// SEAL BATTLE: Check if caster is a seal battle bot with spell damage multiplier
+	%spellMult = $SealBattleSpellDmgMult[%clientId];
+	if(%spellMult != "" && %spellMult > 0)
+	{
+		%originalDamage = %damageValue;
+		%damageValue = floor(%damageValue * %spellMult);
+		echo("[SEAL BATTLE] SpellDamage: Applied spell damage multiplier " @ %spellMult @ " to caster " @ %clientId @ " (damage: " @ %originalDamage @ " -> " @ %damageValue @ ")");
+	}
+
 	GameBase::virtual(%targetId, "onDamage", $SpellDamageType, %damageValue, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, $Spell::keyword[%index]);
 }
 

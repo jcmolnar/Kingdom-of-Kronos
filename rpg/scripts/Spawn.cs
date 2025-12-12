@@ -1,3 +1,4 @@
+$AI_SPAWN_DEBUG = 0; // Toggle [SPAWN DEBUG] messages in this file
 // ============================================================================
 // CRITICAL FIX #2: Transaction-Based Spawn System
 // ============================================================================

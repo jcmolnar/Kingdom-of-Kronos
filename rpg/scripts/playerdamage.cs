@@ -1,3 +1,4 @@
+$LOOTBAG_DEBUG = 0; // Toggle [DROP RATE DEBUG] messages in this file
 // Helper function to get client ID from a Player object
 // For real players, Player::getClient() returns their client ID
 // For enemy bots, Player::getClient() returns -1, so we need to do a reverse lookup
@@ -28,10 +29,11 @@ function GetClientIdFromPlayerObject(%playerObj)
 					// This means we're processing this specific entity's death/cleanup
 					// Allow it to proceed (e.g., during Player::onKilled() for bot despawn)
 					// Only warn if it's been more than 1 second (to avoid spam during immediate cleanup)
-					if(%timeSinceFreed > 1)
-					{
-						echo("WARNING: GetClientIdFromPlayerObject - Client ID " @ %clientId @ " was recently freed " @ %timeSinceFreed @ "s ago, but reverse verification passed. Allowing for entity cleanup.");
-					}
+				// SUPPRESSED: This warning was causing console spam - it's informational only
+				// if(%timeSinceFreed > 1)
+				// {
+				// 	echo("WARNING: GetClientIdFromPlayerObject - Client ID " @ %clientId @ " was recently freed " @ %timeSinceFreed @ "s ago, but reverse verification passed. Allowing for entity cleanup.");
+				// }
 					return %clientId; // Allow it - we're processing this entity
 				}
 				else
@@ -121,7 +123,7 @@ function GetClientIdFromPlayerObject(%playerObj)
 				// In this case, trust Player::getClient() and return the client ID anyway
 				if(%verifyPlayerObj == -1 || %verifyPlayerObj == "")
 				{
-					// Timing issue - Player object not fully registered yet
+				// Timing issue - Player object not fully registered yet
 					// Player::getClient() returned a client ID, so trust it
 					// Only warn once per client ID to reduce spam
 					if($GetClientIdFromPlayerObject_Warning[%clientId] == "")
@@ -129,6 +131,15 @@ function GetClientIdFromPlayerObject(%playerObj)
 						echo("WARNING: GetClientIdFromPlayerObject - Timing issue detected for client ID " @ %clientId @ ". Player object exists but Client::getOwnedObject returns -1 (Player object not fully registered yet). Using client ID from Player::getClient() anyway.");
 						$GetClientIdFromPlayerObject_Warning[%clientId] = getSimTime();
 						schedule("$GetClientIdFromPlayerObject_Warning[" @ %clientId @ "] = \"\";", 30);
+						
+						// CRITICAL: Schedule a delayed orphan check for this specific client ID
+						// If the timing issue persists after 10 seconds, it's truly an orphaned object
+						// Only schedule if not already scheduled to avoid spam
+						if($OrphanCleanupScheduled[%clientId] == "")
+						{
+							$OrphanCleanupScheduled[%clientId] = true;
+							schedule("CleanupOrphanedClientId(" @ %clientId @ ", " @ %playerObj @ ");", 10);
+						}
 					}
 					return %clientId; // Trust Player::getClient() - timing issue, not a real collision
 				}
@@ -205,36 +216,7 @@ function GetClientIdFromPlayerObject(%playerObj)
 					}
 				}
 				
-				// PHASE 2 FIX: Entity type validation - verify client ID matches expected entity type
-				// PRIORITY: Check bot indicators FIRST (bots can have HasLoadedAndSpawned set, so don't use it for player detection)
-				%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
-				%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
-				%isBot = ((%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1) || 
-				          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) ||
-				          Player::isAiControlled(%checkId) || isRPGAI(%checkId));
-				
-				// Only check for player indicators if NOT a bot
-				%isPlayer = false;
-				if(!%isBot)
-				{
-					%playerName = Client::getName(%checkId);
-					if(%playerName != "" && %playerName != -1)
-					{
-						%characterFile = "temp\\" @ %playerName @ ".cs";
-						if(isFile(%characterFile))
-						{
-							%isPlayer = true;
-						}
-					}
-					// HasLoadedAndSpawned is NOT a reliable player indicator (bots set it too)
-				}
-				
-				// If entity type validation fails, log warning but still return ID (better than returning -1)
-				// This should rarely trigger now since we prioritize bot detection
-				if(%isPlayer && %isBot)
-				{
-					echo("ERROR: GetClientIdFromPlayerObject - Client ID " @ %checkId @ " has conflicting entity type indicators (both player and bot). This may indicate a collision.");
-				}
+				// (Legacy validation removed - unified safeguards prioritize isFile() check elsewhere)
 				
 				%foundClientId = %checkId; // Found client ID for enemy bot or player
 				break;
@@ -295,36 +277,7 @@ function GetClientIdFromPlayerObject(%playerObj)
 						}
 					}
 					
-					// PHASE 2 FIX: Entity type validation - verify client ID matches expected entity type
-					// PRIORITY: Check bot indicators FIRST (bots can have HasLoadedAndSpawned set, so don't use it for player detection)
-					%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
-					%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
-					%isBot = ((%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1) || 
-					          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) ||
-					          Player::isAiControlled(%checkId) || isRPGAI(%checkId));
-					
-					// Only check for player indicators if NOT a bot
-					%isPlayer = false;
-					if(!%isBot)
-					{
-						%playerName = Client::getName(%checkId);
-						if(%playerName != "" && %playerName != -1)
-						{
-							%characterFile = "temp\\" @ %playerName @ ".cs";
-							if(isFile(%characterFile))
-							{
-								%isPlayer = true;
-							}
-						}
-						// HasLoadedAndSpawned is NOT a reliable player indicator (bots set it too)
-					}
-					
-					// If entity type validation fails, log warning but still return ID (better than returning -1)
-					// This should rarely trigger now since we prioritize bot detection
-					if(%isPlayer && %isBot)
-					{
-						echo("ERROR: GetClientIdFromPlayerObject - Client ID " @ %checkId @ " has conflicting entity type indicators (both player and bot). This may indicate a collision.");
-					}
+					// (Legacy validation removed - unified safeguards prioritize isFile() check elsewhere)
 					
 					%foundClientId = %checkId; // Found client ID for enemy bot or player
 					break;
@@ -1403,8 +1356,16 @@ function Player::onKilled(%this)
 								   %origItem == "LVLG" || %origItem == "LVLS" || %origItem == "LVLE")
 									continue; // Loop already increments by 2, so this correctly skips both keyword and its value
 								
-								// Check both registered name and raw name
-								if(%origItem == %registeredItemName || %origItem == %beltItemName)
+								// Check both registered name and raw name (case-insensitive for reliability)
+								// Also check reverse lookup: if OriginalLootString item has a registered name, check that too
+								%origItemRegistered = %origItem;
+								if($BeltItem[%origItem, "Item"] != "")
+									%origItemRegistered = $BeltItem[%origItem, "Item"];
+								
+								if(String::ICompare(%origItem, %registeredItemName) == 0 || 
+								   String::ICompare(%origItem, %beltItemName) == 0 ||
+								   String::ICompare(%origItemRegistered, %registeredItemName) == 0 ||
+								   String::ICompare(%origItemRegistered, %beltItemName) == 0)
 								{
 									%originalCountStr = GetWord(%originalLootString, %k + 1);
 									%originalItemName = %origItem;
@@ -1536,9 +1497,11 @@ function Player::onKilled(%this)
 							}
 							else
 							{
-								// No percentage format - guaranteed drop (100%)
-								%rollSucceeded = true;
-								if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | No percentage format - guaranteed drop (100%)");
+								// No percentage format - this should NOT happen for quest items/key items
+								// Items without percentage format in OriginalLootString are likely configuration errors
+								// For safety, treat as 0% drop rate (don't drop) unless explicitly configured with percentage
+								%rollSucceeded = false;
+								if($LOOTBAG_DEBUG) echo("[DROP RATE DEBUG] Item: " @ %beltItemName @ " | No percentage format in OriginalLootString - treating as 0% drop (configuration error). Item should have format like 'ItemName 1/30' for chance-based drops.");
 							}
 							
 							if(%rollSucceeded)
@@ -2559,6 +2522,7 @@ function Player::onKilled(%this)
 function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%object,%weapon,%preCalcMiss)
 {
 	dbecho($dbechoMode, "Player::onDamage(" @ %this @ ", " @ %type @ ", " @ %value @ ", " @ %pos @ ", " @ %vec @ ", " @ %mom @ ", " @ %vertPos @ ", " @ %rweapon @ ", " @ %object @ ", " @ %weapon @ ", " @ %preCalcMiss @ ")");
+	if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Player::onDamage ENTRY: Victim=" @ %this @ ", ShooterObj=" @ %object @ ", Damage=" @ %value @ ", Type=" @ %type @ ", PreCalcMiss=" @ %preCalcMiss);
 
 	%skilltype = $SkillType[%weapon];
 
@@ -2643,10 +2607,21 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 			if(!%hasLoaded || %spawnInvuln || %nameGuard == "true")
 			{
 				// Hard ignore: exit immediately to prevent any processing, messages, or side effects
+				if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Early Exit: Invuln/Loading/NameGuard. Loaded=" @ %hasLoaded @ " Invuln=" @ %spawnInvuln @ " NameGuard=" @ %nameGuard);
 				return;
 			}
 		}
 
+		// Safe zone guard: if damagedClient is in a safe zone and not in an arena, ignore damage
+		%safeZone = fetchData(%damagedClient, "safeZone");
+		%arena = fetchData(%damagedClient, "arena");
+		%safeZoneGuard = fetchData(%damagedClient, "safeZoneGuard"); // Additional guard for safe zone entry/exit
+		if((%safeZone && !%arena) || %safeZoneGuard)
+		{
+			if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Exit: Safe Zone. SafeZone=" @ %safeZone @ " Arena=" @ %arena @ " SafeGuard=" @ %safeZoneGuard);
+			return;
+		}
+		
 		// %object is the shooter's client ID (for players) or Player object (for AI shooters)
 		// For spell damage, %object might be a client ID, so try to get the Player object
 		%shooterClient = %object;
@@ -2669,6 +2644,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				}
 			}
 		}
+		if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Shooter Resolved: " @ %shooterClient @ " (Original: " @ %object @ ")");
 		
 		%damagedClientPos = GameBase::getPosition(%damagedClient);
 		%shooterClientPos = GameBase::getPosition(%shooterClient);
@@ -3036,6 +3012,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					%initialMiss = false;
 					if(%r <= %x)
 					{
+						if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Calculated MISS! r=" @ %r @ " <= x=" @ %x @ " (Def=" @ %defenderDEF @ " Atk=" @ %attackerSkill @ ")");
 						%isMiss = true;
 						%initialMiss = true;
 					}
@@ -4159,6 +4136,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				// CRITICAL: Include LCK misses (%lckMiss) in $damagedBy so players get EXP credit
 				// Even though LCK protection prevented the damage, the player still "hit" the enemy
 				// and should get credit for the kill if the enemy dies from other damage
+				if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Check Reg Block: Shooter=" @ %shooterClient @ " IsMiss=" @ %isMiss @ " Value=" @ %value @ " TargetDead=" @ %targetIsDead @ " ExpDist=" @ fetchData(%damagedClient, "ExpDistributed"));
 				if( %shooterClient != 0 && !%isMiss)
 				{
 					// CRITICAL: Don't add damage to $damagedBy if the target is already dead
@@ -4172,6 +4150,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					{
 						// Target is dead or EXP already distributed - skip adding to $damagedBy
 						// This prevents late-arriving damage events from being tracked after death
+						if($DamageDebugEnabled) echo("[DAMAGE DEBUG] REJECTED: ExpAlreadyDistributed=" @ %expDistributed @ " Dead=" @ %targetIsDead @ " for " @ %damagedClient);
 					}
 					else
 					{
@@ -4222,6 +4201,8 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							%newDamage = %existingDamageNum + %backupValue;
 							$damagedBy[%dname, %existingIndex] = %sname @ " " @ %newDamage;
 							
+							if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Updated " @ %sname @ " damage on " @ %dname @ " to " @ %newDamage @ " (Index: " @ %existingIndex @ ")");
+
 							// CRITICAL: Reschedule the erase timer when updating existing entry
 							// This ensures the entry doesn't get erased too early, especially for rapid attacks
 							// Note: We can't cancel the old schedule, but scheduling a new one will extend the timer
@@ -4240,11 +4221,13 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							if(%index != "")
 							{
 								$damagedBy[%dname, %index] = %sname @ " " @ %backupValue;
+								if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Added " @ %sname @ " damage on " @ %dname @ ": " @ %backupValue @ " (Index: " @ %index @ ")");
 								schedule("$damagedBy[\"" @ %dname @ "\", " @ %index @ "] = \"\";", $damagedByEraseDelay);
 							}
 							else
 							{
 								//too many hits on waiting list, he doesn't get in on exp.
+								if($DamageDebugEnabled) echo("[DAMAGE DEBUG] FAILED to add " @ %sname @ " damage on " @ %dname @ " - List Full!");
 							}
 						}
 					}

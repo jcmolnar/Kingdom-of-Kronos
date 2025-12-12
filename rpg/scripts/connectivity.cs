@@ -133,6 +133,10 @@ function Server::onClientDisconnect(%clientId)
 {
 	dbecho($dbechoMode2, "Server::onClientDisconnect(" @ %clientId @ ")");
 	
+	// SAFEGUARD: Clear the player's save file cache when they disconnect
+	// This ensures the next client using this ID doesn't inherit a stale cache status
+	ClearPlayerSaveFileCache(%clientId);
+	
 	// Handle zone player count for dynamic bot loading (skip AI bots)
 	if(!Player::isAiControlled(%clientId))
 	{
@@ -252,48 +256,125 @@ function Server::onClientConnect(%clientId)
 
 	dbecho($dbechoMode2, "Server::onClientConnect(" @ %clientId @ ")");
 
-	// CRITICAL: Check if this client ID was previously used by a bot and clean it up
+	// SAFEGUARD OPTIMIZATION: Initialize PlayerHasSaveFile cache
+	// This avoids repeated disk I/O (isFile) checks in IsRealPlayer() and other safeguards
+	// We only cache 'false' if we are certain it's a bot (AI controlled), otherwise leave empty for safety
+	%checkName = Client::getName(%clientId);
+	if(%checkName != "" && %checkName != -1 && isFile("temp\\" @ %checkName @ ".cs"))
+		$PlayerHasSaveFile[%clientId] = true;
+	else if(Player::isAiControlled(%clientId))
+		$PlayerHasSaveFile[%clientId] = false;
+
+	// CRITICAL FIX: Check if this client ID was previously used by a bot and clean it up
 	// This prevents conflicts when a player connects and gets a client ID that was used by a bot
 	%playerObj = Client::getOwnedObject(%clientId);
 	%playerName = Client::getName(%clientId);
+	
+	// PHASE 1 FIX: Check if client ID was recently freed (still being cleaned up)
+	%recentlyFreed = $ClientIdRecentlyFreed[%clientId];
+	if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+	{
+		%currentTime = getSimTime();
+		%timeSinceFreed = %currentTime - %recentlyFreed;
+		if(%timeSinceFreed < 10)
+		{
+			// Client ID was recently freed - wait a bit for cleanup to complete
+			echo("WARNING: Server::onClientConnect - Client ID " @ %clientId @ " was recently freed " @ %timeSinceFreed @ "s ago. Delaying player spawn to allow cleanup...");
+			// Clear the flag and schedule a retry
+			$ClientIdRecentlyFreed[%clientId] = "";
+			schedule("Server::onClientConnect(" @ %clientId @ ");", 1.0);
+			return;
+		}
+		else
+		{
+			// Enough time has passed, clear the flag
+			$ClientIdRecentlyFreed[%clientId] = "";
+		}
+	}
+	
+	// PHASE 1 FIX: Check if an active bot is using this client ID
+	// If a bot Player object exists and is AI-controlled, force cleanup/kill the bot
+	if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
+	{
+		%isAiControlled = Player::isAiControlled(%clientId);
+		%isRPGAI = isRPGAI(%clientId);
+		
+		if(%isAiControlled || %isRPGAI)
+		{
+			// Active bot found at this client ID - this is a collision!
+			%botName = Client::getName(%clientId);
+			echo("CRITICAL: Server::onClientConnect - Client ID " @ %clientId @ " is occupied by active bot '" @ %botName @ "'. Forcing cleanup to prevent collision...");
+			
+			// Force kill/delete the bot
+			if(isObject(%playerObj))
+			{
+				// Mark as no-drop and no-exp to prevent side effects
+				storeData(%clientId, "noDropLootbagFlag", True);
+				storeData(%clientId, "noExperienceFlag", True);
+				// Kill the bot's Player object
+				deleteObject(%playerObj);
+				echo("CRITICAL: Deleted bot Player object " @ %playerObj @ " for client ID " @ %clientId);
+			}
+		}
+	}
 	
 	// Check if this client ID has bot data (indicating it was used by a bot)
 	%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
 	%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
 	
-	// If bot data exists but this is a real player (has a name and isn't a bot), clean up bot data
-	if((%spawnBotInfo != "" || %botInfoAiName != "") && %playerName != "" && %playerName != -1)
+	// UNCONDITIONAL CLEANUP: If *any* bot data exists from a previous session, WIPE IT OUT.
+	// This prevents "Data Leakage" where a new client (Real Player OR New Bot) inherits stale info.
+	// Previously, we only cleaned up if we detected a Real Player, which allowed New Bots to inherit bad data.
+	if(%spawnBotInfo != "" || %botInfoAiName != "" || $EnemyBotData[%clientId, "BotInfoAiName"] != "")
 	{
-		// Check if this is actually a bot (isRPGAI) - if not, it's a real player and we need to clean up
-		if(!isRPGAI(%clientId))
+		echo("WARNING: Server::onClientConnect - Client ID " @ %clientId @ " (" @ %playerName @ ") has stale bot data from previous session. Wiping all data to prevent conflicts.");
+		
+		// Clean up all bot data to prevent conflicts
+		storeData(%clientId, "SpawnBotInfo", "");
+		storeData(%clientId, "SpawnTime", "");
+		storeData(%clientId, "BotInfoAiName", "");
+		storeData(%clientId, "botTeam", "");
+		storeData(%clientId, "zone", "");
+		storeData(%clientId, "tmpzone", "");
+		storeData(%clientId, "noDropLootbagFlag", ""); // Should be cleared too
+		storeData(%clientId, "noExperienceFlag", "");
+		
+		$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
+		$EnemyBotData[%clientId, "SpawnTime"] = "";
+		$EnemyBotData[%clientId, "BotInfoAiName"] = "";
+		$EnemyBotData[%clientId, "zone"] = "";
+		
+		$TownBotData[%clientId, "SpawnBotInfo"] = "";
+		$TownBotData[%clientId, "SpawnTime"] = "";
+		$TownBotData[%clientId, "BotInfoAiName"] = "";
+		$TownBotData[%clientId, "zone"] = "";
+		
+		$ClientData[%clientId, "SpawnBotInfo"] = "";
+		$ClientData[%clientId, "SpawnTime"] = "";
+		$ClientData[%clientId, "BotInfoAiName"] = "";
+		$ClientData[%clientId, "zone"] = "";
+		
+		$BotInfoAiName[%clientId] = "";
+		
+		// Also clean registry for this ID if it exists
+		if($BotRegistry[%clientId] != "")
 		{
-			echo("WARNING: Server::onClientConnect - Client ID " @ %clientId @ " (" @ %playerName @ ") has bot data but is a real player. Cleaning up bot data...");
-			
-			// Clean up all bot data to prevent conflicts
-			storeData(%clientId, "SpawnBotInfo", "");
-			storeData(%clientId, "SpawnTime", "");
-			storeData(%clientId, "BotInfoAiName", "");
-			storeData(%clientId, "botTeam", "");
-			$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
-			$EnemyBotData[%clientId, "SpawnTime"] = "";
-			$EnemyBotData[%clientId, "BotInfoAiName"] = "";
-			$TownBotData[%clientId, "SpawnBotInfo"] = "";
-			$TownBotData[%clientId, "SpawnTime"] = "";
-			$TownBotData[%clientId, "BotInfoAiName"] = "";
-			$ClientData[%clientId, "SpawnBotInfo"] = "";
-			$ClientData[%clientId, "SpawnTime"] = "";
-			$ClientData[%clientId, "BotInfoAiName"] = "";
-			$BotInfoAiName[%clientId] = "";
-			
-			// Clear from town bot tracking if present
-			for(%regIndex = 0; %regIndex < $TownBotRegistryCount; %regIndex++)
+			$BotRegistry[%clientId] = "";
+			// Note: We don't decrement counters here because onClientDrop usually handles it.
+			// If we decrement here, we might double-decrement if onClientDrop ran but didn't clear registry?
+			// But since we are reusing the ID, the previous bot is DEFINITELY gone.
+			// It's safer to just clear the registry entry so this new client isn't tracked as the old bot.
+			echo("Server::onClientConnect - Cleared stale BotRegistry for client " @ %clientId);
+		}
+		
+		// Clear from town bot tracking if present
+		for(%regIndex = 0; %regIndex < $TownBotRegistryCount; %regIndex++)
+		{
+			%regBotName = $TownBotRegistry[%regIndex];
+			if($TownBotSpawned[%regBotName] == %clientId)
 			{
-				%regBotName = $TownBotRegistry[%regIndex];
-				if($TownBotSpawned[%regBotName] == %clientId)
-				{
-					$TownBotSpawned[%regBotName] = "";
-					break;
-				}
+				$TownBotSpawned[%regBotName] = "";
+				break;
 			}
 		}
 	}

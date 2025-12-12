@@ -1,3 +1,4 @@
+$LOOTBAG_DEBUG = 0; // Toggle [LOOTBAG DEBUG] messages in this file
 function String::len(%string)
 {
 	//dbecho($dbechoMode, "String::len(" @ %string @ ")");
@@ -2433,7 +2434,6 @@ function SaveWorldDeployables() {
         $world::rot[%clearIdx] = "";
         $world::team[%clearIdx] = "";
         $world::special[%clearIdx] = "";
-        $world::lootbagTime[%clearIdx] = "";
     }
     $world::objectCount = "";
     
@@ -2541,7 +2541,6 @@ function SaveWorldDeployables() {
                 if (%w1 != "*")
                     %loot = %w0 @ " * " @ String::getSubStr(%loot, String::len(%w0)+String::len(%w1)+2, 99999);
                 $world::special[%ii] = %loot;
-                $world::lootbagTime[%ii] = $lootbagTime[%objID]; // Save timestamp for this lootbag
             }
         }
     }
@@ -2621,7 +2620,6 @@ function SaveWorldDeployables() {
     } else {
         export("world::objectCount", "temp\\" @ $missionName @ "_worldsave_.cs", false);
         export("world::*", "temp\\" @ $missionName @ "_worldsave_.cs", true);
-        export("world::lootbagTime*", "temp\\" @ $missionName @ "_worldsave_.cs", true); // Save lootbag timestamps
     }
     
     // Save server time so timestamps persist across restarts
@@ -2687,14 +2685,7 @@ function LoadWorld() {
             } else if ($world::object[%i] == "DeployableTree") {
                 DeployTree($world::owner[%i], $world::team[%i], $world::pos[%i], $world::rot[%i]);
             } else if ($world::object[%i] == "Lootbag") {
-                %lootbagId = DeployLootbag($world::pos[%i], $world::rot[%i], $world::special[%i]);
-                // Restore the saved timestamp if it exists (for persistent age tracking)
-                if($world::lootbagTime[%i] != "")
-                {
-                    $lootbagTime[%lootbagId] = $world::lootbagTime[%i];
-                }
-                // Clear the saved timestamp variable
-                $world::lootbagTime[%i] = "";
+                DeployLootbag($world::pos[%i], $world::rot[%i], $world::special[%i]);
             }
         }
 
@@ -2747,7 +2738,6 @@ function DeployLootbag(%pos, %rot, %special)
 	%lootbag = newObject("", "Item", "Lootbag", 1, false);
 
 	$loot[%lootbag] = %special;
-	$lootbagTime[%lootbag] = GetPersistentTime(); // Store creation timestamp for age checking (persistent across restarts)
 
  	addToSet("MissionCleanup", %lootbag);
 	
@@ -2765,7 +2755,7 @@ function DeployLootbag(%pos, %rot, %special)
 //=============================================================================
 
 $LootbagAggregateRadius = 25;      // Distance within which lootbags are merged
-$LootbagAggregateInterval = 120;   // Interval in seconds (120 = 2 minutes)
+$LootbagAggregateInterval = 60;    // Interval in seconds (60 = 1 minute)
 
 // Helper: determine if a lootbag owner name belongs to a bot (enemy or town)
 function IsLootOwnerBot(%ownerName)
@@ -3051,8 +3041,8 @@ function AggregateLootbags()
 	if($LootbagAggregateSaveScheduled == "")
 	{
 		$LootbagAggregateSaveScheduled = true;
-		schedule("SaveWorldDeployables(); $LootbagAggregateSaveScheduled = \"\";", 30);
-		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE] Scheduled SaveWorldDeployables in 30s after aggregation");
+		schedule("SaveWorldDeployables(); $LootbagAggregateSaveScheduled = \"\";", 5);
+		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE] Scheduled SaveWorldDeployables in 5s after aggregation");
 	}
 	
 	// Schedule next run
@@ -3383,6 +3373,8 @@ function clipTrailingNumbers(%str)
 
 function UpdateAppearance(%clientId)
 {
+	%clientName = Client::getName(%clientId);
+	echo("[ARMOR DEBUG] UpdateAppearance CALLED for clientId=" @ %clientId @ " name='" @ %clientName @ "'");
 	dbecho($dbechoMode, "UpdateAppearance(" @ %clientId @ ")");
 
 	// CRITICAL: Validate player object exists before proceeding
@@ -3390,6 +3382,14 @@ function UpdateAppearance(%clientId)
 	if(%player == -1 || %player == "")
 	{
 		// Player object doesn't exist (player/bot was deleted)
+		return;
+	}
+	
+	// CRITICAL FIX: Check explicit flag on player object (most robust)
+	if(%player.isTownBot == "true" || %player.isTownBot == true)
+	{
+		// This is definitely a town bot - skip
+		dbecho($dbechoMode, "UpdateAppearance skipped for bot " @ %clientId @ " (isTownBot flag set)");
 		return;
 	}
 
@@ -3482,12 +3482,10 @@ function UpdateAppearance(%clientId)
 		%armor = -1;
 	}
 
-	if(Client::getSkinBase(%clientId) != %skinbase)
-		Client::setSkin(%clientId, %skinbase);
-
 	//=================================
-	// Update player model
+	// Update player model (Armor)
 	//=================================
+	// CRITICAL: Set Armor FIRST because it might reset the skin
 	if(%armor != -1)
 		%p = %race @ %apm @ %cw;
 
@@ -3498,6 +3496,13 @@ function UpdateAppearance(%clientId)
 		Player::setArmor(%clientId, %p);
 		GameBase::setEnergy(%player, %ae);
 	}
+	
+	//=================================
+	// Update skin (After Armor)
+	//=================================
+	// CRITICAL FIX: Set skin AFTER armor change to prevent reversion to default/enemy skin
+	if(Client::getSkinBase(%clientId) != %skinbase)
+		Client::setSkin(%clientId, %skinbase);
 
 	//=================================
 	// Update shields and Orb
@@ -4972,7 +4977,21 @@ function RefreshAllEnemyBot(%clientId)
 	}
 
 //	echo("DEBUG RefreshAll: Calling UpdateAppearance...");
-	UpdateAppearance(%clientId);
+	// CRITICAL: Skip UpdateAppearance for bots - they have their armor set during spawn
+	// UpdateAppearance was a legacy workaround for non-engine spawning that caused
+	// town bots to have their armor changed to AdminArmor immediately after spawn
+	%isBot = isRPGAI(%clientId);
+	%clientName = Client::getName(%clientId);
+	echo("[TOWNBOT ARMOR DEBUG] RefreshAll: clientId=" @ %clientId @ " name='" @ %clientName @ "' isRPGAI=" @ %isBot);
+	if(!%isBot)
+	{
+		echo("[TOWNBOT ARMOR DEBUG] RefreshAll: Calling UpdateAppearance for " @ %clientId);
+		UpdateAppearance(%clientId);
+	}
+	else
+	{
+		echo("[TOWNBOT ARMOR DEBUG] RefreshAll: SKIPPING UpdateAppearance for bot " @ %clientId);
+	}
 //	echo("DEBUG RefreshAll: UpdateAppearance completed");
 
 //	echo("DEBUG RefreshAll: Calling refreshHPREGEN...");

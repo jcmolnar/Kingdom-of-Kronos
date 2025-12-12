@@ -49,6 +49,177 @@ $ActiveEnemyBots = 0;         // Count of active enemy bots (Player objects with
 $ActiveTownBots = 0;          // Count of active town bots (Drones with BotInfoAiName, no SpawnBotInfo)
 
 // ============================================================================
+// SPAWN TELEMETRY COUNTERS
+// Track spawn attempts, successes, and failures for diagnostics
+// ============================================================================
+$Telemetry_SpawnAttempts = 0;        // Total spawn attempts
+$Telemetry_SpawnSuccess = 0;         // Successful spawns
+$Telemetry_SpawnFailed = 0;          // Failed spawns
+$Telemetry_SpawnFailedTownBot = 0;   // Failed due to town bot conflict
+$Telemetry_SpawnFailedClientId = 0;  // Failed due to client ID issues
+$Telemetry_SpawnFailedOther = 0;     // Failed for other reasons
+$Telemetry_DeathsProcessed = 0;      // Bot deaths processed
+$Telemetry_AINumbersFreed = 0;       // AI numbers successfully freed
+$Telemetry_AINumberOrphans = 0;      // AI numbers that couldn't be freed
+
+function Telemetry_RecordSpawnAttempt() { $Telemetry_SpawnAttempts++; }
+function Telemetry_RecordSpawnSuccess() { $Telemetry_SpawnSuccess++; }
+function Telemetry_RecordSpawnFailed(%reason)
+{
+	$Telemetry_SpawnFailed++;
+	if(%reason == "townbot")
+		$Telemetry_SpawnFailedTownBot++;
+	else if(%reason == "clientid")
+		$Telemetry_SpawnFailedClientId++;
+	else
+		$Telemetry_SpawnFailedOther++;
+}
+function Telemetry_RecordDeath() { $Telemetry_DeathsProcessed++; }
+function Telemetry_RecordAINumberFreed() { $Telemetry_AINumbersFreed++; }
+function Telemetry_RecordAINumberOrphan() { $Telemetry_AINumberOrphans++; }
+function Telemetry_Reset()
+{
+	$Telemetry_SpawnAttempts = 0;
+	$Telemetry_SpawnSuccess = 0;
+	$Telemetry_SpawnFailed = 0;
+	$Telemetry_SpawnFailedTownBot = 0;
+	$Telemetry_SpawnFailedClientId = 0;
+	$Telemetry_SpawnFailedOther = 0;
+	$Telemetry_DeathsProcessed = 0;
+	$Telemetry_AINumbersFreed = 0;
+	$Telemetry_AINumberOrphans = 0;
+}
+
+// ============================================================================
+// PERIODIC AI NUMBER RECONCILIATION
+// Runs every 5 minutes to clean up orphaned AI numbers from $aiNumTable
+// ============================================================================
+$AINumberReconciliationEnabled = true;  // Set to false to disable
+
+function StartAINumberReconciliation()
+{
+	if($AINumberReconciliationEnabled)
+	{
+		schedule("PeriodicAINumberReconciliation();", 300);  // 5 minutes
+		echo("[AI RECONCILIATION] Started periodic AI number reconciliation (every 5 minutes)");
+	}
+}
+
+function PeriodicAINumberReconciliation()
+{
+	if(!$AINumberReconciliationEnabled)
+		return;
+	
+	%freedCount = 0;
+	%checkedCount = 0;
+	
+	// Get list of live bot names
+	%liveBotNames = "";
+	%botList = GetBotIdList();
+	if(%botList != "")
+	{
+		for(%i = 0; (%botId = GetWord(%botList, %i)) != -1; %i++)
+		{
+			%botName = fetchData(%botId, "BotInfoAiName");
+			if(%botName != "" && %botName != -1 && %botName != "0")
+				%liveBotNames = %liveBotNames @ %botName @ " ";
+		}
+	}
+	
+	// Scan $aiNumTable for reserved numbers
+	for(%n = 0; %n <= 500; %n++)
+	{
+		if($aiNumTable[%n] != "" && $aiNumTable[%n] != -1)
+		{
+			%checkedCount++;
+			
+			// Check if any live bot uses this number
+			%isOrphaned = true;
+			for(%k = 0; (%liveName = GetWord(%liveBotNames, %k)) != -1; %k++)
+			{
+				if($tmpbotn[%liveName] == %n)
+				{
+					%isOrphaned = false;
+					break;
+				}
+			}
+			
+			if(%isOrphaned)
+			{
+				$aiNumTable[%n] = "";
+				%freedCount++;
+			}
+		}
+	}
+	
+	if(%freedCount > 0)
+		echo("[AI RECONCILIATION] Freed " @ %freedCount @ " orphaned AI numbers (checked " @ %checkedCount @ ")");
+	
+	// Schedule next run
+	schedule("PeriodicAINumberReconciliation();", 300);  // 5 minutes
+}
+
+// ============================================================================
+// PRE-INDEXED BOT LOOKUP TABLES
+// Provides O(1) access to bot data by clientId and by aiName
+// ============================================================================
+// $BotIndex_ClientToName[clientId] = aiName
+// $BotIndex_NameToClient[aiName] = clientId
+// $BotIndex_SpawnPointBots[spawnPointId] = "clientId1 clientId2 ..."
+
+function BotIndex_Add(%clientId, %aiName, %spawnPointId)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+	
+	$BotIndex_ClientToName[%clientId] = %aiName;
+	if(%aiName != "" && %aiName != -1)
+		$BotIndex_NameToClient[%aiName] = %clientId;
+	
+	if(%spawnPointId != "" && %spawnPointId != -1)
+	{
+		%existing = $BotIndex_SpawnPointBots[%spawnPointId];
+		if(%existing == "")
+			$BotIndex_SpawnPointBots[%spawnPointId] = %clientId;
+		else
+			$BotIndex_SpawnPointBots[%spawnPointId] = %existing @ " " @ %clientId;
+	}
+}
+
+function BotIndex_Remove(%clientId)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+	
+	%aiName = $BotIndex_ClientToName[%clientId];
+	$BotIndex_ClientToName[%clientId] = "";
+	if(%aiName != "" && %aiName != -1)
+		$BotIndex_NameToClient[%aiName] = "";
+	
+	%spawnPointId = $BotRegistry[%clientId];
+	if(%spawnPointId != "" && %spawnPointId != -1)
+	{
+		%existing = $BotIndex_SpawnPointBots[%spawnPointId];
+		%newList = "";
+		for(%i = 0; (%id = GetWord(%existing, %i)) != -1; %i++)
+		{
+			if(%id != %clientId)
+			{
+				if(%newList == "")
+					%newList = %id;
+				else
+					%newList = %newList @ " " @ %id;
+			}
+		}
+		$BotIndex_SpawnPointBots[%spawnPointId] = %newList;
+	}
+}
+
+function BotIndex_GetNameByClient(%clientId) { return $BotIndex_ClientToName[%clientId]; }
+function BotIndex_GetClientByName(%aiName) { return $BotIndex_NameToClient[%aiName]; }
+function BotIndex_GetBotsBySpawnPoint(%spawnPointId) { return $BotIndex_SpawnPointBots[%spawnPointId]; }
+
+// ============================================================================
 // CENTRALIZED BOT REGISTRY SYSTEM
 // This is the authoritative source for bot tracking and spawn counter management
 // ============================================================================
@@ -367,6 +538,9 @@ function RegisterBot(%clientId, %spawnPointId, %team, %aiName)
 			$BotRegistryList = $BotRegistryList @ " " @ %clientId;
 	}
 	
+	// Add to O(1) lookup index
+	BotIndex_Add(%clientId, %aiName, %spawnPointId);
+	
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT REGISTRY] Registered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", team=" @ %team @ ", name=" @ %aiName);
 }
 
@@ -376,16 +550,46 @@ function UnregisterBot(%clientId)
 	if(%clientId == "" || %clientId == -1)
 		return;
 	
+	// Remove from O(1) lookup index (call before clearing registry entries)
+	BotIndex_Remove(%clientId);
+	
 	%spawnPointId = $BotRegistry[%clientId];
 	%aiName = $BotRegistry[%clientId, "name"];
+	
+	// Also try to get name from storeData if not in registry
+	if(%aiName == "" || %aiName == -1)
+		%aiName = fetchData(%clientId, "BotInfoAiName");
+	
+	echo("[BOT REGISTRY DEBUG] UnregisterBot called: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName);
 	
 	// Clear registry entries
 	$BotRegistry[%clientId] = "";
 	$BotRegistry[%clientId, "team"] = "";
 	$BotRegistry[%clientId, "name"] = "";
 	
+	// CRITICAL: Clear ALL storeData entries that identify this as a bot
+	// This prevents shell bot detection in FindPlayerInBotGroup
+	storeData(%clientId, "BotInfoAiName", "");
+	storeData(%clientId, "SpawnBotInfo", "");
+	storeData(%clientId, "SpawnTime", "");
+	
+	// CRITICAL: Clear $EnemyBotData arrays
+	$EnemyBotData[%clientId, "BotInfoAiName"] = "";
+	$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
+	$EnemyBotData[%clientId, "SpawnTime"] = "";
+	$EnemyBotData[%clientId, "zone"] = "";
+	
+	// CRITICAL: Clear $ClientData for backwards compatibility
+	$ClientData[%clientId, "BotInfoAiName"] = "";
+	$ClientData[%clientId, "SpawnBotInfo"] = "";
+	$ClientData[%clientId, "SpawnTime"] = "";
+	
+	// CRITICAL: Clear direct array for fast lookup
+	$BotInfoAiName[%clientId] = "";
+	
 	// Remove from registry list
 	%newList = "";
+	%foundInList = false;
 	for(%i = 0; GetWord($BotRegistryList, %i) != -1; %i++)
 	{
 		%id = GetWord($BotRegistryList, %i);
@@ -396,10 +600,56 @@ function UnregisterBot(%clientId)
 			else
 				%newList = %newList @ " " @ %id;
 		}
+		else
+		{
+			%foundInList = true;
+		}
 	}
 	$BotRegistryList = %newList;
 	
-	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT REGISTRY] Unregistered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName);
+	// CRITICAL: Also delete any orphaned player objects for this client ID
+	// This handles the case where Player::getClient(obj) returns clientId but Client::getOwnedObject(clientId) returns -1
+	// Scan BotGroup
+	if(isObject("BotGroup"))
+	{
+		%group = nameToID("BotGroup");
+		%count = Group::objectCount(%group);
+		for(%i = %count - 1; %i >= 0; %i--)
+		{
+			%obj = Group::getObject(%group, %i);
+			if(!isObject(%obj)) continue;
+			if(getObjectType(%obj) != "Player") continue;
+			
+			%objClientId = Player::getClient(%obj);
+			if(%objClientId == %clientId)
+			{
+				echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in BotGroup for clientId=" @ %clientId @ " - deleting");
+				deleteObject(%obj);
+			}
+		}
+	}
+	
+	// CRITICAL: Also scan MissionCleanup since orphaned objects end up there
+	if(isObject("MissionCleanup"))
+	{
+		%group = nameToID("MissionCleanup");
+		%count = Group::objectCount(%group);
+		for(%i = %count - 1; %i >= 0; %i--)
+		{
+			%obj = Group::getObject(%group, %i);
+			if(!isObject(%obj)) continue;
+			if(getObjectType(%obj) != "Player") continue;
+			
+			%objClientId = Player::getClient(%obj);
+			if(%objClientId == %clientId)
+			{
+				echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " - deleting");
+				deleteObject(%obj);
+			}
+		}
+	}
+	
+	echo("[BOT REGISTRY] Unregistered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName @ ", wasInList=" @ %foundInList);
 }
 
 // Get spawn point for a bot from registry
@@ -420,7 +670,6 @@ function IsBotRegistered(%clientId)
 	return false;
 }
 
-// Get count of registered bots for a specific spawn point
 function GetRegisteredBotCount(%spawnPointId)
 {
 	%count = 0;
@@ -431,6 +680,210 @@ function GetRegisteredBotCount(%spawnPointId)
 			%count++;
 	}
 	return %count;
+}
+
+// Cleanup a specific orphaned client ID - called via schedule after timing issue is detected
+// This checks if the timing issue persisted (indicating a true orphan) and deletes the object if so
+function CleanupOrphanedClientId(%clientId, %originalPlayerObj)
+{
+	// Clear the scheduled flag
+	$OrphanCleanupScheduled[%clientId] = "";
+	
+	// First, verify Client::getOwnedObject still returns -1 (timing issue persisted)
+	%currentOwnedObj = Client::getOwnedObject(%clientId);
+	if(%currentOwnedObj != -1 && %currentOwnedObj != "")
+	{
+		// Timing issue resolved - client now owns an object, no cleanup needed
+		return;
+	}
+	
+	// Timing issue persisted - this is truly an orphaned object
+	// Check if the original player object still exists and still claims this client ID
+	if(isObject(%originalPlayerObj))
+	{
+		%objClientId = Player::getClient(%originalPlayerObj);
+		if(%objClientId == %clientId)
+		{
+			// Verify this is not a real player before deleting
+			if(!IsRealPlayer(%clientId))
+			{
+				%dataName = GameBase::getDataName(%originalPlayerObj);
+				echo("[ORPHAN CLEANUP] Delayed cleanup: Object " @ %originalPlayerObj @ " (data=" @ %dataName @ ") is still orphaned for clientId=" @ %clientId @ " after 10s - deleting");
+				deleteObject(%originalPlayerObj);
+			}
+			else
+			{
+				echo("[ORPHAN CLEANUP] Delayed cleanup: Object " @ %originalPlayerObj @ " for clientId=" @ %clientId @ " - SKIPPED (IsRealPlayer=true)");
+			}
+		}
+	}
+	
+	// Also scan for any other orphaned objects with this client ID (there might be multiple)
+	if(isObject("MissionCleanup"))
+	{
+		%group = nameToID("MissionCleanup");
+		%count = Group::objectCount(%group);
+		for(%i = %count - 1; %i >= 0; %i--)
+		{
+			%obj = Group::getObject(%group, %i);
+			if(!isObject(%obj)) continue;
+			if(getObjectType(%obj) != "Player") continue;
+			if(%obj == %originalPlayerObj) continue; // Already handled above
+			
+			%objClientId = Player::getClient(%obj);
+			if(%objClientId == %clientId)
+			{
+				if(!IsRealPlayer(%clientId))
+				{
+					%dataName = GameBase::getDataName(%obj);
+					echo("[ORPHAN CLEANUP] Delayed cleanup: Additional orphaned object " @ %obj @ " (data=" @ %dataName @ ") found for clientId=" @ %clientId @ " - deleting");
+					deleteObject(%obj);
+				}
+			}
+		}
+	}
+}
+
+// Debug function to dump the entire bot registry state
+// Call with: DumpBotRegistry();
+function DumpBotRegistry()
+{
+	echo("==================================================");
+	echo(" BOT REGISTRY DUMP");
+	echo("==================================================");
+	echo(" $BotRegistryList: '" @ $BotRegistryList @ "'");
+	echo(" Total entries: " @ GetWordCount($BotRegistryList));
+	echo("--------------------------------------------------");
+	
+	for(%i = 0; GetWord($BotRegistryList, %i) != -1; %i++)
+	{
+		%clientId = GetWord($BotRegistryList, %i);
+		%spawnPoint = $BotRegistry[%clientId];
+		%team = $BotRegistry[%clientId, "team"];
+		%name = $BotRegistry[%clientId, "name"];
+		%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+		%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+		%playerObj = Client::getOwnedObject(%clientId);
+		%clientName = Client::getName(%clientId);
+		
+		echo(" [" @ %i @ "] clientId=" @ %clientId);
+		echo("     Registry: spawnPoint='" @ %spawnPoint @ "', team='" @ %team @ "', name='" @ %name @ "'");
+		echo("     StoreData: BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'");
+		echo("     Engine: playerObj=" @ %playerObj @ ", clientName='" @ %clientName @ "'");
+		
+		if(%playerObj == -1 || %playerObj == "")
+			echo("     STATUS: >>> SHELL BOT (no player object) <<<");
+		else if(%spawnPoint == "" && %botInfoAiName == "")
+			echo("     STATUS: >>> ZOMBIE (in list but no data) <<<");
+	}
+	echo("==================================================");
+}
+
+// Clean up orphaned bot objects that exist in the world but have broken client associations
+// This happens when: Player::getClient(obj) returns a clientId, but Client::getOwnedObject(clientId) returns -1
+// Call with: CleanupOrphanedBotObjects();
+function CleanupOrphanedBotObjects()
+{
+	echo("==================================================");
+	echo(" ORPHANED BOT CLEANUP");
+	echo("==================================================");
+	
+	%cleanedCount = 0;
+	%checkedCount = 0;
+	
+	// Scan BotGroup first
+	if(isObject("BotGroup"))
+	{
+		%group = nameToID("BotGroup");
+		%count = Group::objectCount(%group);
+		echo(" Scanning BotGroup (" @ %count @ " objects)...");
+		
+		// Iterate backwards to safely delete
+		for(%i = %count - 1; %i >= 0; %i--)
+		{
+			%obj = Group::getObject(%group, %i);
+			if(!isObject(%obj)) continue;
+			if(getObjectType(%obj) != "Player") continue;
+			
+			%checkedCount++;
+			%clientId = Player::getClient(%obj);
+			
+			if(%clientId != -1 && %clientId != "")
+			{
+				%ownedObj = Client::getOwnedObject(%clientId);
+				
+				// ORPHAN DETECTED: Object thinks it belongs to client, but client doesn't own it
+				if(%ownedObj == -1 || %ownedObj == "")
+				{
+					%dataName = GameBase::getDataName(%obj);
+					%pos = GameBase::getPosition(%obj);
+					echo(" [ORPHAN] Object " @ %obj @ " (data=" @ %dataName @ ") claims clientId=" @ %clientId @ " but Client::getOwnedObject returns -1");
+					echo("          Position: " @ %pos);
+					
+					// SAFEGUARD: Verify this is not a real player
+					if(!IsRealPlayer(%clientId))
+					{
+						echo("          ACTION: Deleting orphaned bot object...");
+						deleteObject(%obj);
+						%cleanedCount++;
+					}
+					else
+					{
+						echo("          ACTION: SKIPPED - IsRealPlayer returned true (protected)");
+					}
+				}
+			}
+		}
+	}
+	
+	// Also scan MissionCleanup for any missed orphans
+	if(isObject("MissionCleanup"))
+	{
+		%group = nameToID("MissionCleanup");
+		%count = Group::objectCount(%group);
+		echo(" Scanning MissionCleanup (" @ %count @ " objects)...");
+		
+		for(%i = %count - 1; %i >= 0; %i--)
+		{
+			%obj = Group::getObject(%group, %i);
+			if(!isObject(%obj)) continue;
+			if(getObjectType(%obj) != "Player") continue;
+			
+			%checkedCount++;
+			%clientId = Player::getClient(%obj);
+			
+			if(%clientId != -1 && %clientId != "" && %clientId > 2048)  // Only bot client IDs
+			{
+				%ownedObj = Client::getOwnedObject(%clientId);
+				
+				if(%ownedObj == -1 || %ownedObj == "")
+				{
+					%dataName = GameBase::getDataName(%obj);
+					%pos = GameBase::getPosition(%obj);
+					echo(" [ORPHAN] Object " @ %obj @ " (data=" @ %dataName @ ") claims clientId=" @ %clientId @ " but Client::getOwnedObject returns -1");
+					echo("          Position: " @ %pos);
+					
+					if(!IsRealPlayer(%clientId))
+					{
+						echo("          ACTION: Deleting orphaned bot object...");
+						deleteObject(%obj);
+						%cleanedCount++;
+					}
+					else
+					{
+						echo("          ACTION: SKIPPED - IsRealPlayer returned true (protected)");
+					}
+				}
+			}
+		}
+	}
+	
+	echo("--------------------------------------------------");
+	echo(" Checked: " @ %checkedCount @ " player objects");
+	echo(" Cleaned: " @ %cleanedCount @ " orphaned objects");
+	echo("==================================================");
+	
+	return %cleanedCount;
 }
 
 // ============================================================================
@@ -451,38 +904,21 @@ function GetRegisteredBotCount(%spawnPointId)
 
 // IsRealPlayer: Quick check to determine if a client ID belongs to a real player
 // Returns: true if real player, false if bot
-// Use this for fast checks where you only need to know if something is a player
+// Updated to handle "Ghost Bots" (disconnected bots that lose isAiControlled status but have lingering data)
 function IsRealPlayer(%clientId)
 {
 	if(%clientId == "" || %clientId == -1)
 		return false;
-	
-	// Priority 1: Engine check (fastest) - if NOT AI-controlled, it's a player
-	if(!Player::isAiControlled(%clientId))
-	{
-		if($Debug::SafeGuards)
-			echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " is NOT AI-controlled = REAL PLAYER");
-		return true;
-	}
-	
-	// Priority 2: Client ID in player range (2048 and below)
-	if(%clientId <= 2048)
-	{
-		if($Debug::SafeGuards)
-			echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " is in player range (<= 2048) = REAL PLAYER");
-		return true;
-	}
-	
-	// Priority 3: Save file check (mod-specific, most reliable for RPG)
-	// Check cache first, then filesystem
+		
+	// Priority 1: Save file check (Ultimate Truth for RPG Mod)
+	// We check this FIRST because Ghost Bots are !isAiControlled (like players) but !isFile (unlike players)
 	%playerName = Client::getName(%clientId);
 	if(%playerName != "" && %playerName != -1)
 	{
 		// Check cache first (set at connection time)
 		if($PlayerHasSaveFile[%clientId] == true || $PlayerHasSaveFile[%clientId] == "1")
 		{
-			if($Debug::SafeGuards)
-				echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " has cached save file = REAL PLAYER");
+			if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " has cached save file = REAL PLAYER");
 			return true;
 		}
 		
@@ -491,13 +927,41 @@ function IsRealPlayer(%clientId)
 		{
 			// Update cache for future checks
 			$PlayerHasSaveFile[%clientId] = true;
-			echo("[CRITICAL] IsRealPlayer: Client " @ %clientId @ " (" @ %playerName @ ") has save file = REAL PLAYER");
+			if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " (" @ %playerName @ ") has save file = REAL PLAYER");
 			return true;
 		}
 	}
 	
-	// Not a real player
-	return false;
+	// Priority 2: Engine check
+	// If the engine knows it's AI, it's definitely not a real player
+	if(Player::isAiControlled(%clientId))
+	{
+		return false;
+	}
+	
+	// Priority 3: Ghost Bot Check
+	// If execution reaches here, it is NOT AI-controlled (could be Real Player OR Ghost Bot)
+	// We distinguish them by checking for lingering bot data
+	%botInfo = fetchData(%clientId, "BotInfoAiName");
+	%spawnInfo = fetchData(%clientId, "SpawnBotInfo");
+	if((%botInfo != "" && %botInfo != -1 && %botInfo != "0") || (%spawnInfo != "" && %spawnInfo != -1 && %spawnInfo != "0"))
+	{
+		// It has bot data but no save file -> It is a Ghost Bot
+		if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " has data '" @ %botInfo @ "'/'" @ %spawnInfo @ "' but !isAiControlled = GHOST BOT (Not Real)");
+		return false;
+	}
+	
+	// Priority 4: Client ID in player range (2048 and below)
+	// If it has no save file and no bot data, but is in player range -> Assume Real Player (Safety)
+	if(%clientId <= 2048)
+	{
+		if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " is in player range (<= 2048) = REAL PLAYER");
+		return true;
+	}
+	
+	// Fallback: If we can't prove it's a bot, assume it's a player for safety
+	if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " fallback safety check = REAL PLAYER");
+	return true;
 }
 
 // IsSafeToModify: Master safeguard function - checks if safe to modify a client ID
@@ -513,10 +977,20 @@ function IsSafeToModify(%clientId, %operation)
 	}
 	
 	// Layer 1: Engine check (fastest, most reliable)
-	if(!Player::isAiControlled(%clientId))
+	if(Player::isAiControlled(%clientId))
 	{
-		echo("[BLOCKED] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " is NOT AI-controlled - REAL PLAYER PROTECTED");
-		return false;
+		// Is AI -> Safe to modify
+	}
+	else
+	{
+		// Not AI controlled - could be Real Player OR Ghost Bot
+		// Use IsRealPlayer() which now handles Ghost Bot detection
+		if(IsRealPlayer(%clientId))
+		{
+			echo("[BLOCKED] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " detected as REAL PLAYER - PROTECTED");
+			return false;
+		}
+		// If IsRealPlayer returns false here, it's a Ghost Bot -> Safe to modify (cleanup)
 	}
 	
 	// Layer 2: Client ID range (bot range is 2049+)
@@ -553,6 +1027,64 @@ function IsSafeToModify(%clientId, %operation)
 	return true;
 }
 
+// IsSafeToModifyForEnemyBot: Extended safeguard for enemy bot operations
+// This protects BOTH real players AND town bots from being modified/deleted by enemy bot logic
+// Use this in enemy bot spawn/cleanup paths to prevent town bot conflicts
+// Returns: true if safe to modify (is an enemy bot or stale data), false if PROTECTED
+function IsSafeToModifyForEnemyBot(%clientId, %operation)
+{
+	if(%clientId == "" || %clientId == -1)
+	{
+		if($Debug::SafeGuards)
+			echo("[SAFEGUARD] IsSafeToModifyForEnemyBot [" @ %operation @ "]: Invalid clientId - returning false");
+		return false;
+	}
+	
+	// Layer 1: Check if it's a real player (existing protection)
+	if(!IsSafeToModify(%clientId, %operation))
+	{
+		// Already blocked by real player protection
+		return false;
+	}
+	
+	// Layer 2: CRITICAL - Check if this is an active town bot
+	// Town bots pass IsSafeToModify() because they're AI-controlled, but we don't want to despawn them
+	if(isTownBot(%clientId))
+	{
+		// Verify the town bot is actually alive (has valid player object)
+		%townBotPlayerObj = Client::getOwnedObject(%clientId);
+		if(%townBotPlayerObj != "" && %townBotPlayerObj != -1 && isObject(%townBotPlayerObj))
+		{
+			// Active town bot - PROTECT IT
+			echo("[BLOCKED] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " is an ACTIVE TOWN BOT - PROTECTED from enemy bot operations");
+			return false;
+		}
+		// Town bot is dead/invalid - safe to clean up its data
+		if($Debug::SafeGuards)
+			echo("[SAFEGUARD] IsSafeToModifyForEnemyBot [" @ %operation @ "]: Client " @ %clientId @ " is a dead/stale town bot - OK to cleanup");
+	}
+	
+	// Layer 3: Check $TownBotSpawned registry directly (belt and suspenders)
+	for(%i = 0; (%botName = GetWord($TownBotRegistry, %i)) != -1; %i++)
+	{
+		if($TownBotSpawned[%botName] == %clientId)
+		{
+			// This client ID is registered to a town bot
+			%townBotPlayerObj = Client::getOwnedObject(%clientId);
+			if(%townBotPlayerObj != "" && %townBotPlayerObj != -1 && isObject(%townBotPlayerObj))
+			{
+				echo("[BLOCKED] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " is registered to ACTIVE town bot '" @ %botName @ "' - PROTECTED");
+				return false;
+			}
+		}
+	}
+	
+	// All checks passed - safe to modify for enemy bot purposes
+	if($Debug::SafeGuards)
+		echo("[SAFEGUARD] IsSafeToModifyForEnemyBot [" @ %operation @ "]: Client " @ %clientId @ " is NOT a protected entity - OK to modify");
+	return true;
+}
+
 // IsSafeToDeletePlayerObject: Specific safeguard for player object deletion
 // This is the most critical safeguard - used before deleteObject() on player objects
 // Returns: true if safe to delete (object belongs to a bot), false if UNSAFE
@@ -569,8 +1101,21 @@ function IsSafeToDeletePlayerObject(%playerObj, %clientId, %operation)
 	// Layer 1: Engine check on player object directly (most reliable)
 	if(!Player::isAiControlled(%playerObj))
 	{
-		echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: PlayerObj " @ %playerObj @ " is NOT AI-controlled - REAL PLAYER OBJECT PROTECTED");
-		return false;
+		// Exception: Ghost Bots
+		// If the provided %clientId is confirmed to be a Bot (via IsRealPlayer, logic includes ghost check),
+		// we allow proceeding to subsequent layers (which will double-check save files).
+		%isGhostException = false;
+		if(%clientId != "" && %clientId != -1)
+		{
+			if(!IsRealPlayer(%clientId))
+				%isGhostException = true;
+		}
+		
+		if(!%isGhostException)
+		{
+			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: PlayerObj " @ %playerObj @ " is NOT AI-controlled - REAL PLAYER OBJECT PROTECTED");
+			return false;
+		}
 	}
 	
 	// Layer 2: If clientId provided, verify it's in bot range
@@ -1009,19 +1554,9 @@ function StartSpawnCounterReconciliation()
 
 function PreSpawnCleanup(%clientId)
 {
-	// Hard guard: never touch real players (non-AI or players with a save file)
-	if(%clientId == "" || %clientId == -1)
+	// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
+	if(!IsSafeToModify(%clientId, "PreSpawnCleanup"))
 		return;
-	if(!Player::isAiControlled(%clientId))
-	{
-		%playerNameCheck = Client::getName(%clientId);
-		if(%playerNameCheck != "" && %playerNameCheck != -1)
-		{
-			%characterFile = "temp\\" @ %playerNameCheck @ ".cs";
-			if(isFile(%characterFile))
-				return; // real player with save file
-		}
-	}
 	
 	if(%clientId == "" || %clientId == -1)
 		return;
@@ -1032,36 +1567,7 @@ function PreSpawnCleanup(%clientId)
 	%pobj = Client::getOwnedObject(%clientId);
 	if(%pobj != -1 && %pobj != "" && isObject(%pobj))
 	{
-		// CRITICAL: Final verification immediately before deletion (prevents race condition)
-		// Re-check save file one more time to ensure a real player didn't connect between checks
-		%finalNameCheck = Client::getName(%clientId);
-		if(%finalNameCheck != "" && %finalNameCheck != -1)
-		{
-			%finalCharacterFile = "temp\\" @ %finalNameCheck @ ".cs";
-			if(isFile(%finalCharacterFile))
-			{
-				echo("[PRE-SPAWN CLEANUP] CRITICAL SAFEGUARD - Real player " @ %finalNameCheck @ " (clientId=" @ %clientId @ ") detected immediately before deletion. Aborting to prevent data loss.");
-				return; // Abort immediately
-			}
-		}
-		
-		// Additional check: Verify this is not a connected real player
-		%isConnected = false;
-		for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
-		{
-			if(%cl == %clientId)
-			{
-				%isConnected = true;
-				break;
-			}
-		}
-		
-		// If connected but no save file yet, check if it's a real player by checking if it's NOT AI-controlled
-		if(%isConnected && !Player::isAiControlled(%clientId))
-		{
-			echo("[PRE-SPAWN CLEANUP] CRITICAL SAFEGUARD - Connected client " @ %clientId @ " is NOT AI-controlled. This is a real player. Aborting deletion.");
-			return; // Abort immediately
-		}
+		// (Redundant safeguards removed - handled by IsSafeToModify at top of function)
 		
 		// All checks passed - safe to delete using AI::delete (proper engine cleanup)
 		%aiName = $BotInfoAiName[%clientId];
@@ -1321,21 +1827,13 @@ function getBotSpawnPoint(%clientId)
 // Single function that handles ALL bot cleanup to ensure consistency
 // ============================================================================
 
+// function CleanupBot(%clientId, %aiName)
 function CleanupBot(%clientId, %aiName)
 {
-	// Hard guard: never clean up real players (non-AI or players with a save file)
-	if(%clientId == "" || %clientId == -1)
+	// Unified Safeguard: Check if safe to modify (handles Real Players vs Ghost Bots)
+	if(!IsSafeToModify(%clientId, "CleanupBot"))
 		return;
-	if(!Player::isAiControlled(%clientId))
-	{
-		%playerNameCheck = Client::getName(%clientId);
-		if(%playerNameCheck != "" && %playerNameCheck != -1)
-		{
-			%characterFile = "temp\\" @ %playerNameCheck @ ".cs";
-			if(isFile(%characterFile))
-				return; // real player with save file
-		}
-	}
+
 	
 	echo("[BOT CLEANUP] Starting cleanup for clientId=" @ %clientId @ ", aiName=" @ %aiName);
 	
@@ -1382,7 +1880,11 @@ function CleanupBot(%clientId, %aiName)
 		$Directive99RemovalAttempted[%aiName] = "";
 	}
 	
-	// Step 4: Clear all data storage
+	// Step 4: Unregister from bot registry (CRITICAL: removes from $BotRegistryList)
+	// This MUST happen to prevent shell bot spam - without this, dead bots stay in iteration lists
+	UnregisterBot(%clientId);
+	
+	// Step 5: Clear all data storage
 	// Use PreSpawnCleanup which already does comprehensive clearing
 	PreSpawnCleanup(%clientId);
 	
@@ -1554,31 +2056,8 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 		%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
 		if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
 		{
-			// SAFEGUARD: Verify this is actually a bot, not a real player
-			%checkName = Client::getName(%checkId);
-			if(%checkName != "" && %checkName != -1)
-			{
-				%characterFile = "temp\\" @ %checkName @ ".cs";
-				if(isFile(%characterFile))
-				{
-					// This is a real player with a save file - skip it
-					continue;
-				}
-			}
-			
-			// Additional safeguard: Check if it's marked as a bot
-			%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
-			%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
-			%isLikelyBot = false;
-			if(%botInfoAiName != "" && %botInfoAiName != -1)
-				%isLikelyBot = true;
-			else if(%spawnBotInfo != "" && %spawnBotInfo != -1)
-				%isLikelyBot = true;
-			else if($BotRegistry[%checkId] != "" && $BotRegistry[%checkId] != -1)
-				%isLikelyBot = true;
-			
-			// Only proceed if we confirmed it's a bot
-			if(%isLikelyBot)
+			// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
+			if(IsSafeToModify(%checkId, "createAI Stale Cleanup"))
 			{
 				%currentTime = getSimTime();
 				%timeSinceFreed = %currentTime - %recentlyFreed;
@@ -1588,37 +2067,9 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 					%stalePlayerObj = Client::getOwnedObject(%checkId);
 					if(%stalePlayerObj != -1 && %stalePlayerObj != "" && isObject(%stalePlayerObj))
 					{
-						// CRITICAL: Final verification immediately before deletion (prevents race condition)
-						%finalStaleNameCheck = Client::getName(%checkId);
-						if(%finalStaleNameCheck != "" && %finalStaleNameCheck != -1)
-						{
-							%finalStaleCharacterFile = "temp\\" @ %finalStaleNameCheck @ ".cs";
-							if(isFile(%finalStaleCharacterFile))
-							{
-								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-									echo("[SPAWN FLOW] createAI(): CRITICAL SAFEGUARD - Real player " @ %finalStaleNameCheck @ " (clientId=" @ %checkId @ ") detected immediately before deletion. Aborting to prevent data loss.");
-								continue; // Skip this client ID
-							}
-						}
+						// (Safeguard check handled by IsSafeToModify)
 						
-						// Additional check: Verify this is not a connected real player
-						%isStaleConnected = false;
-						for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
-						{
-							if(%cl == %checkId)
-							{
-								%isStaleConnected = true;
-								break;
-							}
-						}
-						
-						// If connected but no save file yet, check if it's a real player by checking if it's NOT AI-controlled
-						if(%isStaleConnected && !Player::isAiControlled(%checkId))
-						{
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-								echo("[SPAWN FLOW] createAI(): CRITICAL SAFEGUARD - Connected client " @ %checkId @ " is NOT AI-controlled. This is a real player. Aborting deletion.");
-							continue; // Skip this client ID
-						}
+
 						
 						// All checks passed - safe to delete stale bot using AI::delete
 						%staleAiName = $BotInfoAiName[%checkId];
@@ -2152,7 +2603,8 @@ function AI::setWeapons(%aiName, %loadout)
 	{
 		// botTeam not stored - try to get from BotInfo (should have been set in SpawnAIGetClientId)
 		%botInfoTeam = $BotInfo[%aiName, TEAM];
-		if(%botInfoTeam != "" && %botInfoTeam != -1 && %botInfoTeam != "0" && %botInfoTeam != 0)
+		// CRITICAL FIX: Allow team 0 (Town) to be valid! Removed checks for 0.
+		if(%botInfoTeam != "" && %botInfoTeam != -1)
 		{
 			// Store it and set the team
 			storeData(%aiId, "botTeam", %botInfoTeam);
@@ -2168,13 +2620,25 @@ function AI::setWeapons(%aiName, %loadout)
 		}
 		else
 		{
-			// No team info available - default to team 1 (enemy) but log warning
-			echo("WARNING: AI::setWeapons - No team info for bot " @ %aiName @ " (clientId=" @ %aiId @ "). Defaulting to team 1.");
-			storeData(%aiId, "botTeam", 1);
-			GameBase::setTeam(%aiId, 1);
+			%teamToSet = 1; // Default to enemy
+			
+			// CRITICAL FIX: Check if it's a town bot before defaulting to team 1
+			if(String::findSubStr(%aiName, "TownBot_") == 0)
+			{
+				echo("WARNING: AI::setWeapons - No team info for town bot " @ %aiName @ ". Defaulting to team 0.");
+				%teamToSet = 0;
+			}
+			else
+			{
+				// No team info available - default to team 1 (enemy) but log warning
+				echo("WARNING: AI::setWeapons - No team info for bot " @ %aiName @ " (clientId=" @ %aiId @ "). Defaulting to team 1.");
+			}
+			
+			storeData(%aiId, "botTeam", %teamToSet);
+			GameBase::setTeam(%aiId, %teamToSet);
 			%playerObjForTeam = Client::getOwnedObject(%aiId);
 			if(%playerObjForTeam != -1 && %playerObjForTeam != "")
-				GameBase::setTeam(%playerObjForTeam, 1);
+				GameBase::setTeam(%playerObjForTeam, %teamToSet);
 		}
 	}
 	
@@ -2203,6 +2667,12 @@ function AI::setWeapons(%aiName, %loadout)
 				storeData(%aiId, "OriginalLootString", %equipString);
 				if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
 					echo("[INERT DEBUG] AI::setWeapons: Calling GiveThisStuff with equipString (guardtype=" @ %guardtype @ ")");
+				
+				// CRITICAL FIX: Ensure skin is set before GiveThisStuff for TOWN BOTS only
+				// Enemy bots typically have empty %currentArmor or use different skin logic
+				if(%currentArmor != "" && %currentArmor != -1 && String::findSubStr(%aiName, "TownBot_") == 0)
+					Client::setSkin(%aiId, $Server::teamSkin[0]);
+					
 				//echo("[SPAWN DEBUG] AI::setWeapons(): Calling GiveThisStuff with equipString=" @ %equipString);
 				GiveThisStuff(%aiId, %equipString, False);
 			}
@@ -2227,6 +2697,11 @@ function AI::setWeapons(%aiName, %loadout)
 			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
 				echo("[INERT DEBUG] AI::setWeapons: Calling GiveThisStuff with items from BotInfo");
 			//echo("[SPAWN DEBUG] AI::setWeapons(): Calling GiveThisStuff with items=" @ %items);
+			
+			// CRITICAL FIX: Ensure skin is set before GiveThisStuff for TOWN BOTS only
+			if(%currentArmor != "" && %currentArmor != -1 && String::findSubStr(%aiName, "TownBot_") == 0)
+				Client::setSkin(%aiId, $Server::teamSkin[0]);
+				
 			GiveThisStuff(%aiId, %items, False);
 		}
 	}
@@ -2250,6 +2725,11 @@ function AI::setWeapons(%aiName, %loadout)
 			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
 				echo("[INERT DEBUG] AI::setWeapons: Calling GiveThisStuff with loadoutString (loadout=" @ %loadout @ ")");
 			//echo("[SPAWN DEBUG] AI::setWeapons(): Calling GiveThisStuff with loadoutString=" @ %loadoutString);
+		
+		// CRITICAL FIX: Ensure skin is set before GiveThisStuff for TOWN BOTS only
+		if(%currentArmor != "" && %currentArmor != -1 && String::findSubStr(%aiName, "TownBot_") == 0)
+			Client::setSkin(%aiId, $Server::teamSkin[0]);
+			
 		GiveThisStuff(%aiId, %loadoutString, False);
 		}
 		else
@@ -2445,6 +2925,22 @@ function AI::Periodic(%aiName)
 {
 	dbecho($dbechoMode, "AI::Periodic(" @ %aiName @ ")");
 
+	// CRITICAL FIX: Early exit for bots in Graveyard (dead but not yet cleaned up)
+	// This prevents log spam and resource waste from dead bots continuing to run periodic logic
+	// We check this BEFORE any other processing to minimize overhead
+	%checkClientId = AI::getClientIdFromName(%aiName);
+	if(%checkClientId != -1 && %checkClientId != "")
+	{
+		// Check if in graveyard
+		if(IsInGraveyard(%checkClientId))
+			return; // Dead bot - don't reschedule, let it die quietly
+		
+		// Check if player object exists
+		%checkPlayerObj = Client::getOwnedObject(%checkClientId);
+		if(%checkPlayerObj == -1 || %checkPlayerObj == "" || !isObject(%checkPlayerObj))
+			return; // No player object - bot is effectively dead
+	}
+
 	// CRITICAL: Check if this is a corpse object - corpses can trigger callbackPeriodic
 	// after bot death. Corpse names typically start with "Corpse" followed by a number and bot name
 	// Example: "Corpse5 Liquifier6" - we need to reject these immediately to prevent "shellbot" errors
@@ -2473,21 +2969,13 @@ function AI::Periodic(%aiName)
 		$AI_Periodic_LastLog[%aiName] = %currentTime;
 	}
 
-	// Use getClientIdFromName() instead of getId() to minimize error spam
-	// getClientIdFromName() checks BotInfoAiName first (for Player objects) before calling getId()
-	%aiId = AI::getClientIdFromName(%aiName);
+	// Use the clientId we already got from the early check (avoid duplicate call)
+	// Note: %checkClientId was set at the top of this function
+	%aiId = %checkClientId;
 	
-	// Validate bot still exists
+	// Validate bot still exists (redundant with early check but kept for safety)
 	if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
 	{
-		// DEBUG: Log when bot can't be found
-		if(String::findSubStr(%aiName, "God") != -1 || String::findSubStr(%aiName, "Insurrector") != -1)
-		{
-			if($AI_DEBUG_ENABLED)
-				echo("[AI DEBUG] AI::Periodic - Could not find client ID for " @ %aiName);
-		}
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
-			echo("[INERT DEBUG] AI::Periodic: Bot not found (aiId=-1/empty) for " @ %aiName @ " - returning early");
 		return; // Bot doesn't exist anymore, skip
 	}
 
@@ -2536,14 +3024,11 @@ function AI::Periodic(%aiName)
 		}
 	}
 
-	// CRITICAL: Get Player object for reliable team lookup
-	// GameBase::getTeam() returns -1 for client IDs but works correctly for Player objects
-	%playerObj = Client::getOwnedObject(%aiId);
+	// Reuse player object from early check (avoid duplicate call)
+	%playerObj = %checkPlayerObj;
 	if(%playerObj == -1 || %playerObj == "")
 	{
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
-			echo("[INERT DEBUG] AI::Periodic: Player object missing for " @ %aiName @ " (aiId=" @ %aiId @ ") - returning early");
-		return; // Bot doesn't have a valid player object
+		return; // Bot doesn't have a valid player object (already checked early but kept for safety)
 	}
 	
 	%aiTeam = GameBase::getTeam(%playerObj);
@@ -3574,6 +4059,9 @@ $numAI++;
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 			echo("[SPAWN FLOW] AI::helper(): Spawn FAILED - rolling back reserved slot for spawnPoint " @ %spawnPointId);
 		RollbackSpawnSlot(%spawnPointId);
+		// CRITICAL FIX: Decrement $numAI since we incremented it before spawn attempt
+		if($numAI > 0)
+			$numAI--;
 		return -1;
 	}
 
@@ -3611,6 +4099,15 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 		else
 		{
 			// Bot name exists but player object is invalid - this is a shell bot
+			
+			// SAFEGUARD: Verify it's not a real player before cleaning up
+			if(!IsSafeToModify(%existingId, "SpawnAI Shell Cleanup"))
+			{
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+					echo("[SPAWN FLOW] SpawnAI(): STARTUP ABORTED - Existing client " @ %existingId @ " (" @ %newName @ ") is protected.");
+				return %newName; 
+			}
+
 			// Clean it up before spawning a new one
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 				echo("[SPAWN FLOW] SpawnAI(): WARNING - Bot " @ %newName @ " exists but player object is invalid (shell bot, clientId=" @ %existingId @ "). Cleaning up before respawn...");
@@ -3719,6 +4216,10 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 			storeData(%immediateClientId, "SpawnBotInfo", %spawnBotInfo);
 			$EnemyBotData[%immediateClientId, "SpawnBotInfo"] = %spawnBotInfo;
 			
+			// CRITICAL FIX: Clear ExpDistributed flag for new enemy bots
+			// This prevents the bot from inheriting "EXP already distributed" status from a previous bot/client
+			storeData(%immediateClientId, "ExpDistributed", "");
+			
 			// Set team immediately to prevent UpdateTeam() from setting it to team 1
 			// Store botTeam first so RefreshAll() can restore it if needed
 			storeData(%immediateClientId, "botTeam", %botTeam);
@@ -3801,7 +4302,15 @@ function FindPlayerInBotGroup(%clientId)
 	if(%hasBotData && (%playerObj == -1 || %playerObj == ""))
 	{
 		// Shell bot detected - return -1 immediately to prevent unnecessary BotGroup search
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[INERT DEBUG] FindPlayerInBotGroup: Shell bot detected (clientId=" @ %clientId @ ", BotInfoAiName='" @ %botInfoAiName @ "', no player object) - returning -1");
+		// THROTTLE: Only log once per 30 seconds per clientId to prevent log spam
+		%currentTime = getSimTime();
+		%lastShellLog = $FindPlayerInBotGroup_ShellLog[%clientId];
+		if(%lastShellLog == "" || %lastShellLog == -1 || (%currentTime - %lastShellLog) >= 30)
+		{
+			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) 
+				echo("[INERT DEBUG] FindPlayerInBotGroup: Shell bot detected (clientId=" @ %clientId @ ", BotInfoAiName='" @ %botInfoAiName @ "', no player object) - returning -1");
+			$FindPlayerInBotGroup_ShellLog[%clientId] = %currentTime;
+		}
 		return -1;
 	}
 	
@@ -5355,98 +5864,42 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		
 		if(%hasActiveTownBot)
 		{
-			// Active town bot conflict - delete and retry (up to 3 attempts)
+			// CRITICAL FIX: Active town bot conflict detected!
+			// The client ID %aiId is being used by an ACTIVE town bot.
+			// We MUST NOT delete %playerObj because that IS the town bot's player object!
+			// Instead, we abort this spawn attempt and let the retry logic try again
+			// (which may eventually get a different client ID or the town bot may despawn naturally)
+			
 			%retryCount = $EnemyBotSpawnRetry[%newName];
 			if(%retryCount == "")
 				%retryCount = 0;
 			
 			if(%retryCount < 3)
 			{
-				echo("WARNING: SpawnAI - Client ID " @ %aiId @ " is in use by an active town bot. Deleting and retrying spawn for enemy bot " @ %newName @ " (attempt " @ (%retryCount + 1) @ "/3).");
-				// Delete the bot that was just spawned using deleteObject (enemy bots are Player objects, not Drones)
-				// CRITICAL SAFEGUARD: Verify this is actually a bot before deleting (we just spawned it, but be extra safe)
-				if(%playerObj != -1 && %playerObj != "")
-				{
-					%hasLoadedAndSpawned = fetchData(%aiId, "HasLoadedAndSpawned");
-					if(%hasLoadedAndSpawned == "" || %hasLoadedAndSpawned == "0" || %hasLoadedAndSpawned == -1)
-					{
-						// No HasLoadedAndSpawned flag - safe to delete (it's a bot)
-						// CRITICAL: Mark this client ID as recently freed to prevent immediate reuse
-						// This prevents shell bots from forming when the client ID is immediately reused
-						// Use validation token to prevent scheduled clear from affecting real players
-						%validationToken = %newName @ "_" @ getSimTime();
-						$ClientIdRecentlyFreedToken[%aiId] = %validationToken;
-						$ClientIdRecentlyFreed[%aiId] = getSimTime();
-						schedule("if($ClientIdRecentlyFreedToken[" @ %aiId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %aiId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %aiId @ "] = \"\"; }", 10.0);
-						deleteObject(%playerObj);
-					}
-					else
-					{
-						// Has HasLoadedAndSpawned flag - this is a PLAYER! Don't delete!
-						echo("ERROR: SpawnAI - SAFETY CHECK FAILED! Client ID " @ %aiId @ " has HasLoadedAndSpawned flag - this is a PLAYER, not a bot! Aborting deletion to prevent player deletion.");
-					}
-				}
+				echo("WARNING: SpawnAIGetClientId - Client ID " @ %aiId @ " is in use by an ACTIVE town bot. Aborting spawn for enemy bot " @ %newName @ " (attempt " @ (%retryCount + 1) @ "/3). Town bot is PROTECTED.");
 				
-				// Before retrying, check if the town bot is actually still alive
-				// If it's dead, clear its stale data so the retry can succeed
-				%townBotPlayerObjCheck = Client::getOwnedObject(%aiId);
-				if(%townBotPlayerObjCheck == -1 || %townBotPlayerObjCheck == "")
-				{
-					// Town bot is actually dead - clear stale data
-					echo("INFO: SpawnAI - Town bot at client ID " @ %aiId @ " is actually dead. Clearing stale data before retry.");
-					$TownBotData[%aiId, "BotInfoAiName"] = "";
-					$TownBotData[%aiId, "SpawnBotInfo"] = "";
-					$TownBotData[%aiId, "SpawnTime"] = "";
-					$TownBotData[%aiId, "QuestItems"] = "";
-					$TownBotData[%aiId, "KeyItems"] = "";
-					$TownBotData[%aiId, "Consumables"] = "";
-					$TownBotData[%aiId, "Armor"] = "";
-					$TownBotData[%aiId, "Accessories"] = "";
-					$TownBotData[%aiId, "Other"] = "";
-					// Also clear from $ClientData for backwards compatibility
-					$ClientData[%aiId, "BotInfoAiName"] = "";
-					$ClientData[%aiId, "SpawnBotInfo"] = "";
-				}
+				// DO NOT delete %playerObj - that's the TOWN BOT!
+				// Just abort and retry - the engine might assign a different client ID next time
+				// or the town bot may despawn naturally if players leave the zone
 				
 				// Increment retry counter and retry by calling SpawnAI again with all parameters
 				$EnemyBotSpawnRetry[%newName] = %retryCount + 1;
 				// Retry spawning - schedule a retry call to SpawnAI with all original parameters
-				// Use a longer delay to give the engine time to free up the client ID
-				schedule("SpawnAI(\"" @ %newName @ "\", \"" @ %displayName @ "\", \"" @ %aiSpawnPos @ "\", \"" @ %commandIssuer @ "\");", 0.5);
+				// Use a longer delay to give the engine time to assign a different client ID
+				schedule("SpawnAI(\"" @ %newName @ "\", \"" @ %displayName @ "\", \"" @ %aiSpawnPos @ "\", \"" @ %commandIssuer @ "\");", 1.0);
 				return -1; // Return -1 to indicate failure, but retry is scheduled
 			}
 			else
 			{
-				// Max retries reached - give up
-				echo("ERROR: SpawnAI - Failed to spawn enemy bot " @ %newName @ " after 3 retries. Client ID " @ %aiId @ " is still in use by an active town bot.");
+				// Max retries reached - give up but DON'T delete the town bot
+				echo("ERROR: SpawnAIGetClientId - Failed to spawn enemy bot " @ %newName @ " after 3 retries. Client ID " @ %aiId @ " is still in use by an ACTIVE town bot. Town bot is PROTECTED - NOT deleting.");
 				// CRITICAL FIX #2: Rollback reserved slot if spawn failed
 				if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 				{
 					RollbackSpawnSlot(%spawnPointId);
 				}
-				// Delete the bot that was just spawned
-				// CRITICAL SAFEGUARD: Verify this is actually a bot before deleting (we just spawned it, but be extra safe)
-				if(%playerObj != -1 && %playerObj != "")
-				{
-					%hasLoadedAndSpawned = fetchData(%aiId, "HasLoadedAndSpawned");
-					if(%hasLoadedAndSpawned == "" || %hasLoadedAndSpawned == "0" || %hasLoadedAndSpawned == -1)
-					{
-						// No HasLoadedAndSpawned flag - safe to delete (it's a bot)
-						// CRITICAL: Mark this client ID as recently freed to prevent immediate reuse
-						// This prevents shell bots from forming when the client ID is immediately reused
-						// Use validation token to prevent scheduled clear from affecting real players
-						%validationToken = %newName @ "_" @ getSimTime();
-						$ClientIdRecentlyFreedToken[%aiId] = %validationToken;
-						$ClientIdRecentlyFreed[%aiId] = getSimTime();
-						schedule("if($ClientIdRecentlyFreedToken[" @ %aiId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %aiId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %aiId @ "] = \"\"; }", 10.0);
-						deleteObject(%playerObj);
-					}
-					else
-					{
-						// Has HasLoadedAndSpawned flag - this is a PLAYER! Don't delete!
-						echo("ERROR: SpawnAI - SAFETY CHECK FAILED! Client ID " @ %aiId @ " has HasLoadedAndSpawned flag - this is a PLAYER, not a bot! Aborting deletion to prevent player deletion.");
-					}
-				}
+				// DO NOT delete %playerObj - that's the TOWN BOT!
+				// The town bot must remain alive and functional
 				$EnemyBotSpawnRetry[%newName] = "";
 				return -1;
 			}
@@ -5834,6 +6287,11 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Setting BotInfoAiName for clientId " @ %aiId @ " to '" @ %newName @ "'");
 		storeData(%aiId, "BotInfoAiName", %newName);
 		$BotInfoAiName[%aiId] = %newName;  // Also store in direct array for fast lookup
+		
+		// CRITICAL FIX: Clear ExpDistributed flag for new enemy bots
+		// This prevents the bot from inheriting "EXP already distributed" status from a previous bot/client
+		storeData(%aiId, "ExpDistributed", "");
+		
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): BotInfoAiName set successfully");
 		
 		AI::SetVar(%newName, spotDist, $AIspotDist);
@@ -6161,27 +6619,21 @@ function AI::onDroneKilled(%aiName)
       
       	if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
       	{
-	      	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] AI::onDroneKilled(): ERROR - Could not get AI ID for " @ %aiName @ " (may be shell bot)");
+	      	// NOTE: This is NORMAL for zone despawns - Player::onKilled() already cleared this bot's data
+	      	// before AI::onDroneKilled() runs (it's scheduled with a delay). The bot was already cleaned up.
+	      	// This is NOT an error condition, just AI::onDroneKilled being called redundantly.
+	      	// Only log in debug mode, and use INFO level instead of ERROR to reduce noise.
+	      	if($AI_DEBUG_ENABLED) echo("[BOT CLEANUP] AI::onDroneKilled(): Bot " @ %aiName @ " already cleaned up (normal for zone despawns)");
       		return;
       	}
       	
-      	// CRITICAL SAFEGUARD: Verify this is actually a bot, not a real player
-      	%playerNameCheck = Client::getName(%aiId);
-      	if(%playerNameCheck != "" && %playerNameCheck != -1)
+      	// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
+      	if(!IsSafeToModify(%aiId, "AI::onDroneKilled"))
       	{
-      		%characterFile = "temp\\" @ %playerNameCheck @ ".cs";
-      		if(isFile(%characterFile))
-      		{
-      			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] AI::onDroneKilled(): CRITICAL SAFEGUARD - Detected real player " @ %playerNameCheck @ " (clientId=" @ %aiId @ ") with save file. Skipping bot cleanup to prevent data loss.");
-      			// Clear any stale bot data that might have caused this false positive
-      			$EnemyBotData[%aiId, "BotInfoAiName"] = "";
-      			$EnemyBotData[%aiId, "SpawnBotInfo"] = "";
-      			$TownBotData[%aiId, "BotInfoAiName"] = "";
-      			$ClientData[%aiId, "BotInfoAiName"] = "";
-      			$BotInfoAiName[%aiId] = "";
-      			$BotRegistry[%aiId] = "";
-      			return; // CRITICAL: Exit immediately to prevent player data loss
-      		}
+      		// It's a real player - block cleanup
+      		// Note: We used to clear stale bot data here, but IsSafeToModify protects us now.
+      		// If stale data persists, it's safer to keep it than risk deleting a player who matches it.
+      		return; 
       	}
       	
       	// Get player object and name for cleanup
@@ -6335,6 +6787,11 @@ function AI::onDroneKilled(%aiName)
 				$tmpbotn[%aiName] = "";
 				//echo("[SPAWN DEBUG] AI::onDroneKilled(): Freed AI number " @ %aiNumber @ " for enemy bot " @ %aiName @ " - number can now be recycled");
 			}
+			
+			// CRITICAL ROOT CAUSE FIX: Unregister bot from $BotRegistryList
+			// Without this, dead bots stay in the iteration list forever and cause "shell bot" spam
+			// This was the missing piece causing FindPlayerInBotGroup spam for minutes
+			UnregisterBot(%aiId);
 			
 			// CRITICAL: Spawn counter is decremented in Player::onKilled() - do NOT decrement here
 			// Decrementing here would cause double-decrement and make counter go negative
@@ -9536,17 +9993,19 @@ function SpawnZoneBots(%zoneIndex)
 			
 			// Get race and validate it exists
 			%botRace = $BotInfo[%botName, RACE];
+			echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " | $BotInfo[RACE]='" @ %botRace @ "'");
 			if(%botRace == "" || %botRace == -1)
 			{
-				echo("ERROR: SpawnZoneBots - Bot " @ %botName @ " has no RACE defined, defaulting to Human");
-				%botRace = "Human";
+				echo("ERROR: SpawnZoneBots - Bot " @ %botName @ " has no RACE defined, defaulting to MaleHuman");
+				%botRace = "MaleHuman";
 			}
 			
 			%armor = $RaceToArmorType[%botRace];
+			echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " | Race='" @ %botRace @ "' | $RaceToArmorType='" @ %armor @ "'");
 			if(%armor == "" || %armor == -1)
 			{
-				echo("ERROR: SpawnZoneBots - Could not find armor for race '" @ %botRace @ "' for bot " @ %botName @ ", defaulting to MaleHumanArmor");
-				%armor = "MaleHumanArmor";
+				echo("ERROR: SpawnZoneBots - Could not find armor for race '" @ %botRace @ "' for bot " @ %botName @ ", defaulting to MaleHumanArmor7");
+				%armor = "MaleHumanArmor7";
 			}
 			
 			%spawnPos = $BotInfo[%botName, SPAWN_POS];
@@ -9786,8 +10245,10 @@ function SpawnZoneBots(%zoneIndex)
 			// No stored ID means this is a fresh spawn - just proceed to spawn
 			// AI::spawn() will handle any orphaned AIs with this name
 			
+			echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: CALLING AI::spawn() for " @ %botName @ " with armor='" @ %armor @ "'");
 			if(AI::spawn(%aiName, %armor, %spawnPos, %spawnRot, %displayName, "male2") != "false")
 			{
+				echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: AI::spawn() SUCCEEDED for " @ %botName);
 				// DEBUG: Commented out to reduce server lag
 	//echo("[TOWN BOT DEBUG] AI::spawn() returned SUCCESS for " @ %botName);
 				// CRITICAL: Try to get client ID immediately to set team before UpdateTeam() runs
@@ -9795,13 +10256,73 @@ function SpawnZoneBots(%zoneIndex)
 				// If we can get the client ID now, set team immediately to prevent UpdateTeam() from setting it to team 1
 				%immediateClientId = NEWgetClientByName(%displayName);
 				if(%immediateClientId != -1 && %immediateClientId != "")
-				{
+			{
+					// DEBUG: Check what armor the bot actually got
+					%actualArmor = Player::getArmor(%immediateClientId);
+					%actualTeam = GameBase::getTeam(%immediateClientId);
+					%playerObj = Client::getOwnedObject(%immediateClientId);
+					%dataName = "";
+					if(%playerObj != -1 && %playerObj != "")
+					{
+						%dataName = GameBase::getDataName(%playerObj);
+						// CRITICAL FIX: Mark object as town bot explicitly to prevent UpdateAppearance from messing with it
+						%playerObj.isTownBot = true;
+					}
+					
+					echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " spawned | clientId=" @ %immediateClientId @ " | playerObj=" @ %playerObj);
+					echo("[TOWNBOT RACE DEBUG]   Expected armor='" @ %armor @ "' | Player::getArmor='" @ %actualArmor @ "' | GameBase::getDataName='" @ %dataName @ "' | Team=" @ %actualTeam);
+					
+					// CRITICAL DEBUG: Check for orphaned objects with this client ID in MissionCleanup
+					if(isObject("MissionCleanup"))
+					{
+						%group = nameToID("MissionCleanup");
+						%count = Group::objectCount(%group);
+						%orphanCount = 0;
+						for(%j = %count - 1; %j >= 0; %j--)
+						{
+							%obj = Group::getObject(%group, %j);
+							if(!isObject(%obj)) continue;
+							if(getObjectType(%obj) != "Player") continue;
+							
+							%objClientId = Player::getClient(%obj);
+							if(%objClientId == %immediateClientId && %obj != %playerObj)
+							{
+								%orphanData = GameBase::getDataName(%obj);
+								echo("[TOWNBOT RACE DEBUG]   WARNING: Found orphaned object " @ %obj @ " (data=" @ %orphanData @ ") also claiming clientId=" @ %immediateClientId @ "!");
+								%orphanCount++;
+								// Delete the orphan immediately
+								echo("[TOWNBOT RACE DEBUG]   Deleting orphan " @ %obj);
+								deleteObject(%obj);
+							}
+						}
+						if(%orphanCount > 0)
+							echo("[TOWNBOT RACE DEBUG]   Cleaned " @ %orphanCount @ " orphaned objects for clientId=" @ %immediateClientId);
+					}
+					
 					// Got client ID immediately - set BotInfoAiName and team right away
 				%aiNameFull = "TownBot_" @ %botName;
 					storeData(%immediateClientId, "BotInfoAiName", %aiNameFull);
 					$TownBotData[%immediateClientId, "BotInfoAiName"] = %aiNameFull;
 					// Set team to 0 immediately to prevent UpdateTeam() from setting it to team 1
 					GameBase::setTeam(%immediateClientId, 0);
+					
+					// CRITICAL FIX: Clear ExpDistributed flag for new town bots
+					// This prevents the bot from inheriting "EXP already distributed" status from a previous bot/client
+					storeData(%immediateClientId, "ExpDistributed", "");
+					
+					// CRITICAL FIX: Always refresh armor visual after setting team
+					// When team was -1 (engine default), the visual skin is wrong even if armor model is correct
+					// We must re-apply armor after team change to fix the visual appearance
+					if(%armor != "" && %armor != -1)
+					{
+						echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Refreshing armor visual for " @ %botName @ " after team set (armor='" @ %armor @ "')");
+						Player::setArmor(%playerObj, %armor);
+						Client::setSkin(%immediateClientId, $Server::teamSkin[0]);
+						
+						// FINAL WORD: Schedule one more skin enforcement at T+2.0s
+						// This runs after ALL other scheduled scripts (especially any ~1.0s culprits)
+						schedule("ForceTownBotSkin(" @ %immediateClientId @ ", \"" @ %botName @ "\");", 2.0);
+					}
 				}
 				
 				// CRITICAL: Add 1 second delay before looking up client ID to allow Player object to register
@@ -9876,32 +10397,9 @@ function DespawnZoneBots(%zoneIndex)
 			%clientId = $TownBotSpawned[%botName];
 			%aiName = "TownBot_" @ %botName;
 			
-			// CRITICAL SAFEGUARD: Verify this is actually a bot, not a player
-			if(!isRPGAI(%clientId) && !Player::isAiControlled(%clientId))
-			{
-				echo("WARNING: DespawnZoneBots - clientId " @ %clientId @ " for bot " @ %botName @ " is not a bot! Skipping to prevent player data cleanup.");
+			// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
+			if(!IsSafeToModify(%clientId, "DespawnZoneBots (Town)"))
 				continue;
-			}
-			
-			// CRITICAL SAFEGUARD: Must have BotInfoAiName to be considered a bot
-			%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
-			if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
-			{
-				echo("WARNING: DespawnZoneBots - Bot " @ %botName @ " (clientId " @ %clientId @ ") has no BotInfoAiName - this is a player, not a bot. Skipping.");
-				continue;
-			}
-			
-			// Additional check - if it has a character save file, it's a player
-			%playerName = Client::getName(%clientId);
-			if(%playerName != "" && %playerName != -1)
-			{
-				%characterFile = "temp\\" @ %playerName @ ".cs";
-				if(isFile(%characterFile))
-				{
-					echo("WARNING: DespawnZoneBots - Bot " @ %botName @ " (clientId " @ %clientId @ ", name: " @ %playerName @ ") has character save file (this is a player, not a bot). Skipping.");
-					continue;
-				}
-			}
 			
 			// ADDITIONAL SAFEGUARD: Only despawn bots that have fully loaded and spawned
 			// This prevents despawning bots that are still initializing or in an invalid state
@@ -10107,7 +10605,13 @@ function DespawnZoneBots(%zoneIndex)
 	// to prevent killing enemy bots in other zones.
 	// CRITICAL FIX: Client::getFirst()/getNext() only returns REAL player clients, NOT AI bots!
 	// Use $BotRegistryList to iterate enemy bots (bots are not in client connection list)
-	for(%i = 0; (%botId = GetWord($BotRegistryList, %i)) != -1; %i++)
+	// 
+	// CRITICAL FIX: Copy the list BEFORE iterating!
+	// Player::Kill() -> UnregisterBot() modifies $BotRegistryList, removing the killed bot.
+	// This shifts all subsequent entries down, causing the next bot to be skipped.
+	// By copying the list first, we iterate a stable snapshot while the original is modified.
+	%botListSnapshot = $BotRegistryList;
+	for(%i = 0; (%botId = GetWord(%botListSnapshot, %i)) != -1; %i++)
 	{
 		// Validate bot ID is valid
 		if(%botId == "" || %botId == "0")
@@ -10136,34 +10640,9 @@ function DespawnZoneBots(%zoneIndex)
 		// DEBUG: Trace enemy bot candidates
 		echo("[DESPAWN DEBUG] Checking bot candidate: " @ %botId @ " (" @ Client::getName(%botId) @ ")");
 		
-		// CRITICAL SAFEGUARD: Verify this is actually a bot, not a player
-		if(!isRPGAI(%botId) && !Player::isAiControlled(%botId))
-		{
-			echo("WARNING: DespawnZoneBots - Attempted to despawn player clientId " @ %botId @ " (" @ Client::getName(%botId) @ "). Skipping to prevent player data loss.");
+		// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
+		if(!IsSafeToModify(%botId, "DespawnZoneBots (Enemy)"))
 			continue;
-		}
-		
-		// CRITICAL SAFEGUARD: Must have SpawnBotInfo or BotInfoAiName to be considered a bot
-		%spawnBotInfoCheck = fetchData(%botId, "SpawnBotInfo");
-		%botInfoAiNameCheck = fetchData(%botId, "BotInfoAiName");
-		if((%spawnBotInfoCheck == "" || %spawnBotInfoCheck == "0" || %spawnBotInfoCheck == -1) && 
-		   (%botInfoAiNameCheck == "" || %botInfoAiNameCheck == "0" || %botInfoAiNameCheck == -1))
-		{
-			echo("WARNING: DespawnZoneBots - clientId " @ %botId @ " (" @ Client::getName(%botId) @ ") has no SpawnBotInfo or BotInfoAiName - this is a player, not a bot. Skipping.");
-			continue;
-		}
-		
-		// Additional check - if it has a character save file, it's a player
-		%playerName = Client::getName(%botId);
-		if(%playerName != "" && %playerName != -1)
-		{
-			%characterFile = "temp\\" @ %playerName @ ".cs";
-			if(isFile(%characterFile))
-			{
-				echo("WARNING: DespawnZoneBots - clientId " @ %botId @ " (" @ %playerName @ ") has character save file (this is a player, not a bot). Skipping.");
-				continue;
-			}
-		}
 		
 		// CRITICAL: Determine bot type BEFORE checking HasLoadedAndSpawned so we can show accurate warning messages
 		// Town bots have BotInfoAiName but NO SpawnBotInfo
@@ -10224,28 +10703,31 @@ function DespawnZoneBots(%zoneIndex)
 			continue; // Invalid zone index, skip
 		}
 		
-		echo("[DESPAWN DEBUG] Processing bot " @ %botId @ " for target zone " @ %targetZoneFolder);
+		echo("[DESPAWN DEBUG] Processing bot " @ %botId @ " for target zone INDEX " @ %zoneIndex @ " (folderID " @ %targetZoneFolder @ ")");
 		
-		// Compare bot's zone directly with target zone
+		// Compare bot's zone INDEX directly with target zone INDEX
+		// CRITICAL FIX: %botZone is a zone INDEX (13, 17, etc.) and must be compared to %zoneIndex (also an index)
+		// NOT to %targetZoneFolder (which is an object ID like 8568)
 		%match = false;
 		%originZone = "";
 		%matchedViaOrigin = false;
-		if(%botZone == %targetZoneFolder)
+		if(%botZone == %zoneIndex)
 		{
 			%match = true;
+			echo("[DESPAWN DEBUG] MATCH! Bot " @ %botId @ " zone=" @ %botZone @ " matches target zoneIndex=" @ %zoneIndex);
 		}
 		else
 		{
-			// Mismatch on primary zone - check SpawnOriginZoneID (Spawn Origin)
-			// This handles cases where "zone" is overwritten by the game (e.g. index 13 vs ID 8582)
+			// Mismatch on primary zone - check SpawnOriginZoneID (origin folder ID) against targetZoneFolder (folder ID)
+			// This handles cases where bot was spawned from a specific folder
 			%originZone = fetchData(%botId, "SpawnOriginZoneID");
 			if(%originZone == "" || %originZone == 0 || %originZone == -1)
 				%originZone = $EnemyBotData[%botId, "SpawnOriginZoneID"];
 				
 			if(%originZone == %targetZoneFolder)
 			{
-				// Match found via SpawnOriginZoneID!
-				echo("[DESPAWN DEBUG] MATCH! Bot " @ %botId @ " matched via SpawnOriginZoneID=" @ %originZone);
+				// Match found via SpawnOriginZoneID (comparing folder IDs)!
+				echo("[DESPAWN DEBUG] MATCH! Bot " @ %botId @ " matched via SpawnOriginZoneID=" @ %originZone @ " == targetZoneFolder=" @ %targetZoneFolder);
 				%match = true;
 				%matchedViaOrigin = true;
 			}
@@ -10253,21 +10735,13 @@ function DespawnZoneBots(%zoneIndex)
 
 		if(!%match)
 		{
-			echo("[DESPAWN DEBUG] Zone Mismatch for " @ %botId @ ": botZone=" @ %botZone @ ", originZone=" @ %originZone @ ", targetZone=" @ %targetZoneFolder @ ". Skipping.");
+			echo("[DESPAWN DEBUG] Zone Mismatch for " @ %botId @ ": botZone(index)=" @ %botZone @ " != targetZoneIndex=" @ %zoneIndex @ ", originZone(folderID)=" @ %originZone @ " != targetZoneFolder=" @ %targetZoneFolder @ ". Skipping.");
 			continue; // Bot is in a different zone, skip to prevent killing bots in other zones
 		}
 		
-		// Double-check using zone description as well (defense in depth)
-		// CRITICAL FIX: If we matched via SpawnOriginZoneID, use %originZone (folder ID) instead of %botZone (which might be an index)
-		%zoneForDescCheck = %botZone;
-		if(%matchedViaOrigin && %originZone != "" && %originZone != -1)
-			%zoneForDescCheck = %originZone;
-		%botZoneDesc = Zone::getDesc(%zoneForDescCheck);
-		if(%botZoneDesc != %zoneDesc)
-		{
-			echo("[DESPAWN DEBUG] Zone description mismatch for " @ %botId @ ": botZoneDesc='" @ %botZoneDesc @ "' != zoneDesc='" @ %zoneDesc @ "'. Skipping.");
-			continue; // Zone descriptions don't match, skip to be safe
-		}
+		// NOTE: Zone description check removed - it was blocking legitimate despawns
+		// Zone::getDesc(%botZone) returns -1 for zone indexes, causing false mismatches
+		// The zone INDEX match above is sufficient for safe despawning
 		
 		// CRITICAL SAFEGUARD: Must have SpawnBotInfo to be considered an enemy bot
 		%spawnBotInfo = fetchData(%botId, "SpawnBotInfo");
@@ -10612,8 +11086,20 @@ function InitTownBotPostSpawn(%aiName, %name)
 	if(%currentArmor != %expectedArmor)
 	{
 		echo("WARNING: InitTownBotPostSpawn - Bot " @ %name @ " has wrong armor '" @ %currentArmor @ "', correcting to '" @ %expectedArmor @ "'");
-		// Set the correct armor/skin
-		Client::setSkin(%clientId, %expectedArmor);
+		// CRITICAL FIX: Use Player::setArmor to change the armor model, not Client::setSkin
+		// Client::setSkin only changes texture/skin, not the actual armor PlayerData
+		%playerObj = Client::getOwnedObject(%clientId);
+		if(%playerObj != "" && %playerObj != -1)
+		{
+			Player::setArmor(%playerObj, %expectedArmor);
+			// Also set skin to ensure visual appearance matches
+			Client::setSkin(%clientId, %expectedArmor);
+			echo("DEBUG: InitTownBotPostSpawn - Applied armor fix for " @ %name @ ": Player::setArmor(" @ %playerObj @ ", " @ %expectedArmor @ ")");
+		}
+		else
+		{
+			echo("ERROR: InitTownBotPostSpawn - Could not get player object to fix armor for " @ %name);
+		}
 	}
 	
 	// Set default flag to prevent town bots from dropping loot (edge case bug protection)
@@ -11765,9 +12251,12 @@ function isRPGAI(%clientId)
 	
 	// Also check if this clientId is in $TownBotSpawned (for town bots)
 	%isTownBotByRegistry = false;
-	for(%i = 0; (%botName = GetWord($TownBotRegistry, %i)) != -1; %i++)
+	// Also check if this clientId is in $TownBotSpawned (for town bots)
+	%isTownBotByRegistry = false;
+	for(%i = 0; %i < $TownBotRegistryCount; %i++)
 	{
-		if($TownBotSpawned[%botName] == %clientId)
+		%botName = $TownBotRegistry[%i];
+		if(%botName != "" && $TownBotSpawned[%botName] == %clientId)
 		{
 			%isTownBotByRegistry = true;
 			break;
@@ -11861,6 +12350,22 @@ function VerifyTownBotTeam(%clientId, %botName, %expectedTeam)
 		echo("WARNING: VerifyTownBotTeam - Team was changed for town bot " @ %botName @ " (clientId=" @ %clientId @ "). Expected " @ %expectedTeam @ ", got " @ %currentTeam @ ". Restoring...");
 		GameBase::setTeam(%clientId, %expectedTeam);
 		
+		// CRITICAL FIX: Refresh armor visual after team correction
+		// When team was -1, engine shows enemy skin even with correct armor model
+		// We need to re-apply armor to refresh the visual appearance
+		%botRace = $BotInfo[%botName, RACE];
+		if(%botRace != "" && %botRace != -1)
+		{
+			%expectedArmor = $RaceToArmorType[%botRace];
+			if(%expectedArmor != "" && %expectedArmor != -1)
+			{
+				// Refresh armor to fix visual appearance after team correction
+				Player::setArmor(%playerObj, %expectedArmor);
+				Client::setSkin(%clientId, $Server::teamSkin[0]);
+				echo("DEBUG: VerifyTownBotTeam - Refreshed armor for " @ %botName @ " after team correction (team " @ %currentTeam @ " -> " @ %expectedTeam @ ", armor='" @ %expectedArmor @ "')");
+			}
+		}
+		
 		// Verify it was restored
 		%newTeam = GameBase::getTeam(%clientId);
 		if(%newTeam != %expectedTeam)
@@ -11871,6 +12376,66 @@ function VerifyTownBotTeam(%clientId, %botName, %expectedTeam)
 			schedule(%cmd, 0.1);
 		}
 	}
+}
+
+// ============================================================================
+// FINAL WORD: ForceTownBotSkin
+// This function runs at T+2.0s after spawn to guarantee the correct skin/team
+// even if other scripts (running at ~1.0s) attempted to change it.
+// ============================================================================
+function ForceTownBotSkin(%clientId, %botName)
+{
+	// Validate client ID
+	if(%clientId == "" || %clientId == -1)
+		return;
+	
+	%playerObj = Client::getOwnedObject(%clientId);
+	if(%playerObj == "" || %playerObj == -1)
+		return;  // Bot doesn't exist anymore
+	
+	// Verify this is still a town bot (check for TownBot_ prefix)
+	%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+	if(String::findSubStr(%botInfoAiName, "TownBot_") != 0)
+		return;  // Not a town bot
+	
+	// DIAGNOSTIC: Log all values before applying
+	%currentTeam = GameBase::getTeam(%clientId);
+	%currentObjTeam = GameBase::getTeam(%playerObj);
+	%currentArmor = Player::getArmor(%clientId);
+	%currentSkin = Client::getSkinBase(%clientId);
+	
+	echo("[FINAL FIX] ForceTownBotSkin: BEFORE - clientId=" @ %clientId @ ", playerObj=" @ %playerObj);
+	echo("[FINAL FIX]   Team: client=" @ %currentTeam @ ", obj=" @ %currentObjTeam);
+	echo("[FINAL FIX]   Armor: '" @ %currentArmor @ "', Skin: '" @ %currentSkin @ "'");
+	
+	// Get expected armor from race
+	%botRace = $BotInfo[%botName, RACE];
+	if(%botRace == "" || %botRace == -1)
+		%botRace = "MaleHuman";
+	%expectedArmor = $RaceToArmorType[%botRace];
+	if(%expectedArmor == "" || %expectedArmor == -1)
+		%expectedArmor = "MaleHumanArmor7";
+	
+	// FORCE Team 0 on BOTH client AND player object
+	GameBase::setTeam(%clientId, 0);
+	GameBase::setTeam(%playerObj, 0);
+	
+	// FORCE armor refresh - triggers engine visual update
+	Player::setArmor(%playerObj, %expectedArmor);
+	
+	// FORCE skin with HARDCODED "rpgbase" - exactly like the manual command that worked
+	Client::setSkin(%clientId, "rpgbase");
+	
+	// DIAGNOSTIC: Log all values after applying
+	%newTeam = GameBase::getTeam(%clientId);
+	%newObjTeam = GameBase::getTeam(%playerObj);
+	%newArmor = Player::getArmor(%clientId);
+	%newSkin = Client::getSkinBase(%clientId);
+	
+	echo("[FINAL FIX] ForceTownBotSkin: AFTER - clientId=" @ %clientId);
+	echo("[FINAL FIX]   Team: client=" @ %newTeam @ ", obj=" @ %newObjTeam);
+	echo("[FINAL FIX]   Armor: '" @ %newArmor @ "', Skin: '" @ %newSkin @ "'");
+	echo("[FINAL FIX] ForceTownBotSkin: DONE for " @ %botName);
 }
 
 // ============================================================================
@@ -12075,3 +12640,121 @@ function onClientDrop(%clientId)
 		}
 	}
 }
+
+// ============================================================================
+// DEBUG TOOL: InspectBot
+// ============================================================================
+function InspectBot(%clientId)
+{
+echo("==================================================");
+echo(" INSPECT BOT: " @ %clientId);
+echo("==================================================");
+
+// 1. Basic Client Info
+%name = Client::getName(%clientId);
+%playerObj = Client::getOwnedObject(%clientId);
+%controlObj = Client::getControlObject(%clientId);
+%team = Client::getTeam(%clientId);
+
+echo(" [CLIENT]");
+echo(" Name:              '" @ %name @ "'");
+echo(" Team:              " @ %team);
+echo(" Player Object:     " @ %playerObj);
+echo(" Control Object:    " @ %controlObj);
+
+// 2. Engine Checks
+%isAi = Player::isAiControlled(%clientId);
+%playerObjIsAi = "";
+if(%playerObj != -1 && %playerObj != "")
+%playerObjIsAi = Player::isAiControlled(%playerObj);
+
+echo(" [ENGINE]");
+echo(" Player::isAiControlled(" @ %clientId @ "): " @ %isAi);
+if(%playerObj != "")
+{
+echo(" Player::isAiControlled(" @ %playerObj @ "): " @ %playerObjIsAi);
+echo(" Object Name:           '" @ Object::getName(%playerObj) @ "'");
+echo(" Object DataBlock:      " @ %playerObj.dataBlock);
+echo(" Object Position:       " @ GameBase::getPosition(%playerObj));
+echo(" Object Rotation:       " @ GameBase::getRotation(%playerObj));
+echo(" Object State:          " @ %playerObj.state @ " (Dead: " @ %playerObj.dead @ ")");
+}
+
+// Reverse lookup check
+if(%playerObj != -1 && %playerObj != "")
+{
+%clientFromObj = Player::getClient(%playerObj);
+echo(" Player::getClient(" @ %playerObj @ "):    " @ %clientFromObj);
+if(%clientFromObj != %clientId)
+echo(" [WARNING] Client ID mismatch! Owned=" @ %clientId @ ", Reverse=" @ %clientFromObj);
+}
+
+// 3. Mod Data Checks
+%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+%hasLoaded = fetchData(%clientId, "HasLoadedAndSpawned");
+%zone = fetchData(%clientId, "zone");
+
+echo(" [MOD DATA]");
+echo(" BotInfoAiName:     '" @ %botInfoAiName @ "'");
+echo(" SpawnBotInfo:      '" @ %spawnBotInfo @ "'");
+echo(" HasLoaded:         " @ %hasLoaded);
+echo(" Zone:              " @ %zone);
+
+// 4. EnemyBotData (Global Array)
+%ebName = $EnemyBotData[%clientId, "BotInfoAiName"];
+%ebSpawn = $EnemyBotData[%clientId, "SpawnBotInfo"];
+%ebZone = $EnemyBotData[%clientId, "zone"];
+
+echo(" [ENEMY BOT DATA]");
+echo(" $EnemyBotData Name:  '" @ %ebName @ "'");
+echo(" $EnemyBotData Spawn: '" @ %ebSpawn @ "'");
+echo(" $EnemyBotData Zone:  " @ %ebZone);
+
+// 5. Registry & Graveyard
+%inRegistry = $BotRegistry[%clientId];
+%inGraveyard = IsInGraveyard(%clientId);
+%recentlyFreed = $ClientIdRecentlyFreed[%clientId];
+
+echo(" [REGISTRY]");
+echo(" $BotRegistry:      " @ %inRegistry);
+echo(" In Graveyard:      " @ %inGraveyard);
+echo(" Recently Freed:    " @ %recentlyFreed);
+
+// 6. Safeguards
+%isSafeToModify = IsSafeToModify(%clientId, "InspectBot");
+%isRealPlayer = IsRealPlayer(%clientId);
+
+// Check for save file manually to report path
+%saveFile = "temp\\" @ %name @ ".cs";
+%hasSaveFile = isFile(%saveFile);
+
+echo(" [SAFEGUARDS]");
+echo(" IsRealPlayer:      " @ %isRealPlayer);
+echo(" IsSafeToModify:    " @ %isSafeToModify);
+echo(" Has Save File:     " @ %hasSaveFile @ " (" @ %saveFile @ ")");
+	
+echo("--------------------------------------------------");
+echo(" REAL PLAYER LIST (via IsRealPlayer check):");
+%realCount = 0;
+%aiCount = 0;
+for(%id = Client::getFirst(); %id != -1; %id = Client::getNext(%id))
+{
+	if(IsRealPlayer(%id))
+	{
+		%realCount++;
+		%rName = Client::getName(%id);
+		%rIsAi = Player::isAiControlled(%id);
+		%rFile = isFile("temp\\" @ %rName @ ".cs");
+		echo(" > " @ %id @ ": '" @ %rName @ "' (isAI=" @ %rIsAi @ ", hasFile=" @ %rFile @ ")");
+	}
+	else
+	{
+		%aiCount++;
+	}
+}
+echo(" Total Real: " @ %realCount @ " | Total AI: " @ %aiCount);
+
+echo("==================================================");
+}
+

@@ -2695,6 +2695,30 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 				Client::sendMessage(%client,0,"Deploy position out of range");	
 			return false;
 		}
+		if(%w1 == "#exportdata")
+		{
+			if(%clientToServerAdminLevel < 3)
+			{
+				Client::sendMessage(%TrueClientId, 0, "Need admin level 3");
+				return;
+			}
+			%player = Client::getOwnedObject(%TrueClientId);
+			if(GameBase::getLOSInfo(%player, 150))
+			{
+				%obj = $los::object;
+				$ObjectMapData["Type"] = GameBase::getDataName(%obj);
+				$ObjectMapData["Position"] = GameBase::getPosition(%obj);
+				$ObjectMapData["Rotation"] = GameBase::getRotation(%obj);
+				export("ObjectMapData*", "temp\\-" @ $missionName @ "-MapData.cs", true);
+				Client::sendMessage(%TrueClientId, 2, "Object successfully exported.");
+				echo("[ADMIN]: " @ %TCsenderName @ " exported object data");
+			}
+			else
+			{
+				Client::sendMessage(%TrueClientId, 0, "No object in line of sight (range: 150)");
+			}
+			return;
+		}
 		if(%w1 == "#gm")
 		{
 			Client::sendMessage(%TrueClientId, $MsgWhite, "THIS COMMAND HAS BEEN DISCONTINUED, PLEASE USE #ANON");
@@ -6666,8 +6690,11 @@ if(%w1 == "#deletebot")
 					if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0")
 					{
 						// Get the number BEFORE clearing $tmpbotn to ensure we can free it
-						%botNumber = $tmpbotn[%botInfoAiName];
-						if(%botNumber != "" && %botNumber != -1 && %botNumber != "0")
+					%botNumber = $tmpbotn[%botInfoAiName];
+					// CRITICAL: Check if AI number exists and is valid (including 0)
+					// setAInumber() stores numeric values, so if it exists (not empty, not -1), it's valid
+					// The old check '%botNumber != "0"' was WRONG - it skipped freeing number 0!
+					if(%botNumber != "" && %botNumber != -1)
 						{
 							$aiNumTable[%botNumber] = "";
 							$tmpbotn[%botInfoAiName] = "";
@@ -7033,6 +7060,464 @@ if(%w1 == "#deletebot")
 		}
 		return;
 	}
+if(%w1 == "#spawnpointscan")
+{
+	if(%clientToServerAdminLevel >= 1)
+	{
+		// Parse optional "fix" parameter
+		%autoFix = false;
+		if(%w2 == "fix")
+			%autoFix = true;
+		
+		echo("[SPAWNPOINT SCAN] === Starting Spawn Point Scan ===");
+		Client::sendMessage(%TrueClientId, 0, "=== SPAWN POINT SCAN ===");
+		
+		%group = nameToID("MissionGroup\\SpawnPoints");
+		if(%group == -1)
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "ERROR: Could not find SpawnPoints group");
+			echo("[SPAWNPOINT SCAN] ERROR: Could not find SpawnPoints group");
+			return;
+		}
+		
+		%totalSpawnPoints = 0;
+		%brokenCount = 0;
+		%stuckReservations = 0;
+		%counterMismatches = 0;
+		%orphanedBots = 0;
+		%fixedCount = 0;
+		
+		// Iterate all spawn points
+		for(%i = 0; %i <= Group::objectCount(%group)-1; %i++)
+		{
+			%spawnPoint = Group::getObject(%group, %i);
+			if(%spawnPoint == "" || %spawnPoint == -1)
+				continue;
+			
+			%totalSpawnPoints++;
+			%info = Object::getName(%spawnPoint);
+			%maxBots = Cap(round(GetWord(%info, 0) * $spawnMultiplier), 0, "inf");
+			%currentCounter = $numAIperSpawnPoint[%spawnPoint];
+			if(%currentCounter == "")
+				%currentCounter = 0;
+			%registeredCount = GetRegisteredBotCount(%spawnPoint);
+			%reservedStatus = $SpawnSlotReserved[%spawnPoint];
+			%reservedTime = $SpawnSlotReservedTime[%spawnPoint];
+			
+			// Check for issues
+			%issues = "";
+			%isBroken = false;
+			
+			// Issue 1: Counter mismatch (counter != registered bots)
+			if(%currentCounter != %registeredCount)
+			{
+				%issues = %issues @ "Counter mismatch (counter=" @ %currentCounter @ ", registered=" @ %registeredCount @ "). ";
+				%counterMismatches++;
+				%isBroken = true;
+				
+				if(%autoFix)
+				{
+					// Fix by setting counter to registered count
+					$numAIperSpawnPoint[%spawnPoint] = %registeredCount;
+					%issues = %issues @ "[FIXED: counter=" @ %registeredCount @ "] ";
+					%fixedCount++;
+				}
+			}
+			
+			// Issue 2: Stuck reservation (reserved > 15 seconds)
+			if(%reservedStatus == "true" && %reservedTime != "" && %reservedTime != -1)
+			{
+				%reservedAge = getSimTime() - %reservedTime;
+				if(%reservedAge > 15)
+				{
+					%issues = %issues @ "Stuck reservation (" @ floor(%reservedAge) @ "s). ";
+					%stuckReservations++;
+					%isBroken = true;
+					
+					if(%autoFix)
+					{
+						// Fix by clearing reservation
+						$SpawnSlotReserved[%spawnPoint] = "";
+						$SpawnSlotReservedTime[%spawnPoint] = "";
+						%issues = %issues @ "[FIXED: cleared] ";
+						%fixedCount++;
+					}
+				}
+			}
+			
+			// Issue 3: Counter > 0 but no registered bots (orphaned counter)
+			if(%currentCounter > 0 && %registeredCount == 0)
+			{
+				%issues = %issues @ "Orphaned counter (counter=" @ %currentCounter @ " but 0 registered bots). ";
+				%orphanedBots++;
+				%isBroken = true;
+				
+				if(%autoFix)
+				{
+					// Fix by resetting counter
+					$numAIperSpawnPoint[%spawnPoint] = 0;
+					%issues = %issues @ "[FIXED: reset to 0] ";
+					%fixedCount++;
+				}
+			}
+			
+			// Issue 4: Counter > max allowed
+			if(%currentCounter > %maxBots && %maxBots > 0)
+			{
+				%issues = %issues @ "Counter exceeds max (" @ %currentCounter @ "/" @ %maxBots @ "). ";
+				%isBroken = true;
+				
+				if(%autoFix)
+				{
+					$numAIperSpawnPoint[%spawnPoint] = %registeredCount;
+					%issues = %issues @ "[FIXED: set to " @ %registeredCount @ "] ";
+					%fixedCount++;
+				}
+			}
+			
+			// Report broken spawn points
+			if(%isBroken)
+			{
+				%brokenCount++;
+				%message = "BROKEN: " @ %spawnPoint @ " - " @ %issues;
+				Client::sendMessage(%TrueClientId, $MsgRed, %message);
+				echo("[SPAWNPOINT SCAN] " @ %message);
+			}
+		}
+		
+		// Summary
+		%summaryColor = 0;
+		if(%brokenCount > 0)
+			%summaryColor = $MsgRed;
+		
+		%message = "=== SCAN COMPLETE: " @ %totalSpawnPoints @ " spawn points scanned ===";
+		Client::sendMessage(%TrueClientId, 0, %message);
+		echo("[SPAWNPOINT SCAN] " @ %message);
+		
+		if(%brokenCount == 0)
+		{
+			%message = "Result: All spawn points are healthy!";
+			Client::sendMessage(%TrueClientId, $MsgGreen, %message);
+			echo("[SPAWNPOINT SCAN] " @ %message);
+		}
+		else
+		{
+			%message = "Result: " @ %brokenCount @ " broken spawn points found:";
+			Client::sendMessage(%TrueClientId, %summaryColor, %message);
+			echo("[SPAWNPOINT SCAN] " @ %message);
+			
+			%message = "  - Counter mismatches: " @ %counterMismatches;
+			Client::sendMessage(%TrueClientId, 0, %message);
+			echo("[SPAWNPOINT SCAN] " @ %message);
+			
+			%message = "  - Stuck reservations: " @ %stuckReservations;
+			Client::sendMessage(%TrueClientId, 0, %message);
+			echo("[SPAWNPOINT SCAN] " @ %message);
+			
+			%message = "  - Orphaned counters: " @ %orphanedBots;
+			Client::sendMessage(%TrueClientId, 0, %message);
+			echo("[SPAWNPOINT SCAN] " @ %message);
+			
+			if(%autoFix)
+			{
+				%message = "Auto-fix applied: " @ %fixedCount @ " issues fixed";
+				Client::sendMessage(%TrueClientId, $MsgGreen, %message);
+				echo("[SPAWNPOINT SCAN] " @ %message);
+			}
+			else
+			{
+				%message = "TIP: Use '#spawnpointscan fix' to auto-fix issues";
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[SPAWNPOINT SCAN] " @ %message);
+			}
+		}
+		
+		%fixSuffix = "";
+		if(%autoFix)
+			%fixSuffix = " fix";
+		echo("[ADMIN]: " @ %TCsenderName @ " ran #spawnpointscan" @ %fixSuffix);
+	}
+	return;
+}
+if(%w1 == "#auditainumbers")
+{
+	if(%clientToServerAdminLevel >= 1)
+	{
+		// Parse optional "fix" parameter
+		%autoFix = false;
+		if(%w2 == "fix")
+			%autoFix = true;
+		
+		echo("[AI NUMBER AUDIT] === Starting AI Number Audit ===");
+		Client::sendMessage(%TrueClientId, 0, "=== AI NUMBER AUDIT ===");
+		
+		// Build list of bot names that are actually alive
+		%liveBotNames = "";
+		%botList = GetBotIdList();
+		if(%botList != "")
+		{
+			for(%i = 0; (%botId = GetWord(%botList, %i)) != -1; %i++)
+			{
+				%botInfoAiName = fetchData(%botId, "BotInfoAiName");
+				if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0")
+					%liveBotNames = %liveBotNames @ %botInfoAiName @ " ";
+			}
+		}
+		
+		// Scan $aiNumTable for reserved numbers
+		%reservedCount = 0;
+		%orphanedCount = 0;
+		%orphanedList = "";
+		%freedCount = 0;
+		
+		for(%n = 0; %n <= 500; %n++)
+		{
+			if($aiNumTable[%n] != "" && $aiNumTable[%n] != -1)
+			{
+				%reservedCount++;
+				
+				// Find which bot name uses this number
+				%foundBot = "";
+				for(%j = 0; (%checkBotId = GetWord(%botList, %j)) != -1; %j++)
+				{
+					%checkAiName = fetchData(%checkBotId, "BotInfoAiName");
+					if(%checkAiName != "" && $tmpbotn[%checkAiName] == %n)
+					{
+						%foundBot = %checkAiName;
+						break;
+					}
+				}
+				
+				// Check if bot is actually alive
+				if(%foundBot == "")
+				{
+					// Try to find by iterating $tmpbotn (less reliable since we can't iterate directly)
+					// Instead check if any live bot name ends with this number
+					%isOrphaned = true;
+					for(%k = 0; (%liveName = GetWord(%liveBotNames, %k)) != -1; %k++)
+					{
+						if($tmpbotn[%liveName] == %n)
+						{
+							%isOrphaned = false;
+							break;
+						}
+					}
+					
+					if(%isOrphaned)
+					{
+						%orphanedCount++;
+						%orphanedList = %orphanedList @ %n @ " ";
+						
+						if(%autoFix)
+						{
+							$aiNumTable[%n] = "";
+							%freedCount++;
+						}
+					}
+				}
+			}
+		}
+		
+		// Summary
+		%message = "Reserved AI numbers (0-500): " @ %reservedCount;
+		Client::sendMessage(%TrueClientId, 0, %message);
+		echo("[AI NUMBER AUDIT] " @ %message);
+		
+		%message = "Orphaned numbers: " @ %orphanedCount;
+		if(%orphanedCount > 0)
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, %message);
+			echo("[AI NUMBER AUDIT] " @ %message);
+			
+			if(%orphanedList != "")
+			{
+				%message = "  Orphaned list: " @ %orphanedList;
+				Client::sendMessage(%TrueClientId, 0, %message);
+				echo("[AI NUMBER AUDIT] " @ %message);
+			}
+			
+			if(%autoFix)
+			{
+				%message = "Freed " @ %freedCount @ " orphaned numbers";
+				Client::sendMessage(%TrueClientId, $MsgGreen, %message);
+				echo("[AI NUMBER AUDIT] " @ %message);
+			}
+			else
+			{
+				%message = "TIP: Use '#auditainumbers fix' to free orphaned numbers";
+				Client::sendMessage(%TrueClientId, 0, %message);
+			}
+		}
+		else
+		{
+			Client::sendMessage(%TrueClientId, $MsgGreen, %message @ " - All clean!");
+			echo("[AI NUMBER AUDIT] " @ %message @ " - All clean!");
+		}
+		
+		// Also show $numAI for comparison
+		%message = "Current $numAI counter: " @ $numAI;
+		Client::sendMessage(%TrueClientId, 0, %message);
+		echo("[AI NUMBER AUDIT] " @ %message);
+		
+		%fixSuffix = "";
+		if(%autoFix)
+			%fixSuffix = " fix";
+		echo("[ADMIN]: " @ %TCsenderName @ " ran #auditainumbers" @ %fixSuffix);
+	}
+	return;
+}
+if(%w1 == "#fullbotscan")
+{
+	if(%clientToServerAdminLevel >= 1)
+	{
+		echo("[FULL BOT SCAN] === Starting Full Bot Scan ===");
+		Client::sendMessage(%TrueClientId, 0, "=== FULL BOT SCAN ===");
+		
+		// Get all live bots in world
+		%botList = GetBotIdList();
+		%liveBotsCount = 0;
+		%liveBots = "";
+		if(%botList != "")
+		{
+			for(%i = 0; (%botId = GetWord(%botList, %i)) != -1; %i++)
+			{
+				%liveBotsCount++;
+				%liveBots = %liveBots @ %botId @ " ";
+			}
+		}
+		
+		// Check 1: Bots in $BotRegistryList but not alive
+		%orphanedRegistry = 0;
+		%orphanedRegistryList = "";
+		for(%i = 0; GetWord($BotRegistryList, %i) != -1; %i++)
+		{
+			%regId = GetWord($BotRegistryList, %i);
+			%playerObj = Client::getOwnedObject(%regId);
+			if(%playerObj == "" || %playerObj == -1)
+			{
+				%orphanedRegistry++;
+				%orphanedRegistryList = %orphanedRegistryList @ %regId @ " ";
+			}
+		}
+		
+		// Check 2: Live bots not in $BotRegistryList (unregistered)
+		%unregisteredBots = 0;
+		%unregisteredList = "";
+		for(%i = 0; (%botId = GetWord(%botList, %i)) != -1; %i++)
+		{
+			// Check if enemy bot (has SpawnBotInfo)
+			%spawnBotInfo = fetchData(%botId, "SpawnBotInfo");
+			if(%spawnBotInfo != "" && %spawnBotInfo != -1 && %spawnBotInfo != "0")
+			{
+				// Enemy bot - should be in $BotRegistryList
+				%found = false;
+				for(%j = 0; GetWord($BotRegistryList, %j) != -1; %j++)
+				{
+					if(GetWord($BotRegistryList, %j) == %botId)
+					{
+						%found = true;
+						break;
+					}
+				}
+				if(!%found)
+				{
+					%unregisteredBots++;
+					%unregisteredList = %unregisteredList @ %botId @ " ";
+				}
+			}
+		}
+		
+		// Check 3: Town bots - $TownBotSpawned vs alive
+		%orphanedTownBots = 0;
+		%orphanedTownBotsList = "";
+		for(%i = 0; (%botName = GetWord($TownBotRegistry, %i)) != -1; %i++)
+		{
+			if(%botName == "" || %botName == "0")
+				continue;
+			%townBotId = $TownBotSpawned[%botName];
+			if(%townBotId != "" && %townBotId != -1)
+			{
+				%playerObj = Client::getOwnedObject(%townBotId);
+				if(%playerObj == "" || %playerObj == -1)
+				{
+					%orphanedTownBots++;
+					%orphanedTownBotsList = %orphanedTownBotsList @ %botName @ " ";
+				}
+			}
+		}
+		
+		// Summary
+		%message = "Live bots in world: " @ %liveBotsCount;
+		Client::sendMessage(%TrueClientId, 0, %message);
+		echo("[FULL BOT SCAN] " @ %message);
+		
+		%message = "Orphaned in $BotRegistryList: " @ %orphanedRegistry;
+		if(%orphanedRegistry > 0)
+			Client::sendMessage(%TrueClientId, $MsgRed, %message);
+		else
+			Client::sendMessage(%TrueClientId, $MsgGreen, %message);
+		echo("[FULL BOT SCAN] " @ %message);
+		
+		%message = "Unregistered enemy bots: " @ %unregisteredBots;
+		if(%unregisteredBots > 0)
+			Client::sendMessage(%TrueClientId, $MsgRed, %message);
+		else
+			Client::sendMessage(%TrueClientId, $MsgGreen, %message);
+		echo("[FULL BOT SCAN] " @ %message);
+		
+		%message = "Orphaned town bot entries: " @ %orphanedTownBots;
+		if(%orphanedTownBots > 0)
+			Client::sendMessage(%TrueClientId, $MsgRed, %message);
+		else
+			Client::sendMessage(%TrueClientId, $MsgGreen, %message);
+		echo("[FULL BOT SCAN] " @ %message);
+		
+		%totalIssues = %orphanedRegistry + %unregisteredBots + %orphanedTownBots;
+		if(%totalIssues == 0)
+		{
+			%message = "Result: All bot registries are consistent!";
+			Client::sendMessage(%TrueClientId, $MsgGreen, %message);
+		}
+		else
+		{
+			%message = "Result: " @ %totalIssues @ " inconsistencies found";
+			Client::sendMessage(%TrueClientId, $MsgRed, %message);
+		}
+		echo("[FULL BOT SCAN] " @ %message);
+		
+		echo("[ADMIN]: " @ %TCsenderName @ " ran #fullbotscan");
+	}
+	return;
+}
+if(%w1 == "#spawntelemetry")
+{
+	if(%clientToServerAdminLevel >= 1)
+	{
+		%successRate = 0;
+		if($Telemetry_SpawnAttempts > 0)
+			%successRate = floor(($Telemetry_SpawnSuccess / $Telemetry_SpawnAttempts) * 100);
+		
+		Client::sendMessage(%TrueClientId, 0, "=== SPAWN TELEMETRY ===");
+		Client::sendMessage(%TrueClientId, 0, "Spawn attempts: " @ $Telemetry_SpawnAttempts);
+		Client::sendMessage(%TrueClientId, 0, "  - Success: " @ $Telemetry_SpawnSuccess @ " (" @ %successRate @ "%)");
+		Client::sendMessage(%TrueClientId, 0, "  - Failed: " @ $Telemetry_SpawnFailed);
+		Client::sendMessage(%TrueClientId, 0, "    - Town bot conflict: " @ $Telemetry_SpawnFailedTownBot);
+		Client::sendMessage(%TrueClientId, 0, "    - Client ID issues: " @ $Telemetry_SpawnFailedClientId);
+		Client::sendMessage(%TrueClientId, 0, "    - Other: " @ $Telemetry_SpawnFailedOther);
+		Client::sendMessage(%TrueClientId, 0, "Deaths processed: " @ $Telemetry_DeathsProcessed);
+		Client::sendMessage(%TrueClientId, 0, "AI numbers freed: " @ $Telemetry_AINumbersFreed);
+		Client::sendMessage(%TrueClientId, 0, "AI number orphans: " @ $Telemetry_AINumberOrphans);
+		
+		if(%w2 == "reset")
+		{
+			Telemetry_Reset();
+			Client::sendMessage(%TrueClientId, $MsgGreen, "Telemetry counters reset.");
+		}
+		
+		echo("[ADMIN]: " @ %TCsenderName @ " ran #spawntelemetry");
+	}
+	return;
+}
 	if(%w1 == "#spawnpointdebug")
 	{
 		if(%clientToServerAdminLevel >= 1)
