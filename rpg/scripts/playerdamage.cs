@@ -1893,9 +1893,14 @@ function Player::onKilled(%this)
 			// CRITICAL: Decrement $numAI counter when enemy bot dies
 			// This prevents the count from accumulating over time
 			if($numAI > 0)
+			{
 				$numAI--;
+				$Telemetry_NumAI_Dec++;  // Track $numAI decrements
+			}
 			if($numAI < 0)
 				$numAI = 0;
+			
+			Telemetry_RecordDeath();  // Track bot death processed
 			
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT TRACK] Enemy bot died: " @ %botInfoAiName @ " (clientId=" @ %clientId @ ") | Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots @ " | $numAI: " @ $numAI);
 			
@@ -1920,6 +1925,7 @@ function Player::onKilled(%this)
 					$aiNumTable[%aiNumber] = "";
 					$tmpbotn[%aiName] = "";
 					%numberFreed = true;
+					Telemetry_RecordAINumberFreed();  // Track AI number freed
 					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %aiNumber @ " for enemy bot " @ %aiName @ " (via BotInfoAiName) - number can now be recycled");
 				}
 			}
@@ -1976,6 +1982,7 @@ function Player::onKilled(%this)
 									$aiNumTable[%tryNumber] = "";
 									$tmpbotn[%tryName] = "";
 									%numberFreed = true;
+									Telemetry_RecordAINumberFreed();  // Track AI number freed
 									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %tryNumber @ " for enemy bot " @ %tryName @ " (via display name fallback) - number can now be recycled");
 									break;
 								}
@@ -2020,6 +2027,7 @@ function Player::onKilled(%this)
 										$aiNumTable[%tryNumber] = "";
 										$tmpbotn[%tryName] = "";
 										%numberFreed = true;
+										Telemetry_RecordAINumberFreed();  // Track AI number freed
 										if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %tryNumber @ " for enemy bot " @ %tryName @ " (via exhaustive search fallback) - number can now be recycled");
 										break;
 									}
