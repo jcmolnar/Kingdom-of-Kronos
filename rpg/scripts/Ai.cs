@@ -4191,7 +4191,7 @@ function DetermineBotTeam(%botName, %displayName, %commandIssuer, %clientId)
 		return 1; // Default to team 1 (enemy)
 	}
 	
-	// Priority 3: Direct lookup via $NameForRace → $TeamForRace (most reliable for enemy bots)
+	// Priority 3: Direct lookup via $NameForRace -> $TeamForRace (most reliable for enemy bots)
 	// This is the standard way teams are defined in enemyarmors.cs
 	%guardtype = StripTrailingDigits(%botName);
 	if(%guardtype != "" && %guardtype != -1)
@@ -4202,7 +4202,7 @@ function DetermineBotTeam(%botName, %displayName, %commandIssuer, %clientId)
 			%teamFromRace = $TeamForRace[%botRace];
 			if(%teamFromRace != "" && %teamFromRace != -1 && %teamFromRace != "0" && %teamFromRace != 0)
 			{
-				if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] DetermineBotTeam: Found team " @ %teamFromRace @ " via $NameForRace→$TeamForRace (guardtype=" @ %guardtype @ ", race=" @ %botRace @ ")");
+				if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] DetermineBotTeam: Found team " @ %teamFromRace @ " via $NameForRace->$TeamForRace (guardtype=" @ %guardtype @ ", race=" @ %botRace @ ")");
 				return %teamFromRace;
 			}
 		}
