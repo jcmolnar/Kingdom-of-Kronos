@@ -4685,24 +4685,36 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					// Zone is empty - abort spawn and clean up bot object
 					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Zone " @ %zoneIndex @ " is empty, aborting spawn for " @ %newName);
 					
-					// Find and delete bot object using %newName (safer than %displayName)
-					%ghostBotId = AI::getClientIdFromName(%newName);
+					// CRITICAL: Delete the already-spawned bot to prevent ghost shell
+					// AI::spawn() already created the bot, we MUST delete it
+					
+					// Try to find the bot using multiple methods
+					%ghostBotId = AI::getId(%newName);  // Most reliable - engine lookup
+					if(%ghostBotId == "" || %ghostBotId == -1)
+						%ghostBotId = AI::getClientIdFromName(%newName);
 					if(%ghostBotId == "" || %ghostBotId == -1)
 						%ghostBotId = NEWgetClientByName(%newName);
 					
+					// Clear spawn flags first
+					$SpawnAIScheduled[%newName] = "";
+					
 					if(%ghostBotId != -1 && %ghostBotId != "")
 					{
-						%ghostPlayerObj = Client::getOwnedObject(%ghostBotId);
-						if(%ghostPlayerObj != -1 && %ghostPlayerObj != "")
-						{
-							// Clear spawn flags
-							$SpawnAIScheduled[%newName] = "";
-							storeData(%ghostBotId, "SpawnBotInfo", "");
-							// Delete bot using AI::delete (proper engine cleanup)
-							echo("[SPAWN AI] Deleting ghost bot via AI::delete: " @ %newName);
-							AI::delete(%newName);
-						}
+						// Found the bot - clear its data
+						storeData(%ghostBotId, "SpawnBotInfo", "");
+						storeData(%ghostBotId, "BotInfoAiName", "");
+						$BotType[%ghostBotId] = "";
+						echo("[SPAWN AI] Deleting ghost bot via AI::delete: " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
 					}
+					else
+					{
+						// Couldn't find clientId, but bot might still exist - try AI::delete anyway
+						echo("[SPAWN AI] Couldn't find clientId for " @ %newName @ ", trying AI::delete anyway");
+					}
+					
+					// ALWAYS try AI::delete by name - the bot was created by AI::spawn
+					// Even if we couldn't find the clientId, AI::delete(name) should work
+					AI::delete(%newName);
 					
 					// CRITICAL: Rollback spawn slot to prevent spawn point from being marked "busy" forever
 					RollbackSpawnSlot(%spawnPointId);
