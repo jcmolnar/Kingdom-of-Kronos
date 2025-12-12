@@ -652,10 +652,8 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	if(%clientId == "" || %clientId == -1)
 		return;
 	
-	// -------------------------------------------------------------------------
-	// 1. Clear $BotType cache (enables O(1) bot type detection)
-	// -------------------------------------------------------------------------
-	$BotType[%clientId] = "";
+	// NOTE: $BotType is cleared at END of function (after all storeData calls)
+	// Otherwise GetClientDataType() warns 100+ times during cleanup
 	
 	// -------------------------------------------------------------------------
 	// 2. Clear storeData fields (routes to appropriate array based on type)
@@ -796,6 +794,11 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	%commonWeapons = "Crossbow Bow Rifle Pistol Shotgun";
 	for(%i = 0; (%weapon = GetWord(%commonWeapons, %i)) != -1; %i++)
 		storeData(%clientId, "LoadedProjectile " @ %weapon, "");
+	
+	// -------------------------------------------------------------------------
+	// 11. Clear $BotType cache LAST (after all storeData calls complete)
+	// -------------------------------------------------------------------------
+	$BotType[%clientId] = "";
 }
 
 // Get spawn point for a bot from registry
