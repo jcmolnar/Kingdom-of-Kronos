@@ -1871,7 +1871,7 @@ function PreSpawnCleanup(%clientId)
 				echo("[PRE-SPAWN CLEANUP] Deleting bot via AI::delete: " @ %aiName @ " (clientId=" @ %clientId @ ")");
 				AI::delete(%aiName);
 			}
-			else if(%actualClientId != -1 && %actualClientId != "")
+			else if(%actualClientId != -1 && %actualClientId != "" && %actualClientId != "False" && %actualClientId != "false")
 			{
 				// Bot is ALIVE on a different clientId - DON'T delete by name!
 				// Just delete the player object on THIS clientId and clear the stale data
@@ -5414,7 +5414,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting old bot via AI::delete: " @ %oldAiName);
 									AI::delete(%oldAiName);
 								}
-								else if(%actualClientId != -1 && %actualClientId != "")
+								else if(%actualClientId != -1 && %actualClientId != "" && %actualClientId != "False" && %actualClientId != "false")
 								{
 									// Bot is ALIVE on a different clientId - DON'T delete by name!
 									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - Bot " @ %oldAiName @ " is alive on clientId " @ %actualClientId @ ", NOT deleting by name. Just clearing stale data.");
