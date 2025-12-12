@@ -154,6 +154,19 @@ function createServer(%mission, %dedicated)
 	$LoadOutList = "";
 	$isRaining = "";
 
+	// CRITICAL: Create BotGroup and PlayerGroup SimSets at server startup
+	// This ensures they exist before any bots/players spawn, preventing FindPlayerInBotGroup() failures
+	if(!isObject("BotGroup"))
+	{
+		newObject("BotGroup", SimGroup, true);
+		echo("[SERVER INIT] Created BotGroup SimSet at server startup");
+	}
+	if(!isObject("PlayerGroup"))
+	{
+		newObject("PlayerGroup", SimGroup, true);
+		echo("[SERVER INIT] Created PlayerGroup SimSet at server startup");
+	}
+
 	$loadingMission = false;
 	$ME::Loaded = false;
 	if(%mission == "")
@@ -301,11 +314,23 @@ function createServer(%mission, %dedicated)
 		InitSpawnPoints();
 		// Start the centralized spawn counter reconciliation loop
 		StartSpawnCounterReconciliation();
+		// Start periodic AI cleanup systems
+		StartAINumberReconciliation();
+		StartGhostBotCleanup();
 	}
 
 	// Start periodic lootbag aggregation (merges nearby lootbags to reduce clutter)
 	// Uses guard inside StartLootbagAggregation to avoid duplicate schedules
 	StartLootbagAggregation(30);
+	
+	// Start periodic graveyard cleanup (removes entries older than 10 seconds)
+	// This prevents graveyard accumulation from blocking client ID reuse
+	// CRITICAL: Use guard to prevent duplicate scheduling (CleanupOldGraveyardEntries reschedules itself)
+	if($GraveyardCleanupScheduled == "")
+	{
+		$GraveyardCleanupScheduled = "true";
+		schedule("CleanupOldGraveyardEntries();", 30);
+	}
 	
 	// Start overlevel AFK zone enforcement (low-level zones protection)
 	StartAFKZoneEnforcement();

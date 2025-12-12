@@ -160,6 +160,141 @@ function PeriodicAINumberReconciliation()
 }
 
 // ============================================================================
+// GHOST BOT DETECTION AND CLEANUP
+// Runs every 30 seconds to detect and clean up ghost bots (bots with missing BotInfoAiName)
+// Uses double-scan approach: first scan flags suspects, second scan cleans up confirmed ghosts
+// ============================================================================
+$GhostBotCleanupEnabled = true;  // Set to false to disable
+
+function StartGhostBotCleanup()
+{
+	if($GhostBotCleanupEnabled)
+	{
+		schedule("PeriodicGhostBotScan();", 30);  // 30 seconds
+		echo("[GHOST BOT] Started periodic ghost bot detection (every 30 seconds)");
+	}
+}
+
+function PeriodicGhostBotScan()
+{
+	if(!$GhostBotCleanupEnabled)
+		return;
+	
+	%ghostCount = 0;
+	%cleanedCount = 0;
+	%newSuspects = 0;
+	
+	// Get list of all bot objects from BotGroup
+	if(!isObject("BotGroup"))
+	{
+		schedule("PeriodicGhostBotScan();", 30);
+		return;
+	}
+	
+	%group = nameToID("BotGroup");
+	%count = Group::objectCount(%group);
+	
+	for(%i = %count - 1; %i >= 0; %i--)
+	{
+		%obj = Group::getObject(%group, %i);
+		if(!isObject(%obj)) continue;
+		if(getObjectType(%obj) != "Player") continue;
+		
+		%clientId = Player::getClient(%obj);
+		if(%clientId == "" || %clientId == -1) continue;
+		
+		// Check if this bot has valid BotInfoAiName
+		%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+		%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+		%displayName = Client::getName(%clientId);
+		
+		// Skip if it has valid identifying data
+		if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0")
+			continue;
+		
+		// Skip town bots (they don't use BotInfoAiName the same way)
+		if(isTownBot(%clientId))
+			continue;
+		
+		// This is a potential ghost bot (enemy bot without BotInfoAiName)
+		%ghostCount++;
+		
+		// Check if it was already flagged in a previous scan
+		if($GhostBotSuspect[%clientId] != "")
+		{
+			%timeFlagged = $GhostBotSuspect[%clientId];
+			%currentTime = getSimTime();
+			%elapsed = %currentTime - %timeFlagged;
+			
+			// If flagged for more than 25 seconds (allows for normal 3s spawn delay + buffer)
+			if(%elapsed > 25)
+			{
+				// CONFIRMED GHOST - clean it up
+				echo("[GHOST BOT] Cleaning up confirmed ghost bot: clientId=" @ %clientId @ ", displayName='" @ %displayName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "', flagged " @ %elapsed @ "s ago");
+				
+				// Mark as no-drop, no-exp to prevent side effects
+				storeData(%clientId, "noDropLootbagFlag", True);
+				storeData(%clientId, "noExperienceFlag", True);
+				
+				// Clean up data
+				ClearAllBotData(%clientId, false);
+				
+				// Try to delete the player object
+				if(isObject(%obj))
+					deleteObject(%obj);
+				
+				// Clear the suspect flag
+				$GhostBotSuspect[%clientId] = "";
+				%cleanedCount++;
+			}
+		}
+		else
+		{
+			// NEW SUSPECT - flag it with current time
+			$GhostBotSuspect[%clientId] = getSimTime();
+			%newSuspects++;
+			
+			if($AI_DEBUG_ENABLED)
+				echo("[GHOST BOT] Flagged new suspect: clientId=" @ %clientId @ ", displayName='" @ %displayName @ "'");
+		}
+	}
+	
+	// Clear flags for bots that are no longer suspects (they got proper data or were cleaned up elsewhere)
+	// This prevents stale flags from accumulating
+	for(%checkId = 2048; %checkId < 2128; %checkId++)
+	{
+		if($GhostBotSuspect[%checkId] != "")
+		{
+			// Check if this bot still exists and is still a ghost
+			%stillExists = false;
+			%playerObj = Client::getOwnedObject(%checkId);
+			if(%playerObj != "" && %playerObj != -1 && isObject(%playerObj))
+			{
+				%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
+				if(%botInfoAiName == "" || %botInfoAiName == -1 || %botInfoAiName == "0")
+				{
+					// Skip town bots
+					if(!isTownBot(%checkId))
+						%stillExists = true;
+				}
+			}
+			
+			if(!%stillExists)
+			{
+				// Bot either got proper data or was cleaned up - clear the flag
+				$GhostBotSuspect[%checkId] = "";
+			}
+		}
+	}
+	
+	if(%cleanedCount > 0 || (%newSuspects > 0 && $AI_DEBUG_ENABLED))
+		echo("[GHOST BOT] Scan complete: " @ %ghostCount @ " ghosts found, " @ %newSuspects @ " newly flagged, " @ %cleanedCount @ " cleaned up");
+	
+	// Schedule next scan
+	schedule("PeriodicGhostBotScan();", 30);
+}
+
+// ============================================================================
 // PRE-INDEXED BOT LOOKUP TABLES
 // Provides O(1) access to bot data by clientId and by aiName
 // ============================================================================
@@ -2627,6 +2762,9 @@ function AI::setupAI(%key, %team)
 			dbecho(1, %aiFound @ " drones installed..." );
 
 		$numAi = %aiFound;
+		
+		// NOTE: Periodic cleanup systems (StartAINumberReconciliation, StartGhostBotCleanup)
+		// are started from Server.cs in createServer() alongside other periodic systems
 	}
 	else     //respawning dead AI with original name and path
 	{
