@@ -1,58 +1,61 @@
 // Helper function to determine which data array to use for a client
 // Returns: "player", "townbot", or "enemybot"
-// NOTE: This function checks arrays directly to avoid recursion when checking SpawnBotInfo
-// CRITICAL: Check new arrays FIRST to avoid stale data in old array causing misidentification
+// CRITICAL: Player safeguard FIRST - never misidentify player as bot (causes black screen)
 function GetClientDataType(%clientId)
 {
-	// Check if client is a bot
+	// PRIORITY 0: PLAYER SAFEGUARD - Check for player save file FIRST
+	// If player has a character save file, they are DEFINITELY a player, NOT a bot
+	// This prevents stale bot data from causing player misidentification (black screen)
+	%playerName = Client::getName(%clientId);
+	if(%playerName != "" && %playerName != -1)
+	{
+		%characterFile = "temp\\" @ %playerName @ ".cs";
+		if(isFile(%characterFile))
+		{
+			return "player";  // Has save file = definitely a player
+		}
+	}
+	
+	// PRIORITY 2: Check $BotType cache (set at spawn, cleared on death)
+	// This is the fast path for properly spawned bots
+	%botType = $BotType[%clientId];
+	if(%botType == "enemy")
+		return "enemybot";
+	if(%botType == "town")
+		return "townbot";
+	
+	// LEGACY: If $BotType not set, check arrays (backwards compatibility)
 	if(isRPGAI(%clientId))
 	{
-		// For bots, check SpawnBotInfo to determine type
-		// CRITICAL: Check new arrays FIRST to avoid stale data in $ClientData
 		// Check enemy bot array first
 		%spawnBotInfoEnemy = $EnemyBotData[%clientId, "SpawnBotInfo"];
 		if(%spawnBotInfoEnemy != "" && %spawnBotInfoEnemy != "0" && %spawnBotInfoEnemy != -1)
-		{
-			// Found in enemy bot array - it's an enemy bot
 			return "enemybot";
-		}
 		
-		// Check town bot array - if BotInfoAiName exists, it's a town bot
+		// Check town bot array
 		%townBotAiName = $TownBotData[%clientId, "BotInfoAiName"];
 		if(%townBotAiName != "" && %townBotAiName != "0" && %townBotAiName != -1)
-		{
-			// Found BotInfoAiName in town bot array - it's a town bot
 			return "townbot";
-		}
 		
-		// Check old array for backwards compatibility (migration mode)
+		// Check old $ClientData for backwards compatibility
 		%spawnBotInfo = $ClientData[%clientId, "SpawnBotInfo"];
-		%oldBotInfoAiName = $ClientData[%clientId, "BotInfoAiName"];
-		
-		// If SpawnBotInfo is set in old array, it's an enemy bot
 		if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
-		{
-			// Enemy bot: SpawnBotInfo is set in old array
 			return "enemybot";
-		}
 		
-		// If BotInfoAiName exists but SpawnBotInfo doesn't, it's a town bot
+		%oldBotInfoAiName = $ClientData[%clientId, "BotInfoAiName"];
 		if(%oldBotInfoAiName != "" && %oldBotInfoAiName != "0" && %oldBotInfoAiName != -1)
-		{
-			// Town bot: BotInfoAiName exists but SpawnBotInfo is empty
 			return "townbot";
-		}
 		
-		// Default: if it's an AI but we can't determine type, assume enemy bot (safer default)
-		// This should rarely happen if refactoring is complete
-		return "enemybot";
-	}
-	else
-	{
-		// Player
+		// PRIORITY 3: Bot has no $BotType and no data - spawn was incomplete
+		// Log and default to player (SAFE) - better to break bot than player
+		echo("WARNING: GetClientDataType - Bot " @ %clientId @ " has no $BotType and no data. Defaulting to player for safety.");
 		return "player";
 	}
+	
+	// Not a bot - definitely a player
+	return "player";
 }
+
 
 // Helper function to get data from appropriate array
 // During migration: checks new array first, falls back to old array
@@ -103,6 +106,8 @@ function GetDataFromArray(%clientId, %type)
 }
 
 // Helper function to set data in appropriate array
+// PRIORITY 4: Bots only write to their specific array (no dual-write to $ClientData)
+// This prevents stale bot data in $ClientData from causing player misidentification
 function SetDataInArray(%clientId, %type, %value)
 {
 	%clientType = GetClientDataType(%clientId);
@@ -114,18 +119,16 @@ function SetDataInArray(%clientId, %type, %value)
 	else if(%clientType == "townbot")
 	{
 		$TownBotData[%clientId, %type] = %value;
-		// Also update old array during migration for backwards compatibility
-		$ClientData[%clientId, %type] = %value;
+		// REMOVED: Dual-write to $ClientData (caused stale data pollution)
 	}
 	else if(%clientType == "enemybot")
 	{
 		$EnemyBotData[%clientId, %type] = %value;
-		// Also update old array during migration for backwards compatibility
-		$ClientData[%clientId, %type] = %value;
+		// REMOVED: Dual-write to $ClientData (caused stale data pollution)
 	}
 	else
 	{
-		// Default fallback
+		// Default fallback (should be player if GetClientDataType returns unknown)
 		$ClientData[%clientId, %type] = %value;
 	}
 }

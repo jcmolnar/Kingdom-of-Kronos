@@ -541,6 +541,10 @@ function RegisterBot(%clientId, %spawnPointId, %team, %aiName)
 	// Add to O(1) lookup index
 	BotIndex_Add(%clientId, %aiName, %spawnPointId);
 	
+	// PRIORITY 2: Set $BotType cache for O(1) bot type detection
+	// This eliminates 300+ array lookups per spawn in GetClientDataType()
+	$BotType[%clientId] = "enemy";
+	
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT REGISTRY] Registered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", team=" @ %team @ ", name=" @ %aiName);
 }
 
@@ -549,6 +553,9 @@ function UnregisterBot(%clientId)
 {
 	if(%clientId == "" || %clientId == -1)
 		return;
+	
+	// PRIORITY 2: Clear $BotType cache FIRST (before any other cleanup)
+	$BotType[%clientId] = "";
 	
 	// Remove from O(1) lookup index (call before clearing registry entries)
 	BotIndex_Remove(%clientId);
@@ -7111,6 +7118,7 @@ function AI::onDroneKilled(%aiName)
 			if(%botName != "" && %botName != -1 && %botName != "0")
 			{
 				$TownBotSpawned[%botName] = "";
+				$BotType[%aiId] = "";  // PRIORITY 2: Clear $BotType cache
 				echo("[TOWN BOT CLEANUP] AI::onDroneKilled - Cleared $TownBotSpawned[" @ %botName @ "] for clientId " @ %aiId);
 			}
 			else
@@ -7122,6 +7130,7 @@ function AI::onDroneKilled(%aiName)
 					if($TownBotSpawned[%regBotName] == %aiId)
 					{
 						$TownBotSpawned[%regBotName] = "";
+						$BotType[%aiId] = "";  // PRIORITY 2: Clear $BotType cache
 						echo("[TOWN BOT CLEANUP] AI::onDroneKilled - Cleared $TownBotSpawned[" @ %regBotName @ "] by clientId search (clientId=" @ %aiId @ ")");
 						break;
 					}
@@ -9211,6 +9220,9 @@ function SpawnZoneBotPostSpawn(%aiName, %botName, %displayName, %zoneIndex)
 	// Reset retry counter on successful spawn
 	$TownBotSpawned[%botName] = %clientId;
 	
+	// PRIORITY 2: Set $BotType cache for O(1) bot type detection
+	$BotType[%clientId] = "town";
+	
 	// Add to TownBotList immediately so bots can be found for interaction
 	$TownBotList = $TownBotList @ %clientId @ " ";
 	
@@ -9534,6 +9546,7 @@ function RetryGetAIId(%aiName, %botName, %displayName, %zoneIndex)
 	$TownBotSpawnRetry[%botName] = "";
 	
 	$TownBotSpawned[%botName] = %clientId;
+	$BotType[%clientId] = "town";  // PRIORITY 2: Set $BotType cache
 	$TownBotList = $TownBotList @ %clientId @ " ";
 	// CRITICAL: Set BotInfoAiName in $TownBotData FIRST so GetClientDataType identifies it as a town bot
 	// This must happen before clearing SpawnBotInfo to ensure proper type detection
@@ -9777,6 +9790,7 @@ function SpawnSingleZoneBot(%botName, %zoneIndex)
 		$TownBotSpawnRetry[%botName] = "";
 		
 		$TownBotSpawned[%botName] = %clientId;
+		$BotType[%clientId] = "town";  // PRIORITY 2: Set $BotType cache
 		
 		// Add to TownBotList immediately so bots can be found for interaction
 		$TownBotList = $TownBotList @ %clientId @ " ";
