@@ -36,28 +36,28 @@ $AIattackMode = 1;
 
 // Debug output control flags
 // Set to 1 to enable debug output, 0 to disable (reduces server load and log spam)
-$AI_DEBUG_ENABLED = 1;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
-$AI_SPAWN_DEBUG = 1;          // Controls [SPAWN FLOW] messages specifically
-$AI_PERIODIC_DEBUG = 1;       // Controls [INERT DEBUG] AI::Periodic messages
+$AI_DEBUG_ENABLED = 0;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
+$AI_SPAWN_DEBUG = 0;          // Controls [SPAWN FLOW] messages specifically
+$AI_PERIODIC_DEBUG = 0;       // Controls [INERT DEBUG] AI::Periodic messages
 $LOOTBAG_DEBUG = 0;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
-$Debug::SafeGuards = 1;       // Controls [SAFEGUARD] player protection logging
+$Debug::SafeGuards = 0;       // Controls [SAFEGUARD] player protection logging
 
 // Granular Debug Flags (Turn off to reduce spam)
-$TOWNBOT_RACE_DEBUG = 1;      // Controls [TOWNBOT RACE DEBUG] messages
-$TOWNBOT_SKIN_DEBUG = 1;      // Controls [FINAL FIX] messages
-$MISSION_CLEANUP_DEBUG = 1;   // Controls [DEBUG] addToSetMissionCleanup messages
-$GETBOTID_DEBUG = 1;          // Controls [GETBOTIDLIST DEBUG] messages
-$SPAWNLOOP_DEBUG = 1;         // Controls [SPAWN DEBUG] messages
-$BOT_TEAM_DEBUG = 1;          // Controls [BOT TEAM DEBUG] messages
-$TEAM_ENFORCE_DEBUG = 1;      // Controls [TEAM ENFORCE] messages
-$BOT_TRACK_DEBUG = 1;         // Controls [BOT TRACK] messages
-$BOT_REGISTRY_DEBUG = 1;      // Controls [BOT REGISTRY] messages
-$SPAWN_TRANSACTION_DEBUG = 1; // Controls [SPAWN TRANSACTION] messages
-$BOT_SHELL_DEBUG = 1;         // Controls [BOT SHELL DEBUG] messages
-$SPAWN_COUNTER_DEBUG = 1;     // Controls [SPAWN COUNTER] messages
-$BOT_CLEANUP_DEBUG = 1;       // Controls [BOT CLEANUP] messages
-$TOWNBOT_ARMOR_DEBUG = 1;     // Controls [TOWNBOT ARMOR DEBUG] messages
-$RECONCILE_DEBUG = 1;         // Controls [RECONCILE] messages
+$TOWNBOT_RACE_DEBUG = 0;      // Controls [TOWNBOT RACE DEBUG] messages
+$TOWNBOT_SKIN_DEBUG = 0;      // Controls [FINAL FIX] messages
+$MISSION_CLEANUP_DEBUG = 0;   // Controls [DEBUG] addToSetMissionCleanup messages
+$GETBOTID_DEBUG = 0;          // Controls [GETBOTIDLIST DEBUG] messages
+$SPAWNLOOP_DEBUG = 0;         // Controls [SPAWN DEBUG] messages
+$BOT_TEAM_DEBUG = 0;          // Controls [BOT TEAM DEBUG] messages
+$TEAM_ENFORCE_DEBUG = 0;      // Controls [TEAM ENFORCE] messages
+$BOT_TRACK_DEBUG = 0;         // Controls [BOT TRACK] messages
+$BOT_REGISTRY_DEBUG = 0;      // Controls [BOT REGISTRY] messages
+$SPAWN_TRANSACTION_DEBUG = 0; // Controls [SPAWN TRANSACTION] messages
+$BOT_SHELL_DEBUG = 0;         // Controls [BOT SHELL DEBUG] messages
+$SPAWN_COUNTER_DEBUG = 0;     // Controls [SPAWN COUNTER] messages
+$BOT_CLEANUP_DEBUG = 0;       // Controls [BOT CLEANUP] messages
+$TOWNBOT_ARMOR_DEBUG = 0;     // Controls [TOWNBOT ARMOR DEBUG] messages
+$RECONCILE_DEBUG = 0;         // Controls [RECONCILE] messages
 
 
 // Bot tracking counters
@@ -4713,6 +4713,134 @@ function FindPlayerInBotGroup(%clientId)
 	return -1;
 }
 
+// ============================================================================
+// SPAWN AI HELPER FUNCTIONS
+// Consolidated helpers to reduce duplication in SpawnAIGetClientId
+// ============================================================================
+
+// Store zone data for a bot using both storeData and direct array access
+// This ensures DespawnZoneBots can find the bot regardless of which data source it checks
+function Bot_StoreZoneData(%aiId, %spawnPointId)
+{
+	if(%aiId == "" || %aiId == -1) return;
+	if(%spawnPointId == "" || %spawnPointId == -1) return;
+	
+	%markerZone = $MarkerZone[%spawnPointId];
+	if(%markerZone == "" || %markerZone == -1) return;
+	
+	storeData(%aiId, "zone", %markerZone);
+	storeData(%aiId, "tmpzone", %markerZone);
+	storeData(%aiId, "SpawnOriginZoneID", %markerZone);
+	
+	// CRITICAL: Explicitly write to EnemyBotData as well, since storeData() might default to ClientData
+	// because SpawnBotInfo isn't set yet (so isRPGAI returns false)
+	$EnemyBotData[%aiId, "zone"] = %markerZone;
+	$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
+	
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+		echo("[SPAWN FLOW] Bot_StoreZoneData(): Stored zone " @ %markerZone @ " for clientId=" @ %aiId);
+}
+
+// Get validated player object with FindPlayerInBotGroup fallback
+// Returns "" if player object is invalid or doesn't exist
+function Bot_GetValidatedPlayerObject(%clientId)
+{
+	if(%clientId == "" || %clientId == -1) return "";
+	
+	%playerObj = Client::getOwnedObject(%clientId);
+	
+	// Fallback if engine hasn't updated getOwnedObject yet
+	if(%playerObj == -1 || %playerObj == "")
+		%playerObj = FindPlayerInBotGroup(%clientId);
+	
+	// Validate object actually exists
+	if(%playerObj == -1 || %playerObj == "" || !isObject(%playerObj))
+		return "";
+	
+	return %playerObj;
+}
+
+// Check if a client ID belongs to a real player (not a bot)
+// Returns true if this is a real player that should NOT be touched
+function Bot_IsRealPlayer(%clientId)
+{
+	if(%clientId == "" || %clientId == -1) return false;
+	
+	// Check 1: Character save file (most reliable indicator)
+	%name = Client::getName(%clientId);
+	if(%name != "" && %name != -1)
+	{
+		%characterFile = "temp\\" @ %name @ ".cs";
+		if(isFile(%characterFile))
+			return true;
+	}
+	
+	// Check 2: Not AI-controlled
+	if(!Player::isAiControlled(%clientId))
+		return true;
+	
+	return false;
+}
+
+// Check if a name matches known enemy bot patterns
+// Returns true if the name looks like an enemy bot
+function Bot_MatchesEnemyPattern(%name)
+{
+	if(%name == "" || %name == -1) return false;
+	
+	// Standard enemy bot prefixes (from NameForRace in EnemyArmors.cs)
+	if(String::findSubStr(%name, "Alien") == 0 ||
+	   String::findSubStr(%name, "Admin") == 0 ||
+	   String::findSubStr(%name, "Angel") == 0 ||
+	   String::findSubStr(%name, "Demon") == 0 ||
+	   String::findSubStr(%name, "Zombie") == 0 ||
+	   String::findSubStr(%name, "Ogre") == 0 ||
+	   String::findSubStr(%name, "Orc") == 0 ||
+	   String::findSubStr(%name, "Pigman") == 0 ||
+	   String::findSubStr(%name, "Pigmen") == 0 ||
+	   String::findSubStr(%name, "Undead") == 0 ||
+	   String::findSubStr(%name, "Minotaur") == 0 ||
+	   String::findSubStr(%name, "Seal") == 0 ||
+	   String::findSubStr(%name, "God") == 0 ||
+	   String::findSubStr(%name, "Enemy") == 0)
+	{
+		return true;
+	}
+	
+	// Colloseum/Seal Battle bot patterns (can appear anywhere in name)
+	if(String::findSubStr(%name, "Round") != -1 ||
+	   String::findSubStr(%name, "BattleOx") == 0 ||
+	   String::findSubStr(%name, "Invader") == 0 ||
+	   String::findSubStr(%name, "MoonBreaker") == 0)
+	{
+		return true;
+	}
+	
+	return false;
+}
+
+// Clear all stale bot data from a client ID
+// Used when reusing a client ID or cleaning up shell bots
+function Bot_ClearStaleData(%clientId)
+{
+	if(%clientId == "" || %clientId == -1) return;
+	
+	storeData(%clientId, "BotInfoAiName", "");
+	storeData(%clientId, "SpawnBotInfo", "");
+	storeData(%clientId, "HasLoadedAndSpawned", "");
+	
+	$EnemyBotData[%clientId, "BotInfoAiName"] = "";
+	$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
+	$ClientData[%clientId, "BotInfoAiName"] = "";
+	$ClientData[%clientId, "SpawnBotInfo"] = "";
+	$BotInfoAiName[%clientId] = "";
+	
+	UnregisterBot(%clientId);
+	
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+		echo("[SPAWN FLOW] Bot_ClearStaleData(): Cleared stale data for clientId=" @ %clientId);
+}
+
 function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId)
 {
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] SpawnAIGetClientId: ENTRY spawnPointId='" @ %spawnPointId @ "' for " @ %newName);
@@ -4838,24 +4966,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				%aiId = %aiIdFromGetId;
 				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via AI::getId() (fastest method)");
 				
-				// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
-				if(%spawnPointId != "" && %spawnPointId != -1)
-				{
-					%markerZone = $MarkerZone[%spawnPointId];
-					if(%markerZone != "" && %markerZone != -1)
-					{
-						storeData(%aiId, "zone", %markerZone);
-						storeData(%aiId, "tmpzone", %markerZone);
-						
-						// CRITICAL: Explicitly write to EnemyBotData as well, since storeData() might default to ClientData
-						// because SpawnBotInfo isn't set yet (so isRPGAI returns false)
-						$EnemyBotData[%aiId, "zone"] = %markerZone;
-						$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
-						storeData(%aiId, "SpawnOriginZoneID", %markerZone);
-						
-						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
-					}
-				}
+				// Store zone data so DespawnZoneBots can find this bot
+				Bot_StoreZoneData(%aiId, %spawnPointId);
 			}
 		}
 	}
@@ -4883,27 +4995,11 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					%existingBotInfoAiName = fetchData(%aiId, "BotInfoAiName");
 					if(%existingBotInfoAiName == "" || %existingBotInfoAiName == -1 || %existingBotInfoAiName == "0" || %existingBotInfoAiName == %newName)
 					{
-						// Safe to use - this is our newly-spawned bot
+							// Safe to use - this is our newly-spawned bot
 						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via NEWgetClientByName()");
 						
-						// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
-						if(%spawnPointId != "" && %spawnPointId != -1)
-						{
-							%markerZone = $MarkerZone[%spawnPointId];
-							if(%markerZone != "" && %markerZone != -1)
-							{
-								storeData(%aiId, "zone", %markerZone);
-								storeData(%aiId, "tmpzone", %markerZone);
-								
-								// CRITICAL: Explicitly write to EnemyBotData as well, since storeData() might default to ClientData
-								// because SpawnBotInfo isn't set yet (so isRPGAI returns false)
-								$EnemyBotData[%aiId, "zone"] = %markerZone;
-								$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
-								storeData(%aiId, "SpawnOriginZoneID", %markerZone);
-								
-								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
-							}
-						}
+						// Store zone data so DespawnZoneBots can find this bot
+						Bot_StoreZoneData(%aiId, %spawnPointId);
 					}
 					else
 					{
@@ -4955,16 +5051,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							}
 							
 							// Clear all bot data to prevent shell bot detection
-							storeData(%aiId, "BotInfoAiName", "");
-							storeData(%aiId, "SpawnBotInfo", "");
-							storeData(%aiId, "HasLoadedAndSpawned", "");
-							$EnemyBotData[%aiId, "BotInfoAiName"] = "";
-							$EnemyBotData[%aiId, "SpawnBotInfo"] = "";
-							$ClientData[%aiId, "BotInfoAiName"] = "";
-							$ClientData[%aiId, "SpawnBotInfo"] = "";
-							$BotInfoAiName[%aiId] = "";
-							// Also unregister from bot registry if it was registered
-							UnregisterBot(%aiId);
+							Bot_ClearStaleData(%aiId);
 						}
 						
 						// Now check if we can use this client ID (should be clean now)
@@ -4973,20 +5060,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						{
 							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via NEWgetClientByName() (was recently freed but enough time passed, old data cleared)");
 
-							// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
-							if(%spawnPointId != "" && %spawnPointId != -1)
-							{
-								%markerZone = $MarkerZone[%spawnPointId];
-								if(%markerZone != "" && %markerZone != -1)
-								{
-									storeData(%aiId, "zone", %markerZone);
-									storeData(%aiId, "tmpzone", %markerZone);
-									$EnemyBotData[%aiId, "zone"] = %markerZone;
-									$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
-									storeData(%aiId, "SpawnOriginZoneID", %markerZone);
-									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
-								}
-							}
+							// Store zone data so DespawnZoneBots can find this bot
+							Bot_StoreZoneData(%aiId, %spawnPointId);
 						}
 						else
 						{
@@ -5130,24 +5205,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								%aiId = %checkId;
 								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found nameless AI client " @ %checkId @ " - Assuming it is " @ %displayName @ " (name lag)");
 								
-								// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
-								if(%spawnPointId != "" && %spawnPointId != -1)
-								{
-									%markerZone = $MarkerZone[%spawnPointId];
-									if(%markerZone != "" && %markerZone != -1)
-									{
-										storeData(%aiId, "zone", %markerZone);
-										storeData(%aiId, "tmpzone", %markerZone);
-										
-										// CRITICAL: Explicitly write to EnemyBotData as well, since storeData() might default to ClientData
-										// because SpawnBotInfo isn't set yet (so isRPGAI returns false)
-										$EnemyBotData[%aiId, "zone"] = %markerZone;
-										$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
-										storeData(%aiId, "SpawnOriginZoneID", %markerZone);
-										
-										if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
-									}
-								}
+								// Store zone data so DespawnZoneBots can find this bot
+								Bot_StoreZoneData(%aiId, %spawnPointId);
 								break;
 							}
 						}
@@ -5165,24 +5224,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					%isOurNewBot = true;
 					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found newly-spawned bot " @ %newName @ " at clientId " @ %checkId @ " - cleared recently freed flag");
 					
-					// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
-					if(%spawnPointId != "" && %spawnPointId != -1)
-					{
-						%markerZone = $MarkerZone[%spawnPointId];
-						if(%markerZone != "" && %markerZone != -1)
-						{
-							storeData(%checkId, "zone", %markerZone);
-							storeData(%checkId, "tmpzone", %markerZone);
-							
-							// CRITICAL: Explicitly write to EnemyBotData as well, since storeData() might default to ClientData
-							// because SpawnBotInfo isn't set yet (so isRPGAI returns false)
-							$EnemyBotData[%checkId, "zone"] = %markerZone;
-							$EnemyBotData[%checkId, "SpawnOriginZoneID"] = %markerZone;
-							storeData(%checkId, "SpawnOriginZoneID", %markerZone);
-							
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %checkId @ ")");
-						}
-					}
+					// Store zone data so DespawnZoneBots can find this bot
+					Bot_StoreZoneData(%checkId, %spawnPointId);
 				}
 				
 				// If this is NOT our newly-spawned bot, check if it was recently freed
@@ -5221,24 +5264,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							%aiId = %checkId;
 							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via brute-force search (no existing BotInfoAiName)");
 							
-							// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
-							if(%spawnPointId != "" && %spawnPointId != -1)
-							{
-								%markerZone = $MarkerZone[%spawnPointId];
-								if(%markerZone != "" && %markerZone != -1)
-								{
-									storeData(%aiId, "zone", %markerZone);
-									storeData(%aiId, "tmpzone", %markerZone);
-									
-									// CRITICAL: Explicitly write to EnemyBotData as well, since storeData() might default to ClientData
-									// because SpawnBotInfo isn't set yet (so isRPGAI returns false)
-									$EnemyBotData[%aiId, "zone"] = %markerZone;
-									$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
-									storeData(%aiId, "SpawnOriginZoneID", %markerZone);
-									
-									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
-								}
-							}
+							// Store zone data so DespawnZoneBots can find this bot
+							Bot_StoreZoneData(%aiId, %spawnPointId);
 							break;
 						}
 						else if(%existingBotInfoAiName == %newName)
@@ -5252,37 +5279,14 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							// Display name matches but BotInfoAiName doesn't - this is our newly-spawned bot with stale BotInfoAiName
 							// Clear the stale data and use this client ID
 							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %checkId @ " via brute-force search (display name matches but BotInfoAiName='" @ %existingBotInfoAiName @ "' is stale, clearing)");
+							
 							// Clear stale bot data
-							storeData(%checkId, "BotInfoAiName", "");
-							storeData(%checkId, "SpawnBotInfo", "");
-							storeData(%checkId, "HasLoadedAndSpawned", "");
-							$EnemyBotData[%checkId, "BotInfoAiName"] = "";
-							$EnemyBotData[%checkId, "SpawnBotInfo"] = "";
-							$ClientData[%checkId, "BotInfoAiName"] = "";
-							$ClientData[%checkId, "SpawnBotInfo"] = "";
-							$BotInfoAiName[%checkId] = "";
-							UnregisterBot(%checkId);
+							Bot_ClearStaleData(%checkId);
 							
 							%aiId = %checkId;
 							
-							// CRITICAL FIX: Store zone data so DespawnZoneBots can find this bot
-							if(%spawnPointId != "" && %spawnPointId != -1)
-							{
-								%markerZone = $MarkerZone[%spawnPointId];
-								if(%markerZone != "" && %markerZone != -1)
-								{
-									storeData(%aiId, "zone", %markerZone);
-									storeData(%aiId, "tmpzone", %markerZone);
-									
-									// CRITICAL: Explicitly write to EnemyBotData as well, since storeData() might default to ClientData
-									// because SpawnBotInfo isn't set yet (so isRPGAI returns false)
-									$EnemyBotData[%aiId, "zone"] = %markerZone;
-									$EnemyBotData[%aiId, "SpawnOriginZoneID"] = %markerZone;
-									storeData(%aiId, "SpawnOriginZoneID", %markerZone);
-									
-									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Stored zone " @ %markerZone @ " for bot " @ %newName @ " (clientId=" @ %aiId @ ")");
-								}
-							}
+							// Store zone data so DespawnZoneBots can find this bot
+							Bot_StoreZoneData(%aiId, %spawnPointId);
 							break;
 						}
 					}

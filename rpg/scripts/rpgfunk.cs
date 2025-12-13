@@ -7668,7 +7668,7 @@ $AFKOverLevelBuffer = 5;
 $AFKOverLevelInactivity = 180;
 $AFKOverLevelWarnWindow = 30;
 $AFKOverLevelMinZoneTime = 60;
-$AFKOverLevelTeleportPos = "-202.374 -2231.03 186";
+$AFKOverLevelTeleportPos = "-905.1 -2201.61 522.14";
 
 // Hard caps by zone description (case-insensitive match)
 $AFKZoneCap["Pig Den"] = 30;

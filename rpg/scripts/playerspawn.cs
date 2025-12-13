@@ -1,5 +1,5 @@
-$AI_DEBUG_ENABLED = 1; // Toggle [DOT_OP_DEBUG] messages in this file
-$AI_PERIODIC_DEBUG = 1; // Toggle [INERT DEBUG] messages in this file
+$AI_DEBUG_ENABLED = 0; // Toggle [DOT_OP_DEBUG] messages in this file
+$AI_PERIODIC_DEBUG = 0; // Toggle [INERT DEBUG] messages in this file
 function Game::pickObserverSpawn(%clientId)
 {
 	dbecho($dbechoMode2, "Game::pickObserverSpawn(" @ %clientId @ ")");
