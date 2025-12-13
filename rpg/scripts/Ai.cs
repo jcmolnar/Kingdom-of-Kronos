@@ -7077,314 +7077,338 @@ function Ai::soundHelper( %sourceId, %destId, %waveFileName )
 }
 
 
-// Default periodic callback.  [Note by default it isn't called unless a frequency 
-//    is set up using AI::CallbackPeriodic().  Type in that command to see how 
-//    it works].  
-function AI::onPeriodic( %aiName )
-{
-	dbecho($dbechoMode, "AI::onPeriodic(" @ %aiName @ ")");
+//=============================================================================
+// BOT CLEANUP HELPER FUNCTIONS
+// These functions consolidate repetitive cleanup code from AI::onDroneKilled
+//=============================================================================
 
-	echo("onPeriodic() called with " @ %aiName);
+// Helper: Find client ID from AI name using multi-tier fallback
+// Returns: Client ID or -1 if not found
+function Bot_GetClientIdFromAiName(%aiName)
+{
+	// Tier 1: AI::getClientIdFromName (works for both Drones and Player objects)
+	%aiId = AI::getClientIdFromName(%aiName);
+	if(%aiId != -1 && %aiId != "" && %aiId != "False" && %aiId != "false")
+		return %aiId;
+
+	// Tier 2: Search BotInfoAiName via GetEveryoneIdList
+	%list = GetEveryoneIdList();
+	for(%i = 0; GetWord(%list, %i) != -1; %i++)
+	{
+		%checkId = GetWord(%list, %i);
+		if(fetchData(%checkId, "BotInfoAiName") == %aiName)
+			return %checkId;
+	}
+
+	// Tier 3: Search arrays via Client iteration
+	for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
+	{
+		if($EnemyBotData[%checkId, "BotInfoAiName"] == %aiName)
+			return %checkId;
+		if($ClientData[%checkId, "BotInfoAiName"] == %aiName)
+			return %checkId;
+	}
+
+	// Tier 4: Fallback range loop (2049-2200)
+	for(%checkId = 2049; %checkId <= 2200; %checkId++)
+	{
+		if($EnemyBotData[%checkId, "BotInfoAiName"] == %aiName)
+			return %checkId;
+		if($ClientData[%checkId, "BotInfoAiName"] == %aiName)
+			return %checkId;
+	}
+
+	return -1;
+}
+
+// Helper: Determine bot type from available data
+// Returns: "enemy", "town", or "unknown"
+function Bot_DetermineType(%aiId, %spawnBotInfo, %botInfoAiName)
+{
+	// Enemy bot: Has SpawnBotInfo (primary indicator)
+	if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
+		return "enemy";
+
+	// Town bot: BotInfoAiName starts with "TownBot_"
+	if(%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1)
+	{
+		if(String::findSubStr(%botInfoAiName, "TownBot_") == 0)
+			return "town";
+	}
+
+	// Infer from display name (fallback)
+	%displayName = Client::getName(%aiId);
+	if(%displayName != "" && %displayName != -1)
+	{
+		if(String::findSubStr(%displayName, "Enemy") >= 0 || 
+		   String::findSubStr(%displayName, "Ogre") >= 0 ||
+		   String::findSubStr(%displayName, "Pigmen") >= 0 ||
+		   String::findSubStr(%displayName, "Undead") >= 0 ||
+		   String::findSubStr(%displayName, "Demon") >= 0 ||
+		   String::findSubStr(%displayName, "Minotaur") >= 0 ||
+		   String::findSubStr(%displayName, "Alien") >= 0 ||
+		   String::findSubStr(%displayName, "Seal") >= 0)
+		{
+			return "enemy";
+		}
+	}
+
+	return "unknown";
+}
+
+// Helper: Clear all storeData fields for a bot
+function Bot_ClearStoreData(%aiId, %botType)
+{
+	// Common fields (all bot types)
+	storeData(%aiId, "SpawnBotInfo", "");
+	storeData(%aiId, "SpawnTime", "");
+	storeData(%aiId, "BotInfoAiName", "");
+	storeData(%aiId, "RemortStep", "");
+	storeData(%aiId, "QuestItems", "");
+	storeData(%aiId, "KeyItems", "");
+	storeData(%aiId, "Consumables", "");
+	storeData(%aiId, "Armor", "");
+	storeData(%aiId, "Accessories", "");
+	storeData(%aiId, "Other", "");
+	storeData(%aiId, "zone", "");
+	storeData(%aiId, "tmpzone", "");
+	storeData(%aiId, "SpawnOriginZoneID", "");
+	storeData(%aiId, "botTeam", "");
+	storeData(%aiId, "AITarget", "");
+	storeData(%aiId, "AILastDestination", "");
+	storeData(%aiId, "AILastLoggedDist", "");
+	storeData(%aiId, "AIMovementLoopRunning", "");
+	storeData(%aiId, "dumbAIflag", "");
+	storeData(%aiId, "frozen", "");
+	storeData(%aiId, "RACE", "");
+	storeData(%aiId, "SpawnInvuln", "");
+
+	if(%botType == "enemy")
+	{
+		// Enemy-specific fields
+		storeData(%aiId, "noExperienceFlag", "");
+		storeData(%aiId, "noDropLootbagFlag", "");
+		storeData(%aiId, "noBotSniff", "");
+		storeData(%aiId, "SpellCastStep", "");
+		storeData(%aiId, "LCKconsequence", "");
+		storeData(%aiId, "AIattackMarker", "");
+		storeData(%aiId, "BotAttackLoopActive", "");
+		storeData(%aiId, "SealBattleBot", "");
+		storeData(%aiId, "SealBattleScaledRound", "");
+		storeData(%aiId, "SealBattleOriginalLVL", "");
+		storeData(%aiId, "SealBattleOriginalRemortStep", "");
+		storeData(%aiId, "SealBattleOriginalEndurance", "");
+		storeData(%aiId, "SealBattleOriginalEnergy", "");
+		storeData(%aiId, "SealBattleOriginalWeightCapacity", "");
+		storeData(%aiId, "AImoveChance", "");
+	}
+	else if(%botType == "town")
+	{
+		// Town-specific fields
+		storeData(%aiId, "NoDropLoot", "");
+		storeData(%aiId, "MountWeaponOnSpawn", "");
+		storeData(%aiId, "MountWeaponOnTalk", "");
+		storeData(%aiId, "ShowIdleMessage", "");
+		storeData(%aiId, "LastInteractionTime", "");
+	}
+}
+
+// Helper: Clear all array data for a bot
+function Bot_ClearArrayData(%aiId, %botType)
+{
+	// Clear direct array
+	$BotInfoAiName[%aiId] = "";
+	$BotType[%aiId] = "";
+	$BotFrozen[%aiId] = "";
+
+	// Clear directives (0-99)
+	for(%d = 0; %d <= 99; %d++)
+		$aidirectiveTable[%aiId, %d] = "";
+
+	// Clear belt cache
+	$Belt::CachedList[%aiId, "QuestItems"] = "";
+	$Belt::CachedList[%aiId, "KeyItems"] = "";
+	$Belt::CachedList[%aiId, "Consumables"] = "";
+	$Belt::CachedList[%aiId, "Armor"] = "";
+	$Belt::CachedList[%aiId, "Accessories"] = "";
+	$Belt::CachedList[%aiId, "Other"] = "";
+
+	if(%botType == "enemy")
+	{
+		// Clear $EnemyBotData
+		$EnemyBotData[%aiId, "SpawnBotInfo"] = "";
+		$EnemyBotData[%aiId, "SpawnTime"] = "";
+		$EnemyBotData[%aiId, "BotInfoAiName"] = "";
+		$EnemyBotData[%aiId, "zone"] = "";
+		$EnemyBotData[%aiId, "tmpzone"] = "";
+		$EnemyBotData[%aiId, "SpawnOriginZoneID"] = "";
+		$EnemyBotData[%aiId, "RemortStep"] = "";
+		$EnemyBotData[%aiId, "QuestItems"] = "";
+		$EnemyBotData[%aiId, "KeyItems"] = "";
+		$EnemyBotData[%aiId, "Consumables"] = "";
+		$EnemyBotData[%aiId, "Armor"] = "";
+		$EnemyBotData[%aiId, "Accessories"] = "";
+		$EnemyBotData[%aiId, "Other"] = "";
+		$EnemyBotData[%aiId, "noExperienceFlag"] = "";
+		$EnemyBotData[%aiId, "noDropLootbagFlag"] = "";
+		$EnemyBotData[%aiId, "dumbAIflag"] = "";
+		$EnemyBotData[%aiId, "frozen"] = "";
+		$EnemyBotData[%aiId, "noBotSniff"] = "";
+		$EnemyBotData[%aiId, "SpellCastStep"] = "";
+		$EnemyBotData[%aiId, "LCKconsequence"] = "";
+		$EnemyBotData[%aiId, "AIattackMarker"] = "";
+		$EnemyBotData[%aiId, "SealBattleBot"] = "";
+		$EnemyBotData[%aiId, "SealBattleScaledRound"] = "";
+		$EnemyBotData[%aiId, "SealBattleOriginalLVL"] = "";
+		$EnemyBotData[%aiId, "SealBattleOriginalRemortStep"] = "";
+		$EnemyBotData[%aiId, "SealBattleOriginalEndurance"] = "";
+		$EnemyBotData[%aiId, "SealBattleOriginalEnergy"] = "";
+		$EnemyBotData[%aiId, "SealBattleOriginalWeightCapacity"] = "";
+		$EnemyBotData[%aiId, "AImoveChance"] = "";
+		$EnemyBotData[%aiId, "RACE"] = "";
+		$EnemyBotData[%aiId, "SpawnInvuln"] = "";
+		$EnemyBotData[%aiId, "DEF"] = "";
+		$EnemyBotData[%aiId, "MDEF"] = "";
+		$EnemyBotData[%aiId, "ATK"] = "";
+		$EnemyBotData[%aiId, "DMG"] = "";
+	}
+	else if(%botType == "town")
+	{
+		// Clear $TownBotData
+		$TownBotData[%aiId, "BotInfoAiName"] = "";
+		$TownBotData[%aiId, "SpawnBotInfo"] = "";
+		$TownBotData[%aiId, "SpawnTime"] = "";
+		$TownBotData[%aiId, "QuestItems"] = "";
+		$TownBotData[%aiId, "KeyItems"] = "";
+		$TownBotData[%aiId, "Consumables"] = "";
+		$TownBotData[%aiId, "Armor"] = "";
+		$TownBotData[%aiId, "Accessories"] = "";
+		$TownBotData[%aiId, "Other"] = "";
+	}
+
+	// Always clear $ClientData for backwards compatibility
+	$ClientData[%aiId, "SpawnBotInfo"] = "";
+	$ClientData[%aiId, "SpawnTime"] = "";
+	$ClientData[%aiId, "BotInfoAiName"] = "";
+	$ClientData[%aiId, "SealBattleBot"] = "";
+	$ClientData[%aiId, "SealBattleScaledRound"] = "";
+	$ClientData[%aiId, "SealBattleOriginalLVL"] = "";
+	$ClientData[%aiId, "SealBattleOriginalRemortStep"] = "";
+	$ClientData[%aiId, "SealBattleOriginalEndurance"] = "";
+	$ClientData[%aiId, "SealBattleOriginalEnergy"] = "";
+	$ClientData[%aiId, "SealBattleOriginalWeightCapacity"] = "";
+	$ClientData[%aiId, "AImoveChance"] = "";
+	$ClientData[%aiId, "RACE"] = "";
+	$ClientData[%aiId, "SpawnInvuln"] = "";
+	$ClientData[%aiId, "DEF"] = "";
+	$ClientData[%aiId, "MDEF"] = "";
+	$ClientData[%aiId, "ATK"] = "";
+	$ClientData[%aiId, "DMG"] = "";
 }
 
 
 function AI::onDroneKilled(%aiName)
 {
 	dbecho($dbechoMode, "AI::onDroneKilled(" @ %aiName @ ")");
-	//echo("[SPAWN DEBUG] AI::onDroneKilled(): botName=" @ %aiName);
 
-	if(!$SinglePlayer )
+	if(!$SinglePlayer)
 	{
-		// CRITICAL: Use AI::getClientIdFromName() first (works for both Drones and Player objects)
-		// Note: This internally calls AI::getId() which may generate "Could not find drone" errors
-		// but we need to try it for Drones. For Player objects, it will fall back to BotInfoAiName lookup.
-		%aiId = AI::getClientIdFromName(%aiName);
+		// STEP 1: Find client ID using helper function (consolidates 4-tier fallback)
+		%aiId = Bot_GetClientIdFromAiName(%aiName);
 		
-		// FALLBACK: If getClientIdFromName() failed, try searching through data arrays
-		// This handles cases where Player::onKilled() may have cleared some data but arrays still have it
 		if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
 		{
-			// Search through all active clients to find one with matching BotInfoAiName
-			%list = GetEveryoneIdList();
-			for(%i = 0; GetWord(%list, %i) != -1; %i++)
+			// Bot already cleaned up (normal for zone despawns)
+			if($AI_DEBUG_ENABLED) echo("[BOT CLEANUP] AI::onDroneKilled(): Bot " @ %aiName @ " already cleaned up (normal for zone despawns)");
+			return;
+		}
+		
+		// STEP 2: Verify this is a bot (not a real player)
+		if(!IsSafeToModify(%aiId, "AI::onDroneKilled"))
+			return;
+		
+		// STEP 3: Check if already processed (prevent double-counting)
+		%deathProcessed = fetchData(%aiId, "DeathProcessed");
+		if(%deathProcessed != "" && %deathProcessed != "0" && %deathProcessed != -1)
+			return;
+		
+		// Mark as processing IMMEDIATELY
+		storeData(%aiId, "DeathProcessed", "processing");
+		
+		// STEP 4: Get player object and name for cleanup
+		%playerObj = Client::getOwnedObject(%aiId);
+		%playerName = Client::getName(%aiId);
+		
+		// STEP 5: Clear directive #99 immediately
+		if($Directive99RemovalAttempted[%aiName] != "true" && $Directive99RemovalAttempted[%aiName] != "1")
+			AI::newDirectiveRemove(%aiName, 99);
+		
+		// STEP 6: Extract bot data BEFORE any cleanup
+		%spawnBotInfo = fetchData(%aiId, "SpawnBotInfo");
+		if(%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1)
+		{
+			%spawnBotInfo = $EnemyBotData[%aiId, "SpawnBotInfo"];
+			if(%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1)
+				%spawnBotInfo = $ClientData[%aiId, "SpawnBotInfo"];
+		}
+		
+		%botInfoAiName = fetchData(%aiId, "BotInfoAiName");
+		if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
+		{
+			%botInfoAiName = $EnemyBotData[%aiId, "BotInfoAiName"];
+			if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
+				%botInfoAiName = $ClientData[%aiId, "BotInfoAiName"];
+		}
+		
+		// Clear spawn scheduled flag
+		if(%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1)
+			$SpawnAIScheduled[%botInfoAiName] = "";
+		
+		// Re-check botInfoAiName from additional sources
+		if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
+		{
+			%botInfoAiName = $BotInfoAiName[%aiId];
+			if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
 			{
-				%checkId = GetWord(%list, %i);
-				%checkBotInfoAiName = fetchData(%checkId, "BotInfoAiName");
-				if(%checkBotInfoAiName == %aiName)
-				{
-					%aiId = %checkId;
-					break;
-				}
+				%botInfoAiName = $TownBotData[%aiId, "BotInfoAiName"];
+				if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
+					%botInfoAiName = $EnemyBotData[%aiId, "BotInfoAiName"];
 			}
 		}
 		
-		// FALLBACK 2: If still not found, try searching $EnemyBotData and $ClientData arrays
-      	if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
-      	{
-			// TWO-TIER APPROACH: Use Client::getFirst()/getNext() first (most reliable), then range loop as fallback
-			// Tier 1: Use Client::getFirst()/getNext() (most reliable method)
-			for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
-			{
-				%checkBotInfoAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
-				if(%checkBotInfoAiName == %aiName)
-				{
-					%aiId = %checkId;
-					break;
-				}
-				%checkBotInfoAiName = $ClientData[%checkId, "BotInfoAiName"];
-				if(%checkBotInfoAiName == %aiName)
-				{
-					%aiId = %checkId;
-					break;
-				}
-			}
-			
-			// Tier 2: Range loop fallback (2049-2200) - only if Tier 1 didn't find a match
-			if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
-			{
-				for(%checkId = 2049; %checkId <= 2200; %checkId++)
-				{
-					%checkBotInfoAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
-					if(%checkBotInfoAiName == %aiName)
-					{
-						%aiId = %checkId;
-						break;
-					}
-					%checkBotInfoAiName = $ClientData[%checkId, "BotInfoAiName"];
-					if(%checkBotInfoAiName == %aiName)
-					{
-						%aiId = %checkId;
-						break;
-					}
-				}
-			}
-		}
-      
-      	if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
-      	{
-	      	// NOTE: This is NORMAL for zone despawns - Player::onKilled() already cleared this bot's data
-	      	// before AI::onDroneKilled() runs (it's scheduled with a delay). The bot was already cleaned up.
-	      	// This is NOT an error condition, just AI::onDroneKilled being called redundantly.
-	      	// Only log in debug mode, and use INFO level instead of ERROR to reduce noise.
-	      	if($AI_DEBUG_ENABLED) echo("[BOT CLEANUP] AI::onDroneKilled(): Bot " @ %aiName @ " already cleaned up (normal for zone despawns)");
-      		return;
-      	}
-      	
-      	// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
-      	if(!IsSafeToModify(%aiId, "AI::onDroneKilled"))
-      	{
-      		// It's a real player - block cleanup
-      		// Note: We used to clear stale bot data here, but IsSafeToModify protects us now.
-      		// If stale data persists, it's safer to keep it than risk deleting a player who matches it.
-      		return; 
-      	}
-      	
-      	// Get player object and name for cleanup
-      	// NOTE: It's normal for player object to be missing during cleanup (engine cleanup happens before this callback)
-      	// Don't log warnings - this is expected behavior, not an error
-      	%playerObj = Client::getOwnedObject(%aiId);
-      	%playerName = Client::getName(%aiId);
-	      
-      	// CRITICAL: Check if this bot has already been processed (prevent double-counting)
-      	%deathProcessed = fetchData(%aiId, "DeathProcessed");
-      	if(%deathProcessed != "" && %deathProcessed != "0" && %deathProcessed != -1)
-      	{
-      		// Already processed - skip to prevent double-counting
-      		//echo("[SPAWN DEBUG] AI::onDroneKilled(): Bot " @ %aiName @ " already processed, skipping");
-      		return;
-      	}
-      	
-      	// Mark as being processed IMMEDIATELY to prevent double-processing
-      	storeData(%aiId, "DeathProcessed", "processing");
-      	
-      	// CRITICAL: Clear directive #99 immediately when bot dies to prevent accumulation
-      	// Directive #99 is used for follow/waypoint directives and must be cleared on death
-      	// This prevents "Directive #99 not found" errors from accumulating
-      	// Only attempt removal if we haven't already tried (prevent duplicate attempts)
-      	// Note: AI::newDirectiveRemove will set the flag internally, so we check before calling
-      	if($Directive99RemovalAttempted[%aiName] != "true" && $Directive99RemovalAttempted[%aiName] != "1")
-      	{
-      		AI::newDirectiveRemove(%aiName, 99);
-      	}
-      	
-      	// CRITICAL: Extract ALL bot data IMMEDIATELY before any cleanup or data clearing
-      	// This ensures we have the data even if it gets cleared during the death process
-      	// NOTE: Player::onKilled may have already cleared SpawnBotInfo, so check arrays as fallback
-      	%spawnBotInfo = fetchData(%aiId, "SpawnBotInfo");
-      	// If fetchData returned empty, check arrays (Player::onKilled may have cleared fetchData but not arrays yet)
-      	if(%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1)
-      	{
-      		%spawnBotInfo = $EnemyBotData[%aiId, "SpawnBotInfo"];
-      		if(%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1)
-      			%spawnBotInfo = $ClientData[%aiId, "SpawnBotInfo"];
-      	}
-      	
-      	%botInfoAiName = fetchData(%aiId, "BotInfoAiName");
-      	// If fetchData returned empty, check arrays (Player::onKilled may have cleared fetchData but not arrays yet)
-      	if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
-      	{
-      		%botInfoAiName = $EnemyBotData[%aiId, "BotInfoAiName"];
-      		if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
-      			%botInfoAiName = $ClientData[%aiId, "BotInfoAiName"];
-      	}
-      	
-      	// CRITICAL: Clear spawn scheduled flag IMMEDIATELY when bot dies
-      	// This prevents stale flags from blocking respawns if bot dies during spawn delay
-      	if(%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1)
-      	{
-      		$SpawnAIScheduled[%botInfoAiName] = "";
-      		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] AI::onDroneKilled(): Cleared $SpawnAIScheduled flag for bot " @ %botInfoAiName);
-      	}
-      	
-      	// Re-check botInfoAiName after potential array lookup
-      	if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
-      	{
-      		%botInfoAiName = $BotInfoAiName[%aiId];
-      		if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
-      		{
-      			// CRITICAL: Check $TownBotData FIRST for town bots (Player::onKilled clears $ClientData but not $TownBotData)
-      			%botInfoAiName = $TownBotData[%aiId, "BotInfoAiName"];
-      			if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
-      			{
-      				%botInfoAiName = $EnemyBotData[%aiId, "BotInfoAiName"];
-      				if(%botInfoAiName == "" || %botInfoAiName == "0" || %botInfoAiName == -1)
-      					%botInfoAiName = $ClientData[%aiId, "BotInfoAiName"];
-      			}
-      		}
-      	}
-      	
-      	%team = fetchData(%aiId, "botTeam");
-      	%playerObj = Client::getOwnedObject(%aiId);
-      	%playerName = Client::getName(%aiId);
-      	
-      	// NOTE: It's normal for player object to be invalid during cleanup (engine cleanup happens before this callback)
-      	// Don't log debug messages - this is expected behavior, not an error
-      	
-      	//echo("[SPAWN DEBUG] AI::onDroneKilled(): SpawnBotInfo='" @ %spawnBotInfo @ "' for aiId=" @ %aiId @ ", botName=" @ %aiName);
-      	//echo("[SPAWN DEBUG] AI::onDroneKilled(): BotInfoAiName='" @ %botInfoAiName @ "'");
-      	
-      	// CRITICAL: Get AI number BEFORE clearing $tmpbotn so we can free it from $aiNumTable
-      	// This ensures bot numbers are recycled properly (prevents numbers going to 100+)
-      	%aiNumber = $tmpbotn[%aiName];
-      	
-      	// Now clear data that might interfere with bot type detection
+		%team = fetchData(%aiId, "botTeam");
+		%aiNumber = $tmpbotn[%aiName];
 		storeData(%aiId, "botTeam", "");
 		
-		// CRITICAL: Determine bot type for proper cleanup and tracking
-		// Enemy bot: Has SpawnBotInfo (and it's not empty) - this is the PRIMARY indicator
-		// Town bot: Has BotInfoAiName starting with "TownBot_" AND NO SpawnBotInfo
-		// NOTE: We check SpawnBotInfo FIRST because it's the definitive indicator for enemy bots
-		// NOTE: Enemy bots can also have BotInfoAiName set, but it won't start with "TownBot_"
-		%isEnemyBot = (%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1);
-		%isTownBot = false;
-		if(!%isEnemyBot && %botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1)
-		{
-			// CRITICAL: Only treat as town bot if BotInfoAiName starts with "TownBot_"
-			// Enemy bots have BotInfoAiName set to their bot name (e.g., "MoonBreaker2"), not "TownBot_*"
-			if(String::findSubStr(%botInfoAiName, "TownBot_") == 0)
-			{
-				%isTownBot = true;
-			}
-		}
+		// STEP 7: Determine bot type using helper function
+		%botType = Bot_DetermineType(%aiId, %spawnBotInfo, %botInfoAiName);
 		
-		// If we still can't determine bot type, try using the AI name pattern
-		// Enemy bots from SpawnAI() will have their BotInfoAiName set to %newName
-		// But if data was cleared, we can infer from the AI name matching patterns
-		if(!%isEnemyBot && !%isTownBot)
+		// STEP 8: Process based on bot type
+		if(%botType == "enemy")
 		{
-			// Try to infer from AI name - if it matches known enemy bot patterns, assume enemy bot
-			// This is a fallback for cases where data was cleared prematurely
-			// Patterns match team names from EnemyArmors.cs (teams 1-8 are enemy teams)
-			%displayName = Client::getName(%aiId);
-			if(%displayName != "" && %displayName != -1)
-			{
-				// Check if display name matches enemy bot patterns based on team names from EnemyArmors.cs
-				// Team 1: "Enemy", Team 2: "Ogres", Team 3: "Pigmen", Team 4: "Undead", 
-				// Team 5: "Demons", Team 6: "Minotaur", Team 7: "Aliens", Team 8: "Seals"
-				if(String::findSubStr(%displayName, "Enemy") >= 0 || 
-				   String::findSubStr(%displayName, "Ogre") >= 0 ||
-				   String::findSubStr(%displayName, "Pigmen") >= 0 ||
-				   String::findSubStr(%displayName, "Undead") >= 0 ||
-				   String::findSubStr(%displayName, "Demon") >= 0 ||
-				   String::findSubStr(%displayName, "Minotaur") >= 0 ||
-				   String::findSubStr(%displayName, "Alien") >= 0 ||
-				   String::findSubStr(%displayName, "Seal") >= 0)
-				{
-					%isEnemyBot = true;
-					echo("WARNING: AI::onDroneKilled - Bot " @ %aiName @ " (clientId=" @ %aiId @ ") data was cleared, but inferring enemy bot from display name '" @ %displayName @ "'");
-				}
-			}
-		}
-		
-		if(%isEnemyBot)
-		{
-			// ENEMY BOT: Counters already decremented in Player::onKilled
-			// Do not decrement here to avoid double-counting
-			// echo("[BOT TRACK] Enemy bot died: " @ %aiName @ " (clientId=" @ %aiId @ ") | Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots);
+			// === ENEMY BOT CLEANUP ===
 			
-			// CRITICAL: Free AI number from $aiNumTable so it can be recycled
-			// This ensures bot numbers restart from 0-20 instead of going to 100+
+			// Free AI number
 			if(%aiNumber != "" && %aiNumber != -1 && %aiNumber != "0")
 			{
 				$aiNumTable[%aiNumber] = "";
 				$tmpbotn[%aiName] = "";
-				//echo("[SPAWN DEBUG] AI::onDroneKilled(): Freed AI number " @ %aiNumber @ " for enemy bot " @ %aiName @ " - number can now be recycled");
 			}
 			
-			// CRITICAL ROOT CAUSE FIX: Unregister bot from $BotRegistryList
-			// Without this, dead bots stay in the iteration list forever and cause "shell bot" spam
-			// This was the missing piece causing FindPlayerInBotGroup spam for minutes
+			// Unregister from bot registry
 			UnregisterBot(%aiId);
 			
-			// CRITICAL: Spawn counter is decremented in Player::onKilled() - do NOT decrement here
-			// Decrementing here would cause double-decrement and make counter go negative
-			// This allows multiple bots to spawn from the same spawn point
-			// The counter is already decremented in Player::onKilled() at line 1418
-			// echo("[SPAWN DEBUG] AI::onDroneKilled(): SpawnPoint counter already decremented in Player::onKilled()");
-			
-			// Store bot type for reference
+			// Mark as processed
 			storeData(%aiId, "DeathProcessed", "enemy");
 			
-			// CRITICAL: Clear all enemy bot data from storeData
-			storeData(%aiId, "SpawnBotInfo", "");
-			storeData(%aiId, "SpawnTime", "");
-			storeData(%aiId, "BotInfoAiName", "");
-			storeData(%aiId, "RemortStep", "");
-			storeData(%aiId, "QuestItems", "");
-			storeData(%aiId, "KeyItems", "");
-			storeData(%aiId, "Consumables", "");
-			storeData(%aiId, "Armor", "");
-			storeData(%aiId, "Accessories", "");
-			storeData(%aiId, "Other", "");
-			storeData(%aiId, "noExperienceFlag", "");
-			storeData(%aiId, "noDropLootbagFlag", "");
-			storeData(%aiId, "dumbAIflag", "");
-			storeData(%aiId, "frozen", "");
-			storeData(%aiId, "noBotSniff", "");
-			storeData(%aiId, "SpellCastStep", "");
-			storeData(%aiId, "LCKconsequence", "");
-			storeData(%aiId, "AIattackMarker", "");
-			storeData(%aiId, "botTeam", "");
-			storeData(%aiId, "AITarget", "");
-			storeData(%aiId, "BotAttackLoopActive", ""); // Clear attack loop flag
+			// Clear all bot data using helper functions
+			Bot_ClearStoreData(%aiId, "enemy");
+			Bot_ClearArrayData(%aiId, "enemy");
 			
-			// CRITICAL: Clear seal battle specific data to prevent transfer to new bots/players
-			storeData(%aiId, "SealBattleBot", "");
-			storeData(%aiId, "SealBattleScaledRound", "");
-			storeData(%aiId, "SealBattleOriginalLVL", "");
-			storeData(%aiId, "SealBattleOriginalRemortStep", "");
-			storeData(%aiId, "SealBattleOriginalEndurance", "");
-			storeData(%aiId, "SealBattleOriginalEnergy", "");
-			storeData(%aiId, "SealBattleOriginalWeightCapacity", "");
-			storeData(%aiId, "AImoveChance", "");
-			storeData(%aiId, "RACE", "");
-			storeData(%aiId, "SpawnInvuln", "");
-			
-			// CRITICAL: Clear name-based spawn invulnerability flags for seal battle bots
+			// Clear seal battle spawn invuln by name
 			%displayName = Client::getName(%aiId);
 			if(%displayName != "" && %displayName != -1)
 			{
-				// Check if this is a seal battle bot name pattern
 				if(String::findSubStr(%displayName, "SealFighter") == 0 || 
 				   String::findSubStr(%displayName, "SealMage") == 0 || 
 				   String::findSubStr(%displayName, "SealGuardian") == 0)
@@ -7393,185 +7417,60 @@ function AI::onDroneKilled(%aiName)
 				}
 			}
 			
-			// CRITICAL: Clear bot frozen flags
-			$BotFrozen[%aiId] = "";
-			
-			// CRITICAL: Schedule clearing of $ClientIdRecentlyFreed flag after AI::delete() completes
-			// This allows the client ID to be reused after cleanup is fully done (1.0s delay + 0.5s buffer = 1.5s total)
-			// Use validation token to prevent scheduled clear from executing on a real player who got the same clientId
+			// Schedule client ID reuse
 			%validationToken = %aiName @ "_" @ getSimTime();
 			$ClientIdRecentlyFreedToken[%aiId] = %validationToken;
 			schedule("if($ClientIdRecentlyFreedToken[" @ %aiId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %aiId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %aiId @ "] = \"\"; }", 1.5);
-			storeData(%aiId, "AILastDestination", "");
-			storeData(%aiId, "AILastLoggedDist", "");
-			storeData(%aiId, "AIMovementLoopRunning", "");
-			storeData(%aiId, "zone", "");
-			storeData(%aiId, "tmpzone", "");
-			storeData(%aiId, "SpawnOriginZoneID", "");
 			
-			// CRITICAL: Clear all enemy bot data from $EnemyBotData array
-			$EnemyBotData[%aiId, "SpawnBotInfo"] = "";
-			$EnemyBotData[%aiId, "SpawnTime"] = "";
-			$EnemyBotData[%aiId, "BotInfoAiName"] = "";
-			$EnemyBotData[%aiId, "zone"] = "";
-			$EnemyBotData[%aiId, "tmpzone"] = "";
-			$EnemyBotData[%aiId, "SpawnOriginZoneID"] = "";
-			$EnemyBotData[%aiId, "RemortStep"] = "";
-			$EnemyBotData[%aiId, "QuestItems"] = "";
-			$EnemyBotData[%aiId, "KeyItems"] = "";
-			$EnemyBotData[%aiId, "Consumables"] = "";
-			$EnemyBotData[%aiId, "Armor"] = "";
-			$EnemyBotData[%aiId, "Accessories"] = "";
-			$EnemyBotData[%aiId, "Other"] = "";
-			$EnemyBotData[%aiId, "noExperienceFlag"] = "";
-			$EnemyBotData[%aiId, "noDropLootbagFlag"] = "";
-			$EnemyBotData[%aiId, "dumbAIflag"] = "";
-			$EnemyBotData[%aiId, "frozen"] = "";
-			$EnemyBotData[%aiId, "noBotSniff"] = "";
-			$EnemyBotData[%aiId, "SpellCastStep"] = "";
-			$EnemyBotData[%aiId, "LCKconsequence"] = "";
-			$EnemyBotData[%aiId, "AIattackMarker"] = "";
-			
-			// CRITICAL: Clear seal battle specific data from $EnemyBotData array
-			$EnemyBotData[%aiId, "SealBattleBot"] = "";
-			$EnemyBotData[%aiId, "SealBattleScaledRound"] = "";
-			$EnemyBotData[%aiId, "SealBattleOriginalLVL"] = "";
-			$EnemyBotData[%aiId, "SealBattleOriginalRemortStep"] = "";
-			$EnemyBotData[%aiId, "SealBattleOriginalEndurance"] = "";
-			$EnemyBotData[%aiId, "SealBattleOriginalEnergy"] = "";
-			$EnemyBotData[%aiId, "SealBattleOriginalWeightCapacity"] = "";
-			$EnemyBotData[%aiId, "AImoveChance"] = "";
-			$EnemyBotData[%aiId, "RACE"] = "";
-			$EnemyBotData[%aiId, "SpawnInvuln"] = "";
-			$EnemyBotData[%aiId, "DEF"] = "";
-			$EnemyBotData[%aiId, "MDEF"] = "";
-			$EnemyBotData[%aiId, "ATK"] = "";
-			$EnemyBotData[%aiId, "DMG"] = "";
-			
-			// CRITICAL: Clear from $ClientData for backwards compatibility
-			$ClientData[%aiId, "SpawnBotInfo"] = "";
-			$ClientData[%aiId, "SpawnTime"] = "";
-			$ClientData[%aiId, "BotInfoAiName"] = "";
-			
-			// CRITICAL: Clear seal battle specific data from $ClientData array
-			$ClientData[%aiId, "SealBattleBot"] = "";
-			$ClientData[%aiId, "SealBattleScaledRound"] = "";
-			$ClientData[%aiId, "SealBattleOriginalLVL"] = "";
-			$ClientData[%aiId, "SealBattleOriginalRemortStep"] = "";
-			$ClientData[%aiId, "SealBattleOriginalEndurance"] = "";
-			$ClientData[%aiId, "SealBattleOriginalEnergy"] = "";
-			$ClientData[%aiId, "SealBattleOriginalWeightCapacity"] = "";
-			$ClientData[%aiId, "AImoveChance"] = "";
-			$ClientData[%aiId, "RACE"] = "";
-			$ClientData[%aiId, "SpawnInvuln"] = "";
-			$ClientData[%aiId, "DEF"] = "";
-			$ClientData[%aiId, "MDEF"] = "";
-			$ClientData[%aiId, "ATK"] = "";
-			$ClientData[%aiId, "DMG"] = "";
-			
-			// CRITICAL: Clear from direct array
-			$BotInfoAiName[%aiId] = "";
-			
-			// CRITICAL: Clear all directive table entries for this bot (by client ID)
-			// Clear common directives (0-99) to prevent stale directive data
-			for(%d = 0; %d <= 99; %d++)
-			{
-				$aidirectiveTable[%aiId, %d] = "";
-			}
-			
-			// CRITICAL: Clear belt cached lists to prevent memory leaks
-			$Belt::CachedList[%aiId, "QuestItems"] = "";
-			$Belt::CachedList[%aiId, "KeyItems"] = "";
-			$Belt::CachedList[%aiId, "Consumables"] = "";
-			$Belt::CachedList[%aiId, "Armor"] = "";
-			$Belt::CachedList[%aiId, "Accessories"] = "";
-			$Belt::CachedList[%aiId, "Other"] = "";
-
-			//pet stuff
+			// Pet cleanup
 			$PetList = RemoveFromCommaList($PetList, %aiId);
 			%petowner = fetchData(%aiId, "petowner");
-				storeData(%petowner, "PersonalPetList", RemoveFromCommaList(fetchData(%petowner, "PersonalPetList"), %aiId));
-				Client::sendMessage(%petowner, $MsgRed, Client::getName(%aiId) @ " was slain!");
+			storeData(%petowner, "PersonalPetList", RemoveFromCommaList(fetchData(%petowner, "PersonalPetList"), %aiId));
+			Client::sendMessage(%petowner, $MsgRed, Client::getName(%aiId) @ " was slain!");
 			storeData(%aiId, "petowner", "");
 			
-			//botgroup stuff
+			// Bot group cleanup
 			%b = AI::IsInWhichBotGroup(%aiId);
 			if(%b != -1)
 				AI::RemoveBotFromBotGroup(%aiId, %b);
 			
-			// CRITICAL: Check player object status - it's normal for it to be invalid during cleanup
-			// Don't treat missing player object as a shell bot - it's expected during death cleanup
-			// Only log if we had a valid player object earlier but it's gone now (which is normal)
-			%playerObjNow = Client::getOwnedObject(%aiId);
-			if(%playerObj != -1 && %playerObj != "" && (%playerObjNow == -1 || %playerObjNow == ""))
-			{
-				// Player object was valid earlier but is now gone - this is normal during cleanup, not a shell bot
-				// Don't log as error - this is expected behavior
-			}
-			
-			// CRITICAL FIX #1: Add bot to Graveyard IMMEDIATELY (before scheduled deletion)
-			// This prevents SpawnAIGetClientId from reusing the clientId while deletion is pending
+			// Add to graveyard and schedule deletion
 			AddToGraveyard(%aiName, %aiId);
-			
-			// CRITICAL: Delete AI name from engine registry to free it for reuse
-			// Use %aiName (the parameter) as it's the actual AI name in the engine
-			// This prevents "An AI named X already exists!" errors when respawning
-			// NOTE: AI::delete() may not work for Player objects, but we should still try
-			// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
-			// CRITICAL FIX #1: After deletion completes, remove from graveyard
 			if(%aiName != "" && %aiName != -1 && %aiName != "0")
 			{
 				%escapedAiName = String::replace(%aiName, "\"", "\\\"");
 				schedule("AI::delete(\"" @ %escapedAiName @ "\"); RemoveFromGraveyard(\"" @ %escapedAiName @ "\", " @ %aiId @ ");", 1.0);
-				// Clear directive 99 removal attempt flag when bot is deleted
 				$Directive99RemovalAttempted[%aiName] = "";
 			}
 			
-			// CRITICAL: Delete player object for enemy bots (Player objects)
-			// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
-			// Only delete if we had a valid player object reference - if it's already gone, that's fine
+			// Delete player object
 			if(%playerObj != -1 && %playerObj != "")
-			{
 				schedule("if(isObject(" @ %playerObj @ ")) deleteObject(" @ %playerObj @ ");", 1.0);
-			}
-			// Don't log warning if player object is missing - it's normal during cleanup
 		}
-		else if(%isTownBot)
+		else if(%botType == "town")
 		{
-			// TOWN BOT: Counters already decremented in Player::onKilled
-			// Do not decrement here to avoid double-counting
-			// echo("[BOT TRACK] Town bot died: " @ %aiName @ " (clientId=" @ %aiId @ ", aiName=" @ %botInfoAiName @ ") | Total Town: " @ $ActiveTownBots @ " | Total All: " @ $TotalActiveBots);
+			// === TOWN BOT CLEANUP ===
 			
-			// Store bot type for reference
+			// Mark as processed
 			storeData(%aiId, "DeathProcessed", "town");
 			
-			// CRITICAL: Extract bot name from BotInfoAiName (format: "TownBot_merchant1" -> "merchant1")
-			// FALLBACK: If BotInfoAiName is empty, try extracting from %aiName parameter
-			// FALLBACK 2: Search $TownBotSpawned by clientId to find the bot name
+			// Extract bot name from BotInfoAiName
 			%botName = "";
 			if(%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1)
 			{
 				%botName = %botInfoAiName;
 				if(String::findSubStr(%botInfoAiName, "TownBot_") == 0)
-				{
-					%botName = String::getSubStr(%botInfoAiName, 8, 999);  // Remove "TownBot_" prefix (8 characters)
-				}
+					%botName = String::getSubStr(%botInfoAiName, 8, 999);
 			}
 			else if(%aiName != "" && %aiName != "0" && %aiName != -1)
 			{
-				// BotInfoAiName is empty - try extracting from %aiName parameter
 				if(String::findSubStr(%aiName, "TownBot_") == 0)
-				{
-					%botName = String::getSubStr(%aiName, 8, 999);  // Remove "TownBot_" prefix (8 characters)
-				}
+					%botName = String::getSubStr(%aiName, 8, 999);
 				else
-				{
-					// %aiName doesn't have prefix - might already be the bot name
 					%botName = %aiName;
-				}
 			}
 			
-			// FALLBACK 3: If we still don't have bot name, search $TownBotSpawned by clientId
+			// Fallback: Search $TownBotSpawned by clientId
 			if(%botName == "" || %botName == "0" || %botName == -1)
 			{
 				for(%i = 0; (%regBotName = GetWord($TownBotRegistry, %i)) != -1; %i++)
@@ -7579,211 +7478,112 @@ function AI::onDroneKilled(%aiName)
 					if($TownBotSpawned[%regBotName] == %aiId)
 					{
 						%botName = %regBotName;
-						echo("WARNING: AI::onDroneKilled - Found bot name '" @ %botName @ "' by searching $TownBotSpawned for clientId " @ %aiId @ " (BotInfoAiName was empty)");
 						break;
 					}
 				}
 			}
 			
-			// CRITICAL: Clear all town bot data from storeData
-			storeData(%aiId, "BotInfoAiName", "");
-			storeData(%aiId, "SpawnBotInfo", "");
-			storeData(%aiId, "SpawnTime", "");
-			storeData(%aiId, "QuestItems", "");
-			storeData(%aiId, "KeyItems", "");
-			storeData(%aiId, "Consumables", "");
-			storeData(%aiId, "Armor", "");
-			storeData(%aiId, "Accessories", "");
-			storeData(%aiId, "Other", "");
-			storeData(%aiId, "zone", "");
-			storeData(%aiId, "tmpzone", "");
-			storeData(%aiId, "botTeam", "");
-			storeData(%aiId, "AITarget", "");
-			storeData(%aiId, "AILastDestination", "");
-			storeData(%aiId, "AILastLoggedDist", "");
-			storeData(%aiId, "AIMovementLoopRunning", "");
+			// Clear all bot data using helper functions
+			Bot_ClearStoreData(%aiId, "town");
+			Bot_ClearArrayData(%aiId, "town");
 			
-			// CRITICAL: Clear all storeData fields set during InitTownBotPostSpawn
-			storeData(%aiId, "RACE", "");
-			storeData(%aiId, "NoDropLoot", "");
-			storeData(%aiId, "MountWeaponOnSpawn", "");
-			storeData(%aiId, "MountWeaponOnTalk", "");
-			storeData(%aiId, "ShowIdleMessage", "");
-			storeData(%aiId, "LastInteractionTime", "");
-			storeData(%aiId, "dumbAIflag", "");
-			
-			// CRITICAL: Clear all town bot data from $TownBotData array
-			$TownBotData[%aiId, "BotInfoAiName"] = "";
-			$TownBotData[%aiId, "SpawnBotInfo"] = "";
-			$TownBotData[%aiId, "SpawnTime"] = "";
-			$TownBotData[%aiId, "QuestItems"] = "";
-			$TownBotData[%aiId, "KeyItems"] = "";
-			$TownBotData[%aiId, "Consumables"] = "";
-			$TownBotData[%aiId, "Armor"] = "";
-			$TownBotData[%aiId, "Accessories"] = "";
-			$TownBotData[%aiId, "Other"] = "";
-			
-			// CRITICAL: Clear from $ClientData for backwards compatibility
-			$ClientData[%aiId, "BotInfoAiName"] = "";
-			$ClientData[%aiId, "SpawnBotInfo"] = "";
-			$ClientData[%aiId, "SpawnTime"] = "";
-			
-			// CRITICAL: Clear from direct array
-			$BotInfoAiName[%aiId] = "";
-			
-			// CRITICAL: Clear all directive table entries for this bot (by client ID)
-			// Clear common directives (0-99) to prevent stale directive data
-			for(%d = 0; %d <= 99; %d++)
-			{
-				$aidirectiveTable[%aiId, %d] = "";
-			}
-			
-			// CRITICAL: Clear belt cached lists to prevent memory leaks
-			$Belt::CachedList[%aiId, "QuestItems"] = "";
-			$Belt::CachedList[%aiId, "KeyItems"] = "";
-			$Belt::CachedList[%aiId, "Consumables"] = "";
-			$Belt::CachedList[%aiId, "Armor"] = "";
-			$Belt::CachedList[%aiId, "Accessories"] = "";
-			$Belt::CachedList[%aiId, "Other"] = "";
-			
-			// Remove from TownBotList if present
+			// Remove from TownBotList
 			$TownBotList = RemoveFromCommaList($TownBotList, %aiId);
 			
-			// CRITICAL: Clear spawn tracking using bot name (not BotInfoAiName)
-			// Also clear by clientId if bot name is unknown (safety fallback)
+			// Clear spawn tracking
 			if(%botName != "" && %botName != -1 && %botName != "0")
 			{
 				$TownBotSpawned[%botName] = "";
-				$BotType[%aiId] = "";  // PRIORITY 2: Clear $BotType cache
 				echo("[TOWN BOT CLEANUP] AI::onDroneKilled - Cleared $TownBotSpawned[" @ %botName @ "] for clientId " @ %aiId);
 			}
 			else
 			{
-				// Bot name is unknown - search and clear by clientId (safety fallback)
-				echo("WARNING: AI::onDroneKilled - Bot name is empty for town bot (clientId=" @ %aiId @ ", aiName=" @ %aiName @ "). Searching $TownBotSpawned by clientId...");
+				// Fallback: Search and clear by clientId
 				for(%i = 0; (%regBotName = GetWord($TownBotRegistry, %i)) != -1; %i++)
 				{
 					if($TownBotSpawned[%regBotName] == %aiId)
 					{
 						$TownBotSpawned[%regBotName] = "";
-						$BotType[%aiId] = "";  // PRIORITY 2: Clear $BotType cache
-						echo("[TOWN BOT CLEANUP] AI::onDroneKilled - Cleared $TownBotSpawned[" @ %regBotName @ "] by clientId search (clientId=" @ %aiId @ ")");
 						break;
 					}
 				}
 			}
 			
-			// CRITICAL: Clear bot group if applicable
+			// Bot group cleanup
 			%b = AI::IsInWhichBotGroup(%aiId);
 			if(%b != -1)
 				AI::RemoveBotFromBotGroup(%aiId, %b);
 			
-			// CRITICAL: Free AI number from $aiNumTable so it can be recycled
-			// This ensures bot numbers restart from 0-20 instead of going to 100+
-			// Use the AI number we stored earlier (before clearing $tmpbotn)
+			// Free AI number
 			if(%aiNumber != "" && %aiNumber != -1 && %aiNumber != "0")
 			{
 				$aiNumTable[%aiNumber] = "";
 				$tmpbotn[%aiName] = "";
-				//echo("[SPAWN DEBUG] AI::onDroneKilled(): Freed AI number " @ %aiNumber @ " for town bot " @ %aiName @ " - number can now be recycled");
 			}
 			else
 			{
-				// Fallback: Try to get number from $tmpbotn if we didn't store it earlier
 				%fallbackNumber = $tmpbotn[%aiName];
 				if(%fallbackNumber != "" && %fallbackNumber != -1 && %fallbackNumber != "0")
 				{
 					$aiNumTable[%fallbackNumber] = "";
 					$tmpbotn[%aiName] = "";
-					//echo("[SPAWN DEBUG] AI::onDroneKilled(): Freed AI number " @ %fallbackNumber @ " for town bot " @ %aiName @ " (fallback) - number can now be recycled");
 				}
 			}
 			
-			// CRITICAL: Delete AI name from engine registry to free it for reuse
-			// Use %aiName (the parameter) as it's the actual AI name in the engine
-			// This prevents "An AI named X already exists!" errors when respawning
-			// NOTE: AI::delete() may not work for Player objects, but we should still try
+			// Schedule AI deletion
 			if(%aiName != "" && %aiName != -1 && %aiName != "0")
 			{
 				%escapedAiName = String::replace(%aiName, "\"", "\\\"");
-				// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
 				schedule("AI::delete(\"" @ %escapedAiName @ "\");", 1.0);
-				// Clear directive 99 removal attempt flag when bot is deleted
 				$Directive99RemovalAttempted[%aiName] = "";
 			}
 			
-			// CRITICAL: Mark this client ID as recently freed to prevent immediate reuse
-			// This prevents new bots from getting the same client ID before cleanup completes
+			// Mark client ID as recently freed
 			$ClientIdRecentlyFreed[%aiId] = getSimTime();
 			
-			// CRITICAL: Clear retry counters (if any were set during spawn failures)
+			// Clear retry counters
 			if(%botName != "" && %botName != -1 && %botName != "0")
 			{
 				$TownBotRetryGetAIIdCount[%botName] = "";
 				$TownBotSpawnRetry[%botName] = "";
 			}
 			
-			// CRITICAL: Delete player object for town bots (Player objects)
-			// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
+			// Delete player object and schedule respawn
 			if(%playerObj != -1 && %playerObj != "")
-			{
 				schedule("if(isObject(" @ %playerObj @ ")) deleteObject(" @ %playerObj @ ");", 1.0);
-			}
 			
-			//echo("[SPAWN DEBUG] AI::onDroneKilled(): Not a SpawnPoint bot, scheduling AI::setupAI()");
 			schedule("AI::setupAI(" @ %aiName @ ", " @ %team @ ");", 60);
 		}
 		else
 		{
-			// Unknown bot type - log warning but still clean up
-			// Store bot type for reference (assume enemy bot if we can't determine)
+			// === UNKNOWN BOT TYPE ===
 			storeData(%aiId, "DeathProcessed", "unknown");
 			
-			// If we inferred it was an enemy bot from display name, treat it as such
-			if(%isEnemyBot)
-			{
-				// Treat as enemy bot (inferred from display name)
-				// Counters already decremented in Player::onKilled
-				// Do not decrement here to avoid double-counting
-				// echo("[BOT TRACK] Enemy bot died (inferred): " @ %aiName @ " (clientId=" @ %aiId @ ") | Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots);
-			}
-			else
-			{
-				// Truly unknown - log warning
-				echo("WARNING: AI::onDroneKilled - Bot " @ %aiName @ " (clientId=" @ %aiId @ ") is neither enemy bot nor town bot. SpawnBotInfo='" @ %spawnBotInfo @ "', BotInfoAiName='" @ %botInfoAiName @ "'. Display name: '" @ Client::getName(%aiId) @ "'");
-			}
+			if(%botType != "enemy")
+				echo("WARNING: AI::onDroneKilled - Bot " @ %aiName @ " (clientId=" @ %aiId @ ") is unknown type. SpawnBotInfo='" @ %spawnBotInfo @ "', BotInfoAiName='" @ %botInfoAiName @ "'");
 			
-			// Still clean up data
+			// Minimal cleanup
 			storeData(%aiId, "SpawnBotInfo", "");
 			storeData(%aiId, "BotInfoAiName", "");
 			storeData(%aiId, "AIattackMarker", "");
 			$BotInfoAiName[%aiId] = "";
 			
-			// CRITICAL: Delete AI name from engine registry to free it for reuse
-			// Use %aiName (the parameter) as it's the actual AI name in the engine
-			// This prevents "An AI named X already exists!" errors when respawning
 			if(%aiName != "" && %aiName != -1 && %aiName != "0")
 			{
 				%escapedAiName = String::replace(%aiName, "\"", "\\\"");
-				// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
 				schedule("AI::delete(\"" @ %escapedAiName @ "\");", 1.0);
-				// Clear directive 99 removal attempt flag when bot is deleted
 				$Directive99RemovalAttempted[%aiName] = "";
 			}
 			
-			//echo("[SPAWN DEBUG] AI::onDroneKilled(): Not a SpawnPoint bot, scheduling AI::setupAI()");
 			schedule("AI::setupAI(" @ %aiName @ ", " @ %team @ ");", 60);
 		}
 		
-		// CRITICAL: Clear DeathProcessed flag after a delay to allow cleanup
-		// This prevents the flag from persisting and blocking future bots using the same clientId
-		%escapedAiId = %aiId;
-		schedule("storeData(" @ %escapedAiId @ ", \"DeathProcessed\", \"\");", 5.0);
+		// Clear DeathProcessed flag after delay
+		schedule("storeData(" @ %aiId @ ", \"DeathProcessed\", \"\");", 5.0);
 	}
 	else
 	{
-		// just in case:
-		dbecho( 2, "Non training callback called from Training" );
+		dbecho(2, "Non training callback called from Training");
 	}
 }
 
