@@ -78,6 +78,14 @@ function Telemetry_RecordSpawnFailed(%reason)
 		$Telemetry_SpawnFailedZoneEmpty++;
 	else
 		$Telemetry_SpawnFailedOther++;
+	
+	// CRITICAL: Successfully recording a failure means the spawn attempt (which incremented $numAI) 
+	// did not result in a live bot. We MUST decrement $numAI to balance the count.
+	if($numAI > 0)
+	{
+		$numAI--;
+		$Telemetry_NumAI_Dec++;
+	}
 }
 function Telemetry_RecordDeath() { $Telemetry_DeathsProcessed++; }
 function Telemetry_RecordAINumberFreed() { $Telemetry_AINumbersFreed++; }
@@ -4381,11 +4389,6 @@ Telemetry_RecordSpawnAttempt();  // Track spawn attempt
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 			echo("[SPAWN FLOW] AI::helper(): Spawn FAILED - rolling back reserved slot for spawnPoint " @ %spawnPointId);
 		RollbackSpawnSlot(%spawnPointId);
-		if($numAI > 0)
-		{
-			$numAI--;
-			$Telemetry_NumAI_Dec++;  // Track $numAI decrements
-		}
 		Telemetry_RecordSpawnFailed("other");  // Spawn failed before AI::spawn
 		return -1;
 	}
