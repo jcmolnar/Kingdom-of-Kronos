@@ -5364,6 +5364,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							{
 								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Real player " @ %finalNameCheck @ " (clientId=" @ %aiId @ ") detected immediately before deletion. Aborting to prevent data loss.");
 								%aiId = -1; // Reset to force retry
+								Telemetry_RecordSpawnFailed("clientid");
 								return -1; // Exit immediately
 							}
 							
@@ -5385,6 +5386,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								{
 									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Name '" @ %finalNameCheck @ "' has save file. This is a REAL PLAYER. Aborting deletion.");
 									%aiId = -1;
+									Telemetry_RecordSpawnFailed("clientid");
 									return -1;
 								}
 							}
@@ -5406,6 +5408,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						{
 							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Connected client " @ %aiId @ " is NOT AI-controlled. This is a real player. Aborting deletion.");
 							%aiId = -1;
+							Telemetry_RecordSpawnFailed("clientid");
 							return -1;
 						}
 						
@@ -5841,6 +5844,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								if(isFile(%finalCharacterFile))
 								{
 									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Client ID " @ %ghostBotId @ " has character save file (" @ %finalNameCheck @ ") - this is a REAL PLAYER! Aborting Player object deletion.");
+									Telemetry_RecordSpawnFailed("clientid");
 									return -1; // Exit immediately
 								}
 							}
@@ -5850,6 +5854,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							if(%finalCheck == "True" || %finalCheck == "true" || %finalCheck == "1")
 							{
 								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): FINAL SAFEGUARD - Client ID " @ %ghostBotId @ " has HasLoadedAndSpawned flag - this is a PLAYER! Aborting Player object deletion.");
+								Telemetry_RecordSpawnFailed("clientid");
 								return -1; // Exit immediately
 							}
 							
@@ -5891,6 +5896,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			{
 				RollbackSpawnSlot(%spawnPointId);
 			}
+			Telemetry_RecordSpawnFailed("other"); // Max retries reached
 			return -1;
 		}
 	}
@@ -5954,6 +5960,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				$BotRegistry[%aiId, "team"] = "";
 				$BotRegistry[%aiId, "name"] = "";
 				$BotRegistryLastSeen[%aiId] = "";
+				Telemetry_RecordSpawnFailed("townbot");
 				return;
 			}
 			else
@@ -5980,6 +5987,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		{
 			RollbackSpawnSlot(%spawnPointId);
 		}
+			Telemetry_RecordSpawnFailed("clientid");
 			return -1;
 	}
 	else
@@ -6185,6 +6193,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				%checkId = AI::getClientIdFromName(%newName);
 				if(%checkId != -1 && %checkId != "" && %checkId != "False" && %checkId != "false")
 					AI::delete(%newName);
+				Telemetry_RecordSpawnFailed("clientid");
 				return -1;  // Abort spawn
 			}
 		}
