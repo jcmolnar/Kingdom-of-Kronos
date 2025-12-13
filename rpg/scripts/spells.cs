@@ -3004,7 +3004,8 @@ function SpellDamage(%clientId, %targetId, %damageValue, %index)
 	{
 		%originalDamage = %damageValue;
 		%damageValue = floor(%damageValue * %spellMult);
-		echo("[SEAL BATTLE] SpellDamage: Applied spell damage multiplier " @ %spellMult @ " to caster " @ %clientId @ " (damage: " @ %originalDamage @ " -> " @ %damageValue @ ")");
+		// DEBUG: Disabled to prevent console spam during seal battles
+		// echo("[SEAL BATTLE] SpellDamage: Applied spell damage multiplier " @ %spellMult @ " to caster " @ %clientId @ " (damage: " @ %originalDamage @ " -> " @ %damageValue @ ")");
 	}
 
 	GameBase::virtual(%targetId, "onDamage", $SpellDamageType, %damageValue, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, $Spell::keyword[%index]);

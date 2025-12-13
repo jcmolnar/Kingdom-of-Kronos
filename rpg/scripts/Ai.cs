@@ -4751,7 +4751,11 @@ function Bot_GetValidatedPlayerObject(%clientId)
 	
 	// Fallback if engine hasn't updated getOwnedObject yet
 	if(%playerObj == -1 || %playerObj == "")
+	{
 		%playerObj = FindPlayerInBotGroup(%clientId);
+		if(%playerObj != -1 && %playerObj != "" && ($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG))
+			echo("[SPAWN FLOW] Bot_GetValidatedPlayerObject(): Found player object " @ %playerObj @ " via FindPlayerInBotGroup fallback for clientId=" @ %clientId);
+	}
 	
 	// Validate object actually exists
 	if(%playerObj == -1 || %playerObj == "" || !isObject(%playerObj))
@@ -4772,12 +4776,20 @@ function Bot_IsRealPlayer(%clientId)
 	{
 		%characterFile = "temp\\" @ %name @ ".cs";
 		if(isFile(%characterFile))
+		{
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+				echo("[SPAWN FLOW] Bot_IsRealPlayer(): Client " @ %clientId @ " (" @ %name @ ") is a REAL PLAYER (save file exists)");
 			return true;
+		}
 	}
 	
 	// Check 2: Not AI-controlled
 	if(!Player::isAiControlled(%clientId))
+	{
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+			echo("[SPAWN FLOW] Bot_IsRealPlayer(): Client " @ %clientId @ " is a REAL PLAYER (not AI controlled)");
 		return true;
+	}
 	
 	return false;
 }
@@ -4804,6 +4816,7 @@ function Bot_MatchesEnemyPattern(%name)
 	   String::findSubStr(%name, "God") == 0 ||
 	   String::findSubStr(%name, "Enemy") == 0)
 	{
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] Bot_MatchesEnemyPattern(): Name '" @ %name @ "' matches enemy pattern");
 		return true;
 	}
 	
@@ -4813,6 +4826,7 @@ function Bot_MatchesEnemyPattern(%name)
 	   String::findSubStr(%name, "Invader") == 0 ||
 	   String::findSubStr(%name, "MoonBreaker") == 0)
 	{
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] Bot_MatchesEnemyPattern(): Name '" @ %name @ "' matches enemy pattern");
 		return true;
 	}
 	
@@ -4952,13 +4966,9 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		}
 		
 		// Validate the client ID has a valid player object
-		%playerObj = Client::getOwnedObject(%aiIdFromGetId);
-		
-		// CRITICAL FIX: Fallback if engine hasn't updated getOwnedObject yet
-		if(%playerObj == -1 || %playerObj == "")
-			%playerObj = FindPlayerInBotGroup(%aiIdFromGetId);
+		%playerObj = Bot_GetValidatedPlayerObject(%aiIdFromGetId);
 			
-		if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
+		if(%playerObj != "")
 		{
 			// Verify it's AI-controlled (safety check)
 			if(Player::isAiControlled(%aiIdFromGetId))
@@ -4979,13 +4989,9 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		if(%aiId != -1 && %aiId != "" && %aiId != "False" && %aiId != "false")
 		{
 			// Found via NEWgetClientByName() - validate it's safe to use
-			%playerObj = Client::getOwnedObject(%aiId);
-			
-			// CRITICAL FIX: Fallback if engine hasn't updated getOwnedObject yet
-			if(%playerObj == -1 || %playerObj == "")
-				%playerObj = FindPlayerInBotGroup(%aiId);
+			%playerObj = Bot_GetValidatedPlayerObject(%aiId);
 				
-			if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
+			if(%playerObj != "")
 			{
 				// Check if it was recently freed
 				%recentlyFreed = $ClientIdRecentlyFreed[%aiId];
@@ -5112,11 +5118,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					continue;
 				}
 				%checkName = Client::getName(%checkId);
-				%playerObj = Client::getOwnedObject(%checkId);
-				
-				// CRITICAL FIX: Fallback if engine hasn't updated getOwnedObject yet
-				if(%playerObj == -1 || %playerObj == "")
-					%playerObj = FindPlayerInBotGroup(%checkId);
+				%playerObj = Bot_GetValidatedPlayerObject(%checkId);
 				
 				// DEBUG: Log first few valid client IDs to see what we're finding
 				if(%foundCount < 5 && %playerObj != -1 && %playerObj != "" && isObject(%playerObj))
@@ -10221,6 +10223,11 @@ function ScheduleZoneSpawn(%zoneIndex)
 	if(%zoneIndex == 0 || %zoneIndex == "")
 		return;
 	
+	// EXEMPTION: Zone 23 (Colosseum) is managed by the Seal Battle system in remortseal.cs
+	// Do not use normal spawn verification - let the seal battle handle its own bots
+	if(%zoneIndex == 23)
+		return;
+	
 	// Mark that we have a pending spawn for this zone
 	$ZoneSpawnPending[%zoneIndex] = getSimTime();
 	
@@ -10811,6 +10818,11 @@ function DespawnZoneBots(%zoneIndex)
 	// CRITICAL: Reject invalid zone indices (0, empty, or -1)
 	// Zone -1 is "Unknown" zone and should never trigger despawn
 	if(%zoneIndex == 0 || %zoneIndex == "" || %zoneIndex == -1)
+		return;
+	
+	// EXEMPTION: Zone 23 (Colosseum) is managed by the Seal Battle system in remortseal.cs
+	// Do not despawn bots here - the seal battle handles its own bot lifecycle
+	if(%zoneIndex == 23)
 		return;
 	
 	// CRITICAL: Verify zone is actually empty before despawning (double-check against $ZonePlayerCount)
