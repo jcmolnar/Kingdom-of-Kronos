@@ -1,0 +1,3 @@
+Replace all purple and purple hues (including violet, lavender, magenta-purple, and any purple-tinted colors) with red flesh tones in this image. The red flesh should have natural skin-like variations with reddish-pink undertones appropriate for a zombie model skin texture. Maintain the exact structure, details, shadows, highlights, and overall composition of the original image. Only the color palette should change from purple to red flesh - all shapes, lines, textures, and structural elements must remain identical. The result should look like a zombie skin texture with realistic flesh coloring where purple once appeared.
+
+

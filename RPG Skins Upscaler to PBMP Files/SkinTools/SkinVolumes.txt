@@ -1,0 +1,34 @@
+How to Create a Skin Volume
+---------------------------
+
+  In order for your skins to work properly, you'll need
+to wrap them in a volume.  This should also make it
+more convenient for you to distribute your Tribes's set
+of skins (larmor, marmor, harmor, lfemale, mfemale).  To
+do so, simply decide on a name for your skin volume, for
+instance DCoreSkins.vol.  (replace DCoreSkins with some
+suitable name for your Tribe.)  Then, simply run:
+
+vt -sp DCoreSkins.vol <skinBitmapName>
+
+for each of the skins you want included in the volume.
+Vt will print something like the following: 
+
+Added: dcore.lfemale.bmp 65604 bytes@ 100%(Phx)
+
+for each skin.  Once you have all the skins in the volume,
+it's a good idea to double check that they all packed safely,
+simply execute:
+
+vt DCoreSkins.vol
+
+which will print a list of the files in the volume.  Once
+you're sure all the skins are properly included, just put
+the completed volume in the base\skins directory, and you're
+all set!
+
+  You should make sure to start fresh every time you need
+to create the skins volume.  That is, delete the old
+volume before trying to add new files to it.  If you don't,
+you can wind up with "holes" in the volume, which will
+make it larger than necessary.

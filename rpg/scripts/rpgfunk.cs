@@ -3738,7 +3738,7 @@ function UpdateTeam(%clientId)
 					GameBase::setTeam(%playerObjForTeam, %storedBotTeam);
 				if(%currentTeam == -1)
 				{
-					echo("[BOT TEAM DEBUG] UpdateTeam - Restored enemy bot team from -1 to " @ %storedBotTeam @ " for clientId " @ %clientId);
+					if($BOT_TEAM_DEBUG) echo("[BOT TEAM DEBUG] UpdateTeam - Restored enemy bot team from -1 to " @ %storedBotTeam @ " for clientId " @ %clientId);
 				}
 				else
 				{
@@ -4108,7 +4108,7 @@ function GetBotIdList()
 		}
 	}
 	
-	if($AI_DEBUG_ENABLED) echo("[GETBOTIDLIST DEBUG] Using BaseRep iteration, found " @ %botsFound @ " bots");
+	if($GETBOTID_DEBUG) echo("[GETBOTIDLIST DEBUG] Using BaseRep iteration, found " @ %botsFound @ " bots");
 	
 	return Trim(%list);
 }
@@ -4935,15 +4935,15 @@ function RefreshAllEnemyBot(%clientId)
 	// town bots to have their armor changed to AdminArmor immediately after spawn
 	%isBot = isRPGAI(%clientId);
 	%clientName = Client::getName(%clientId);
-	echo("[TOWNBOT ARMOR DEBUG] RefreshAll: clientId=" @ %clientId @ " name='" @ %clientName @ "' isRPGAI=" @ %isBot);
+	if($TOWNBOT_ARMOR_DEBUG) echo("[TOWNBOT ARMOR DEBUG] RefreshAll: clientId=" @ %clientId @ " name='" @ %clientName @ "' isRPGAI=" @ %isBot);
 	if(!%isBot)
 	{
-		echo("[TOWNBOT ARMOR DEBUG] RefreshAll: Calling UpdateAppearance for " @ %clientId);
+		if($TOWNBOT_ARMOR_DEBUG) echo("[TOWNBOT ARMOR DEBUG] RefreshAll: Calling UpdateAppearance for " @ %clientId);
 		UpdateAppearance(%clientId);
 	}
 	else
 	{
-		echo("[TOWNBOT ARMOR DEBUG] RefreshAll: SKIPPING UpdateAppearance for bot " @ %clientId);
+		if($TOWNBOT_ARMOR_DEBUG) echo("[TOWNBOT ARMOR DEBUG] RefreshAll: SKIPPING UpdateAppearance for bot " @ %clientId);
 	}
 //	echo("DEBUG RefreshAll: UpdateAppearance completed");
 
@@ -7712,6 +7712,37 @@ function AFKZone_ClearWarning(%id)
 function AFKZone_Teleport(%id)
 {
 	%obj = Client::getOwnedObject(%id);
+	
+	// CRITICAL FIX: Clear zone data BEFORE teleporting so zone shows as "Unknown"
+	// and bot spawning logic properly sees the zone as having one less player
+	%oldZoneFolder = fetchData(%id, "zone");
+	if(%oldZoneFolder != "" && %oldZoneFolder != -1)
+	{
+		%oldZoneIndex = Zone::getIndex(%oldZoneFolder);
+		if(%oldZoneIndex > 0)
+		{
+			// Decrement zone player count so bot spawning logic sees the change
+			%count = $ZonePlayerCount[%oldZoneIndex];
+			if(%count > 0)
+			{
+				$ZonePlayerCount[%oldZoneIndex] = %count - 1;
+				echo("[AFKZONE] Decremented player count for zone " @ %oldZoneIndex @ " (was: " @ %count @ ", now: " @ ($ZonePlayerCount[%oldZoneIndex]) @ ")");
+				
+				// If zone is now empty, cancel pending spawns and schedule despawn
+				if($ZonePlayerCount[%oldZoneIndex] <= 0)
+				{
+					CancelPendingZoneSpawn(%oldZoneIndex);
+					schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
+				}
+			}
+		}
+	}
+	
+	// Clear stored zone data - player is being moved to "nowhere"
+	storeData(%id, "zone", "");
+	storeData(%id, "tmpzone", "");
+	storeData(%id, "lastzone", "");
+	
 	if(%obj != -1 && %obj != "" && isObject(%obj))
 		GameBase::setPosition(%obj, $AFKOverLevelTeleportPos);
 	Client::sendMessage(%id, $MsgRed, "You have been moved out of this low-level zone.");

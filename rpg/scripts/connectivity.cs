@@ -227,6 +227,10 @@ function Server::onClientDisconnect(%clientId)
 
 function Server::onClientConnect(%clientId)
 {
+	// CRITICAL SAFEGUARD: Immediately reserve this client ID for the connecting player
+	// This prevents race conditions where a bot spawn might try to use this ID while
+	// the player connection is being processed. Bot spawn code should check this flag.
+	$ClientIdPlayerConnecting[%clientId] = getSimTime();
 
 
 	// this function located in connectivity.cs //

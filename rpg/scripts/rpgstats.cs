@@ -46,9 +46,15 @@ function GetClientDataType(%clientId)
 		if(%oldBotInfoAiName != "" && %oldBotInfoAiName != "0" && %oldBotInfoAiName != -1)
 			return "townbot";
 		
-		// PRIORITY 3: Bot has no $BotType and no data - spawn was incomplete
-		// Log and default to player (SAFE) - better to break bot than player
-		echo("WARNING: GetClientDataType - Bot " @ %clientId @ " has no $BotType and no data. Defaulting to player for safety.");
+		// PRIORITY 3: Bot has no $BotType and no data - spawn was incomplete OR bot just died
+		// Check if this is a recently freed client ID (normal during death cleanup)
+		%recentlyFreed = $ClientIdRecentlyFreed[%clientId];
+		if(%recentlyFreed == "" || %recentlyFreed == "0" || %recentlyFreed == -1)
+		{
+			// Not recently freed - this is unexpected, log warning
+			echo("WARNING: GetClientDataType - Bot " @ %clientId @ " has no $BotType and no data. Defaulting to player for safety.");
+		}
+		// Default to player (SAFE) - better to break bot than player
 		return "player";
 	}
 	

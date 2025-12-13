@@ -56,6 +56,16 @@ function remoteCancelMenu(%server)
    $CurServerMenuLimitWarning = "";
 }
 
+// STUB: Silently catch stray "CANCEL" commands from clients
+// Some client-side scripts send "CANCEL" instead of "CancelMenu"
+// This prevents "CANCEL: Unknown command" console spam
+function remoteCANCEL(%clientId)
+{
+   // Silently handle - just cancel any active menu for this client
+   if(%clientId != "" && %clientId != -1)
+      Client::cancelMenu(%clientId);
+}
+
 function remoteNewMenu(%server, %title)
 {
    if(%server != 2048)

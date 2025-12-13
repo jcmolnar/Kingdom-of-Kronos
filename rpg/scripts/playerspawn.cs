@@ -304,6 +304,10 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: About to call storeData");
 	storeData(%clientId, "HasLoadedAndSpawned", True);
 	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] Game::playerSpawned: storeData completed");
+	
+	// CRITICAL: Clear player connecting flag - player has fully spawned
+	// Bot spawn code checks this flag to avoid collision with connecting players
+	$ClientIdPlayerConnecting[%clientId] = "";
 
 	if(%clientId.RespawnMeInArena)
 	{

@@ -479,7 +479,7 @@ function Player::onKilled(%this)
 		else
 		{
 			// Not a bot and no valid client ID - this shouldn't happen, but return to be safe
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): ERROR - Invalid clientId for player object " @ %this @ " and not a bot. Display name from %this: '" @ %playerNameFromThis @ "'");
+			if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): ERROR - Invalid clientId for player object " @ %this @ " and not a bot. Display name from %this: '" @ %playerNameFromThis @ "'");
 			return;
 		}
 	}
@@ -506,7 +506,7 @@ function Player::onKilled(%this)
 				$ClientData[%clientId, "BotInfoAiName"] = "";
 				$ClientData[%clientId, "SpawnBotInfo"] = "";
 				$BotInfoAiName[%clientId] = "";
-				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Player " @ %playerNameCheck @ " (clientId=" @ %clientId @ ") has character save file - cleared stale bot data from arrays, treating as REAL PLAYER");
+				if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Player " @ %playerNameCheck @ " (clientId=" @ %clientId @ ") has character save file - cleared stale bot data from arrays, treating as REAL PLAYER");
 			}
 		}
 		
@@ -550,13 +550,13 @@ function Player::onKilled(%this)
 			%playerObjStatusFromThisStr = "VALID";
 		%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
 		%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Bot detected - BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "', Display name from %this: '" @ %playerNameFromThis @ "', Display name from %clientId: '" @ %playerNameFromClientId @ "', Display name from %this.name: '" @ %playerNameFromObj @ "', isObject(%this): " @ %playerObjStatusFromThisStr @ ", Player object from %clientId: " @ %playerObjStatusFromClientId @ ", clientId=" @ %clientId);
+		if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Bot detected - BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "', Display name from %this: '" @ %playerNameFromThis @ "', Display name from %clientId: '" @ %playerNameFromClientId @ "', Display name from %this.name: '" @ %playerNameFromObj @ "', isObject(%this): " @ %playerObjStatusFromThisStr @ ", Player object from %clientId: " @ %playerObjStatusFromClientId @ ", clientId=" @ %clientId);
 	}
 	else
 	{
 		// Real player - just log basic info
 		%playerNameFromClientId = Client::getName(%clientId);
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Real player - clientId=" @ %clientId @ ", Display name from %this: '" @ %playerNameFromThis @ "', Display name from %clientId: '" @ %playerNameFromClientId @ "'");
+		if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Real player - clientId=" @ %clientId @ ", Display name from %this: '" @ %playerNameFromThis @ "', Display name from %clientId: '" @ %playerNameFromClientId @ "'");
 	}
 	
 	%killerId = fetchData(%clientId, "tmpkillerid");
@@ -1902,7 +1902,7 @@ function Player::onKilled(%this)
 			
 			Telemetry_RecordDeath();  // Track bot death processed
 			
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT TRACK] Enemy bot died: " @ %botInfoAiName @ " (clientId=" @ %clientId @ ") | Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots @ " | $numAI: " @ $numAI);
+			if($BOT_TRACK_DEBUG) echo("[BOT TRACK] Enemy bot died: " @ %botInfoAiName @ " (clientId=" @ %clientId @ ") | Total Enemy: " @ $ActiveEnemyBots @ " | Total All: " @ $TotalActiveBots @ " | $numAI: " @ $numAI);
 			
 			// CRITICAL: Free AI number from $aiNumTable so it can be recycled
 			// This ensures bot numbers restart from 0-20 instead of going to 100+
@@ -2061,7 +2061,7 @@ function Player::onKilled(%this)
 			// This prevents new bots from getting the same client ID before cleanup completes
 			// CRITICAL: Set this flag ALWAYS for bots, even if BotInfoAiName is empty (shell bots, corrupted bots, etc.)
 			$ClientIdRecentlyFreed[%clientId] = getSimTime();
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Marked client ID " @ %clientId @ " as recently freed (bot: " @ %botInfoAiName @ ")");
+			if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Marked client ID " @ %clientId @ " as recently freed (bot: " @ %botInfoAiName @ ")");
 			
 			// Per-spawnpoint post-death cooldown: prevent immediate respawn on this spawnpoint
 			%spawnPointId = getBotSpawnPoint(%clientId);
@@ -2078,19 +2078,28 @@ function Player::onKilled(%this)
 				// CRITICAL: Clear spawn scheduled flag IMMEDIATELY when bot dies
 				// This prevents stale flags from blocking respawns if bot dies during spawn delay
 				$SpawnAIScheduled[%botInfoAiName] = "";
-				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Cleared $SpawnAIScheduled flag for bot " @ %botInfoAiName);
+				if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Cleared $SpawnAIScheduled flag for bot " @ %botInfoAiName);
 				
 				// CRITICAL: Escape quotes in bot name to prevent syntax errors
 				%escapedName = String::replace(%botInfoAiName, "\"", "\\\"");
 				// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
 				schedule("AI::delete(\"" @ %escapedName @ "\");", 1.0);
-				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Scheduled AI::delete() for bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ")");
+				if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Scheduled AI::delete() for bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ")");
 			}
 			
-			// CRITICAL: DO NOT clear SpawnBotInfo, SpawnTime, or BotInfoAiName here
-			// AI::onDroneKilled needs to read these to identify bot type and perform cleanup
-			// These will be cleared by AI::onDroneKilled after it processes the bot death
-			// Only clear data that AI::onDroneKilled doesn't need
+			// CRITICAL FIX: Clear SpawnBotInfo and BotInfoAiName IMMEDIATELY!
+			// Previously, these were NOT cleared here with a comment saying AI::onDroneKilled would do it.
+			// But AI::onDroneKilled is for DRONE objects, and enemy bots are PLAYER objects!
+			// This stale data caused PreSpawnCleanup to delete WRONG bots when client IDs were recycled.
+			storeData(%clientId, "SpawnBotInfo", "");
+			storeData(%clientId, "BotInfoAiName", "");
+			$EnemyBotData[%clientId, "SpawnBotInfo"] = "";
+			$EnemyBotData[%clientId, "BotInfoAiName"] = "";
+			$ClientData[%clientId, "SpawnBotInfo"] = "";
+			$ClientData[%clientId, "BotInfoAiName"] = "";
+			$BotInfoAiName[%clientId] = "";
+			if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Cleared SpawnBotInfo/BotInfoAiName IMMEDIATELY for clientId " @ %clientId);
+			
 			storeData(%clientId, "RemortStep", "");
 			storeData(%clientId, "QuestItems", "");
 			storeData(%clientId, "KeyItems", "");
@@ -2301,7 +2310,7 @@ function Player::onKilled(%this)
 					storeData(%clientId, "BotInfoAiName", "");
 					$EnemyBotData[%clientId, "BotInfoAiName"] = "";
 					$ClientData[%clientId, "BotInfoAiName"] = "";
-					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Cleared BotInfoAiName for non-spawn-point bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ")");
+					if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Cleared BotInfoAiName for non-spawn-point bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ")");
 				}
 				
 				// CRITICAL: Clean up scaled weapon damage arrays for seal battle bots
@@ -2351,6 +2360,56 @@ function Player::onKilled(%this)
 					// Use centralized DecrementSpawnCounter() which has multiple fallback methods
 					echo("WARNING: Player::onKilled - Enemy bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ") died but SpawnBotInfo is missing! Using DecrementSpawnCounter() fallbacks...");
 					DecrementSpawnCounter(%clientId);
+					
+					// CRITICAL FIX: Also decrement $numAI and record death telemetry!
+					// This was missing, causing $numAI leaks for bots that die before SpawnAIGetClientId runs
+					if($numAI > 0)
+					{
+						$numAI--;
+						$Telemetry_NumAI_Dec++;
+					}
+					if($numAI < 0)
+						$numAI = 0;
+					
+					Telemetry_RecordDeath();  // Track bot death processed
+					
+					if($BOT_TRACK_DEBUG) echo("[BOT TRACK] Enemy bot died (fallback path): " @ %botInfoAiName @ " (clientId=" @ %clientId @ ") | $numAI: " @ $numAI);
+				}
+			}
+			else
+			{
+				// CRITICAL FIX: Check if this is an AI-controlled bot without ANY bot markers
+				// This catches bots that die VERY early (before BotInfoAiName is set)
+				if(Player::isAiControlled(%clientId))
+				{
+					%displayName = Client::getName(%clientId);
+					// Only process if it looks like an enemy bot name pattern
+					if(String::findSubStr(%displayName, "Pigman") != -1 || 
+					   String::findSubStr(%displayName, "Demon") != -1 || 
+					   String::findSubStr(%displayName, "Alien") != -1 ||
+					   String::findSubStr(%displayName, "God") != -1 ||
+					   String::findSubStr(%displayName, "Admin") != -1 ||
+					   String::findSubStr(%displayName, "Ogre") != -1 ||
+					   String::findSubStr(%displayName, "Orc") != -1 ||
+					   String::findSubStr(%displayName, "Undead") != -1 ||
+					   String::findSubStr(%displayName, "Minotaur") != -1 ||
+					   String::findSubStr(%displayName, "Zombie") != -1)
+					{
+						echo("WARNING: Player::onKilled - AI-controlled bot died without any bot markers! DisplayName=" @ %displayName @ ", clientId=" @ %clientId);
+						
+						// Decrement $numAI since AI::helper incremented it
+						if($numAI > 0)
+						{
+							$numAI--;
+							$Telemetry_NumAI_Dec++;
+						}
+						if($numAI < 0)
+							$numAI = 0;
+						
+						Telemetry_RecordDeath();
+						
+						if($BOT_TRACK_DEBUG) echo("[BOT TRACK] Unmarked enemy bot died: " @ %displayName @ " (clientId=" @ %clientId @ ") | $numAI: " @ $numAI);
+					}
 				}
 			}
 		}
@@ -2384,7 +2443,7 @@ function Player::onKilled(%this)
 					$ActiveTownBots = 0;
 				if($TotalActiveBots < 0)
 					$TotalActiveBots = 0;
-				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT TRACK] Town bot died: " @ %botInfoAiName @ " (clientId=" @ %clientId @ ") | Total Town: " @ $ActiveTownBots @ " | Total All: " @ $TotalActiveBots);
+				if($BOT_TRACK_DEBUG) echo("[BOT TRACK] Town bot died: " @ %botInfoAiName @ " (clientId=" @ %clientId @ ") | Total Town: " @ $ActiveTownBots @ " | Total All: " @ $TotalActiveBots);
 				
 				// CRITICAL: Extract bot name from BotInfoAiName (format: "TownBot_merchant1" -> "merchant1")
 				// FALLBACK: If BotInfoAiName is empty, search $TownBotSpawned by clientId
@@ -2419,7 +2478,7 @@ function Player::onKilled(%this)
 				if(%botName != "" && %botName != -1 && %botName != "0")
 				{
 					$TownBotSpawned[%botName] = "";
-					echo("[TOWN BOT CLEANUP] Player::onKilled - Cleared $TownBotSpawned[" @ %botName @ "] for clientId " @ %clientId);
+					if($BOT_CLEANUP_DEBUG) echo("[TOWN BOT CLEANUP] Player::onKilled - Cleared $TownBotSpawned[" @ %botName @ "] for clientId " @ %clientId);
 				}
 				else
 				{
@@ -2430,7 +2489,7 @@ function Player::onKilled(%this)
 						if($TownBotSpawned[%regBotName] == %clientId)
 						{
 							$TownBotSpawned[%regBotName] = "";
-							echo("[TOWN BOT CLEANUP] Player::onKilled - Cleared $TownBotSpawned[" @ %regBotName @ "] by clientId search (clientId=" @ %clientId @ ")");
+							if($BOT_CLEANUP_DEBUG) echo("[TOWN BOT CLEANUP] Player::onKilled - Cleared $TownBotSpawned[" @ %regBotName @ "] by clientId search (clientId=" @ %clientId @ ")");
 							break;
 						}
 					}

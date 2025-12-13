@@ -1736,6 +1736,16 @@ ItemData FemaleHumanTownBot
 	mapFilter = 1;		//thanks Adger!!
 };
 
+// SAFETY ARCHITECTURE: Auto-register TownBots
+function TownBot::onAdd(%this, %obj)
+{
+	if(!isObject("TownBotGroup")) 
+		newObject("TownBotGroup", SimGroup, true);
+	
+	// Use addToSet() instead of .add() to avoid potential TorqueScript parsing issues
+	addToSet(TownBotGroup, %obj);
+}
+
 //------------------------
 $AccessoryVar[Tent, $Weight] = 40;
 $AccessoryVar[Tent, $MiscInfo] = "A tent. Use #camp to set it up, and #uncamp to disassemble it.";
@@ -1775,6 +1785,69 @@ ItemData Lootbag
 	shadowDetailMask = 4;
 	price = 0;
 };
+
+// SAFETY ARCHITECTURE: Auto-register Lootbags
+function Lootbag::onAdd(%this, %obj)
+{
+	// CRITICAL: Handle timing issue where %obj may be empty when onAdd callback fires
+	// The engine may call onAdd before the object is fully registered, but the object
+	// will still be created successfully. Try using %this if %obj is empty.
+	%targetObj = %obj;
+	if(%targetObj == "" || %targetObj == -1 || !isObject(%targetObj))
+	{
+		// Try using %this as fallback (sometimes onAdd is called on the object itself)
+		if(isObject(%this) && getObjectType(%this) == "Item")
+		{
+			%targetObj = %this;
+		}
+		else
+		{
+			// Object not ready yet - this is a known timing issue with the engine
+			// The object will be created successfully, but we can't add it to the group yet
+			// Schedule a retry to add it to the group after a short delay
+			schedule("Lootbag::retryAddToGroup(" @ %this @ ");", 0.1);
+			return;
+		}
+	}
+	
+	if(!isObject("LootbagGroup")) 
+		newObject("LootbagGroup", SimGroup, true);
+	
+	// Use addToSet() instead of .add() to avoid potential TorqueScript parsing issues
+	// Double-check object is still valid before adding
+	if(isObject(%targetObj))
+	{
+		addToSet(LootbagGroup, %targetObj);
+	}
+}
+
+// Helper function to retry adding lootbag to group after timing delay
+function Lootbag::retryAddToGroup(%obj)
+{
+	if(!isObject(%obj))
+		return;
+		
+	if(!isObject("LootbagGroup")) 
+		newObject("LootbagGroup", SimGroup, true);
+	
+	// Check if already in group before adding
+	if(isObject("LootbagGroup") && Group::objectCount(LootbagGroup) > 0)
+	{
+		%found = false;
+		%count = Group::objectCount(LootbagGroup);
+		for(%i = 0; %i < %count && !%found; %i++)
+		{
+			%groupObj = Group::getObject(LootbagGroup, %i);
+			if(%groupObj == %obj)
+				%found = true;
+		}
+		if(%found)
+			return; // Already in group
+	}
+	
+	if(isObject(%obj))
+		addToSet(LootbagGroup, %obj);
+}
 
 //===================
 //  Mining stuff

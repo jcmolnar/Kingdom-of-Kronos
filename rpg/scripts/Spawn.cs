@@ -1,4 +1,5 @@
-$AI_SPAWN_DEBUG = 0; // Toggle [SPAWN DEBUG] messages in this file
+$SPAWNLOOP_DEBUG = 1;         // Controls [SPAWN DEBUG] messages
+$SPAWN_TRANSACTION_DEBUG = 1; // Controls [SPAWN TRANSACTION] messages
 // ============================================================================
 // CRITICAL FIX #2: Transaction-Based Spawn System
 // ============================================================================
@@ -33,7 +34,7 @@ function ReserveSpawnSlot(%spawnPoint)
 		%timeSinceLastLog = %currentTime - %lastFailLogTime;
 		if(%timeSinceLastLog >= 10000) // 10 seconds (in milliseconds)
 		{
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): FAILED - Already at max (" @ %currentCounter @ "/" @ %maxs @ ")");
+			if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): FAILED - Already at max (" @ %currentCounter @ "/" @ %maxs @ ")");
 			$ReserveSpawnSlotLastFailLog[%spawnPoint] = %currentTime;
 		}
 		return false;
@@ -48,7 +49,7 @@ function ReserveSpawnSlot(%spawnPoint)
 	// Store reservation timestamp for timeout detection
 	$SpawnSlotReservedTime[%spawnPoint] = getSimTime();
 	
-	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): SUCCESS - Reserved slot (" @ %currentCounter @ " -> " @ %newCounter @ "/" @ %maxs @ ") @ " @ $SpawnSlotReservedTime[%spawnPoint]);
+	if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] ReserveSpawnSlot(" @ %spawnPoint @ "): SUCCESS - Reserved slot (" @ %currentCounter @ " -> " @ %newCounter @ "/" @ %maxs @ ") @ " @ $SpawnSlotReservedTime[%spawnPoint]);
 	return true;
 }
 
@@ -58,14 +59,14 @@ function CommitSpawnSlot(%spawnPoint)
 {
 	if(%spawnPoint == "" || %spawnPoint == -1)
 	{
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot: ERROR - Invalid spawnPoint (" @ %spawnPoint @ ")");
+		if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot: ERROR - Invalid spawnPoint (" @ %spawnPoint @ ")");
 		return;
 	}
 	
 	// Check if slot was actually reserved
 	if($SpawnSlotReserved[%spawnPoint] != "true")
 	{
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot(" @ %spawnPoint @ "): WARNING - Slot was not reserved (possible double-commit or missing reservation)");
+		if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot(" @ %spawnPoint @ "): WARNING - Slot was not reserved (possible double-commit or missing reservation)");
 	}
 	
 	// Clear the reservation flag - spawn was successful
@@ -74,7 +75,7 @@ function CommitSpawnSlot(%spawnPoint)
 	// Clear reservation timestamp if it exists
 	$SpawnSlotReservedTime[%spawnPoint] = "";
 	
-	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot(" @ %spawnPoint @ "): Committed - Counter now: " @ $numAIperSpawnPoint[%spawnPoint]);
+	if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] CommitSpawnSlot(" @ %spawnPoint @ "): Committed - Counter now: " @ $numAIperSpawnPoint[%spawnPoint]);
 }
 
 // RollbackSpawnSlot: Reverts a reserved slot (decrements counter)
@@ -83,14 +84,14 @@ function RollbackSpawnSlot(%spawnPoint)
 {
 	if(%spawnPoint == "" || %spawnPoint == -1)
 	{
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot: ERROR - Invalid spawnPoint (" @ %spawnPoint @ ")");
+		if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot: ERROR - Invalid spawnPoint (" @ %spawnPoint @ ")");
 		return;
 	}
 	
 	%currentCounter = $numAIperSpawnPoint[%spawnPoint];
 	if(%currentCounter == "" || %currentCounter == 0)
 	{
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): WARNING - Counter already 0, cannot rollback");
+		if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): WARNING - Counter already 0, cannot rollback");
 		$SpawnSlotReserved[%spawnPoint] = "";
 		$SpawnSlotReservedTime[%spawnPoint] = "";
 		return;
@@ -104,7 +105,7 @@ function RollbackSpawnSlot(%spawnPoint)
 		%reservationAge = getSimTime() - %reservedTime;
 		if(%reservationAge > 15)
 		{
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): WARNING - Rolling back reservation that was " @ %reservationAge @ "s old (possible timeout/stuck reservation)");
+			if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): WARNING - Rolling back reservation that was " @ %reservationAge @ "s old (possible timeout/stuck reservation)");
 		}
 	}
 	
@@ -117,9 +118,9 @@ function RollbackSpawnSlot(%spawnPoint)
 	$SpawnSlotReservedTime[%spawnPoint] = "";
 	
 	if(%reservationAge >= 0)
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): Rolled back (" @ %currentCounter @ " -> " @ %newCounter @ ", reservation age: " @ %reservationAge @ "s)");
+		if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): Rolled back (" @ %currentCounter @ " -> " @ %newCounter @ ", reservation age: " @ %reservationAge @ "s)");
 	else
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): Rolled back (" @ %currentCounter @ " -> " @ %newCounter @ ")");
+		if($SPAWN_TRANSACTION_DEBUG) echo("[SPAWN TRANSACTION] RollbackSpawnSlot(" @ %spawnPoint @ "): Rolled back (" @ %currentCounter @ " -> " @ %newCounter @ ")");
 }
 
 function InitSpawnPoints()
@@ -336,7 +337,7 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		
 		if(%shouldLog && %failureReasons != "")
 		{
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] SpawnLoop(" @ %this @ "): SKIP - " @ %failureReasons @ "@ " @ floor(getSimTime()));
+			if($SPAWNLOOP_DEBUG) echo("[SPAWN DEBUG] SpawnLoop(" @ %this @ "): SKIP - " @ %failureReasons @ "@ " @ floor(getSimTime()));
 			$SpawnLoopLastSkipLog[%this] = %currentTime;
 		}
 	}

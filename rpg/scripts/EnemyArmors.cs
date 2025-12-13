@@ -21,7 +21,7 @@ $Server::teamSkin[9] = "fedmonster";
 $Server::teamName[10] = "Angels";
 $Server::teamSkin[10] = "robewhite";
 $Server::teamName[11] = "Admins";
-$Server::teamSkin[11] = "robewhite";
+$Server::teamSkin[11] = "robeblack";
 
 //------------------------------
 
@@ -371,9 +371,9 @@ $BotEquipment[Eliminator] = 	"CLASS Fighter LVL 45 COINS 82 LCK 0 SteelBroadSwor
 $BotEquipment[Dreadnought] = 	"CLASS Fighter LVL 54 COINS 100 LCK 1 SteelLongSword 1 SkeletonBone 1/25";
 $BotEquipment[DeathKnight] =	"CLASS Mage LVL 130 COINS 900 LCK 1 CastingBlade 1 OgreTooth 1";
 
-$BotEquipment[Villager] = 	"CLASS Fighter LVL 70 COINS 150 LCK 0 SteelLongSword 1";
-$BotEquipment[Guard] =		"CLASS Fighter LVL 85 COINS 250 LCK 0 SteelLongSword 1";
-$BotEquipment[EliteGuard] = 	"CLASS Fighter LVL 100 COINS 350 LCK 0 SteelLongSword 1";
+$BotEquipment[Villager] = 	"CLASS Fighter LVL 70 COINS 150 LCK 0 SteelLongSword 1 AncientScroll 1/2";
+$BotEquipment[Guard] =		"CLASS Fighter LVL 85 COINS 250 LCK 0 SteelLongSword 1 AncientScroll 1/5";
+$BotEquipment[EliteGuard] = 	"CLASS Fighter LVL 100 COINS 350 LCK 0 SteelLongSword 1 AncientScroll 1/20";
 $BotEquipment[King] = 		"CLASS Fighter LVL 115 COINS 500 LCK 1 GoldenLongSword 1 AncientScroll 1/25";
 $BotEquipment[Emperor] = 	"CLASS Fighter LVL 180 COINS 5000 LCK 3 GoldenBastardSword 1";
 $BotEquipment[BanishedKing] = "CLASS Mage LVL 220 COINS 4000 LCK 2 CastingBlade 1 Crown 1";
@@ -393,48 +393,48 @@ $BotEquipment[Militia] = 	"CLASS Paladin LVL 75/50 COINS 35/50 LCK 1";
 $BotEquipment[Thug] = 		"CLASS Thief LVL 65/50 COINS 32/50 LCK 1";
 $BotEquipment[Miner] = 		"CLASS Paladin LVL 29/50 COINS 35/50 LCK 0";
 
-$BotEquipment[Eradicator] = 	"CLASS Fighter LVL 150 COINS 900 LCK 1 GoldenLongSword 1 DuelCard 1/-100";
-$BotEquipment[DeathStar] = 	"CLASS Fighter LVL 300 COINS 1400 LCK 2 GoldenBastardSword 1 KronoStone 1/30 DuelCard 1/-100";
+$BotEquipment[Eradicator] = 	"CLASS Fighter LVL 150 COINS 900 LCK 1 GoldenLongSword 1 DuelCard 1/-10";
+$BotEquipment[DeathStar] = 	"CLASS Fighter LVL 300 COINS 1400 LCK 2 GoldenBastardSword 1 KronoStone 1/30 DuelCard 1/-10";
 $BotEquipment[BattleOx] =	"CLASS Mage LVL 520 REMORT 2 COINS 9000 LCK 2 CastingBlade 1 MinotaurHorn 1";
 
-$BotEquipment[Invader] = 	"CLASS Fighter LVL 300 COINS 2200 LCK 2 GoldenBastardSword 1 DuelCard 1/-100 AlienSpine 1/-80";
-$BotEquipment[Holocaust] = 	"CLASS Fighter LVL 370 COINS 3200 LCK 3 GoldenBastardSword 1 DuelCard 1/-100 AlienSpine 1/-50";
-$BotEquipment[MoonBreaker] = 	"CLASS Fighter LVL 450 COINS 4600 LCK 3 CrystalBastardSword 1 DuelCard 1/-100 AlienSpine 1/30";
+$BotEquipment[Invader] = 	"CLASS Fighter LVL 300 COINS 2200 LCK 2 GoldenBastardSword 1 DuelCard 1/-10 AlienSpine 1/-10";
+$BotEquipment[Holocaust] = 	"CLASS Fighter LVL 370 COINS 3200 LCK 3 GoldenBastardSword 1 DuelCard 1/-10 AlienSpine 1/-15";
+$BotEquipment[MoonBreaker] = 	"CLASS Fighter LVL 450 COINS 4600 LCK 3 CrystalBastardSword 1 DuelCard 1/-10 AlienSpine 1/30";
 $BotEquipment[Queen] =		"CLASS Mage LVL 900 REMORT 5 COINS 30000 LCK 4 CastingBlade 1 AlienEye 1";
 
-$BotEquipment[Corrupter] = 	"CLASS Mage LVL 500 REMORT 1 COINS 14000 LCK 2 CastingBlade 1 DemonBreath 1/30";
+$BotEquipment[Corrupter] = 	"CLASS Mage LVL 500 REMORT 1 COINS 14000 LCK 2 CastingBlade 1 DemonBreath 1/15";
 $BotEquipment[Banisher] =	"CLASS Mage LVL 600 REMORT 2 COINS 22000 LCK 2 CastingBlade 1 DemonBreath 1/20";
-$BotEquipment[Incarnate] = 	"CLASS Mage LVL 700 REMORT 3 COINS 35000 LCK 3 CastingBlade 1 DemonBreath 1/15";
+$BotEquipment[Incarnate] = 	"CLASS Mage LVL 700 REMORT 3 COINS 35000 LCK 3 CastingBlade 1 DemonBreath 1/25";
 $BotEquipment[Disintegrator] = "CLASS Fighter LVL 800 REMORT 5 COINS 60000 LCK 4 TemperedCrystalBastardSword 1";
 
-$BotEquipment[Purifier] = 	"CLASS Fighter LVL 950 REMORT 7 COINS 90000 LCK 5 CrystalClaymore 1 Bible 1/30";
-$BotEquipment[Vaporizer] = 	"CLASS Mage LVL 1050 REMORT 8 COINS 120000 LCK 5 CastingBlade 1 Bible 1/25";
-$BotEquipment[Insurrector] = 	"CLASS Fighter LVL 1250 REMORT 10 COINS 200000 LCK 6 DiamondClaymore 1 Bible 1/20";
+$BotEquipment[Purifier] = 	"CLASS Fighter LVL 950 REMORT 7 COINS 90000 LCK 5 CrystalClaymore 1 Bible 1/15";
+$BotEquipment[Vaporizer] = 	"CLASS Mage LVL 1050 REMORT 8 COINS 120000 LCK 5 CastingBlade 1 Bible 1/20";
+$BotEquipment[Insurrector] = 	"CLASS Fighter LVL 1250 REMORT 10 COINS 200000 LCK 6 DiamondClaymore 1 Bible 1/25";
 $BotEquipment[SoulConsumer] =   "CLASS Fighter LVL 1400 REMORT 12 COINS 300000 LCK 7 DiamondLegendSword 1";
 $BotEquipment[SoulEraser] = 	"CLASS Mage LVL 1650 REMORT 15 COINS 700000 LCK 8 CastingBlade 1";
 $BotEquipment[EndGame] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 900000 LCK 10 DiamondLegendsword 1";
 $BotEquipment[Oni] = 		"CLASS Fighter LVL 2250 REMORT 25 COINS 1000000 LCK 10 DiamondLegendSword 1";
 $BotEquipment[Crest] = 		"CLASS Fighter LVL 2400 REMORT 30 COINS 1500000 LCK 10 DiamondLegendsword 1";
 
-$BotEquipment[Liquifier] = 	"CLASS Fighter LVL 1500 REMORT 10 COINS 90000 LCK 7 BlackDiamondDreamSword 1/5 VirusFragment 1/40 AdminBoots 1/15000";
-$BotEquipment[Obliterator] = 	"CLASS Mage LVL 1750 REMORT 15 COINS 150000 LCK 5 CastingBlade 1 VirusFragment 1/30 AdminBoots 1/10000";
-$BotEquipment[Abolisher] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/5 VirusFragment 1/25 AdminBoots 1/5000";
+$BotEquipment[Liquifier] = 	"CLASS Fighter LVL 1500 REMORT 10 COINS 90000 LCK 7 BlackDiamondDreamSword 1/5 VirusFragment 1/10 AdminBoots 1/15000";
+$BotEquipment[Obliterator] = 	"CLASS Mage LVL 1750 REMORT 15 COINS 150000 LCK 5 CastingBlade 1 VirusFragment 1/15 AdminBoots 1/10000";
+$BotEquipment[Abolisher] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/5 VirusFragment 1/20 AdminBoots 1/5000";
 
 // Colloseum-specific bots - Equipment definitions (matching TournyRound bot equipment)
 // Rank 0 (Newbie): RoundOne=King, RoundTwo=Eradicator, RoundThree=DeathStar
 $BotEquipment[NewbieRoundOne] = 	"CLASS Fighter LVL 115 COINS 500 LCK 1 GoldenLongSword 1 AncientScroll 1/25";
-$BotEquipment[NewbieRoundTwo] = 	"CLASS Fighter LVL 150 COINS 900 LCK 1 GoldenLongSword 1 DuelCard 1/-100";
-$BotEquipment[NewbieRoundThree] = 	"CLASS Fighter LVL 300 COINS 1400 LCK 2 GoldenBastardSword 1 KronoStone 1/30 DuelCard 1/-100";
+$BotEquipment[NewbieRoundTwo] = 	"CLASS Fighter LVL 150 COINS 900 LCK 1 GoldenLongSword 1 DuelCard 1/-10";
+$BotEquipment[NewbieRoundThree] = 	"CLASS Fighter LVL 300 COINS 1400 LCK 2 GoldenBastardSword 1 KronoStone 1/30 DuelCard 1/-10";
 // Rank 1 (Adventurer): RoundOne=DeathStar, RoundTwo=BanishedKing, RoundThree=Invader
-$BotEquipment[AdventurerRoundOne] = 	"CLASS Fighter LVL 300 COINS 1400 LCK 2 GoldenBastardSword 1 KronoStone 1/30 DuelCard 1/-100";
+$BotEquipment[AdventurerRoundOne] = 	"CLASS Fighter LVL 300 COINS 1400 LCK 2 GoldenBastardSword 1 KronoStone 1/30 DuelCard 1/-10";
 $BotEquipment[AdventurerRoundTwo] = 	"CLASS Mage LVL 220 COINS 4000 LCK 2 CastingBlade 1 Crown 1";
-$BotEquipment[AdventurerRoundThree] = 	"CLASS Fighter LVL 300 COINS 2200 LCK 2 GoldenBastardSword 1 DuelCard 1/-100 AlienSpine 1/-80";
+$BotEquipment[AdventurerRoundThree] = 	"CLASS Fighter LVL 300 COINS 2200 LCK 2 GoldenBastardSword 1 DuelCard 1/-10 AlienSpine 1/-20";
 // Rank 2 (Soldier): RoundOne=Invader, RoundTwo=MoonBreaker, RoundThree=BattleOx
-$BotEquipment[SoldierRoundOne] = 	"CLASS Fighter LVL 300 COINS 2200 LCK 2 GoldenBastardSword 1 DuelCard 1/-100 AlienSpine 1/-80";
-$BotEquipment[SoldierRoundTwo] = 	"CLASS Fighter LVL 450 COINS 4600 LCK 3 CrystalBastardSword 1 DuelCard 1/-100 AlienSpine 1/30";
+$BotEquipment[SoldierRoundOne] = 	"CLASS Fighter LVL 300 COINS 2200 LCK 2 GoldenBastardSword 1 DuelCard 1/-10 AlienSpine 1/-20";
+$BotEquipment[SoldierRoundTwo] = 	"CLASS Fighter LVL 450 COINS 4600 LCK 3 CrystalBastardSword 1 DuelCard 1/-10 AlienSpine 1/30";
 $BotEquipment[SoldierRoundThree] = 	"CLASS Mage LVL 520 REMORT 2 COINS 9000 LCK 2 CastingBlade 1 MinotaurHorn 1";
 // Rank 3 (Gladiator): RoundOne=MoonBreaker, RoundTwo=Banisher, RoundThree=Incarnate
-$BotEquipment[GladiatorRoundOne] = 	"CLASS Fighter LVL 450 COINS 4600 LCK 3 CrystalBastardSword 1 DuelCard 1/-100 AlienSpine 1/30";
+$BotEquipment[GladiatorRoundOne] = 	"CLASS Fighter LVL 450 COINS 4600 LCK 3 CrystalBastardSword 1 DuelCard 1/-10 AlienSpine 1/30";
 $BotEquipment[GladiatorRoundTwo] = 	"CLASS Mage LVL 600 REMORT 2 COINS 22000 LCK 2 CastingBlade 1 DemonBreath 1/20";
 $BotEquipment[GladiatorRoundThree] = 	"CLASS Mage LVL 700 REMORT 3 COINS 35000 LCK 3 CastingBlade 1 DemonBreath 1/15";
 // Rank 4 (Star): RoundOne=Incarnate, RoundTwo=Queen, RoundThree=Disintegrator
@@ -469,10 +469,10 @@ $BotEquipment[TranscendentRoundThree] = 	"CLASS Fighter LVL 2400 REMORT 30 COINS
 $BotEquipment[Master] =         "CLASS Fighter LVL 2600 REMORT 31 COINS 200000 LCK 12 DiamondLegendSword 1";
 $BotEquipment[Ripper] =         "CLASS Mage LVL 2900 REMORT 31 COINS 400000 LCK 12 CastingBlade 1";
 
-$BotEquipment[Flux] =         "CLASS Fighter LVL 3000 REMORT 31 COINS 200000 LCK 12 TerminusEst 1/1000 AngelsTear 1/60";
-$BotEquipment[Protector] =         "CLASS Mage LVL 3250 REMORT 32 COINS 400000 LCK 12 CastingBlade 1 AngelsTear 1/50";
-$BotEquipment[Hybrid] =         "CLASS Fighter LVL 3500 REMORT 33 COINS 600000 LCK 12 TerminusEst 1/1000 AngelsTear 1/40";
-$BotEquipment[Crucifier] =         "CLASS Fighter LVL 3650 REMORT 34 COINS 800000 LCK 15 AngelsTear 1/20 TerminusEst 1/500";
+$BotEquipment[Flux] =         "CLASS Fighter LVL 3000 REMORT 31 COINS 200000 LCK 12 TerminusEst 1/1000 AngelsTear 1/20";
+$BotEquipment[Protector] =         "CLASS Mage LVL 3250 REMORT 32 COINS 400000 LCK 12 CastingBlade 1 AngelsTear 1/25";
+$BotEquipment[Hybrid] =         "CLASS Fighter LVL 3500 REMORT 33 COINS 600000 LCK 12 TerminusEst 1/1000 AngelsTear 1/30";
+$BotEquipment[Crucifier] =         "CLASS Fighter LVL 3650 REMORT 34 COINS 800000 LCK 12 TerminusEst 1/10 AngelsTear 1/35";
 
 $BotEquipment[RoundOne] =         "CLASS Fighter LVL 1000 REMORT 15 LCK 1 DiamondLegendSword 1";
 $BotEquipment[RoundTwo] =         "CLASS Mage LVL 1200 REMORT 10 LCK 1 CastingBlade 1";			//MAGE

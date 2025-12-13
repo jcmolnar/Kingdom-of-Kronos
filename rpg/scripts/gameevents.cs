@@ -435,7 +435,7 @@ function HouseEarnings()
 			if(%expReward > 0)
 				Client::sendMessage(%cl, $MsgBeige, "You received " @ %expReward @ " experience points for being loyal to your house.");
 			else if(!%shouldGiveExp)
-				Client::sendMessage(%cl, $MsgBeige, "You are currently max level for your remort, and did not receive any experience.");
+				Client::sendMessage(%cl, $MsgBeige, "You are currently able to remort, and your house's leadership has cut you off from this perk. They suggest either remorting, or finding someone else to freeload from.");
 			if(%rpreward > 0)
 				Client::sendMessage(%cl, $MsgBeige, "You received " @ %rpreward @ " rank points for being loyal to your house.");
 			if(%spreward > 0)

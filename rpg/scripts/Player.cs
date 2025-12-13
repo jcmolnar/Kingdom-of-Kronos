@@ -21,6 +21,17 @@ function Player::onAdd(%this)
 	//reset the player's recharge rates for HP and MANA
       GameBase::setRechargeRate(%this, 0);
 	GameBase::setAutoRepairRate(%this, 0);
+    
+    // SAFETY ARCHITECTURE: Ensure AI bots trigger Game::playerSpawned
+    // AI::spawn() creates the object but might bypass standard spawn scripts
+    %clientId = Player::getClient(%this);
+    if(Player::isAiControlled(%clientId))
+    {
+        // Use schedule to allow object to fully initialize
+        %currentTime = getSimTime();
+        echo("[INERT DEBUG] Player::onAdd: Scheduling Game::playerSpawned(obj=" @ %this @ ", clientId=" @ %clientId @ ") in 0.1s @ " @ %currentTime);
+        schedule("Game::playerSpawned(" @ %this @ ", " @ %clientId @ ", \"" @ Player::getArmor(%this) @ "\");", 0.1);
+    }
 }
 
 function Player::onRemove(%this)

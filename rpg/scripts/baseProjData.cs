@@ -764,3 +764,120 @@ RocketData SpellBomb29
 	liveTime = 0.2;
 	isVisible = False;
 };
+
+//--------------------------------------
+// Homing Missile Prototype (CRASHES - ENGINE MISMATCH)
+//--------------------------------------
+//SeekingMissileData MagicMissile
+//{
+//   bulletShapeName    = "enbolt.dts"; // Using energy bolt visual
+//   explosionTag       = energyExp;
+//   
+//   damageClass        = 1; // Radius damage
+//   damageValue        = 10.0;
+//   damageType         = $SpellDamageType;
+//   
+//   muzzleVelocity     = 50.0;
+//   totalTime          = 10.0; // Long life to track
+//   liveTime           = 10.0;
+//   
+//   // Homing Parameters (from source analysis)
+//   seekingTurningRadius    = 20.0; 
+//   nonSeekingTurningRadius = 50.0; 
+//   proximityDist           = 0.5;
+//   smokeDist               = 1.5;
+//   
+//   lightRange         = 3.0;
+//   lightColor         = { 0.4, 0.4, 1.0 };
+//   
+//   isVisible          = True;
+//   
+//   smokeName          = "smoke.dts"; // Native field found in source
+//};
+// Callback to calculate heat factor for target selection (required by engine)
+function MagicMissile::updateTargetPercentage(%target)
+{
+   return 1.0; // Always track if valid target
+}
+
+//--------------------------------------
+// Bouncing Projectile Prototype (DISABLED - POTENTIAL CRASH)
+//--------------------------------------
+//GrenadeData AcidFlask
+//{
+//   bulletShapeName    = "grenade.dts";
+//   explosionTag       = acidExp;
+//   
+//   damageClass        = 1; 
+//   damageValue        = 0.0; // Needs custom script damage? Or native? 
+//   damageType         = $SpellDamageType;
+//   
+//   elasticity         = 0.6; // Bounciness (0.0 = no bounce, 1.0 = superball)
+//   
+//   muzzleVelocity     = 40.0;
+//   totalTime          = 10.0;
+//   liveTime           = 3.0; // Explodes after 3 seconds
+//   
+//   isVisible          = True;
+//   
+//   smokeName          = "smoke.dts"; // Native field found in source
+//};
+
+//--------------------------------------
+// Shield Visuals Prototype (DISABLED - CAUSES ENGINE CRASH)
+//--------------------------------------
+
+// 1. Ice Shield visual
+//PlayerData ShieldedIceArmor
+//{
+//   className = "Armor";
+//   shapeFile = "larmor"; // Fixed: removed .dts
+//   
+//   // The magic field discovered in source:
+//   shieldShapeName = "iceshield";
+//   
+//   // Other required fields to make it work as armor
+//   flameShapeName = "flame"; // Fixed: removed .dts
+//   visibleToSensor = True;
+//   mapFilter = 1;
+//   mapIcon = "M_player";
+//   maxDamage = 100.0;
+//   maxEnergy = 100.0;
+//   maxForwardSpeed = 10.0; // Slow down?
+//};
+
+// 2. Dome Shield visual
+//PlayerData ShieldedDomeArmor
+//{
+//   className = "Armor";
+//   shapeFile = "larmor"; // Fixed: removed .dts
+//   
+//   // Using the dome field
+//   shieldShapeName = "domefiled";
+//   
+//   flameShapeName = "flame"; // Fixed: removed .dts
+//   visibleToSensor = True;
+//   mapFilter = 1;
+//   mapIcon = "M_player";
+//   maxDamage = 100.0;
+//   maxEnergy = 100.0;
+//   maxForwardSpeed = 10.0;
+//};
+
+//--------------------------------------
+// Chaos Lightning Prototype
+//--------------------------------------
+LightningData ChaosBolt
+{
+   bitmapName       = "lightning.bmp"; 
+   boltLength       = 40.0; 
+   damagePerSec     = 10.0;
+   energyDrainPerSec = 10.0;
+   
+   // Chaos Parameters (from projLightning.cpp)
+   displaceBias     = 0.5; // High jitter (default 0.25)
+   beamWidth        = 0.5; // Thick beam (default 0.2)
+   segmentDivisions = 4;   // Detailed
+   
+   explosionTag     = energyExp; // Standard hit
+};

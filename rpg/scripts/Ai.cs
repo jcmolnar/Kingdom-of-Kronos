@@ -42,6 +42,23 @@ $AI_PERIODIC_DEBUG = 1;       // Controls [INERT DEBUG] AI::Periodic messages
 $LOOTBAG_DEBUG = 0;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
 $Debug::SafeGuards = 1;       // Controls [SAFEGUARD] player protection logging
 
+// Granular Debug Flags (Turn off to reduce spam)
+$TOWNBOT_RACE_DEBUG = 1;      // Controls [TOWNBOT RACE DEBUG] messages
+$TOWNBOT_SKIN_DEBUG = 1;      // Controls [FINAL FIX] messages
+$MISSION_CLEANUP_DEBUG = 1;   // Controls [DEBUG] addToSetMissionCleanup messages
+$GETBOTID_DEBUG = 1;          // Controls [GETBOTIDLIST DEBUG] messages
+$SPAWNLOOP_DEBUG = 1;         // Controls [SPAWN DEBUG] messages
+$BOT_TEAM_DEBUG = 1;          // Controls [BOT TEAM DEBUG] messages
+$TEAM_ENFORCE_DEBUG = 1;      // Controls [TEAM ENFORCE] messages
+$BOT_TRACK_DEBUG = 1;         // Controls [BOT TRACK] messages
+$BOT_REGISTRY_DEBUG = 1;      // Controls [BOT REGISTRY] messages
+$SPAWN_TRANSACTION_DEBUG = 1; // Controls [SPAWN TRANSACTION] messages
+$BOT_SHELL_DEBUG = 1;         // Controls [BOT SHELL DEBUG] messages
+$SPAWN_COUNTER_DEBUG = 1;     // Controls [SPAWN COUNTER] messages
+$BOT_CLEANUP_DEBUG = 1;       // Controls [BOT CLEANUP] messages
+$TOWNBOT_ARMOR_DEBUG = 1;     // Controls [TOWNBOT ARMOR DEBUG] messages
+$RECONCILE_DEBUG = 1;         // Controls [RECONCILE] messages
+
 
 // Bot tracking counters
 $TotalActiveBots = 0;      // Total count of all active bots (enemy + town)
@@ -693,7 +710,7 @@ function RegisterBot(%clientId, %spawnPointId, %team, %aiName)
 	// This eliminates 300+ array lookups per spawn in GetClientDataType()
 	$BotType[%clientId] = "enemy";
 	
-	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT REGISTRY] Registered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", team=" @ %team @ ", name=" @ %aiName);
+	if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Registered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", team=" @ %team @ ", name=" @ %aiName);
 }
 
 // Unregister a bot from the centralized registry
@@ -714,7 +731,7 @@ function UnregisterBot(%clientId)
 	if(%aiName == "" || %aiName == -1)
 		%aiName = fetchData(%clientId, "BotInfoAiName");
 	
-	echo("[BOT REGISTRY DEBUG] UnregisterBot called: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName);
+	if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY DEBUG] UnregisterBot called: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName);
 	
 	// Clear registry entries
 	$BotRegistry[%clientId] = "";
@@ -1502,7 +1519,7 @@ function DecrementSpawnCounter(%clientId)
 {
 	if(%clientId == "" || %clientId == -1)
 	{
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] DecrementSpawnCounter: Invalid clientId");
+		if($SPAWN_COUNTER_DEBUG) echo("[SPAWN COUNTER] DecrementSpawnCounter: Invalid clientId");
 		return false;
 	}
 	
@@ -1559,11 +1576,11 @@ function DecrementSpawnCounter(%clientId)
 		if(%oldCounter > 0)
 		{
 			$numAIperSpawnPoint[%spawnPointId]--;
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] Decremented counter for SpawnPoint " @ %spawnPointId @ " (was: " @ %oldCounter @ ", now: " @ $numAIperSpawnPoint[%spawnPointId] @ ") - source: " @ %source @ ", clientId: " @ %clientId);
+			if($SPAWN_COUNTER_DEBUG) echo("[SPAWN COUNTER] Decremented counter for SpawnPoint " @ %spawnPointId @ " (was: " @ %oldCounter @ ", now: " @ $numAIperSpawnPoint[%spawnPointId] @ ") - source: " @ %source @ ", clientId: " @ %clientId);
 		}
 		else
 		{
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] WARNING: Counter already 0 for SpawnPoint " @ %spawnPointId @ " - cannot decrement (source: " @ %source @ ", clientId: " @ %clientId @ ")");
+			if($SPAWN_COUNTER_DEBUG) echo("[SPAWN COUNTER] WARNING: Counter already 0 for SpawnPoint " @ %spawnPointId @ " - cannot decrement (source: " @ %source @ ", clientId: " @ %clientId @ ")");
 		}
 		
 		// Ensure counter never goes below 0
@@ -1596,7 +1613,7 @@ function DecrementSpawnCounter(%clientId)
 	
 	// Only show warning if it's NOT a TempSpawn bot (TempSpawn bots don't use spawn point counters)
 	if(!%isTempSpawn)
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] WARNING: Could not find spawn point for clientId " @ %clientId @ " - counter NOT decremented");
+		if($SPAWN_COUNTER_DEBUG) echo("[SPAWN COUNTER] WARNING: Could not find spawn point for clientId " @ %clientId @ " - counter NOT decremented");
 	
 	// Still unregister even if we couldn't find spawn point
 	UnregisterBot(%clientId);
@@ -1615,7 +1632,7 @@ function IncrementSpawnCounter(%spawnPointId)
 		%oldCounter = 0;
 	
 	$numAIperSpawnPoint[%spawnPointId]++;
-	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] Incremented counter for SpawnPoint " @ %spawnPointId @ " (was: " @ %oldCounter @ ", now: " @ $numAIperSpawnPoint[%spawnPointId] @ ")");
+	if($SPAWN_COUNTER_DEBUG) echo("[SPAWN COUNTER] Incremented counter for SpawnPoint " @ %spawnPointId @ " (was: " @ %oldCounter @ ", now: " @ $numAIperSpawnPoint[%spawnPointId] @ ")");
 }
 
 // ============================================================================
@@ -1625,7 +1642,7 @@ function IncrementSpawnCounter(%spawnPointId)
 
 function ReconcileSpawnCounters()
 {
-	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Starting spawn counter reconciliation...");
+	if($RECONCILE_DEBUG) echo("[RECONCILE] Starting spawn counter reconciliation...");
 	
 	%totalFixed = 0;
 	%totalChecked = 0;
@@ -1666,7 +1683,7 @@ function ReconcileSpawnCounters()
 			// Check for discrepancy
 			if(%actualCount != %counterValue)
 			{
-				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] DISCREPANCY FOUND: SpawnPoint " @ %spawnPoint @ " - Counter=" @ %counterValue @ ", Actual=" @ %actualCount @ " - FIXING");
+				if($RECONCILE_DEBUG) echo("[RECONCILE] DISCREPANCY FOUND: SpawnPoint " @ %spawnPoint @ " - Counter=" @ %counterValue @ ", Actual=" @ %actualCount @ " - FIXING");
 				$numAIperSpawnPoint[%spawnPoint] = %actualCount;
 				%totalFixed++;
 			}
@@ -2513,6 +2530,37 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 		}
 	}
 	
+	// CRITICAL PRE-FLIGHT CHECK: Delay spawn if ANY player is actively connecting
+	// This prevents race conditions where AI::spawn might assign a client ID that's about to be used by a connecting player
+	%hasActiveConnection = false;
+	for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
+	{
+		%connectTime = $ClientIdPlayerConnecting[%checkId];
+		if(%connectTime != "" && %connectTime != "0" && %connectTime != -1)
+		{
+			%timeSinceConnect = getSimTime() - %connectTime;
+			if(%timeSinceConnect < 10)  // Connection within last 10 seconds
+			{
+				%hasActiveConnection = true;
+				echo("CRITICAL SAFEGUARD: createAI - Player actively connecting (clientId=" @ %checkId @ ", " @ %timeSinceConnect @ "s ago). Delaying bot spawn for " @ %aiName);
+				break;
+			}
+			else
+			{
+				// Stale connection flag - clear it
+				$ClientIdPlayerConnecting[%checkId] = "";
+			}
+		}
+	}
+	
+	if(%hasActiveConnection)
+	{
+		// Delay this spawn by 2 seconds to let player connection complete
+		// Return false to indicate spawn was deferred
+		schedule("createAI(\"" @ %aiName @ "\", \"" @ %armor @ "\", \"" @ %spawnPos @ "\", \"" @ %spawnRot @ "\", \"" @ %name @ "\");", 2.0);
+		return "deferred";
+	}
+	
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 		echo("[SPAWN FLOW] createAI(): Calling AI::spawn(" @ %aiName @ ", " @ %armor @ ", " @ %spawnPos @ ", " @ %spawnRot @ ", " @ %name @ ")");
 	%spawnResult = AI::spawn( %aiName, %armor, %spawnPos, %spawnRot, %name, "male2" );
@@ -2839,7 +2887,7 @@ function AI::setWeapons(%aiName, %loadout)
 {
 	dbecho($dbechoMode, "AI::setWeapons(" @ %aiName @ ")");
 	%currentTime = getSimTime();
-	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+	if($AI_PERIODIC_DEBUG)
 		echo("[INERT DEBUG] AI::setWeapons: ENTRY @ " @ %currentTime @ " - aiName=" @ %aiName @ ", loadout=" @ %loadout);
 
 	// CRITICAL: Use getClientIdFromName() instead of getId() to minimize error spam
@@ -2854,47 +2902,47 @@ function AI::setWeapons(%aiName, %loadout)
 			echo("[INERT DEBUG] AI::setWeapons: getClientIdFromName returned invalid ID (-1/empty/False) for " @ %aiName @ " - returning early");
 		return;
 	}
-	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+	if($AI_PERIODIC_DEBUG)
 		echo("[INERT DEBUG] AI::setWeapons: getClientIdFromName returned " @ %aiId @ " for " @ %aiName);
 	
 	// CRITICAL: Validate that player object still exists before proceeding
 	%playerObj = Client::getOwnedObject(%aiId);
-	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+	if($AI_PERIODIC_DEBUG)
 		echo("[INERT DEBUG] AI::setWeapons: Client::getOwnedObject(" @ %aiId @ ") returned: " @ %playerObj);
 	
 	// CRITICAL FIX: Fallback if engine hasn't updated getOwnedObject yet
 	if(%playerObj == -1 || %playerObj == "")
 	{
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+		if($AI_PERIODIC_DEBUG)
 			echo("[INERT DEBUG] AI::setWeapons: Player object missing from Client::getOwnedObject, trying FindPlayerInBotGroup() fallback");
 		%playerObj = FindPlayerInBotGroup(%aiId);
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+		if($AI_PERIODIC_DEBUG)
 			echo("[INERT DEBUG] AI::setWeapons: FindPlayerInBotGroup(" @ %aiId @ ") returned: " @ %playerObj);
 		
 		// Check BotGroup status for debugging
 		if(!isObject("BotGroup"))
 		{
-			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+			if($AI_PERIODIC_DEBUG)
 				echo("[INERT DEBUG] AI::setWeapons: WARNING - BotGroup does not exist when fallback is needed!");
 		}
 		else
 		{
 			%botGroupCount = Group::objectCount(BotGroup);
-			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+			if($AI_PERIODIC_DEBUG)
 				echo("[INERT DEBUG] AI::setWeapons: BotGroup exists with " @ %botGroupCount @ " objects");
 		}
 	}
 		
 	if(%playerObj == -1 || %playerObj == "")
 	{
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+		if($AI_PERIODIC_DEBUG)
 			echo("[INERT DEBUG] AI::setWeapons: Player object still missing after fallback - retrying in 1.0s");
 		if($AI_DEBUG_ENABLED)
 			echo("[AI WARNING] AI::setWeapons: Player object missing for " @ %aiName @ " (id=" @ %aiId @ "). Retrying in 1.0s...");
 		schedule("AI::setWeapons(\"" @ %aiName @ "\", \"" @ %loadout @ "\");", 1.0);
 		return;
 	}
-	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+	if($AI_PERIODIC_DEBUG)
 		echo("[INERT DEBUG] AI::setWeapons: Player object validated (playerObj=" @ %playerObj @ "), proceeding");
 	if($AI_DEBUG_ENABLED)
 		echo("[AI DEBUG] AI::setWeapons: Applying weapons to " @ %aiName @ " (playerObj=" @ %playerObj @ ")");
@@ -2993,7 +3041,7 @@ function AI::setWeapons(%aiName, %loadout)
 				
 				// Store original equipment string with percentage chances for lootbag generation
 				storeData(%aiId, "OriginalLootString", %equipString);
-				if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+				if($AI_PERIODIC_DEBUG)
 					echo("[INERT DEBUG] AI::setWeapons: Calling GiveThisStuff with equipString (guardtype=" @ %guardtype @ ")");
 				
 				// CRITICAL FIX: Ensure skin is set before GiveThisStuff for TOWN BOTS only
@@ -3022,7 +3070,7 @@ function AI::setWeapons(%aiName, %loadout)
 			
 			// Store original items string with percentage chances for lootbag generation
 			storeData(%aiId, "OriginalLootString", %items);
-			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+			if($AI_PERIODIC_DEBUG)
 				echo("[INERT DEBUG] AI::setWeapons: Calling GiveThisStuff with items from BotInfo");
 			//echo("[SPAWN DEBUG] AI::setWeapons(): Calling GiveThisStuff with items=" @ %items);
 			
@@ -3050,7 +3098,7 @@ function AI::setWeapons(%aiName, %loadout)
 			}
 			
 			storeData(%aiId, "OriginalLootString", %loadoutString);
-			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+			if($AI_PERIODIC_DEBUG)
 				echo("[INERT DEBUG] AI::setWeapons: Calling GiveThisStuff with loadoutString (loadout=" @ %loadout @ ")");
 			//echo("[SPAWN DEBUG] AI::setWeapons(): Calling GiveThisStuff with loadoutString=" @ %loadoutString);
 		
@@ -3070,14 +3118,14 @@ function AI::setWeapons(%aiName, %loadout)
 
 	Game::refreshClientScore(%aiId);
   
-	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+	if($AI_PERIODIC_DEBUG)
 		echo("[INERT DEBUG] AI::setWeapons: Setting AI engine variables - triggerPct=1.0, iq=100, attackMode=" @ $AIattackMode);
 	AI::SetVar(%aiName, triggerPct, 1.0 );
 	AI::setVar(%aiName, iq, 100 );
 	AI::setVar(%aiName, attackMode, $AIattackMode);
 	AI::setAutomaticTargets( %aiName );
 
-	if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+	if($AI_PERIODIC_DEBUG)
 		echo("[INERT DEBUG] AI::setWeapons: Scheduling callbackPeriodic for " @ %aiName @ " (5s interval)");
 	ai::callbackPeriodic(%aiName, 5, AI::Periodic);
 
@@ -3280,7 +3328,7 @@ function AI::Periodic(%aiName)
 		%lastCorpseLog = $AI_Periodic_CorpseLog[%aiName];
 		if(%lastCorpseLog == "" || %lastCorpseLog == -1 || (%currentTime - %lastCorpseLog) >= 30)
 		{
-			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+			if($AI_PERIODIC_DEBUG)
 				echo("[INERT DEBUG] AI::Periodic: Ignoring corpse object " @ %aiName @ " - callbackPeriodic still running for dead bot");
 			$AI_Periodic_CorpseLog[%aiName] = %currentTime;
 		}
@@ -3292,7 +3340,7 @@ function AI::Periodic(%aiName)
 	%lastLogTime = $AI_Periodic_LastLog[%aiName];
 	if(%lastLogTime == "" || %lastLogTime == -1 || (%currentTime - %lastLogTime) >= 10)
 	{
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+		if($AI_PERIODIC_DEBUG)
 			echo("[INERT DEBUG] AI::Periodic: ENTRY @ " @ %currentTime @ " - aiName=" @ %aiName);
 		$AI_Periodic_LastLog[%aiName] = %currentTime;
 	}
@@ -3315,7 +3363,7 @@ function AI::Periodic(%aiName)
 			if($AI_DEBUG_ENABLED)
 				echo("[AI DEBUG] AI::Periodic - Bot " @ %aiName @ " is frozen or dumbAI, skipping");
 		}
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+		if($AI_PERIODIC_DEBUG)
 			echo("[INERT DEBUG] AI::Periodic: Bot " @ %aiName @ " (aiId=" @ %aiId @ ") is frozen or dumbAI - returning early");
 		return;
 	}
@@ -3324,7 +3372,7 @@ function AI::Periodic(%aiName)
 	// This completely halts AI behavior during shove to allow physics to move the bot
 	if($BotFrozen[%aiId] == "true")
 	{
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+		if($AI_PERIODIC_DEBUG)
 			echo("[INERT DEBUG] AI::Periodic: Bot " @ %aiName @ " (aiId=" @ %aiId @ ") is frozen via $BotFrozen - returning early");
 		return;
 	}
@@ -3340,7 +3388,7 @@ function AI::Periodic(%aiName)
 		// Only consider it "recently shoved" if it was within the last 1.5 seconds
 		if(%timeSinceShove < 1.5)
 		{
-			if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG)
+			if($AI_PERIODIC_DEBUG)
 				echo("[INERT DEBUG] AI::Periodic: Bot " @ %aiName @ " (aiId=" @ %aiId @ ") was recently shoved " @ %timeSinceShove @ "s ago - returning early");
 			return;
 		}
@@ -4383,13 +4431,19 @@ Telemetry_RecordSpawnAttempt();  // Track spawn attempt
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 		echo("[SPAWN FLOW] AI::helper(): SpawnAI() returned=" @ %spawnResult);
 	
-	// CRITICAL FIX #2: If spawn failed, rollback the reserved slot
-	if((%spawnResult == -1 || %spawnResult == "") && %spawnPointId != "" && %spawnPointId != -1)
+	// CRITICAL FIX: If spawn failed, record failure and optionally rollback slot
+	if(%spawnResult == -1 || %spawnResult == "")
 	{
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-			echo("[SPAWN FLOW] AI::helper(): Spawn FAILED - rolling back reserved slot for spawnPoint " @ %spawnPointId);
-		RollbackSpawnSlot(%spawnPointId);
-		Telemetry_RecordSpawnFailed("other");  // Spawn failed before AI::spawn
+		// Rollback spawn slot if this was a spawn point spawn
+		if(%spawnPointId != "" && %spawnPointId != -1)
+		{
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+				echo("[SPAWN FLOW] AI::helper(): Spawn FAILED - rolling back reserved slot for spawnPoint " @ %spawnPointId);
+			RollbackSpawnSlot(%spawnPointId);
+		}
+		// CRITICAL FIX: ALWAYS record failure to decrement $numAI (balances increment at line 4392)
+		// This was previously only called for spawnpoint spawns, causing $numAI leaks for TempSpawn/Town bots
+		Telemetry_RecordSpawnFailed("other");
 		return -1;
 	}
 
@@ -4746,6 +4800,29 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	%aiIdFromGetId = AI::getId(%newName);
 	if(%aiIdFromGetId != -1 && %aiIdFromGetId != "" && %aiIdFromGetId != "False" && %aiIdFromGetId != "false")
 	{
+		// CRITICAL SAFEGUARD: Check if a player is actively connecting to this client ID
+		// If so, abort this spawn to prevent collision (causes black screen for player)
+		%playerConnecting = $ClientIdPlayerConnecting[%aiIdFromGetId];
+		if(%playerConnecting != "" && %playerConnecting != "0" && %playerConnecting != -1)
+		{
+			%timeSinceConnect = getSimTime() - %playerConnecting;
+			// Only abort if connection is recent (within 30 seconds)
+			if(%timeSinceConnect < 30)
+			{
+				echo("CRITICAL SAFEGUARD: SpawnAIGetClientId - Client ID " @ %aiIdFromGetId @ " has active player connection (" @ %timeSinceConnect @ "s ago). ABORTING spawn for bot " @ %newName @ " to prevent collision.");
+				// Rollback spawn slot
+				if(%spawnPointId != "" && %spawnPointId != -1)
+					RollbackSpawnSlot(%spawnPointId);
+				Telemetry_RecordSpawnFailed("clientid");
+				return;
+			}
+			else
+			{
+				// Connection is stale (>30s) - clear it and proceed
+				$ClientIdPlayerConnecting[%aiIdFromGetId] = "";
+			}
+		}
+		
 		// Validate the client ID has a valid player object
 		%playerObj = Client::getOwnedObject(%aiIdFromGetId);
 		
@@ -5280,7 +5357,12 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	}
 	else
 	{
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - displayName is empty, cannot search for client ID");
+		// Only warn if we ALSO don't have a valid aiId - otherwise this is expected
+		// (we found the bot via AI::getId but displayName was empty, which is fine)
+		if(%aiId == -1 || %aiId == "" || %aiId == "False" || %aiId == "false")
+		{
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): WARNING - displayName is empty for bot " @ %newName @ " (aiId=" @ %aiId @ ", spawnPointId=" @ %spawnPointId @ "). Cannot search by displayName.");
+		}
 	}
 	
 	// CRITICAL FIX #2: Use spawnPointId from parameter if provided, otherwise extract from commandIssuer
@@ -5612,6 +5694,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ ", Display name: '" @ %displayName @ "'. This bot will become a SHELL! Cleaning up...");
 					%escapedName = String::replace(%newName, "\"", "\\\"");
 					AI::delete(%escapedName);
+					// NOTE: Don't call Telemetry_RecordSpawnFailed here - retries will be scheduled
+					// Telemetry will be recorded when max retries is reached (line ~5971)
 					// Reset aiId so we retry
 				}
 			}
@@ -5621,6 +5705,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): ERROR - Bot " @ %newName @ " spawned but player object is invalid! clientId=" @ %aiId @ ", Display name: '" @ %displayName @ "'. This bot will become a SHELL! Cleaning up...");
 				%escapedName = String::replace(%newName, "\"", "\\\"");
 				AI::delete(%escapedName);
+				// NOTE: Don't call Telemetry_RecordSpawnFailed here - retries will be scheduled
+				// Telemetry will be recorded when max retries is reached (line ~5971)
 				// Reset aiId so we retry
 				%aiId = "";
 				// CRITICAL: Rollback spawn slot if this was a spawn point call
@@ -5882,6 +5968,51 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			// Clear both retry counters on failure
 			$EnemyBotClientIdRetry[%newName] = "";
 			$EnemyBotSpawnRetry[%newName] = "";
+			
+			// CRITICAL FIX: Free the AI number when spawn fails completely
+			// When AI::spawn() fails silently, the AI number is leaked because we never get a clientId
+			// We must extract the number from the bot name and free it directly
+			%aiNumber = $tmpbotn[%newName];
+			if(%aiNumber != "" && %aiNumber != -1 && %aiNumber != "0")
+			{
+				$aiNumTable[%aiNumber] = "";
+				$tmpbotn[%newName] = "";
+				Telemetry_RecordAINumberFreed();
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): CRITICAL - Freed leaked AI number " @ %aiNumber @ " for failed bot " @ %newName);
+			}
+			else
+			{
+				// Try to extract number from name as fallback (e.g., "Banisher5" -> 5)
+				// This handles cases where $tmpbotn wasn't set properly
+				%nameLen = String::len(%newName);
+				for(%i = %nameLen - 1; %i >= 0; %i--)
+				{
+					%char = String::getSubStr(%newName, %i, 1);
+					if(%char >= "0" && %char <= "9")
+					{
+						// Found a digit, extract the number
+						%numStart = %i;
+						while(%numStart > 0)
+						{
+							%prevChar = String::getSubStr(%newName, %numStart - 1, 1);
+							if(%prevChar >= "0" && %prevChar <= "9")
+								%numStart--;
+							else
+								break;
+						}
+						%extractedNum = String::getSubStr(%newName, %numStart, %nameLen - %numStart);
+						if(%extractedNum != "" && $aiNumTable[%extractedNum] != "")
+						{
+							$aiNumTable[%extractedNum] = "";
+							$tmpbotn[%newName] = "";
+							Telemetry_RecordAINumberFreed();
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): CRITICAL - Freed leaked AI number " @ %extractedNum @ " for failed bot " @ %newName @ " (via name extraction)");
+						}
+						break;
+					}
+				}
+			}
+			
 			// CRITICAL FIX #2: Rollback reserved slot when max retries reached
 			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 			{
@@ -10277,7 +10408,8 @@ function GetZoneShortName(%zoneDesc)
 // DELAYED ZONE SPAWN VERIFICATION
 // Prevents spawning bots when players quickly pass through a zone
 // ============================================================================
-$ZoneSpawnDelay = 10;  // Seconds to wait before spawning (set to 0 to disable delay)
+$ZoneSpawnDelay = 10;      // Seconds to wait before spawning ENEMY ZONES (set to 0 to disable delay)
+$TownSpawnDelay = 1;       // Seconds to wait before spawning TOWN ZONES (shorter delay for town bots)
 
 // Called when first player enters zone - schedules spawn verification
 function ScheduleZoneSpawn(%zoneIndex)
@@ -10288,10 +10420,30 @@ function ScheduleZoneSpawn(%zoneIndex)
 	// Mark that we have a pending spawn for this zone
 	$ZoneSpawnPending[%zoneIndex] = getSimTime();
 	
-	// Get delay (0 = instant spawn like before)
-	%delay = $ZoneSpawnDelay;
-	if(%delay == "" || %delay < 0)
-		%delay = 10;  // Default to 10 seconds
+	// Determine if this is a town zone (has town bots) or enemy zone
+	%isTownZone = false;
+	for(%i = 0; (%botName = GetWord($TownBotRegistry, %i)) != -1; %i++)
+	{
+		if($TownBotZone[%botName] == %zoneIndex)
+		{
+			%isTownZone = true;
+			break;
+		}
+	}
+	
+	// Get appropriate delay based on zone type
+	%delay = $ZoneSpawnDelay;  // Default to enemy zone delay (10s)
+	if(%isTownZone)
+	{
+		%delay = $TownSpawnDelay;  // Town zones use shorter delay (1s)
+		if(%delay == "" || %delay < 0)
+			%delay = 1;
+	}
+	else
+	{
+		if(%delay == "" || %delay < 0)
+			%delay = 10;  // Default to 10 seconds for enemy zones
+	}
 	
 	if(%delay == 0)
 	{
@@ -10303,7 +10455,10 @@ function ScheduleZoneSpawn(%zoneIndex)
 	{
 		// Schedule verification after delay
 		%zoneDesc = $Zone::Desc[%zoneIndex];
-		echo("[ZONE SPAWN] Scheduling spawn verification for zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") in " @ %delay @ " seconds");
+		%zoneType = "enemy";
+		if(%isTownZone)
+			%zoneType = "town";
+		echo("[ZONE SPAWN] Scheduling " @ %zoneType @ " spawn verification for zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") in " @ %delay @ " seconds");
 		schedule("VerifyAndSpawnZoneBots(" @ %zoneIndex @ ");", %delay);
 	}
 }
@@ -10488,7 +10643,7 @@ function SpawnZoneBots(%zoneIndex)
 			
 			// Get race and validate it exists
 			%botRace = $BotInfo[%botName, RACE];
-			echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " | $BotInfo[RACE]='" @ %botRace @ "'");
+			if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " | $BotInfo[RACE]='" @ %botRace @ "'");
 			if(%botRace == "" || %botRace == -1)
 			{
 				echo("ERROR: SpawnZoneBots - Bot " @ %botName @ " has no RACE defined, defaulting to MaleHuman");
@@ -10496,7 +10651,7 @@ function SpawnZoneBots(%zoneIndex)
 			}
 			
 			%armor = $RaceToArmorType[%botRace];
-			echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " | Race='" @ %botRace @ "' | $RaceToArmorType='" @ %armor @ "'");
+			if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " | Race='" @ %botRace @ "' | $RaceToArmorType='" @ %armor @ "'");
 			if(%armor == "" || %armor == -1)
 			{
 				echo("ERROR: SpawnZoneBots - Could not find armor for race '" @ %botRace @ "' for bot " @ %botName @ ", defaulting to MaleHumanArmor7");
@@ -10740,10 +10895,10 @@ function SpawnZoneBots(%zoneIndex)
 			// No stored ID means this is a fresh spawn - just proceed to spawn
 			// AI::spawn() will handle any orphaned AIs with this name
 			
-			echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: CALLING AI::spawn() for " @ %botName @ " with armor='" @ %armor @ "'");
+			if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: CALLING AI::spawn() for " @ %botName @ " with armor='" @ %armor @ "'");
 			if(AI::spawn(%aiName, %armor, %spawnPos, %spawnRot, %displayName, "male2") != "false")
 			{
-				echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: AI::spawn() SUCCEEDED for " @ %botName);
+				if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: AI::spawn() SUCCEEDED for " @ %botName);
 				// DEBUG: Commented out to reduce server lag
 	//echo("[TOWN BOT DEBUG] AI::spawn() returned SUCCESS for " @ %botName);
 				// CRITICAL: Try to get client ID immediately to set team before UpdateTeam() runs
@@ -10764,8 +10919,11 @@ function SpawnZoneBots(%zoneIndex)
 						%playerObj.isTownBot = true;
 					}
 					
-					echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " spawned | clientId=" @ %immediateClientId @ " | playerObj=" @ %playerObj);
-					echo("[TOWNBOT RACE DEBUG]   Expected armor='" @ %armor @ "' | Player::getArmor='" @ %actualArmor @ "' | GameBase::getDataName='" @ %dataName @ "' | Team=" @ %actualTeam);
+					if($TOWNBOT_RACE_DEBUG)
+					{
+						echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Bot=" @ %botName @ " spawned | clientId=" @ %immediateClientId @ " | playerObj=" @ %playerObj);
+						echo("[TOWNBOT RACE DEBUG]   Expected armor='" @ %armor @ "' | Player::getArmor='" @ %actualArmor @ "' | GameBase::getDataName='" @ %dataName @ "' | Team=" @ %actualTeam);
+					}
 					
 					// CRITICAL DEBUG: Check for orphaned objects with this client ID in MissionCleanup
 					if(isObject("MissionCleanup"))
@@ -10791,7 +10949,7 @@ function SpawnZoneBots(%zoneIndex)
 							}
 						}
 						if(%orphanCount > 0)
-							echo("[TOWNBOT RACE DEBUG]   Cleaned " @ %orphanCount @ " orphaned objects for clientId=" @ %immediateClientId);
+							if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG]   Cleaned " @ %orphanCount @ " orphaned objects for clientId=" @ %immediateClientId);
 					}
 					
 					// Got client ID immediately - set BotInfoAiName and team right away
@@ -10810,7 +10968,7 @@ function SpawnZoneBots(%zoneIndex)
 					// We must re-apply armor after team change to fix the visual appearance
 					if(%armor != "" && %armor != -1)
 					{
-						echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Refreshing armor visual for " @ %botName @ " after team set (armor='" @ %armor @ "')");
+						if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Refreshing armor visual for " @ %botName @ " after team set (armor='" @ %armor @ "')");
 						Player::setArmor(%playerObj, %armor);
 						Client::setSkin(%immediateClientId, $Server::teamSkin[0]);
 						
@@ -11712,7 +11870,7 @@ function addToSetMissionCleanup(%clientId)
 		// Double-check MissionCleanup exists
 		if(isObject("MissionCleanup"))
 		{
-			if($AI_DEBUG_ENABLED) echo("[DEBUG] addToSetMissionCleanup - Adding player object " @ %playerObj @ " to MissionCleanup for clientId " @ %clientId);
+			if($MISSION_CLEANUP_DEBUG) echo("[DEBUG] addToSetMissionCleanup - Adding player object " @ %playerObj @ " to MissionCleanup for clientId " @ %clientId);
 			addToSet("MissionCleanup", %playerObj);
 		}
 		else
@@ -12899,9 +13057,13 @@ function ForceTownBotSkin(%clientId, %botName)
 	%currentArmor = Player::getArmor(%clientId);
 	%currentSkin = Client::getSkinBase(%clientId);
 	
-	echo("[FINAL FIX] ForceTownBotSkin: BEFORE - clientId=" @ %clientId @ ", playerObj=" @ %playerObj);
-	echo("[FINAL FIX]   Team: client=" @ %currentTeam @ ", obj=" @ %currentObjTeam);
-	echo("[FINAL FIX]   Armor: '" @ %currentArmor @ "', Skin: '" @ %currentSkin @ "'");
+	// [FINAL FIX] debug wrapper
+	if($TOWNBOT_SKIN_DEBUG)
+	{
+		echo("[FINAL FIX] ForceTownBotSkin: BEFORE - clientId=" @ %clientId @ ", playerObj=" @ %playerObj);
+		echo("[FINAL FIX]   Team: client=" @ %currentTeam @ ", obj=" @ %currentObjTeam);
+		echo("[FINAL FIX]   Armor: '" @ %currentArmor @ "', Skin: '" @ %currentSkin @ "'");
+	}
 	
 	// Get expected armor from race
 	%botRace = $BotInfo[%botName, RACE];
@@ -12927,10 +13089,13 @@ function ForceTownBotSkin(%clientId, %botName)
 	%newArmor = Player::getArmor(%clientId);
 	%newSkin = Client::getSkinBase(%clientId);
 	
-	echo("[FINAL FIX] ForceTownBotSkin: AFTER - clientId=" @ %clientId);
-	echo("[FINAL FIX]   Team: client=" @ %newTeam @ ", obj=" @ %newObjTeam);
-	echo("[FINAL FIX]   Armor: '" @ %newArmor @ "', Skin: '" @ %newSkin @ "'");
-	echo("[FINAL FIX] ForceTownBotSkin: DONE for " @ %botName);
+	if($TOWNBOT_SKIN_DEBUG)
+	{
+		echo("[FINAL FIX] ForceTownBotSkin: AFTER - clientId=" @ %clientId);
+		echo("[FINAL FIX]   Team: client=" @ %newTeam @ ", obj=" @ %newObjTeam);
+		echo("[FINAL FIX]   Armor: '" @ %newArmor @ "', Skin: '" @ %newSkin @ "'");
+		echo("[FINAL FIX] ForceTownBotSkin: DONE for " @ %botName);
+	}
 }
 
 // ============================================================================
@@ -12980,7 +13145,7 @@ function EnforceEnemyBotTeam(%clientId, %expectedTeam, %attempts)
 		}
 		else
 		{
-			if($AI_DEBUG_ENABLED) echo("[TEAM ENFORCE] EnforceEnemyBotTeam: Max attempts reached for clientId=" @ %clientId @ ". Final team=" @ GameBase::getTeam(%playerObj));
+			if($TEAM_ENFORCE_DEBUG) echo("[TEAM ENFORCE] EnforceEnemyBotTeam: Max attempts reached for clientId=" @ %clientId @ ". Final team=" @ GameBase::getTeam(%playerObj));
 		}
 	}
 }
@@ -12991,11 +13156,11 @@ function ScheduleTeamEnforcement(%clientId, %expectedTeam)
 	// CRITICAL: Also reject -1 and 0 as invalid teams (0 is observer team, -1 is invalid)
 	if(%clientId == -1 || %clientId == "" || %expectedTeam == "" || %expectedTeam == -1 || %expectedTeam == 0)
 	{
-		if($AI_DEBUG_ENABLED) echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Invalid parameters - clientId=" @ %clientId @ ", expectedTeam=" @ %expectedTeam @ " - Using default team 1");
+		if($TEAM_ENFORCE_DEBUG) echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Invalid parameters - clientId=" @ %clientId @ ", expectedTeam=" @ %expectedTeam @ " - Using default team 1");
 		%expectedTeam = 1; // Default to team 1 (enemy) if invalid
 	}
 	
-	if($AI_DEBUG_ENABLED) echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Scheduling enforcement for clientId=" @ %clientId @ " with expectedTeam=" @ %expectedTeam);
+	if($TEAM_ENFORCE_DEBUG) echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Scheduling enforcement for clientId=" @ %clientId @ " with expectedTeam=" @ %expectedTeam);
 	
 	// Schedule multiple enforcement attempts at different intervals
 	schedule("EnforceEnemyBotTeam(" @ %clientId @ ", " @ %expectedTeam @ ", 0);", 0.1);
@@ -13073,7 +13238,7 @@ function VerifyEnemyBotTeam(%clientId, %botName, %expectedTeam)
 	}
 	else
 	{
-		if($AI_DEBUG_ENABLED) echo("[BOT TEAM DEBUG] VerifyEnemyBotTeam - Enemy bot " @ %botName @ " (clientId=" @ %clientId @ ") has correct team " @ %expectedTeam);
+		if($BOT_TEAM_DEBUG) echo("[BOT TEAM DEBUG] VerifyEnemyBotTeam - Enemy bot " @ %botName @ " (clientId=" @ %clientId @ ") has correct team " @ %expectedTeam);
 	}
 }
 
