@@ -2311,33 +2311,8 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 	      //echo("[SPAWN DEBUG] createAI(): Using marker position from group");
 	}
 
-	// Extract guardtype by removing trailing digits (more reliable than clipTrailingNumbers)
-	// This works backwards from the end to find and remove only trailing digits
-	%guardtype = %aiName;
-	%len = String::len(%aiName);
-	%numStr = "";
-	%digitString = "0123456789";
-	
-	// Find trailing digits (working backwards)
-	for(%i = %len - 1; %i >= 0; %i--)
-	{
-		%char = String::getSubStr(%aiName, %i, 1);
-		// Check if character is a digit (0-9 only) - use String::findSubStr to avoid TorqueScript == comparison bug ("E" == "0" evaluates to true)
-		if(String::findSubStr(%digitString, %char) != -1)
-		{
-			%numStr = %char @ %numStr;
-		}
-		else
-		{
-			break;
-		}
-	}
-	
-	// If we found trailing digits, remove them
-	if(%numStr != "")
-	{
-		%guardtype = String::getSubStr(%aiName, 0, %len - String::len(%numStr));
-	}
+	// Parse guard type using helper
+	%guardtype = Bot_ParseGuardType(%aiName);
 	//echo("[SPAWN DEBUG] createAI(): guardtype=" @ %guardtype);
 
 	if($BotInfo[%aiName, RACE] != "")
@@ -2386,149 +2361,8 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 	
 	// CRITICAL: Before spawning, check if any client IDs have stale player objects
 	// This prevents shell bots from forming when a bot dies and a new one spawns quickly
-	// We can't know which client ID will be used, but we can clean up recently freed ones
-	// Scan for client IDs that were recently freed and still have player objects
-	// SAFEGUARD: Only clean up client IDs that are confirmed to be bots (have $ClientIdRecentlyFreed set)
-	// TWO-TIER APPROACH: Use Client::getFirst()/getNext() first (most reliable), then range loop as fallback
-	%cleanupPerformed = false;
-	
-	// Tier 1: Use Client::getFirst()/getNext() (most reliable method)
-	for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
-	{
-		%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
-		if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
-		{
-			// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
-			if(IsSafeToModify(%checkId, "createAI Stale Cleanup"))
-			{
-				%currentTime = getSimTime();
-				%timeSinceFreed = %currentTime - %recentlyFreed;
-				// If freed less than 2 seconds ago, check if player object still exists
-				if(%timeSinceFreed < 2 && %timeSinceFreed >= 0)
-				{
-					%stalePlayerObj = Client::getOwnedObject(%checkId);
-					if(%stalePlayerObj != -1 && %stalePlayerObj != "" && isObject(%stalePlayerObj))
-					{
-						// (Safeguard check handled by IsSafeToModify)
-						
-
-						
-						// All checks passed - safe to delete stale bot using AI::delete
-						%staleAiName = $BotInfoAiName[%checkId];
-						if(%staleAiName == "") %staleAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
-						if(%staleAiName == "") %staleAiName = $TownBotData[%checkId, "BotInfoAiName"];
-						if(%staleAiName == "") %staleAiName = fetchData(%checkId, "BotInfoAiName");
-						
-						if(%staleAiName != "" && %staleAiName != -1 && %staleAiName != "0")
-						{
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-								echo("[SPAWN FLOW] createAI(): Deleting stale bot via AI::delete: " @ %staleAiName @ " (clientId=" @ %checkId @ ")");
-							AI::delete(%staleAiName);
-						}
-						else
-						{
-							// Fallback: No AI name found
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-								echo("[SPAWN FLOW] createAI(): WARNING - No AI name for stale bot, using deleteObject fallback");
-							deleteObject(%stalePlayerObj);
-							Client::setOwnedObject(%checkId, -1);
-						}
-						PreSpawnCleanup(%checkId);
-						%cleanupPerformed = true;
-					}
-				}
-			}
-		}
-	}
-	
-	// Tier 2: Range loop fallback (2049-2200) - only if Tier 1 didn't find any recently freed IDs
-	// This ensures we catch any recently freed bot IDs that might not be in the active client list
-	if(!%cleanupPerformed)
-	{
-		for(%checkId = 2049; %checkId <= 2200; %checkId++)
-		{
-			%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
-			if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
-			{
-				// SAFEGUARD: Verify this is actually a bot, not a real player
-				%checkName = Client::getName(%checkId);
-				if(%checkName != "" && %checkName != -1)
-				{
-					%characterFile = "temp\\" @ %checkName @ ".cs";
-					if(isFile(%characterFile))
-					{
-						// This is a real player with a save file - skip it
-						continue;
-					}
-				}
-				
-				// Additional safeguard: Check if it's marked as a bot
-				%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
-				%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
-				%isLikelyBot = false;
-				if(%botInfoAiName != "" && %botInfoAiName != -1)
-					%isLikelyBot = true;
-				else if(%spawnBotInfo != "" && %spawnBotInfo != -1)
-					%isLikelyBot = true;
-				else if($BotRegistry[%checkId] != "" && $BotRegistry[%checkId] != -1)
-					%isLikelyBot = true;
-				
-				// Only proceed if we confirmed it's a bot
-				if(%isLikelyBot)
-				{
-					%currentTime = getSimTime();
-					%timeSinceFreed = %currentTime - %recentlyFreed;
-					// If freed less than 2 seconds ago, check if player object still exists
-					if(%timeSinceFreed < 2 && %timeSinceFreed >= 0)
-					{
-						%stalePlayerObj = Client::getOwnedObject(%checkId);
-						if(%stalePlayerObj != -1 && %stalePlayerObj != "" && isObject(%stalePlayerObj))
-						{
-							// CRITICAL: Final verification immediately before deletion (prevents race condition)
-							%finalStaleNameCheck = Client::getName(%checkId);
-							if(%finalStaleNameCheck != "" && %finalStaleNameCheck != -1)
-							{
-								%finalStaleCharacterFile = "temp\\" @ %finalStaleNameCheck @ ".cs";
-								if(isFile(%finalStaleCharacterFile))
-								{
-									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-										echo("[SPAWN FLOW] createAI(): CRITICAL SAFEGUARD - Real player " @ %finalStaleNameCheck @ " (clientId=" @ %checkId @ ") detected immediately before deletion. Aborting to prevent data loss.");
-									continue; // Skip this client ID
-								}
-							}
-							
-							// Additional check: Verify this is not a connected real player
-							%isStaleConnected = false;
-							for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
-							{
-								if(%cl == %checkId)
-								{
-									%isStaleConnected = true;
-									break;
-								}
-							}
-							
-							// If connected but no save file yet, check if it's a real player by checking if it's NOT AI-controlled
-							if(%isStaleConnected && !Player::isAiControlled(%checkId))
-							{
-								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-									echo("[SPAWN FLOW] createAI(): CRITICAL SAFEGUARD - Connected client " @ %checkId @ " is NOT AI-controlled. This is a real player. Aborting deletion.");
-								continue; // Skip this client ID
-							}
-							
-							// All checks passed - safe to delete stale bot object
-							// Old player object still exists - delete it to prevent shell
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-								echo("[SPAWN FLOW] createAI(): WARNING - Found stale player object " @ %stalePlayerObj @ " for recently freed bot clientId " @ %checkId @ " (freed " @ %timeSinceFreed @ "s ago). Deleting to prevent shell bot.");
-							deleteObject(%stalePlayerObj);
-							Client::setOwnedObject(%checkId, -1);
-							PreSpawnCleanup(%checkId);
-						}
-					}
-				}
-			}
-		}
-	}
+	// Uses unified helper function Bot_CleanupStaleIds
+	%cleanupPerformed = Bot_CleanupStaleIds();
 	
 	// CRITICAL PRE-FLIGHT CHECK: Delay spawn if ANY player is actively connecting
 	// This prevents race conditions where AI::spawn might assign a client ID that's about to be used by a connecting player
@@ -4717,6 +4551,176 @@ function FindPlayerInBotGroup(%clientId)
 // SPAWN AI HELPER FUNCTIONS
 // Consolidated helpers to reduce duplication in SpawnAIGetClientId
 // ============================================================================
+
+// Helper function to extract guard type from AI name by removing trailing digits
+// Replaces logic previously inline in createAI
+function Bot_ParseGuardType(%aiName)
+{
+	%guardtype = %aiName;
+	%len = String::len(%aiName);
+	%numStr = "";
+	%digitString = "0123456789";
+	
+	// Find trailing digits (working backwards)
+	for(%i = %len - 1; %i >= 0; %i--)
+	{
+		%char = String::getSubStr(%aiName, %i, 1);
+		// Check if character is a digit (0-9 only)
+		if(String::findSubStr(%digitString, %char) != -1)
+		{
+			%numStr = %char @ %numStr;
+		}
+		else
+		{
+			break;
+		}
+	}
+	
+	// If we found trailing digits, remove them
+	if(%numStr != "")
+	{
+		%guardtype = String::getSubStr(%aiName, 0, %len - String::len(%numStr));
+	}
+	
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+		echo("[SPAWN FLOW] Bot_ParseGuardType(): Extracted guardtype='" @ %guardtype @ "' from name='" @ %aiName @ "'");
+		
+	return %guardtype;
+}
+
+// Helper function to clean up stale client IDs before spawning a new bot
+// Replaces the massive "Stale ID Cleanup" block in createAI
+function Bot_CleanupStaleIds()
+{
+	%cleanupPerformed = false;
+	
+	// Tier 1: Use Client::getFirst()/getNext() (most reliable method)
+	for(%checkId = Client::getFirst(); %checkId != -1; %checkId = Client::getNext(%checkId))
+	{
+		%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
+		if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+		{
+			// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
+			if(IsSafeToModify(%checkId, "createAI Stale Cleanup"))
+			{
+				%currentTime = getSimTime();
+				%timeSinceFreed = %currentTime - %recentlyFreed;
+				
+				// If freed less than 2 seconds ago, check if player object still exists
+				if(%timeSinceFreed < 2 && %timeSinceFreed >= 0)
+				{
+					%stalePlayerObj = Client::getOwnedObject(%checkId);
+					if(%stalePlayerObj != -1 && %stalePlayerObj != "" && isObject(%stalePlayerObj))
+					{
+						// All checks passed - safe to delete stale bot using AI::delete
+						%staleAiName = $BotInfoAiName[%checkId];
+						if(%staleAiName == "") %staleAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
+						if(%staleAiName == "") %staleAiName = $TownBotData[%checkId, "BotInfoAiName"];
+						if(%staleAiName == "") %staleAiName = fetchData(%checkId, "BotInfoAiName");
+						
+						if(%staleAiName != "" && %staleAiName != -1 && %staleAiName != "0")
+						{
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+								echo("[SPAWN FLOW] Bot_CleanupStaleIds(): Deleting stale bot via AI::delete: " @ %staleAiName @ " (clientId=" @ %checkId @ ")");
+							AI::delete(%staleAiName);
+						}
+						else
+						{
+							// Fallback: No AI name found
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+								echo("[SPAWN FLOW] Bot_CleanupStaleIds(): WARNING - No AI name for stale bot, using deleteObject fallback");
+							deleteObject(%stalePlayerObj);
+							Client::setOwnedObject(%checkId, -1);
+						}
+						PreSpawnCleanup(%checkId);
+						%cleanupPerformed = true;
+					}
+				}
+			}
+		}
+	}
+	
+	// Tier 2: Range loop fallback (2049-2200) - only if Tier 1 didn't find any recently freed IDs
+	if(!%cleanupPerformed)
+	{
+		for(%checkId = 2049; %checkId <= 2200; %checkId++)
+		{
+			%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
+			if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+			{
+				// SAFEGUARD: Verify this is actually a bot, not a real player
+				%checkName = Client::getName(%checkId);
+				if(%checkName != "" && %checkName != -1)
+				{
+					%characterFile = "temp\\" @ %checkName @ ".cs";
+					if(isFile(%characterFile))
+						continue; // Real player with save file - skip
+				}
+				
+				// Additional safeguard: Check if it's marked as a bot
+				%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
+				%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
+				%isLikelyBot = false;
+				if(%botInfoAiName != "" && %botInfoAiName != -1)
+					%isLikelyBot = true;
+				else if(%spawnBotInfo != "" && %spawnBotInfo != -1)
+					%isLikelyBot = true;
+				else if($BotRegistry[%checkId] != "" && $BotRegistry[%checkId] != -1)
+					%isLikelyBot = true;
+				
+				if(%isLikelyBot)
+				{
+					%currentTime = getSimTime();
+					%timeSinceFreed = %currentTime - %recentlyFreed;
+					
+					// If freed less than 2 seconds ago, check if player object still exists
+					if(%timeSinceFreed < 2 && %timeSinceFreed >= 0)
+					{
+						%stalePlayerObj = Client::getOwnedObject(%checkId);
+						if(%stalePlayerObj != -1 && %stalePlayerObj != "" && isObject(%stalePlayerObj))
+						{
+							// CRITICAL: Final verification immediately before deletion
+							// Use Bot_IsRealPlayer helper if available (or duplicate logic if not defined yet)
+							%isRealPlayer = false;
+							if(isFunction("Bot_IsRealPlayer")) {
+								%isRealPlayer = Bot_IsRealPlayer(%checkId);
+							} else {
+								// Inline fallback if helper not yet defined (safety)
+								%finalStaleNameCheck = Client::getName(%checkId);
+								if(%finalStaleNameCheck != "" && %finalStaleNameCheck != -1) {
+									if(isFile("temp\\" @ %finalStaleNameCheck @ ".cs")) %isRealPlayer = true;
+								}
+								if(!%isRealPlayer) {
+									%isStaleConnected = false;
+									for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl)) {
+										if(%cl == %checkId) { %isStaleConnected = true; break; }
+									}
+									if(%isStaleConnected && !Player::isAiControlled(%checkId)) %isRealPlayer = true;
+								}
+							}
+
+							if(%isRealPlayer)
+							{
+								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+									echo("[SPAWN FLOW] Bot_CleanupStaleIds(): CRITICAL SAFEGUARD - Real player detected at clientId=" @ %checkId @ ". Aborting deletion.");
+								continue;
+							}
+							
+							// All checks passed - safe to delete stale bot object
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+								echo("[SPAWN FLOW] Bot_CleanupStaleIds(): WARNING - Found stale player object " @ %stalePlayerObj @ " for recently freed bot clientId " @ %checkId @ ". Deleting to prevent shell bot.");
+							deleteObject(%stalePlayerObj);
+							Client::setOwnedObject(%checkId, -1);
+							PreSpawnCleanup(%checkId);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return %cleanupPerformed;
+}
 
 // Store zone data for a bot using both storeData and direct array access
 // This ensures DespawnZoneBots can find the bot regardless of which data source it checks
