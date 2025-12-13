@@ -4422,7 +4422,7 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 			// Bot already exists with valid player object - don't spawn again
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 				echo("[SPAWN FLOW] SpawnAI(): WARNING - Bot " @ %newName @ " already exists with valid player object (clientId=" @ %existingId @ "). Skipping duplicate spawn.");
-			return %newName;
+			return -1;
 		}
 		else
 		{
@@ -4433,7 +4433,7 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 			{
 				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 					echo("[SPAWN FLOW] SpawnAI(): STARTUP ABORTED - Existing client " @ %existingId @ " (" @ %newName @ ") is protected.");
-				return %newName; 
+				return -1; 
 			}
 
 			// Clean it up before spawning a new one
@@ -4461,21 +4461,9 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 			echo("[SPAWN FLOW] SpawnAI(): WARNING - Spawn already scheduled for bot " @ %newName @ ". Skipping duplicate schedule.");
 		
-		// CRITICAL FIX: If we skip spawning because it's already scheduled, we must Rollback the slot 
-		// we just Reserved in SpawnLoop, otherwise the counter will stick +1 forever.
-		// Extract spawnPointId from parameter or commandIssuer for rollback
-		%rollbackSpawnPointId = %spawnPointId;
-		if(%rollbackSpawnPointId == "" || %rollbackSpawnPointId == -1)
-		{
-			if(GetWord(%commandIssuer, 0) == "SpawnPoint")
-				%rollbackSpawnPointId = GetWord(%commandIssuer, 1);
-		}
-		if(%rollbackSpawnPointId != "" && %rollbackSpawnPointId != -1)
-		{
-			RollbackSpawnSlot(%rollbackSpawnPointId);
-			$SpawnPointInProgress[%rollbackSpawnPointId] = ""; 
-		}
-		return %newName;
+		// CRITICAL FIX: Return -1 so AI::helper rolls back the slot and decrements $numAI
+		// We don't need to manually rollback here because AI::helper will do it when we return -1
+		return -1;
 	}
 	
 	// CRITICAL FIX #2: Extract spawnPointId from parameter or commandIssuer
