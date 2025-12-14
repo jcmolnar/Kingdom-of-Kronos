@@ -148,11 +148,50 @@ function createServer(%mission, %dedicated)
 	deleteVariables("BlockData*");
 	deleteVariables("EventCommand*");
 	deleteVariables("LoadOut*");
+	
+	// Additional variable clears for bot tracking and spawn systems
+	deleteVariables("BotRegistry*");
+	deleteVariables("EnemyBotData*");
+	deleteVariables("TownBotData*");
+	deleteVariables("ClientData*");
+	deleteVariables("BotInfoAiName*");
+	deleteVariables("numAIperSpawnPoint*");
+	deleteVariables("SpawnInvulnByName*");
+	deleteVariables("ClientIdRecentlyFreed*");
+	deleteVariables("ClientIdPlayerConnecting*");
+	deleteVariables("PlayerHasSaveFile*");
+	deleteVariables("BotIndex*");
+	deleteVariables("SealBattle*");
+	deleteVariables("GhostBotSuspect*");
+	deleteVariables("SpawnSlotReserved*");
+	deleteVariables("SpawnPointInProgress*");
+	deleteVariables("SpawnPointCooldownUntil*");
+	deleteVariables("BotEquipment*");
+	deleteVariables("spawnIndex*");
+	
+	// List variables - initialize to empty string
 	$PetList = "";
 	$DISlist = "";
 	$SpawnPackList = "";
 	$LoadOutList = "";
 	$isRaining = "";
+	$BotRegistryList = "";
+	$TownBotList = "";
+	
+	// Counter variables - initialize to 0
+	$numAI = 0;
+	$Telemetry_SpawnAttempts = 0;
+	$Telemetry_SpawnSuccess = 0;
+	$Telemetry_SpawnFailed = 0;
+	
+	// Flag variables - initialize to known state
+	$SealBattleActive = false;
+	$SealFighterDied = false;
+	$SealBattleParticipants = "";
+	$SpawnLoopRunning = "";
+	$GraveyardCleanupScheduled = "";
+	$AINumberReconciliationEnabled = true;
+	$GhostBotCleanupEnabled = true;
 
 	// CRITICAL: Create BotGroup and PlayerGroup SimSets at server startup
 	// This ensures they exist before any bots/players spawn, preventing FindPlayerInBotGroup() failures
@@ -515,9 +554,9 @@ function Server::finishMissionLoad()
    exec($missionFile);
    Mission::init();
    
-   // Register additional teams (8-11) that aren't in the mission file
-   // Teams 0-7 are registered by the mission file, but we need to add teams 8-11 for Seals, Gods, Angels, Admins
-   for(%i = 8; %i <= 11; %i++)
+   // Register additional teams (8-11) that may not be properly registered from mission file
+   // Teams 0-7 are registered by the mission file, but we need to ensure teams 8-11 exist for Seals, Gods, Angels, Admins
+   for(%i = 8; %i <= 12; %i++)
    {
       %teamName = $Server::teamName[%i];
       %teamSkin = $Server::teamSkin[%i];

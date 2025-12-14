@@ -57,6 +57,7 @@ description: Critical TorqueScript/Tribes 1 scripting rules and constraints
 - `""` (empty string) and `-1` and `0` can all represent "not set" - check all three
 - `schedule()` requires string argument: `schedule("FunctionCall();", 1.0);`
 - String concatenation uses `@` not `+`
+- `getSimTime()` returns **SECONDS** (with decimals), NOT milliseconds
 
 ### 11. ASCII-ONLY CHARACTERS
 **Only use ASCII characters in TorqueScript code and string literals.**

@@ -22,6 +22,8 @@ $Server::teamName[10] = "Angels";
 $Server::teamSkin[10] = "robewhite";
 $Server::teamName[11] = "Admins";
 $Server::teamSkin[11] = "robeblack";
+$Server::teamName[12] = "Void";
+$Server::teamSkin[12] = "invisible";
 
 //------------------------------
 
@@ -169,6 +171,12 @@ $NameForRace[roundNine] = "Seals";
 $NameForRace[roundTen] = "Seals";
 $NameForRace[roundEleven] = "Seals";
 $NameForRace[roundTwelve] = "Seals";
+
+// Void enemies - invisible enemies for The Void dungeon
+$NameForRace[Stalker] = "Void";      // Caster - 
+$NameForRace[Fragment] = "Void";     // Melee -
+$NameForRace[Wraith] = "Void";       // Caster -
+$NameForRace[Consumer] = "Void";     // Melee -
 //------------------------------
 
 $ArmorTypeToRace[TravellerArmor] = "Traveller";
@@ -187,6 +195,7 @@ $ArmorTypeToRace[GodArmor] = "God";
 $ArmorTypeToRace[AngelArmor] ="Angel";
 $ArmorTypeToRace[AdminArmor] ="Admin";
 $ArmorTypeToRace[SealsArmor] ="Seals";
+$ArmorTypeToRace[VoidArmor] = "Void";
 
 $RaceToArmorType[Ogre] = "OgreArmor";
 $RaceToArmorType[Pigman] = "PigmanArmor";
@@ -204,6 +213,7 @@ $RaceToArmorType[God] = "GodArmor";
 $RaceToArmorType[Angel] = "AngelArmor";
 $RaceToArmorType[Admin] = "AdminArmor";
 $RaceToArmorType[Seals] = "SealsArmor";
+$RaceToArmorType[Void] = "VoidArmor";
 
 //------------------------------
 
@@ -350,27 +360,36 @@ $spawnIndex[111] = "TranscendentRoundOne";
 $spawnIndex[112] = "TranscendentRoundTwo";
 $spawnIndex[113] = "TranscendentRoundThree";
 
+// The Void dungeon enemies (Remort 100+)
+$spawnIndex[120] = "Stalker";
+$spawnIndex[121] = "Fragment";
+$spawnIndex[122] = "Wraith";
+$spawnIndex[123] = "Consumer";
+
 //------------------------------
 
-$BotEquipment[Wimp] = 		"CLASS Fighter LVL 19 COINS 26 LCK 0 SharpIronBlade 1";
-$BotEquipment[Guardian] = 	"CLASS Fighter LVL 24 COINS 34 LCK 0 IronBroadSword 1";
-$BotEquipment[Wizard] = 	"CLASS Mage LVL 9/50 COINS 5/50 LCK 0";
-$BotEquipment[Destroyer] = 	"CLASS Fighter LVL 30 COINS 48 LCK 0 IronBroadSword 1 EnchantedStone 1/25";
-
+//Pig Den
 $BotEquipment[Hog] = 		"CLASS Fighter LVL 2 COINS 4 LCK 0";
 $BotEquipment[Chief] = 		"CLASS Mage LVL 30 COINS 60 LCK 0 CastingBlade 1 RubyNecklace 1";
 $BotEquipment[Warrior] = 	"CLASS Fighter LVL 7 COINS 10 LCK 0 RustyIronBlade 1";
 $BotEquipment[Devourer] = 	"CLASS Fighter LVL 15 COINS 20 LCK 0 SharpIronBlade 1 BlackStatue 1/25";
 
+//Ogre Skybase
+$BotEquipment[Wimp] = 		"CLASS Fighter LVL 19 COINS 26 LCK 0 SharpIronBlade 1";
+$BotEquipment[Guardian] = 	"CLASS Fighter LVL 24 COINS 34 LCK 0 IronBroadSword 1";
+$BotEquipment[Wizard] = 	"CLASS Mage LVL 9/50 COINS 5/50 LCK 0";
+$BotEquipment[Destroyer] = 	"CLASS Fighter LVL 30 COINS 48 LCK 0 IronBroadSword 1 EnchantedStone 1/25";
+//Unused?
 $BotEquipment[Berserker] = 	"CLASS Fighter LVL 20/50 COINS 13/50 LCK 0";
 $BotEquipment[Ravager] = 	"CLASS Fighter LVL 24/50 COINS 16/50 LCK 0 BluePotion 3/30";
 $BotEquipment[Slayer] = 	"CLASS Fighter LVL 28/50 COINS 19/50 LCK 0";
 
+//Ogre Stronghold
 $BotEquipment[Ruffian] = 	"CLASS Fighter LVL 38 COINS 64 LCK 0 SteelBroadSword 1";
 $BotEquipment[Eliminator] = 	"CLASS Fighter LVL 45 COINS 82 LCK 0 SteelBroadSword 1";
 $BotEquipment[Dreadnought] = 	"CLASS Fighter LVL 54 COINS 100 LCK 1 SteelLongSword 1 SkeletonBone 1/25";
 $BotEquipment[DeathKnight] =	"CLASS Mage LVL 130 COINS 900 LCK 1 CastingBlade 1 OgreTooth 1";
-
+//Ghost Town
 $BotEquipment[Villager] = 	"CLASS Fighter LVL 70 COINS 150 LCK 0 SteelLongSword 1 AncientScroll 1/2";
 $BotEquipment[Guard] =		"CLASS Fighter LVL 85 COINS 250 LCK 0 SteelLongSword 1 AncientScroll 1/5";
 $BotEquipment[EliteGuard] = 	"CLASS Fighter LVL 100 COINS 350 LCK 0 SteelLongSword 1 AncientScroll 1/20";
@@ -378,8 +397,7 @@ $BotEquipment[King] = 		"CLASS Fighter LVL 115 COINS 500 LCK 1 GoldenLongSword 1
 $BotEquipment[Emperor] = 	"CLASS Fighter LVL 180 COINS 5000 LCK 3 GoldenBastardSword 1";
 $BotEquipment[BanishedKing] = "CLASS Mage LVL 220 COINS 4000 LCK 2 CastingBlade 1 Crown 1";
 
-
-
+//Unused
 $BotEquipment[Brigand] = 	"CLASS Fighter LVL 75/50 COINS 30/50 LCK 0";
 $BotEquipment[Marauder] =	"CLASS Fighter LVL 79/50 COINS 33/50 LCK 0";
 $BotEquipment[Knight] = 	"CLASS Fighter LVL 83/50 COINS 36/50 LCK 0";
@@ -392,21 +410,21 @@ $BotEquipment[Militia] = 	"CLASS Paladin LVL 75/50 COINS 35/50 LCK 1";
 
 $BotEquipment[Thug] = 		"CLASS Thief LVL 65/50 COINS 32/50 LCK 1";
 $BotEquipment[Miner] = 		"CLASS Paladin LVL 29/50 COINS 35/50 LCK 0";
-
+//Mino Tomb
 $BotEquipment[Eradicator] = 	"CLASS Fighter LVL 150 COINS 900 LCK 1 GoldenLongSword 1 DuelCard 1/-10";
 $BotEquipment[DeathStar] = 	"CLASS Fighter LVL 300 COINS 1400 LCK 2 GoldenBastardSword 1 KronoStone 1/30 DuelCard 1/-10";
 $BotEquipment[BattleOx] =	"CLASS Mage LVL 520 REMORT 2 COINS 9000 LCK 2 CastingBlade 1 MinotaurHorn 1";
-
+//Stone Henge
 $BotEquipment[Invader] = 	"CLASS Fighter LVL 300 COINS 2200 LCK 2 GoldenBastardSword 1 DuelCard 1/-10 AlienSpine 1/-10";
 $BotEquipment[Holocaust] = 	"CLASS Fighter LVL 370 COINS 3200 LCK 3 GoldenBastardSword 1 DuelCard 1/-10 AlienSpine 1/-15";
 $BotEquipment[MoonBreaker] = 	"CLASS Fighter LVL 450 COINS 4600 LCK 3 CrystalBastardSword 1 DuelCard 1/-10 AlienSpine 1/30";
 $BotEquipment[Queen] =		"CLASS Mage LVL 900 REMORT 5 COINS 30000 LCK 4 CastingBlade 1 AlienEye 1";
-
+//Demon Incubus
 $BotEquipment[Corrupter] = 	"CLASS Mage LVL 500 REMORT 1 COINS 14000 LCK 2 CastingBlade 1 DemonBreath 1/15";
 $BotEquipment[Banisher] =	"CLASS Mage LVL 600 REMORT 2 COINS 22000 LCK 2 CastingBlade 1 DemonBreath 1/20";
 $BotEquipment[Incarnate] = 	"CLASS Mage LVL 700 REMORT 3 COINS 35000 LCK 3 CastingBlade 1 DemonBreath 1/25";
 $BotEquipment[Disintegrator] = "CLASS Fighter LVL 800 REMORT 5 COINS 60000 LCK 4 TemperedCrystalBastardSword 1";
-
+//Gods Paradox
 $BotEquipment[Purifier] = 	"CLASS Fighter LVL 950 REMORT 7 COINS 90000 LCK 5 CrystalClaymore 1 Bible 1/15";
 $BotEquipment[Vaporizer] = 	"CLASS Mage LVL 1050 REMORT 8 COINS 120000 LCK 5 CastingBlade 1 Bible 1/20";
 $BotEquipment[Insurrector] = 	"CLASS Fighter LVL 1250 REMORT 10 COINS 200000 LCK 6 DiamondClaymore 1 Bible 1/25";
@@ -415,10 +433,21 @@ $BotEquipment[SoulEraser] = 	"CLASS Mage LVL 1650 REMORT 15 COINS 700000 LCK 8 C
 $BotEquipment[EndGame] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 900000 LCK 10 DiamondLegendsword 1";
 $BotEquipment[Oni] = 		"CLASS Fighter LVL 2250 REMORT 25 COINS 1000000 LCK 10 DiamondLegendSword 1";
 $BotEquipment[Crest] = 		"CLASS Fighter LVL 2400 REMORT 30 COINS 1500000 LCK 10 DiamondLegendsword 1";
-
-$BotEquipment[Liquifier] = 	"CLASS Fighter LVL 1500 REMORT 10 COINS 90000 LCK 7 BlackDiamondDreamSword 1/5 VirusFragment 1/10 AdminBoots 1/15000";
+//Admins Demise
+$BotEquipment[Liquifier] = 	"CLASS Fighter LVL 1500 REMORT 10 COINS 90000 LCK 7 BlackDiamondDreamSword 1/3 VirusFragment 1/10 AdminBoots 1/15000";
 $BotEquipment[Obliterator] = 	"CLASS Mage LVL 1750 REMORT 15 COINS 150000 LCK 5 CastingBlade 1 VirusFragment 1/15 AdminBoots 1/10000";
-$BotEquipment[Abolisher] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/5 VirusFragment 1/20 AdminBoots 1/5000";
+$BotEquipment[Abolisher] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/3 VirusFragment 1/20 AdminBoots 1/5000";
+//Angels Enigma
+$BotEquipment[Flux] =         "CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/10 AngelsTear 1/20";
+$BotEquipment[Protector] =         "CLASS Mage LVL 2250 REMORT 22 COINS 400000 LCK 9 CastingBlade 1 AngelsTear 1/25";
+$BotEquipment[Hybrid] =         "CLASS Fighter LVL 2500 REMORT 25 COINS 600000 LCK 10 BlackDiamondDreamSword 1/10 AngelsTear 1/30";
+$BotEquipment[Crucifier] =         "CLASS Fighter LVL 2650 REMORT 28 COINS 800000 LCK 10 BlackDiamondDreamSword 1/10 AngelsTear 1/35";
+
+// The Void dungeon enemies (Remort 100+ tier)
+$BotEquipment[Stalker] =   "CLASS Mage LVL 2600 REMORT 30 COINS 2000000 LCK 10 CastingBlade 1";
+$BotEquipment[Fragment] =  "CLASS Fighter LVL 2800 REMORT 30 COINS 2200000 LCK 10 TerminusEst 1/5 1";
+$BotEquipment[Wraith] =    "CLASS Mage LVL 3100 REMORT 32 COINS 2500000 LCK 10 CastingBlade 1";
+$BotEquipment[Consumer] =  "CLASS Fighter LVL 3600 REMORT 35 COINS 3000000 LCK 10 TerminusEst 1/5 1";
 
 // Colloseum-specific bots - Equipment definitions (matching TournyRound bot equipment)
 // Rank 0 (Newbie): RoundOne=King, RoundTwo=Eradicator, RoundThree=DeathStar
@@ -469,11 +498,6 @@ $BotEquipment[TranscendentRoundThree] = 	"CLASS Fighter LVL 2400 REMORT 30 COINS
 $BotEquipment[Master] =         "CLASS Fighter LVL 2600 REMORT 31 COINS 200000 LCK 12 DiamondLegendSword 1";
 $BotEquipment[Ripper] =         "CLASS Mage LVL 2900 REMORT 31 COINS 400000 LCK 12 CastingBlade 1";
 
-$BotEquipment[Flux] =         "CLASS Fighter LVL 3000 REMORT 31 COINS 200000 LCK 12 TerminusEst 1/1000 AngelsTear 1/20";
-$BotEquipment[Protector] =         "CLASS Mage LVL 3250 REMORT 32 COINS 400000 LCK 12 CastingBlade 1 AngelsTear 1/25";
-$BotEquipment[Hybrid] =         "CLASS Fighter LVL 3500 REMORT 33 COINS 600000 LCK 12 TerminusEst 1/1000 AngelsTear 1/30";
-$BotEquipment[Crucifier] =         "CLASS Fighter LVL 3650 REMORT 34 COINS 800000 LCK 12 TerminusEst 1/10 AngelsTear 1/35";
-
 $BotEquipment[RoundOne] =         "CLASS Fighter LVL 1000 REMORT 15 LCK 1 DiamondLegendSword 1";
 $BotEquipment[RoundTwo] =         "CLASS Mage LVL 1200 REMORT 10 LCK 1 CastingBlade 1";			//MAGE
 $BotEquipment[RoundThree] =         "CLASS Fighter LVL 1500 REMORT 15 LCK 1 DiamondLegendSword 1";
@@ -490,6 +514,8 @@ $BotEquipment[RoundTen] =        "CLASS Fighter LVL 2300 REMORT 80 LCK 11 diamon
 $BotEquipment[RoundEleven] =        "CLASS Mage LVL 2500 REMORT 70 LCK 10 CastingBlade 1";
 $BotEquipment[RoundTwelve] =        "CLASS Fighter LVL 2700 REMORT 75 LCK 12 blackdiamonddreamsword 1";
 
+
+
 //------------------------------
 
 $TeamForRace[Traveller] = 1;
@@ -498,16 +524,17 @@ $TeamForRace[Pigman] = 3;
 $TeamForRace[Orc] = 2;
 $TeamForRace[Ogre] = 2;
 $TeamForRace[Undead] = 4;
-$TeamForRace[MaleElf] = 5;
-$TeamForRace[FemaleElf] = 5;
-$TeamForRace[Minotaur] = 6;
-$TeamForRace[Alien] = 7;
 $TeamForRace[Zombie] = 4;
 $TeamForRace[Demon] = 5;
+//$TeamForRace[MaleElf] = 5;
+//$TeamForRace[FemaleElf] = 5;
+$TeamForRace[Minotaur] = 6;
+$TeamForRace[Alien] = 7;
+$TeamForRace[Seals] = 8;
 $TeamForRace[God] = 9;  // Gods now have their own team
 $TeamForRace[Angel] = 10;  // Angels now have their own team
 $TeamForRace[Admin] = 11;  // Admins now have their own team
-$TeamForRace[Seals] = 8;
+$TeamForRace[Void] = 12;  // The Void dungeon enemies
 
 
 //------------------------------
@@ -3292,4 +3319,178 @@ PlayerData SealsArmor
 	boxHeadRightPercentage = 0.70;
 	boxHeadBackPercentage  = 0.48;
 	boxHeadFrontPercentage = 0.60;
+};
+
+//------------------------------------------------------------------
+// Void armor data: (The Void dungeon - invisible enemies)
+//------------------------------------------------------------------
+
+// Void race sounds - eerie/ethereal sounds
+$RaceSound[Void, Death, 1] = SoundUndeadDeath1;
+$RaceSound[Void, Acquired, 1] = SoundUndeadAcquired1;
+$RaceSound[Void, Hit, 1] = SoundUndeadHit1;
+$RaceSound[Void, Hit, 2] = SoundUndeadHit2;
+$RaceSound[Void, Taunt, 1] = SoundUndeadTaunt1;
+$RaceSound[Void, RandomWait, 1] = SoundUndeadRandom1;
+
+PlayerData VoidArmor
+{
+	className = "Armor";
+	shapeFile = "invisable";
+	damageSkinData = "armorDamageSkins";
+	debrisId = playerDebris;
+	flameShapeName = "lflame";
+	shieldShapeName = "shield";
+	shadowDetailMask = 0;  // No shadow for invisible enemies
+
+	visibleToSensor = False;  // Invisible to sensors
+	mapFilter = 1;
+	mapIcon = "M_player";
+	canCrouch = false;
+
+	maxJetSideForceFactor = 1;
+	maxJetForwardVelocity = 1.0;
+	minJetEnergy = 60;
+	jetForce = 1;
+	jetEnergyDrain = 0.0;
+
+	maxDamage = 1.0;
+	maxForwardSpeed = $spdmed;
+	maxBackwardSpeed = $spdmed * 0.8;
+	maxSideSpeed = $spdmed * 0.75;
+
+	groundForce = 75 * 9.0;
+	mass = 9.0;
+	groundTraction = 3.0;
+	maxEnergy = 60;
+	drag = 1.0;
+	density = 1.2;
+
+	minDamageSpeed = 16;
+	damageScale = $damageScale;
+
+	jumpImpulse = 75;
+	jumpSurfaceMinDot = $jumpSurfaceMinDot;
+
+	// animation data:
+	animData[0]  = { "root", none, 1, true, true, true, false, 0 };
+	animData[1]  = { "run", none, 1, true, false, true, false, 3 };
+	animData[2]  = { "runback", none, 1, true, false, true, false, 3 };
+	animData[3]  = { "side left", none, 1, true, false, true, false, 3 };
+	animData[4]  = { "side left", none, -1, true, false, true, false, 3 };
+	animData[5] = { "jump stand", none, 1, true, false, true, false, 3 };
+	animData[6] = { "jump run", none, 1, true, false, true, false, 3 };
+	animData[7] = { "crouch root", none, 1, true, true, true, false, 3 };
+	animData[8] = { "crouch root", none, 1, true, true, true, false, 3 };
+	animData[9] = { "crouch root", none, -1, true, true, true, false, 3 };
+	animData[10] = { "crouch forward", none, 1, true, false, true, false, 3 };
+	animData[11] = { "crouch forward", none, -1, true, false, true, false, 3 };
+	animData[12] = { "crouch side left", none, 1, true, false, true, false, 3 };
+	animData[13] = { "crouch side left", none, -1, true, false, true, false, 3 };
+	animData[14]  = { "fall", none, 1, true, true, true, false, 3 };
+	animData[15]  = { "landing", SoundLandOnGround, 1, true, false, false, false, 3 };
+	animData[16]  = { "landing", SoundLandOnGround, 1, true, false, false, false, 3 };
+	animData[17]  = { "tumble loop", none, 1, true, false, false, false, 3 };
+	animData[18]  = { "tumble end", none, 1, true, false, false, false, 3 };
+	animData[19] = { "jet", none, 1, true, true, true, false, 3 };
+
+	// misc. animations:
+	animData[20] = { "die back", none, 1, true, false, false, false, 0 };
+	animData[21] = { "throw", none, 1, true, false, false, false, 3 };
+	animData[22] = { "flyer root", none, 1, false, false, false, false, 3 };
+	animData[23] = { "apc root", none, 1, true, true, true, false, 3 };
+	animData[24] = { "apc pilot", none, 1, false, false, false, false, 3 };
+   
+	// death animations:
+	animData[25] = { "crouch die", none, 1, false, false, false, false, 4 };
+	animData[26] = { "die chest", none, 1, false, false, false, false, 4 };
+	animData[27] = { "die head", none, 1, false, false, false, false, 4 };
+	animData[28] = { "die grab back", none, 1, false, false, false, false, 4 };
+	animData[29] = { "die right side", none, 1, false, false, false, false, 4 };
+	animData[30] = { "die left side", none, 1, false, false, false, false, 4 };
+	animData[31] = { "die leg left", none, 1, false, false, false, false, 4 };
+	animData[32] = { "die leg right", none, 1, false, false, false, false, 4 };
+	animData[33] = { "die blown back", none, 1, false, false, false, false, 4 };
+	animData[34] = { "die spin", none, 1, false, false, false, false, 4 };
+	animData[35] = { "die forward", none, 1, false, false, false, false, 4 };
+	animData[36] = { "die forward kneel", none, 1, false, false, false, false, 4 };
+	animData[37] = { "die back", none, 1, false, false, false, false, 4 };
+
+	// signal moves:
+	animData[38] = { "sign over here",  none, 1, true, false, false, false, 2 };
+	animData[39] = { "sign point", none, 1, true, false, false, false, 1 };
+	animData[40] = { "sign retreat",none, 1, true, false, false, false, 2 };
+	animData[41] = { "sign stop", none, 1, true, false, false, true, 1 };
+	animData[42] = { "sign salut", none, 1, true, false, false, true, 1 }; 
+
+	// celebration animations:
+	animData[43] = { "celebration 1",none, 1, true, false, false, false, 2 };
+	animData[44] = { "celebration 2", none, 1, true, false, false, false, 2 };
+	animData[45] = { "celebration 3", none, 1, true, false, false, false, 2 };
+ 
+	// taunt animations:
+	animData[46] = { "taunt 1", none, 1, true, false, false, false, 2 };
+	animData[47] = { "taunt 2", none, 1, true, false, false, false, 2 };
+ 
+	// poses:
+	animData[48] = { "pose kneel", none, 1, true, false, false, true, 1 };
+	animData[49] = { "pose stand", none, 1, true, false, false, true, 1 };
+
+	// Bonus wave
+	animData[50] = { "wave", none, 1, true, false, false, true, 1 };
+
+	jetSound = NoSound;
+	rFootSounds = 
+	{
+		NoSound,  // Silent footsteps for Void enemies
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound
+	}; 
+	lFootSounds =
+	{
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound,
+		NoSound
+	};
+
+	footPrints = { 0, 1 };
+
+	boxWidth = 0.5;
+	boxDepth = 0.5;
+	boxNormalHeight = 2.3;
+	boxCrouchHeight = 1.8;
+
+	boxNormalHeadPercentage  = 0.83;
+	boxNormalTorsoPercentage = 0.53;
+	boxCrouchHeadPercentage  = 0.6666;
+	boxCrouchTorsoPercentage = 0.3333;
+
+	boxHeadLeftPercentage  = 0;
+	boxHeadRightPercentage = 1;
+	boxHeadBackPercentage  = 0;
+	boxHeadFrontPercentage = 1;
 };

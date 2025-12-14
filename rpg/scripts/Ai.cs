@@ -36,28 +36,28 @@ $AIattackMode = 1;
 
 // Debug output control flags
 // Set to 1 to enable debug output, 0 to disable (reduces server load and log spam)
-$AI_DEBUG_ENABLED = 0;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
-$AI_SPAWN_DEBUG = 0;          // Controls [SPAWN FLOW] messages specifically
-$AI_PERIODIC_DEBUG = 0;       // Controls [INERT DEBUG] AI::Periodic messages
-$LOOTBAG_DEBUG = 0;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
-$Debug::SafeGuards = 0;       // Controls [SAFEGUARD] player protection logging
+$AI_DEBUG_ENABLED = 1;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
+$AI_SPAWN_DEBUG = 1;          // Controls [SPAWN FLOW] messages specifically
+$AI_PERIODIC_DEBUG = 1;       // Controls [INERT DEBUG] AI::Periodic messages
+$LOOTBAG_DEBUG = 1;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
+$Debug::SafeGuards = 1;       // Controls [SAFEGUARD] player protection logging
 
 // Granular Debug Flags (Turn off to reduce spam)
 $TOWNBOT_RACE_DEBUG = 0;      // Controls [TOWNBOT RACE DEBUG] messages
 $TOWNBOT_SKIN_DEBUG = 0;      // Controls [FINAL FIX] messages
-$MISSION_CLEANUP_DEBUG = 0;   // Controls [DEBUG] addToSetMissionCleanup messages
-$GETBOTID_DEBUG = 0;          // Controls [GETBOTIDLIST DEBUG] messages
-$SPAWNLOOP_DEBUG = 0;         // Controls [SPAWN DEBUG] messages
-$BOT_TEAM_DEBUG = 0;          // Controls [BOT TEAM DEBUG] messages
-$TEAM_ENFORCE_DEBUG = 0;      // Controls [TEAM ENFORCE] messages
-$BOT_TRACK_DEBUG = 0;         // Controls [BOT TRACK] messages
-$BOT_REGISTRY_DEBUG = 0;      // Controls [BOT REGISTRY] messages
-$SPAWN_TRANSACTION_DEBUG = 0; // Controls [SPAWN TRANSACTION] messages
-$BOT_SHELL_DEBUG = 0;         // Controls [BOT SHELL DEBUG] messages
-$SPAWN_COUNTER_DEBUG = 0;     // Controls [SPAWN COUNTER] messages
-$BOT_CLEANUP_DEBUG = 0;       // Controls [BOT CLEANUP] messages
-$TOWNBOT_ARMOR_DEBUG = 0;     // Controls [TOWNBOT ARMOR DEBUG] messages
-$RECONCILE_DEBUG = 0;         // Controls [RECONCILE] messages
+$MISSION_CLEANUP_DEBUG = 1;   // Controls [DEBUG] addToSetMissionCleanup messages
+$GETBOTID_DEBUG = 1;          // Controls [GETBOTIDLIST DEBUG] messages
+$SPAWNLOOP_DEBUG = 1;         // Controls [SPAWN DEBUG] messages
+$BOT_TEAM_DEBUG = 1;          // Controls [BOT TEAM DEBUG] messages
+$TEAM_ENFORCE_DEBUG = 1;      // Controls [TEAM ENFORCE] messages
+$BOT_TRACK_DEBUG = 1;         // Controls [BOT TRACK] messages
+$BOT_REGISTRY_DEBUG = 1;      // Controls [BOT REGISTRY] messages
+$SPAWN_TRANSACTION_DEBUG = 1; // Controls [SPAWN TRANSACTION] messages
+$BOT_SHELL_DEBUG = 1;         // Controls [BOT SHELL DEBUG] messages
+$SPAWN_COUNTER_DEBUG = 1;     // Controls [SPAWN COUNTER] messages
+$BOT_CLEANUP_DEBUG = 1;       // Controls [BOT CLEANUP] messages
+$TOWNBOT_ARMOR_DEBUG = 1;     // Controls [TOWNBOT ARMOR DEBUG] messages
+$RECONCILE_DEBUG = 1;         // Controls [RECONCILE] messages
 
 
 // Bot tracking counters
@@ -1289,10 +1289,35 @@ function IsSafeToModify(%clientId, %operation)
 		return false; // Nothing to modify
 	}
 	
-	// Layer 1: Engine check (fastest, most reliable)
+	// PRIORITY CHECK: Save file cache - checked FIRST to catch bot-player collisions
+	// If a bot has overwritten a player's client ID, the engine sees it as AI-controlled
+	// but the save file cache still correctly identifies it as a real player's ID
+	if($PlayerHasSaveFile[%clientId] == true || $PlayerHasSaveFile[%clientId] == "1")
+	{
+		echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " has CACHED save file (possible bot-player collision!) - REAL PLAYER PROTECTED");
+		return false;
+	}
+	
+	// ZOMBIE CLIENT CHECK: Detect desync between PlayerManager and SimManager
+	// Real players have a NetConnection/PacketStream object at their client ID
+	// Bots do NOT have an engine object at their client ID - only a PlayerManager entry
+	// If isObject() returns true but it's not a Player, it's a zombie NetConnection!
+	if(isObject(%clientId))
+	{
+		%objType = getObjectType(%clientId);
+		// "Player" type means it's a valid bot/player object - that's OK
+		// Any OTHER type (NetConnection, PacketStream, etc.) means zombie client!
+		if(%objType != "Player" && %objType != "" && %objType != "False")
+		{
+			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " has zombie object type '" @ %objType @ "' - ZOMBIE CLIENT PROTECTED");
+			return false;
+		}
+	}
+	
+	// Layer 1: Engine check (fastest for normal bots)
 	if(Player::isAiControlled(%clientId))
 	{
-		// Is AI -> Safe to modify
+		// Is AI -> Safe to modify (unless cache check above caught a collision)
 	}
 	else
 	{
@@ -1313,18 +1338,11 @@ function IsSafeToModify(%clientId, %operation)
 		return false;
 	}
 	
-	// Layer 3: Save file check (mod-specific, most reliable for RPG)
+	// Layer 3: Filesystem save file check (fallback - catches cases where cache wasn't populated)
 	%playerName = Client::getName(%clientId);
 	if(%playerName != "" && %playerName != -1)
 	{
-		// Check cache first
-		if($PlayerHasSaveFile[%clientId] == true || $PlayerHasSaveFile[%clientId] == "1")
-		{
-			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " (" @ %playerName @ ") has CACHED save file - REAL PLAYER PROTECTED");
-			return false;
-		}
-		
-		// Fallback to filesystem check
+		// Filesystem check only (cache already checked at top of function)
 		if(isFile("temp\\" @ %playerName @ ".cs"))
 		{
 			// Update cache
@@ -2397,6 +2415,36 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 	
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 		echo("[SPAWN FLOW] createAI(): Calling AI::spawn(" @ %aiName @ ", " @ %armor @ ", " @ %spawnPos @ ", " @ %spawnRot @ ", " @ %name @ ")");
+	
+	// =========================================================================================================
+	// CRITICAL PRE-SPAWN PROTECTION: Cache all connected player client IDs and names BEFORE AI::spawn()
+	// After spawn, we check if the bot got a client ID that was in this list with a save file
+	// This catches collisions that IsRealPlayer() can't detect (because engine already overwrote the player)
+	// =========================================================================================================
+	%preSpawnPlayerList = "";
+	for(%pCl = Client::getFirst(); %pCl != -1; %pCl = Client::getNext(%pCl))
+	{
+		%pName = Client::getName(%pCl);
+		if(%pName != "" && %pName != -1)
+		{
+			// Check if this client has a save file (indicating a real player)
+			if($PlayerHasSaveFile[%pCl] == true || $PlayerHasSaveFile[%pCl] == "1" || isFile("temp\\" @ %pName @ ".cs"))
+			{
+				// Store the client ID and name for post-spawn verification
+				$PreSpawnPlayerName[%pCl] = %pName;
+				%preSpawnPlayerList = %preSpawnPlayerList @ %pCl @ " ";
+			}
+		}
+	}
+	
+	// =========================================================================================================
+	// ZOMBIE CLIENT DETECTION (WARNING ONLY - does not block spawns)
+	// The full-range scan was too aggressive - blocking ALL spawns if ANY zombie existed
+	// Now we just log if a zombie is detected, but rely on post-spawn IsSafeToModify() for protection
+	// =========================================================================================================
+	// Note: Zombie detection is handled in IsSafeToModify() which protects against modifying zombie IDs
+	// after spawn. Pre-spawn blocking caused infinite defer loops when zombies persisted.
+	
 	%spawnResult = AI::spawn( %aiName, %armor, %spawnPos, %spawnRot, %name, "male2" );
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 		echo("[SPAWN FLOW] createAI(): AI::spawn() returned: " @ %spawnResult);
@@ -2437,6 +2485,43 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 			 %escapedName = String::replace(%aiName, "\"", "\\\"");
 			 AI::delete(%escapedName);
 			 return "-1_RACE_CONDITION"; // Return specific error code to trigger rollback
+		}
+		// =========================================================================================================
+		
+		// =========================================================================================================
+		// CRITICAL: PROTECT ALREADY-CONNECTED PLAYERS
+		// If AI::spawn assigned a client ID that belongs to a real player, abort immediately
+		// This prevents black screens caused by player objects being overwritten by bot spawn
+		// 
+		// We use BOTH the pre-spawn cache AND IsRealPlayer() for maximum protection:
+		// 1. Pre-spawn cache catches cases where engine overwrote the player (IsRealPlayer fails after)
+		// 2. IsRealPlayer catches edge cases not covered by the cache
+		// =========================================================================================================
+		if(%preClient != -1 && %preClient != "" && %preClient != "False" && %preClient != "false")
+		{
+			// CHECK 1: Pre-spawn cache - most reliable for detecting collision AFTER engine overwrote player
+			%cachedPlayerName = $PreSpawnPlayerName[%preClient];
+			if(%cachedPlayerName != "" && %cachedPlayerName != %name && %cachedPlayerName != %aiName)
+			{
+				// This client ID had a REAL PLAYER with save file before spawn, but now has the bot's name
+				echo("[CRITICAL BLOCKED] AI::spawn assigned client ID " @ %preClient @ " which HAD real player '" @ %cachedPlayerName @ "' before spawn! Aborting spawn of " @ %aiName @ " to prevent black screen.");
+				%escapedName = String::replace(%aiName, "\"", "\\\"");
+				AI::delete(%escapedName);
+				// Clear the cache entry
+				$PreSpawnPlayerName[%preClient] = "";
+				return "-1_PLAYER_COLLISION";
+			}
+			// Clear the cache entry (no longer needed)
+			$PreSpawnPlayerName[%preClient] = "";
+			
+			// CHECK 2: IsRealPlayer - backup check for edge cases
+			if(IsRealPlayer(%preClient))
+			{
+				echo("[CRITICAL BLOCKED] AI::spawn assigned client ID " @ %preClient @ " which belongs to a REAL PLAYER! Aborting spawn of " @ %aiName @ " to prevent black screen.");
+				%escapedName = String::replace(%aiName, "\"", "\\\"");
+				AI::delete(%escapedName);
+				return "-1_PLAYER_COLLISION";
+			}
 		}
 		// =========================================================================================================
 
@@ -2509,6 +2594,17 @@ function createAIPostSpawn(%aiName, %armor, %group)
 	if(%AiId == -1 || %AiId == "" || %AiId == "False" || %AiId == "false")
 	{
 		// Bot may have died between the check and now - silently return
+		return;
+	}
+	
+	// CRITICAL: Verify this client ID does not belong to a real player
+	// This catches any delayed collisions where AI::spawn assigned a player's ID
+	if(IsRealPlayer(%AiId))
+	{
+		echo("[CRITICAL BLOCKED] createAIPostSpawn: Client ID " @ %AiId @ " belongs to a REAL PLAYER! Aborting post-spawn for " @ %aiName @ " to prevent black screen.");
+		// Clean up the bot if it exists
+		%escapedName = String::replace(%aiName, "\"", "\\\"");
+		AI::delete(%escapedName);
 		return;
 	}
 	

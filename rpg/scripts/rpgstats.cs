@@ -827,11 +827,35 @@ function DistributeExpForKilling(%damagedClient)
 
 				%c = %b + %r;
 				
+				// REMORT-AWARE EXPERIENCE MULTIPLIER
+				// Maps player's progress toward their max level onto the original 150-950 scale
+				// This ensures higher remort players get appropriate exp at high absolute levels
 				%d = 1.9;
-				%e = fetchData(%listClientId, "LVL") / 50;
-				%e = floor(%e);
-				if(fetchData(%listClientId, "LVL") > 149)
-					%d = 1.9 - (0.1 * %e);
+				%playerLevel = fetchData(%listClientId, "LVL");
+				
+				if(%playerLevel > 149)
+				{
+					%remortStep = fetchData(%listClientId, "RemortStep");
+					%maxLevel = 125 + (%remortStep * 8);
+					
+					// Calculate progress from level 150 to max level (0.0 to 1.0)
+					%levelRange = %maxLevel - 149;
+					if(%levelRange > 0)
+					{
+						%progress = (%playerLevel - 149) / %levelRange;
+						
+						// Map progress onto original 150-950 scale (801 = 950 - 149)
+						%effectiveLevel = 149 + (%progress * 801);
+						
+						// Apply original formula to effective level
+						%e = floor(%effectiveLevel / 50);
+						%d = 1.9 - (0.1 * %e);
+					}
+					
+					// Clamp to minimum of 0.1 to prevent zero/negative exp
+					if(%d < 0.1)
+						%d = 0.1;
+				}
 
 				%value = (%c * %d) * (1 + (fetchData(%listClientId, "TournyRank") * 0.05));
 			}

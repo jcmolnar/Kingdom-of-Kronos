@@ -7844,9 +7844,17 @@ if(%w1 == "#spawntelemetry")
 			if(%clientToServerAdminLevel >= 2)
 			{
 				%player = Client::getOwnedObject(%TrueClientId);
+				
+				// Get player's current position and rotation
+				%playerPos = GameBase::getPosition(%player);
+				%playerRot = GameBase::getRotation(%player);
+				
+				Client::sendMessage(%TrueClientId, 0, "Your Position: " @ %playerPos);
+				Client::sendMessage(%TrueClientId, 0, "Your Rotation: " @ %playerRot);
+				
+				// Also get LOS (line of sight) position
 				GameBase::getLOSinfo(%player, 50000);
-	
-				Client::sendMessage(%TrueClientId, 0, "Position at LOS is " @ $los::position);
+				Client::sendMessage(%TrueClientId, 0, "Position at LOS: " @ $los::position);
 			}
 			return;
 		}
@@ -10847,6 +10855,14 @@ if(%w1 == "#spawntelemetry")
 						{
 							if(String::findSubStr(%message, %trigger[2]) != -1)
 							{
+							// Check if seal battle can start BEFORE teleporting
+							if(!SealBattle::CanStart(%TrueClientId))
+							{
+								// CanStart already sent the error message
+								$state[%closestId, %TrueClientId] = "";
+								return;
+							}
+							
 							for(%w = 0; (%a = GetWord(%tmpl, %w)) != -1; %w++)
 							{
 								%n = CountObjInList(%tmppartylist[%a]);

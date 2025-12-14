@@ -2998,6 +2998,23 @@ function SpellDamage(%clientId, %targetId, %damageValue, %index)
 {
 	dbecho($dbechoMode, "SpellDamage(" @ %clientId @ ", " @ %targetId @ ", " @ %damageValue @ ", " @ %index @ ")");
 
+	// SEAL BATTLE FIX: Prevent SealMage bots from damaging themselves with their own spells
+	// Check if caster is a SealMage and target is the same bot
+	%casterDisplayName = Client::getName(%clientId);
+	if(String::findSubStr(%casterDisplayName, "SealMage") == 0)
+	{
+		// Caster is a SealMage - check if target is the same bot (self-damage)
+		%targetClientId = Player::getClient(%targetId);
+		if(%targetClientId == -1)
+			%targetClientId = GetClientIdFromPlayerObject(%targetId);
+		
+		if(%targetClientId == %clientId)
+		{
+			// SealMage trying to damage itself - skip
+			return;
+		}
+	}
+
 	// SEAL BATTLE: Check if caster is a seal battle bot with spell damage multiplier
 	%spellMult = $SealBattleSpellDmgMult[%clientId];
 	if(%spellMult != "" && %spellMult > 0)

@@ -2412,6 +2412,14 @@ function LoadServerTime() {
         if($ServerTimeElapsed == "")
             $ServerTimeElapsed = 0;
         echo("DEBUG LoadServerTime: Loaded accumulated time: " @ $ServerTimeElapsed @ " seconds");
+        
+        // 48-hour reset (172800 seconds) - reset server time periodically
+        if($ServerTimeElapsed > 172800)
+        {
+            echo("DEBUG LoadServerTime: Time exceeded 48 hours (" @ $ServerTimeElapsed @ "s), resetting to 0");
+            $ServerTimeElapsed = 0;
+            File::delete("temp\\ServerTime.cs");
+        }
     }
     else
     {
@@ -4477,6 +4485,7 @@ function TeleportToMarker(%clientId, %markergroup, %testpos, %random)
 		      %marker = Group::getObject(%group, %r);
 		
 			%worldLoc = GameBase::getPosition(%marker);
+			%worldRot = GameBase::getRotation(%marker);
 	
 			if(%testpos)
 			{
@@ -4484,15 +4493,18 @@ function TeleportToMarker(%clientId, %markergroup, %testpos, %random)
 				%n = containerBoxFillSet(%set, $SimPlayerObjectType, %worldLoc, 1.0, 1.0, 1.5, getWord(%worldLoc, 2));
 				deleteObject(%set);
 
-				if(%n > 0)
+				// FIX: Check if spot is EMPTY (%n == 0), not occupied
+				if(%n == 0)
 				{
 					GameBase::setPosition(%clientId, %worldLoc);
+					GameBase::setRotation(%clientId, %worldRot);
 					return %worldLoc;
 				}
 			}
 			else
 			{
 				GameBase::setPosition(%clientId, %worldLoc);
+				GameBase::setRotation(%clientId, %worldRot);
 				return %worldLoc;
 			}
 		}
@@ -4503,6 +4515,7 @@ function TeleportToMarker(%clientId, %markergroup, %testpos, %random)
 			      %marker = Group::getObject(%group, %i);
 			
 				%worldLoc = GameBase::getPosition(%marker);
+				%worldRot = GameBase::getRotation(%marker);
 		
 				if(%testpos)
 				{
@@ -4514,12 +4527,14 @@ function TeleportToMarker(%clientId, %markergroup, %testpos, %random)
 					if(%n == 0)
 					{
 						GameBase::setPosition(%clientId, %worldLoc);
+						GameBase::setRotation(%clientId, %worldRot);
 						return %worldLoc;
 					}
 				}
 				else
 				{
 					GameBase::setPosition(%clientId, %worldLoc);
+					GameBase::setRotation(%clientId, %worldRot);
 					return %worldLoc;
 				}
 			}
@@ -4789,73 +4804,6 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 		return;
 	}
 
-// CRITICAL: New function specifically for enemy bots - does NOT touch team at all
-// This is an exact replica of the enemy bot handling in RefreshAll, but without any team restoration
-function RefreshAllEnemyBot(%clientId)
-{
-	dbecho($dbechoMode, "RefreshAllEnemyBot(" @ %clientId @ ")");
-
-	// CRITICAL: Validate client ID and player object exist before proceeding
-	if(%clientId == -1 || %clientId == "" || %clientId == "0")
-	{
-		return;  // Invalid client ID
-	}
-	
-	// CRITICAL: Early check for disconnected clients
-	%clientName = Client::getName(%clientId);
-	if(%clientName == "" || %clientName == -1)
-	{
-		return;
-	}
-	
-	// CRITICAL SAFEGUARD: Check if this is a real player with a save file FIRST
-	// If a character save file exists, this is DEFINITELY a real player, NOT a bot
-	// This prevents RefreshAllEnemyBot from running on players, which could cause client crashes
-	if(%clientName != "" && %clientName != -1)
-	{
-		%characterFile = "temp\\" @ %clientName @ ".cs";
-		if(isFile(%characterFile))
-		{
-			// This is a real player with a save file - abort immediately to prevent client crash
-			echo("[CRITICAL] RefreshAllEnemyBot(): SAFEGUARD - Detected real player " @ %clientName @ " (clientId=" @ %clientId @ ") with save file. Aborting to prevent client crash.");
-			return;
-		}
-	}
-	
-	// CRITICAL: Additional safeguard - verify this is actually a bot
-	// Check for bot markers (BotInfoAiName, SpawnBotInfo, or in bot registry)
-	%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
-	%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
-	%inRegistry = ($BotRegistry[%clientId] != "" && $BotRegistry[%clientId] != -1);
-	
-	// If none of these bot markers exist, this is likely a player - abort
-	if((%botInfoAiName == "" || %botInfoAiName == -1 || %botInfoAiName == "0") && 
-	   (%spawnBotInfo == "" || %spawnBotInfo == -1 || %spawnBotInfo == "0") && 
-	   !%inRegistry)
-	{
-		// No bot markers found - this is likely a player, abort to prevent client crash
-		echo("[CRITICAL] RefreshAllEnemyBot(): SAFEGUARD - No bot markers found for clientId " @ %clientId @ " (" @ %clientName @ "). Aborting to prevent client crash.");
-		return;
-	}
-	
-	// CRITICAL: Check player object exists early
-	%playerObj = Client::getOwnedObject(%clientId);
-	if(%playerObj == -1 || %playerObj == "")
-	{
-		return;
-	}
-	
-	// CRITICAL: Clear stance for enemy bots - they should not have stances enabled
-	// This ensures stance is always cleared even if something else tries to set it
-	storeData(%clientId, "Stance", "");
-	
-	// DO NOT TOUCH TEAM - This function is specifically designed to NOT modify team
-	// The team should already be set correctly by SpawnAIGetClientId() or AI::setWeapons()
-	// Any team modifications here could cause the team to reset to -1
-	
-	// Skip all other RefreshAll functionality for enemy bots
-	return;
-}
 
 	// CRITICAL: Skip AdminBoots handling for town bots - they shouldn't have AdminBoots and don't need race changes
 	%isTownBot = false;
@@ -5007,6 +4955,74 @@ function RefreshAllEnemyBot(%clientId)
 	// Enemy bots return early, so this code only runs for players and town bots
 
 //	echo("===== DEBUG RefreshAll: COMPLETE =====");
+}
+
+// CRITICAL: New function specifically for enemy bots - does NOT touch team at all
+// This is an exact replica of the enemy bot handling in RefreshAll, but without any team restoration
+function RefreshAllEnemyBot(%clientId)
+{
+	dbecho($dbechoMode, "RefreshAllEnemyBot(" @ %clientId @ ")");
+
+	// CRITICAL: Validate client ID and player object exist before proceeding
+	if(%clientId == -1 || %clientId == "" || %clientId == "0")
+	{
+		return;  // Invalid client ID
+	}
+	
+	// CRITICAL: Early check for disconnected clients
+	%clientName = Client::getName(%clientId);
+	if(%clientName == "" || %clientName == -1)
+	{
+		return;
+	}
+	
+	// CRITICAL SAFEGUARD: Check if this is a real player with a save file FIRST
+	// If a character save file exists, this is DEFINITELY a real player, NOT a bot
+	// This prevents RefreshAllEnemyBot from running on players, which could cause client crashes
+	if(%clientName != "" && %clientName != -1)
+	{
+		%characterFile = "temp\\" @ %clientName @ ".cs";
+		if(isFile(%characterFile))
+		{
+			// This is a real player with a save file - abort immediately to prevent client crash
+			echo("[CRITICAL] RefreshAllEnemyBot(): SAFEGUARD - Detected real player " @ %clientName @ " (clientId=" @ %clientId @ ") with save file. Aborting to prevent client crash.");
+			return;
+		}
+	}
+	
+	// CRITICAL: Additional safeguard - verify this is actually a bot
+	// Check for bot markers (BotInfoAiName, SpawnBotInfo, or in bot registry)
+	%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+	%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+	%inRegistry = ($BotRegistry[%clientId] != "" && $BotRegistry[%clientId] != -1);
+	
+	// If none of these bot markers exist, this is likely a player - abort
+	if((%botInfoAiName == "" || %botInfoAiName == -1 || %botInfoAiName == "0") && 
+	   (%spawnBotInfo == "" || %spawnBotInfo == -1 || %spawnBotInfo == "0") && 
+	   !%inRegistry)
+	{
+		// No bot markers found - this is likely a player, abort to prevent client crash
+		echo("[CRITICAL] RefreshAllEnemyBot(): SAFEGUARD - No bot markers found for clientId " @ %clientId @ " (" @ %clientName @ "). Aborting to prevent client crash.");
+		return;
+	}
+	
+	// CRITICAL: Check player object exists early
+	%playerObj = Client::getOwnedObject(%clientId);
+	if(%playerObj == -1 || %playerObj == "")
+	{
+		return;
+	}
+	
+	// CRITICAL: Clear stance for enemy bots - they should not have stances enabled
+	// This ensures stance is always cleared even if something else tries to set it
+	storeData(%clientId, "Stance", "");
+	
+	// DO NOT TOUCH TEAM - This function is specifically designed to NOT modify team
+	// The team should already be set correctly by SpawnAIGetClientId() or AI::setWeapons()
+	// Any team modifications here could cause the team to reset to -1
+	
+	// Skip all other RefreshAll functionality for enemy bots
+	return;
 }
 
 function HasThisStuff(%clientId, %list, %multiplier)
@@ -7298,334 +7314,6 @@ function RecalcHouseObjectives()
 	// echo("HouseMember: Kronos=" @ $HouseMember[HouseKronos] @ ", Arbal=" @ $HouseMember[HouseArbal] @ ", Curama=" @ $HouseMember[HouseCurama] @ ", Yuliple=" @ $HouseMember[HouseYuliple]);
 }
 
-function LoadHouseObjectives()
-{
-	// Load house data from save file (includes BaseControl, FlagCommand, and HouseMember)
-	HouseData::Load();
-	
-	// Restore house objective captures from file
-	exec("HouseObjectives.cs");
-	
-	// Restore BaseControl and FlagCommand from temp variables (if they exist)
-	if(%baseKronos != "")
-		$BaseControl[HouseKronos] = %baseKronos;
-	if(%baseArbal != "")
-		$BaseControl[HouseArbal] = %baseArbal;
-	if(%baseCurama != "")
-		$BaseControl[HouseCurama] = %baseCurama;
-	if(%baseYuliple != "")
-		$BaseControl[HouseYuliple] = %baseYuliple;
-	
-	if(%flagKronos != "")
-		$FlagCommand[HouseKronos] = %flagKronos;
-	if(%flagArbal != "")
-		$FlagCommand[HouseArbal] = %flagArbal;
-	if(%flagCurama != "")
-		$FlagCommand[HouseCurama] = %flagCurama;
-	if(%flagYuliple != "")
-		$FlagCommand[HouseYuliple] = %flagYuliple;
-	
-	// Restore flag positions and team ownership using numeric indices
-	%tempSet = nameToID("MissionGroup");
-	if(%tempSet == -1)
-	{
-		echo("ERROR LoadHouseObjectives: MissionGroup not found!");
-		return;
-	}
-	
-	%flagsRestored = 0;
-	%switchesRestored = 0;
-	
-	// Restore flags by matching objectiveName with saved data
-	// Read the exported variables directly (export converts arrays to underscore format)
-	for(%savedIdx = 0; %savedIdx < 10; %savedIdx++)
-	{
-		// Read exported format: $SavedFlag0_name, $SavedFlag0_holdingTeam, etc.
-		%savedName = "";
-		%savedPos = "";
-		%savedHoldingTeam = "";
-		
-		if(%savedIdx == 0)
-		{
-			%savedName = $SavedFlag0_name;
-			%savedPos = $SavedFlag0_position;
-			%savedHoldingTeam = $SavedFlag0_holdingTeam;
-		}
-		else if(%savedIdx == 1)
-		{
-			%savedName = $SavedFlag1_name;
-			%savedPos = $SavedFlag1_position;
-			%savedHoldingTeam = $SavedFlag1_holdingTeam;
-		}
-		else if(%savedIdx == 2)
-		{
-			%savedName = $SavedFlag2_name;
-			%savedPos = $SavedFlag2_position;
-			%savedHoldingTeam = $SavedFlag2_holdingTeam;
-		}
-		else if(%savedIdx == 3)
-		{
-			%savedName = $SavedFlag3_name;
-			%savedPos = $SavedFlag3_position;
-			%savedHoldingTeam = $SavedFlag3_holdingTeam;
-		}
-		else if(%savedIdx == 4)
-		{
-			%savedName = $SavedFlag4_name;
-			%savedPos = $SavedFlag4_position;
-			%savedHoldingTeam = $SavedFlag4_holdingTeam;
-		}
-		else if(%savedIdx == 5)
-		{
-			%savedName = $SavedFlag5_name;
-			%savedPos = $SavedFlag5_position;
-			%savedHoldingTeam = $SavedFlag5_holdingTeam;
-		}
-		else if(%savedIdx == 6)
-		{
-			%savedName = $SavedFlag6_name;
-			%savedPos = $SavedFlag6_position;
-			%savedHoldingTeam = $SavedFlag6_holdingTeam;
-		}
-		else if(%savedIdx == 7)
-		{
-			%savedName = $SavedFlag7_name;
-			%savedPos = $SavedFlag7_position;
-			%savedHoldingTeam = $SavedFlag7_holdingTeam;
-		}
-		else if(%savedIdx == 8)
-		{
-			%savedName = $SavedFlag8_name;
-			%savedPos = $SavedFlag8_position;
-			%savedHoldingTeam = $SavedFlag8_holdingTeam;
-		}
-		else if(%savedIdx == 9)
-		{
-			%savedName = $SavedFlag9_name;
-			%savedPos = $SavedFlag9_position;
-			%savedHoldingTeam = $SavedFlag9_holdingTeam;
-		}
-		
-		if(%savedName == "")
-			break;
-		
-		if(%savedHoldingTeam == "" || %savedHoldingTeam == -1)
-			%savedHoldingTeam = "None";
-		
-		// Find this flag in MissionGroup
-		for(%i = 0; %i < Group::objectCount(%tempSet); %i++)
-		{
-			%obj = Group::getObject(%tempSet, %i);
-			if(GameBase::getDataName(%obj) == "flag" && %obj.objectiveName == %savedName)
-			{
-				// Restore position
-				GameBase::setPosition(%obj, %savedPos);
-				
-				// Restore which house holds this flag
-				if(%savedHoldingTeam != "None" && %savedHoldingTeam != "")
-				{
-					%obj.holdingTeam = %savedHoldingTeam;
-					%obj.team = %savedHoldingTeam;
-					
-					// Find a flagstand for this house and link the flag to it
-					%flagstandFound = false;
-					for(%j = 0; %j < Group::objectCount(%tempSet); %j++)
-					{
-						%standObj = Group::getObject(%tempSet, %j);
-						if(GameBase::getDataName(%standObj) == "FlagStand" && %standObj.team == %savedHoldingTeam && %standObj.flag == "")
-						{
-							// Link flag to flagstand
-							%obj.flagStand = %standObj;
-							%standObj.flag = %obj;
-							%flagstandFound = true;
-							break;
-						}
-					}
-					
-					// Flags at flagstands should have GameBase::setTeam set to 0
-					GameBase::setTeam(%obj, 0);
-				}
-				else
-				{
-					%obj.holdingTeam = -1;
-					%obj.team = -1;
-					%obj.flagStand = "";
-					
-					// Neutral flags MUST have GameBase::setTeam set to -1 so they can be captured
-					GameBase::setTeam(%obj, -1);
-				}
-				
-				echo("Restored flag '" @ %savedName @ "' to position " @ %savedPos @ " held by " @ %savedHoldingTeam);
-				%flagsRestored++;
-				break;
-			}
-		}
-	}
-	
-	// Restore Tower SimGroup teams (Tower0 through Tower3)
-	// Read the exported variables directly (export converts arrays to underscore format)
-	for(%t = 0; %t <= 3; %t++)
-	{
-		%houseTeam = "";
-		%switchName = "";
-		
-		// Read exported format: $SavedTower0_houseTeam, $SavedSwitch0_name, etc.
-		if(%t == 0)
-		{
-			%houseTeam = $SavedTower0_houseTeam;
-			%switchName = $SavedSwitch0_name;
-		}
-		else if(%t == 1)
-		{
-			%houseTeam = $SavedTower1_houseTeam;
-			%switchName = $SavedSwitch1_name;
-		}
-		else if(%t == 2)
-		{
-			%houseTeam = $SavedTower2_houseTeam;
-			%switchName = $SavedSwitch2_name;
-		}
-		else if(%t == 3)
-		{
-			%houseTeam = $SavedTower3_houseTeam;
-			%switchName = $SavedSwitch3_name;
-		}
-		
-		// Always try to restore, even if it's "None" or empty
-		%towerGroup = nameToID("MissionGroup/Tower" @ %t);
-		if(%towerGroup != -1)
-		{
-			if(%houseTeam == "" || %houseTeam == -1)
-				%houseTeam = "None";
-			
-			// Set team for all objects in the tower group to 0 (all players are on team 0)
-			// But set the .team property on TowerSwitch to the house name
-			for(%j = 0; %j < Group::objectCount(%towerGroup); %j++)
-			{
-				%obj = Group::getObject(%towerGroup, %j);
-				GameBase::setTeam(%obj, 0);
-				
-				// If it's a TowerSwitch, also restore the .team property (house name)
-				if(GameBase::getDataName(%obj) == "TowerSwitch")
-				{
-					if(%houseTeam != "None" && %houseTeam != "")
-						%obj.team = %houseTeam;
-					else
-						%obj.team = "";
-				}
-			}
-			%switchesRestored++;
-		}
-		else
-		{
-			echo("WARNING: Tower" @ %t @ " group not found in MissionGroup!");
-		}
-	}
-	
-	echo("Restored " @ %flagsRestored @ " flags and " @ %switchesRestored @ " towerswitches.");
-	
-	// Recalculate house member counts from all currently connected players
-	// This ensures the counts match the actual connected players, not just saved values
-	RecalcHouseMemberCounts();
-	
-	// Update the objectives display with the loaded/recalculated values
-	// This refreshes the screen that was initialized in InitObjectives() before LoadHouseObjectives() ran
-	UpdateHouseObjectivesDisplay();
-}
-
-// Recalculate house member counts from all currently connected players
-function RecalcHouseMemberCounts()
-{
-	dbecho($dbechoMode, "RecalcHouseMemberCounts()");
-	
-	// Reset all house member counts
-	$HouseMember[HouseKronos] = 0;
-	$HouseMember[HouseArbal] = 0;
-	$HouseMember[HouseCurama] = 0;
-	$HouseMember[HouseYuliple] = 0;
-	
-	// Count members from all currently connected clients
-	// Use Client::getFirst()/getNext() for reliable iteration
-	for(%clientId = Client::getFirst(); %clientId != -1; %clientId = Client::getNext(%clientId))
-	{
-		if(Client::getOwnedObject(%clientId) != -1)
-		{
-			%house = fetchData(%clientId, "MyHouse");
-			if(%house != "")
-			{
-				$HouseMember[%house]++;
-			}
-		}
-	}
-}
-
-function RecalcHouseObjectives()
-{
-	dbecho($dbechoMode, "RecalcHouseObjectives()");
-	
-	%tempSet = nameToID("MissionGroup");
-	if(%tempSet == -1)
-	{
-		echo("ERROR RecalcHouseObjectives: MissionGroup not found!");
-		return;
-	}
-	
-	// Recalculate $BaseControl and $FlagCommand from actual flag/tower states
-	// This ensures they match the actual game state, not just saved values
-	// Reset all counts first
-	$BaseControl[HouseKronos] = 0;
-	$BaseControl[HouseArbal] = 0;
-	$BaseControl[HouseCurama] = 0;
-	$BaseControl[HouseYuliple] = 0;
-	
-	$FlagCommand[HouseKronos] = 0;
-	$FlagCommand[HouseArbal] = 0;
-	$FlagCommand[HouseCurama] = 0;
-	$FlagCommand[HouseYuliple] = 0;
-	
-	// Count flags held by each house
-	for(%i = 0; %i < Group::objectCount(%tempSet); %i++)
-	{
-		%obj = Group::getObject(%tempSet, %i);
-		if(GameBase::getDataName(%obj) == "flag")
-		{
-			%holdingTeam = %obj.holdingTeam;
-			if(%holdingTeam != "" && %holdingTeam != -1 && %holdingTeam != "None")
-				$FlagCommand[%holdingTeam]++;
-		}
-	}
-	
-	// Count towers controlled by each house
-	for(%t = 0; %t <= 3; %t++)
-	{
-		%towerGroup = nameToID("MissionGroup/Tower" @ %t);
-		if(%towerGroup != -1)
-		{
-			for(%j = 0; %j < Group::objectCount(%towerGroup); %j++)
-			{
-				%obj = Group::getObject(%towerGroup, %j);
-				if(GameBase::getDataName(%obj) == "TowerSwitch")
-				{
-					%houseTeam = %obj.team;
-					if(%houseTeam != "" && %houseTeam != -1 && %houseTeam != "None")
-						$BaseControl[%houseTeam]++;
-					break;
-				}
-			}
-		}
-	}
-	
-	// Recalculate house member counts from all currently connected players
-	RecalcHouseMemberCounts();
-	
-	// Update the objectives display with the recalculated values
-	UpdateHouseObjectivesDisplay();
-	
-	// Silenced debug output - BaseControl, FlagCommand, and HouseMember values
-	// echo("BaseControl: Kronos=" @ $BaseControl[HouseKronos] @ ", Arbal=" @ $BaseControl[HouseArbal] @ ", Curama=" @ $BaseControl[HouseCurama] @ ", Yuliple=" @ $BaseControl[HouseYuliple]);
-	// echo("FlagCommand: Kronos=" @ $FlagCommand[HouseKronos] @ ", Arbal=" @ $FlagCommand[HouseArbal] @ ", Curama=" @ $FlagCommand[HouseCurama] @ ", Yuliple=" @ $FlagCommand[HouseYuliple]);
-	// echo("HouseMember: Kronos=" @ $HouseMember[HouseKronos] @ ", Arbal=" @ $HouseMember[HouseArbal] @ ", Curama=" @ $HouseMember[HouseCurama] @ ", Yuliple=" @ $HouseMember[HouseYuliple]);
-}
 
 function ActivateAllGenerators()
 {
@@ -7668,7 +7356,8 @@ $AFKOverLevelBuffer = 5;
 $AFKOverLevelInactivity = 180;
 $AFKOverLevelWarnWindow = 30;
 $AFKOverLevelMinZoneTime = 60;
-$AFKOverLevelTeleportPos = "-905.1 -2201.61 522.14";
+$AFKOverLevelTeleportPos = "-905.1 -2201.61 522.14"; // Fallback position if marker group fails
+$AFKTeleportMarkerGroup = "AFKTeleportPoints"; // Marker group in mission file for AFK teleport locations
 
 // Hard caps by zone description (case-insensitive match)
 $AFKZoneCap["Pig Den"] = 30;
@@ -7744,11 +7433,31 @@ function AFKZone_Teleport(%id)
 	storeData(%id, "lastzone", "");
 	
 	if(%obj != -1 && %obj != "" && isObject(%obj))
-		GameBase::setPosition(%obj, $AFKOverLevelTeleportPos);
+	{
+		// Try to teleport to a random marker from the AFK teleport group
+		// Retry up to 5 times to find an unoccupied spot
+		%teleportSuccess = False;
+		for(%attempt = 0; %attempt < 5; %attempt++)
+		{
+			%result = TeleportToMarker(%id, $AFKTeleportMarkerGroup, true, true);
+			if(%result != False && %result != "")
+			{
+				%teleportSuccess = true;
+				$AFKZoneLastPos[%id] = %result;
+				break;
+			}
+		}
+		
+		// Fallback to hardcoded position if marker group doesn't exist or all spots occupied
+		if(!%teleportSuccess)
+		{
+			GameBase::setPosition(%obj, $AFKOverLevelTeleportPos);
+			$AFKZoneLastPos[%id] = $AFKOverLevelTeleportPos;
+		}
+	}
 	Client::sendMessage(%id, $MsgRed, "You have been moved out of this low-level zone.");
 	AFKZone_ClearWarning(%id);
 	$AFKZoneLastMove[%id] = getSimTime();
-	$AFKZoneLastPos[%id] = $AFKOverLevelTeleportPos;
 	
 	// CRITICAL: Reset zone folder tracking to force AFK zone system to detect zone change
 	// This ensures the next AFKZone_Tick() will recognize the new zone

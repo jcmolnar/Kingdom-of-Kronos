@@ -122,6 +122,9 @@ function InitZoneTeleporterRequirements()
 	// Admin's Demise - requires TOURNYRANK 9 (Yuliple to admins teleporter)
 	$Zone::TournyRankRequirement["Admin's Demise"] = 9;
 	
+	// The Void - requires REMORT 100 (endgame dungeon with invisible enemies)
+	$Zone::RemortRequirement["The Void"] = 100;
+	
 	// Add more zone requirements here as needed based on teleporter NEED lines
 }
 

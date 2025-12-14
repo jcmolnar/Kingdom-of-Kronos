@@ -12,6 +12,8 @@ $SealBattleRound2Complete = false;  // Track if Round 2 was completed
 $SealBattleRound3Complete = false;  // Track if Round 3 was completed
 $SealBattleCurrentRound = 0;  // Track the current active round loop (prevents overlapping loops)
 $SealBattleLoopScheduled = false;  // Track if a loop is currently scheduled (prevents duplicate schedules)
+$SealBattleCooldownEnd = 0;  // Time when cooldown ends (getSimTime() in ms)
+$SealBattleCooldownDuration = 180;  // Cooldown duration in seconds (3 minutes)
 %i=0;
 
 // CRITICAL: Timing constants for seal battle system - all timings are calculated from these
@@ -69,9 +71,10 @@ function SetTotalSealValue(%value)
 // Round 1: Base difficulty
 // Round 2: 1.3x harder than Round 1 (2.0 * 1.3 = 2.6)
 // Round 3: 1.6x harder than Round 1 (2.0 * 1.6 = 3.2)
-$SealBattleRound1Multiplier = 2.0;
-$SealBattleRound2Multiplier = 2.6;  // 1.3x harder than Round 1
-$SealBattleRound3Multiplier = 3.2;  // 1.6x harder than Round 1
+// ADJUSTED FOR HIGHER DIFFICULTY (2025-12-13)
+$SealBattleRound1Multiplier = 2.0;  // Increased from 2.0
+$SealBattleRound2Multiplier = 2.5;  // Reduced from 3 times harder than round 1
+$SealBattleRound3Multiplier = 3.0;  // Reduced from 4.5 times harder than round 1
 
 // =====================================================
 // PER-BOT-TYPE STAT MULTIPLIERS
@@ -81,17 +84,17 @@ $SealBattleRound3Multiplier = 3.2;  // 1.6x harder than Round 1
 // =====================================================
 
 // FIGHTER: High ATK, Medium HP (glass cannon melee)
-$SealBotMult["Fighter", "HP"]        = 1.0;   // Medium HP
+$SealBotMult["Fighter", "HP"]        = 0.9;   // Medium HP
 $SealBotMult["Fighter", "ATK"]       = 1.5;   // HIGH ATK
-$SealBotMult["Fighter", "DEF"]       = 0.8;   // Low DEF (glass cannon)
+$SealBotMult["Fighter", "DEF"]       = 0.5;   // Low DEF (glass cannon)
 $SealBotMult["Fighter", "MDEF"]      = 0.6;   // Low MDEF
 $SealBotMult["Fighter", "WeaponDmg"] = 1.5;   // HIGH weapon damage
 $SealBotMult["Fighter", "SpellDmg"]  = 0.5;   // Low spell damage
 
 // GUARDIAN: High HP, Medium ATK (tank)
-$SealBotMult["Guardian", "HP"]        = 1.8;  // HIGH HP (tank)
+$SealBotMult["Guardian", "HP"]        = 1.4;  // HIGH HP (tank)
 $SealBotMult["Guardian", "ATK"]       = 1.0;  // Medium ATK
-$SealBotMult["Guardian", "DEF"]       = 1.5;  // HIGH DEF
+$SealBotMult["Guardian", "DEF"]       = 1.0;  // HIGH DEF
 $SealBotMult["Guardian", "MDEF"]      = 1.2;  // Medium-high MDEF
 $SealBotMult["Guardian", "WeaponDmg"] = 1.0;  // Medium weapon damage
 $SealBotMult["Guardian", "SpellDmg"]  = 0.3;  // Very low spell damage
@@ -104,24 +107,27 @@ $SealBotMult["Mage", "MDEF"]      = 1.5;      // HIGH MDEF
 $SealBotMult["Mage", "WeaponDmg"] = 0.3;      // Very low weapon damage
 $SealBotMult["Mage", "SpellDmg"]  = 2.0;      // HIGH spell damage
 
-// Determine bot type (Fighter, Mage, Guardian) from internal/display name
+// Determine bot type (Fighter, Mage, Guardian) from display name
+// CRITICAL FIX: Check display name FIRST because internal names (RoundOneXXX, RoundTwoXXX, RoundThreeXXX) 
+// only indicate the ROUND number, NOT the bot type. Each round has ALL 3 bot types.
 function SealBattle::GetBotType(%botName, %aiId)
 {
-    // Check internal name first (e.g., "RoundOne497" = Fighter, "RoundTwo497" = Mage, "RoundThree497" = Guardian)
-    if(String::findSubStr(%botName, "RoundOne") != -1)
-        return "Fighter";
-    else if(String::findSubStr(%botName, "RoundTwo") != -1)
-        return "Mage";
-    else if(String::findSubStr(%botName, "RoundThree") != -1)
-        return "Guardian";
-    
-    // Fallback: Check display name
+    // Check display name FIRST - this contains the actual bot type (SealFighter, SealMage, SealGuardian)
     %displayName = Client::getName(%aiId);
     if(String::findSubStr(%displayName, "Fighter") != -1)
         return "Fighter";
     else if(String::findSubStr(%displayName, "Mage") != -1)
         return "Mage";
     else if(String::findSubStr(%displayName, "Guardian") != -1)
+        return "Guardian";
+    
+    // Fallback: Check internal name (less reliable - only contains round number, not type)
+    // These would be legacy names if they contained the actual type
+    if(String::findSubStr(%botName, "Fighter") != -1)
+        return "Fighter";
+    else if(String::findSubStr(%botName, "Mage") != -1)
+        return "Mage";
+    else if(String::findSubStr(%botName, "Guardian") != -1)
         return "Guardian";
     
     // Default fallback
@@ -162,7 +168,7 @@ function SealBattle::GetBaseStrengthMultiplier()
     %steps = %sealValue / 20;
     // Use square root scaling to prevent exponential growth
     %sqrtSteps = sqrt(%steps);
-    %increment = 0.3;  // Much smaller increment per step
+    %increment = 1.2;  // Increased from 0.3 for much harder scaling
     %multiplier = %baseMultiplier + (%sqrtSteps * %increment);
     return %multiplier;
 }
@@ -222,6 +228,9 @@ function SealBattle::GetParticipantNames()
 		}
 	}
 	
+	// Store count globally for grammar checks (is vs are)
+	$SealBattleParticipantCount = %participantCount;
+	
 	return %participantNames;
 }
 
@@ -242,8 +251,48 @@ function SealBattle::MessageColloseumPlayers(%message)
 	}
 }
 
+// Helper function to check if a seal battle can start
+// Returns true if ready, false if on cooldown or already active
+// Call this BEFORE teleporting players to check if they can actually start the battle
+function SealBattle::CanStart(%clientId)
+{
+	// Check if already active
+	if($SealBattleActive == true)
+	{
+		Client::sendMessage(%clientId, $MsgRed, "A seal battle is already in progress.");
+		return false;
+	}
+	
+	// Check cooldown - 3 minutes must pass after a seal battle ends before starting another
+	%currentTime = getSimTime();
+	echo("[SEAL BATTLE] CanStart check: currentTime=" @ %currentTime @ " cooldownEnd=" @ $SealBattleCooldownEnd);
+	if(%currentTime < $SealBattleCooldownEnd)
+	{
+		%remainingSec = floor($SealBattleCooldownEnd - %currentTime);
+		%remainingMin = floor(%remainingSec / 60);
+		%remainingSecMod = %remainingSec - (%remainingMin * 60);
+		echo("[SEAL BATTLE] Cooldown active: remainingSec=" @ %remainingSec);
+		Client::sendMessage(%clientId, $MsgRed, "The seal is still recovering. Please wait " @ %remainingMin @ " minutes and " @ %remainingSecMod @ " seconds.");
+		return false;
+	}
+	
+	return true;
+}
+
 function SealBattle::Begin(%clientId,%pos,%seal)
 {
+	// Check cooldown - 3 minutes must pass after a seal battle ends before starting another
+	%currentTime = getSimTime();
+	if(%currentTime < $SealBattleCooldownEnd)
+	{
+		%remainingMs = $SealBattleCooldownEnd - %currentTime;
+		%remainingSec = floor(%remainingMs / 1000);
+		%remainingMin = floor(%remainingSec / 60);
+		%remainingSecMod = %remainingSec - (%remainingMin * 60);
+		Client::sendMessage(%clientId, $MsgRed, "The seal is still recovering. Please wait " @ %remainingMin @ " minutes and " @ %remainingSecMod @ " seconds.");
+		return;
+	}
+	
 	if($SealBattleActive != true)
 	{
 		storeData(%clientId,"noDropLootbagFlag",false);
@@ -274,6 +323,8 @@ function SealBattle::Begin(%clientId,%pos,%seal)
 		$SealBattleParticipants = AddToCommaList($SealBattleParticipants, %clientId);
 		
 		// Announce to all players that the seal battle will begin
+		%currentSealVal = GetTotalSealValue();
+		messageAll(2, "The current seal value is " @ %currentSealVal);
 		messageAll(2, "The seal battle will begin in " @ $SealBattleCountdownDuration @ " seconds! Type #helpseal now to join!");
 		
 		// CRITICAL: Spawn Round 1 bots IMMEDIATELY (they take $SealBattleBotSpawnDelay seconds to fully spawn)
@@ -304,6 +355,30 @@ function SealBattle::Begin(%clientId,%pos,%seal)
 
 function SealBattle::StartBattle(%clientId,%pos,%seal)
 {
+	// CRITICAL: Check if any players are still in Colloseum before starting
+	// If all players left during the 30-second countdown, end the battle immediately
+	%playersInColloseum = 0;
+	for(%checkCl = Client::getFirst(); %checkCl != -1; %checkCl = Client::getNext(%checkCl))
+	{
+		if(isRPGAI(%checkCl))
+			continue;
+		
+		%checkZoneId = fetchData(%checkCl, "zone");
+		%checkZoneDesc = Zone::getDesc(%checkZoneId);
+		if(%checkZoneDesc == "Colloseum")
+		{
+			%playersInColloseum++;
+		}
+	}
+	
+	if(%playersInColloseum == 0)
+	{
+		echo("[SEAL BATTLE] StartBattle: No players in Colloseum - all players left during countdown. Ending battle.");
+		messageAll(2, "The seal battle has been cancelled - all participants left.");
+		SealBattle::Conclude(%clientId, false);
+		return;
+	}
+	
 	// Capture all players currently in Colloseum as participants (30-second window just ended)
 	%colloseumEntrance = "-3588 -2364 354";
 	for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
@@ -422,9 +497,12 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 			if(%f != -1 && Player::isAiControlled(%f)) Player::Kill(%f);
 		}
 		
-		// Broadcast message that all players have died
+		// Broadcast message that all players have died - use correct grammar
 		%participantNames = SealBattle::GetParticipantNames();
-		messageAll(2, %participantNames @ " have died attempting to shatter the seal... Heavens be with us!");
+		if($SealBattleParticipantCount == 1)
+			messageAll(2, %participantNames @ " has died attempting to shatter the seal... Heavens be with us!");
+		else
+			messageAll(2, %participantNames @ " have died attempting to shatter the seal... Heavens be with us!");
 		
 		SealBattle::Conclude(%clientId, false);  // false = failure, teleport back
 		return;
@@ -798,10 +876,13 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 			// All rounds complete! Seal battle won!
 			%participantNames = SealBattle::GetParticipantNames();
 			
-			// Send success message with participant list
+			// Send success message with participant list - use correct grammar
 			if(%participantNames != "")
 			{
-				messageAll(2, "The final wave has been beaten! The brave soldier(s) of Kronos-" @ %participantNames @ ", have shattered the seal! We can all rest and remort safely...for now. ~wflag_capture.wav");
+				if($SealBattleParticipantCount == 1)
+					messageAll(2, "The final wave has been beaten! The brave soldier of Kronos-" @ %participantNames @ ", has shattered the seal! We can all rest and remort safely...for now. ~wflag_capture.wav");
+				else
+					messageAll(2, "The final wave has been beaten! The brave soldiers of Kronos-" @ %participantNames @ ", have shattered the seal! We can all rest and remort safely...for now. ~wflag_capture.wav");
 			}
 			else
 			{
@@ -845,8 +926,12 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 // Arguments: %aiTypeIndex - spawn index, %displayName - display name (e.g., "SealFighter1"), %spawnLoc - spawn location string, %pos - battle position, %round - round number
 function SealBattle::SpawnSingleBot(%aiTypeIndex, %displayName, %spawnLoc, %pos, %round)
 {
+	echo("[SEAL BATTLE] SealBattle::SpawnSingleBot(TypeIndex=" @ %aiTypeIndex @ ", Name=" @ %displayName @ ", SpawnLoc=" @ %spawnLoc @ ", Pos=" @ %pos @ ", Round=" @ %round @ ")");
+	
 	// Call AI::helper and capture the returned internal name (e.g., "RoundTwo497")
 	%internalName = AI::helper(%aiTypeIndex, %displayName, %spawnLoc, default);
+	
+	echo("[SEAL BATTLE] SealBattle::SpawnSingleBot: AI::helper returned " @ %internalName);
 	
 	// If spawn failed, log error and return
 	if(%internalName == -1 || %internalName == "")
@@ -913,10 +998,15 @@ function SealBattle::SpawnRound(%clientId, %pos, %seal, %round)
 		// Send "round starting now" message to Colloseum players
 		SealBattle::MessageColloseumPlayers("Wave " @ %round @ " is starting now!");
 		
-		// Get participant names for wave announcement
+		// Get participant names for wave announcement - use correct grammar
 		%participantNames = SealBattle::GetParticipantNames();
 		if(%participantNames != "")
-			messageall(2, "" @ %participantNames @ " are entering wave " @ %round @ ".");
+		{
+			if($SealBattleParticipantCount == 1)
+				messageall(2, "" @ %participantNames @ " is entering wave " @ %round @ ".");
+			else
+				messageall(2, "" @ %participantNames @ " are entering wave " @ %round @ ".");
+		}
 		else
 			messageall(2, "" @ Client::getName(%clientId) @ " is entering wave " @ %round @ ".");
 		
@@ -1042,6 +1132,53 @@ function SealBattle::LazyDeathCheck(%clientId)
 	}
 }
 
+// Helper function to clear ALL seal battle data from a client ID
+// This prevents stale data from being restored on reused client IDs
+function SealBattle::ClearBotData(%clientId)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+	
+	echo("[SEAL BATTLE] SealBattle::ClearBotData(): Clearing all seal battle data for clientId=" @ %clientId);
+	
+	// Clear original stat storage (prevents stale 0 values from being restored)
+	storeData(%clientId, "SealBattleOriginalLVL", "");
+	storeData(%clientId, "SealBattleOriginalRemortStep", "");
+	storeData(%clientId, "SealBattleOriginalEndurance", "");
+	storeData(%clientId, "SealBattleOriginalEnergy", "");
+	storeData(%clientId, "SealBattleOriginalWeightCapacity", "");
+	
+	// Clear direct array storage too
+	$EnemyBotData[%clientId, "SealBattleOriginalLVL"] = "";
+	$EnemyBotData[%clientId, "SealBattleOriginalRemortStep"] = "";
+	$EnemyBotData[%clientId, "SealBattleOriginalEndurance"] = "";
+	$EnemyBotData[%clientId, "SealBattleOriginalEnergy"] = "";
+	$EnemyBotData[%clientId, "SealBattleOriginalWeightCapacity"] = "";
+	$ClientData[%clientId, "SealBattleOriginalLVL"] = "";
+	$ClientData[%clientId, "SealBattleOriginalRemortStep"] = "";
+	$ClientData[%clientId, "SealBattleOriginalEndurance"] = "";
+	$ClientData[%clientId, "SealBattleOriginalEnergy"] = "";
+	$ClientData[%clientId, "SealBattleOriginalWeightCapacity"] = "";
+	
+	// Clear scaled round marker (prevents HardcodeAIskills warning on reused client IDs)
+	storeData(%clientId, "SealBattleScaledRound", "");
+	$SealBattleScaledStats[%clientId, "round"] = "";
+	
+	// Clear scaled stats storage
+	$SealBattleScaledStats[%clientId, "DEF"] = "";
+	$SealBattleScaledStats[%clientId, "MDEF"] = "";
+	$SealBattleScaledStats[%clientId, "ATK"] = "";
+	$SealBattleScaledStats[%clientId, "DMG"] = "";
+	$SealBattleScaledStats[%clientId, "MaxHP"] = "";
+	$SealBattleScaledStats[%clientId, "MaxMANA"] = "";
+	
+	// Clear spell damage multiplier
+	$SealBattleSpellDmgMult[%clientId] = "";
+	
+	// Clear seal battle bot flag
+	storeData(%clientId, "SealBattleBot", "");
+}
+
 function SealBattle::Conclude(%clientId, %success)
 {
 	// CRITICAL: Kill all seal bots from all rounds before concluding
@@ -1051,19 +1188,31 @@ function SealBattle::Conclude(%clientId, %success)
 	{
 		%f = AI::getClientIdFromName($SealBattle::FighterName);
 		if(%f == "") %f = -1; // Normalize empty string to -1
-		if(%f != -1) Player::Kill(%f);
+		if(%f != -1)
+		{
+			SealBattle::ClearBotData(%f);  // Clear BEFORE kill so data is cleared from valid client ID
+			Player::Kill(%f);
+		}
 	}
 	if($SealBattle::MageName != "" && $SealBattle::MageName != -1)
 	{
 		%m = AI::getClientIdFromName($SealBattle::MageName);
 		if(%m == "") %m = -1; // Normalize empty string to -1
-		if(%m != -1) Player::Kill(%m);
+		if(%m != -1)
+		{
+			SealBattle::ClearBotData(%m);  // Clear BEFORE kill so data is cleared from valid client ID
+			Player::Kill(%m);
+		}
 	}
 	if($SealBattle::GuardianName != "" && $SealBattle::GuardianName != -1)
 	{
 		%g = AI::getClientIdFromName($SealBattle::GuardianName);
 		if(%g == "") %g = -1; // Normalize empty string to -1
-		if(%g != -1) Player::Kill(%g);
+		if(%g != -1)
+		{
+			SealBattle::ClearBotData(%g);  // Clear BEFORE kill so data is cleared from valid client ID
+			Player::Kill(%g);
+		}
 	}
 	// Fallback: Also try display names for any bots we might have missed
 	for(%r = 1; %r <= 3; %r++)
@@ -1071,9 +1220,21 @@ function SealBattle::Conclude(%clientId, %success)
 		%g = NEWgetClientByName("SealGuardian" @ %r);
 		%m = NEWgetClientByName("SealMage" @ %r);
 		%f = NEWgetClientByName("SealFighter" @ %r);
-		if(%g != -1) Player::Kill(%g);
-		if(%m != -1) Player::Kill(%m);
-		if(%f != -1) Player::Kill(%f);
+		if(%g != -1)
+		{
+			SealBattle::ClearBotData(%g);
+			Player::Kill(%g);
+		}
+		if(%m != -1)
+		{
+			SealBattle::ClearBotData(%m);
+			Player::Kill(%m);
+		}
+		if(%f != -1)
+		{
+			SealBattle::ClearBotData(%f);
+			Player::Kill(%f);
+		}
 	}
 	
 	// Get the zone description and house for finding all friendly players
@@ -1315,6 +1476,10 @@ function SealBattle::Conclude(%clientId, %success)
 	
 	$SealFighterDied = false;
 	$SealBattleActive = false;
+	
+	// Set cooldown - 3 minutes before another seal battle can start
+	$SealBattleCooldownEnd = getSimTime() + $SealBattleCooldownDuration;  // getSimTime() is in seconds
+	echo("[SEAL BATTLE] Cooldown started. Next seal battle can start in " @ $SealBattleCooldownDuration @ " seconds.");
 	
 	// Clear seal battle zone and house tracking
 	$SealBattleZone = "";
@@ -1905,6 +2070,15 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled WeightCapacity skill from " @ %baseWeightCapacity @ " to " @ %scaledWeightCapacity @ " (mult: " @ %mult @ ")");
 		}
 		
+		// 6. Scale Healing skill DOWN to 10% to prevent bots from outhealing player damage
+		%baseHealing = $PlayerSkill[%aiId, $SkillHealing];
+		if(%baseHealing != "" && %baseHealing != -1 && %baseHealing > 0)
+		{
+			%scaledHealing = floor(%baseHealing * 0.1);  // 10% of original
+			$PlayerSkill[%aiId, $SkillHealing] = %scaledHealing;
+			echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Scaled Healing skill DOWN from " @ %baseHealing @ " to " @ %scaledHealing @ " (10% reduction)");
+		}
+		
 		// Call RefreshAll() to recalculate MaxHP, MaxMANA, MaxWeight from scaled underlying values
 		// CRITICAL: This also recalculates ATK with scaled weapon damage AND scaled RemortStep
 		RefreshAll(%aiId);
@@ -2218,6 +2392,8 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 	echo("  Current Stats:");
 	echo("    HP: " @ %hp @ " / " @ %maxHP @ "  MANA: " @ %mana @ " / " @ %maxMANA);
 	echo("    Weight: " @ %weight @ " / " @ %maxWeight @ "  LCK: " @ %lck);
+	%healingSkill = $PlayerSkill[%aiId, $SkillHealing];
+	echo("    Healing Skill: " @ %healingSkill);
 	if(%stance != "")
 		echo("    Stance: " @ %stance);
 	if(%overweightStep > 0)

@@ -184,11 +184,18 @@ function SpawnLoop(%this)
 	%flag = "";
 	if($SelectiveZoneBotSpawning)
 	{
-		%zoneId = $MarkerZone[%this];
+	%zoneId = $MarkerZone[%this];
 		%zonePlayerCount = Zone::getNumPlayers(%zoneId);
-		// Allow spawning if zone is unknown (empty) OR if zone has players
-		if(%zoneId == "" || %zonePlayerCount > 0)
+		// Spawn zone rules:
+		// - Zone is unknown/empty → NO spawning (spawn point must have valid zone)
+		// - Zone is valid AND has players → Allow spawning
+		// - Zone is valid but no players → Block spawning
+		if(%zoneId != "" && %zoneId != -1 && %zonePlayerCount > 0)
+		{
 			%flag = True;
+		}
+		// else: Zone unknown OR zone valid but no players - don't spawn
+		
 		if(%flag)
 			%flagStr = "true";
 		else

@@ -647,6 +647,38 @@ instant SimGroup "MissionGroup" {
 		instant TeamGroup "team7" {
 			instant SimGroup "AI";
 		};
+		instant TeamGroup "team8" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team9" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team10" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team11" {
+			instant SimGroup "AI";
+		};
+		instant TeamGroup "team12" {
+			instant SimGroup "AI";
+		};
+	};
+	instant SimGroup "AFKTeleportPoints" {
+		instant Marker {
+			dataBlock = "PathMarker";
+			position = "-3111.12 831.001 913.995";
+			rotation = "0 0 2.26527";
+		};
+		instant Marker {
+			dataBlock = "PathMarker";
+			position = "-3111.24 895.137 913.995";
+			rotation = "0 0 1.04481";
+		};
+		instant Marker {
+			dataBlock = "PathMarker";
+			position = "-2817.84 886.356 1204";
+			rotation = "0 0 -0.729699";
+		};
 	};
 	instant Item "flag1" {
 		dataBlock = "flag";
@@ -1465,7 +1497,7 @@ instant SimGroup "MissionGroup" {
 				};
 			};
 			instant SimGroup "AMBIENTSOUND area_plains.wav 10";
-			instant Marker "320 350 150 0" {
+			instant Marker "350 350 200 0" {
 				dataBlock = "PathMarker";
 				name = "";
 				position = "-365 -2334 65";
@@ -1540,7 +1572,7 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "MUSIC ethrenmusic2.wav 30";
 			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
 			instant SimGroup "ENTERSOUND ActivateAM.wav";
-			instant Marker "100 100 150 0" {
+			instant Marker "150 150 150 0" {
 				dataBlock = "PathMarker";
 				name = "";
 				position = "-2857.54 -1300 703";
@@ -1671,7 +1703,7 @@ instant SimGroup "MissionGroup" {
 		instant SimGroup "PROTECTED Black Market" {
 			instant SimGroup "MUSIC jatenmusic.wav 25";
 			instant SimGroup "MUSIC jatenmusic2.wav 18";
-			instant Marker "150 150 200 0" {
+			instant Marker "200 200 200 0" {
 				dataBlock = "PathMarker";
 				name = "";
 				position = "-2582.76 -1159.5 194";
@@ -1731,7 +1763,7 @@ instant SimGroup "MissionGroup" {
 		};
 		instant SimGroup "DUNGEON Admin's Demise" {
 			instant SimGroup "MUSIC yolandamusic2.wav 21";
-			instant Marker "300 300 300 0" {
+			instant Marker "320 320 320 0" {
 				dataBlock = "PathMarker";
 				name = "";
 				position = "-1769 2239 -84";
@@ -1799,6 +1831,22 @@ instant SimGroup "MissionGroup" {
 				name = "";
 				position = "-2452 -236 29";
 				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "DUNGEON The Void" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "356.375 1093.31 245.905";
+					rotation = "0 0 0";
+				};
+			};
+			instant Marker "350 350 350 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "330.5 1035.59 262";
+				rotation = "-0.158407 3.04159 -0.206193";
 			};
 		};
 		instant SimGroup "FREEFORALL DuelingArena" {
@@ -2015,7 +2063,7 @@ instant SimGroup "MissionGroup" {
 			position = "-2375 -236 19.75";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 15 25 50" {
+		instant Marker "1 1 3 10 25 50" {
 			dataBlock = "PathMarker";
 			name = "alien holocaust Contam 1";
 			position = "-784.085 794.475 599.989";
@@ -2039,19 +2087,19 @@ instant SimGroup "MissionGroup" {
 			position = "-3120 2271 -434";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 15 25 60" {
+		instant Marker "1 1 3 10 25 60" {
 			dataBlock = "PathMarker";
 			name = "angels protector";
 			position = "-3129.28 2405 -398.532";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 20 25 61" {
+		instant Marker "1 1 3 10 25 61" {
 			dataBlock = "PathMarker";
 			name = "angels hybrid";
 			position = "-2997 2415 -362";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 25 25 62" {
+		instant Marker "1 1 3 10 25 62" {
 			dataBlock = "PathMarker";
 			name = "angels crucifier";
 			position = "-2984 2283 -326";
@@ -2075,40 +2123,64 @@ instant SimGroup "MissionGroup" {
 			position = "-2851 963 500";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 10 5 63" {
+		instant Marker "1 1 3 10 25 63" {
 			dataBlock = "PathMarker";
 			name = "God Purifier";
 			position = "300.03 -955.519 97.51";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 15 10 64" {
+		instant Marker "1 1 3 10 25 64" {
 			dataBlock = "PathMarker";
 			name = "God Vaporizer";
 			position = "301.701 -953.41 133.303";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 20 15 65" {
+		instant Marker "1 1 3 10 25 65" {
 			dataBlock = "PathMarker";
 			name = "God Insurrector";
 			position = "309.101 -945.542 169.104";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 10 5 78" {
+		instant Marker "1 1 3 10 25 78" {
 			dataBlock = "PathMarker";
 			name = "Admin Liquifier";
 			position = "-1775.39 2267.95 -86.2579";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 15 10 79" {
+		instant Marker "1 1 3 10 25 79" {
 			dataBlock = "PathMarker";
 			name = "Admin Obliterator";
 			position = "-1765.81 2213.65 -86.2568";
 			rotation = "0 0 0";
 		};
-		instant Marker "1 1 3 20 15 80" {
+		instant Marker "1 1 3 10 25 80" {
 			dataBlock = "PathMarker";
 			name = "Admin Abolisher";
 			position = "-1769.37 2191.41 -77.2578";
+			rotation = "0 0 0";
+		};// Spawn Points for Void enemies
+		instant Marker "1 1 3 10 25 120" {
+			dataBlock = "PathMarker";
+			name = "Void Stalker";
+			position = "348.489 1035.01 283.022";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 121" {
+			dataBlock = "PathMarker";
+			name = "Void Fragment";
+			position = "291.236 1056.2 287.306";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 122" {
+			dataBlock = "PathMarker";
+			name = "Void Wraith";
+			position = "270.069 1057.26 285.706";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 3 10 25 123" {
+			dataBlock = "PathMarker";
+			name = "Void Consumer";
+			position = "255.811 1058.06 304.429";
 			rotation = "0 0 0";
 		};
 	};
@@ -3395,6 +3467,45 @@ instant SimGroup "MissionGroup" {
 			isContainer = "1";
 			position = "-2470 -234 95";
 			rotation = "0 1.56991 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	// ============================================
+	// The Void Dungeon (Remort 100+)
+	// ============================================
+	instant SimGroup "The Void" {
+		locked = "0";
+		// Building Objects
+		instant InteriorShape "VoidBuilding1" {
+			fileName = "tunder1.dis";
+			isContainer = "1";
+			position = "330.5 1035.59 262";
+			rotation = "-0.158407 3.04159 -0.206193";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "VoidEntranceMarker" {
+			fileName = "aflagcolumn.dis";
+			isContainer = "1";
+			position = "335.411 1051.87 265.527";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "VoidRock1" {
+			fileName = "mine8.dis";
+			isContainer = "1";
+			position = "290 1046 291";
+			rotation = "1.49999 -0.499999 1.89999";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "VoidRock2" {
+			fileName = "mine8.dis";
+			isContainer = "1";
+			position = "270 1048 289.5";
+			rotation = "1.49999 -0.499999 1.89999";
 			lightParams = "0 ";
 			locked = "1";
 		};
