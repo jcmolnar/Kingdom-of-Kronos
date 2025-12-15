@@ -4935,6 +4935,63 @@ function Bot_MatchesEnemyPattern(%name)
 }
 
 // ============================================================================
+// SPAWN HELPER: Abort spawn when zone becomes empty during spawn delay
+// Called when SpawnAIGetClientId detects zone has 0 players
+// Cleans up ghost bot, rolls back spawn slot, tracks telemetry
+// Returns: nothing (void function, caller should return after calling)
+// ============================================================================
+function Spawn_AbortEmptyZone(%newName, %spawnPointId, %zoneIndex)
+{
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+		echo("[SPAWN FLOW] Spawn_AbortEmptyZone(): Zone " @ %zoneIndex @ " is empty, aborting spawn for " @ %newName);
+	
+	// CRITICAL: Delete the already-spawned bot to prevent ghost shell
+	// AI::spawn() already created the bot, we MUST delete it
+	
+	// Try to find the bot using multiple methods
+	%ghostBotId = AI::getId(%newName);  // Most reliable - engine lookup
+	if(%ghostBotId == "" || %ghostBotId == -1)
+		%ghostBotId = AI::getClientIdFromName(%newName);
+	if(%ghostBotId == "" || %ghostBotId == -1)
+		%ghostBotId = NEWgetClientByName(%newName);
+	
+	// Handle Seal Battle bots specially
+	if(String::findSubStr(%newName, "RoundOne") == 0 || String::findSubStr(%newName, "RoundTwo") == 0 || String::findSubStr(%newName, "RoundThree") == 0)
+	{
+		if(%ghostBotId != -1 && %ghostBotId != "")
+		{
+			storeData(%ghostBotId, "SealBattleBot", true);
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+				echo("[SPAWN FLOW] Spawn_AbortEmptyZone(): Flagged ghost bot " @ %newName @ " as SealBattleBot");
+		}
+	}
+	
+	// Clear spawn flags
+	$SpawnAIScheduled[%newName] = "";
+	
+	// Clear bot data if found
+	if(%ghostBotId != -1 && %ghostBotId != "")
+	{
+		storeData(%ghostBotId, "SpawnBotInfo", "");
+		storeData(%ghostBotId, "BotInfoAiName", "");
+		$BotType[%ghostBotId] = "";
+		echo("[SPAWN AI] Deleting ghost bot via AI::delete: " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
+	}
+	else
+	{
+		echo("[SPAWN AI] Couldn't find clientId for " @ %newName @ ", trying AI::delete anyway");
+	}
+	
+	// ALWAYS try AI::delete by name - the bot was created by AI::spawn
+	AI::delete(%newName);
+	
+	// CRITICAL: Rollback spawn slot to prevent spawn point from being marked "busy" forever
+	RollbackSpawnSlot(%spawnPointId);
+	
+	Telemetry_RecordSpawnFailed("zoneempty");
+}
+
+// ============================================================================
 // SPAWN HELPER: Full cleanup for stale/orphaned client ID before reuse
 // Consolidates: player object deletion, counter decrements, AI number freeing, data clearing
 // Returns: true if cleanup performed, false if skipped (real player or invalid)
@@ -5075,57 +5132,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				
 				if(%playerCount <= 0)
 				{
-					// Zone is empty - abort spawn and clean up bot object
-					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Zone " @ %zoneIndex @ " is empty, aborting spawn for " @ %newName);
-					
-					// CRITICAL: Delete the already-spawned bot to prevent ghost shell
-					// AI::spawn() already created the bot, we MUST delete it
-					
-					// Try to find the bot using multiple methods
-					%ghostBotId = AI::getId(%newName);  // Most reliable - engine lookup
-					if(%ghostBotId == "" || %ghostBotId == -1)
-						%ghostBotId = AI::getClientIdFromName(%newName);
-					if(%ghostBotId == "" || %ghostBotId == -1)
-						%ghostBotId = NEWgetClientByName(%newName);
-					
-					// CRITICAL FIX: Set SealBattleBot flag IMMEDIATELY if this is a seal battle bot
-					// This ensures that when HardcodeAIskills runs (before SetupBot), RefreshAll() knows to calculate stats
-					// Seal battle bot names start with "RoundOne", "RoundTwo", "RoundThree"
-					if(String::findSubStr(%newName, "RoundOne") == 0 || String::findSubStr(%newName, "RoundTwo") == 0 || String::findSubStr(%newName, "RoundThree") == 0)
-					{
-						if(%ghostBotId != -1 && %ghostBotId != "")
-						{
-							storeData(%ghostBotId, "SealBattleBot", true);
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Flagged existing ghost bot " @ %newName @ " as SealBattleBot");
-						}
-					}
-					
-					// Clear spawn flags first
-					$SpawnAIScheduled[%newName] = "";
-					
-					if(%ghostBotId != -1 && %ghostBotId != "")
-					{
-						// Found the bot - clear its data
-						storeData(%ghostBotId, "SpawnBotInfo", "");
-						storeData(%ghostBotId, "BotInfoAiName", "");
-						$BotType[%ghostBotId] = "";
-						echo("[SPAWN AI] Deleting ghost bot via AI::delete: " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
-					}
-					else
-					{
-						// Couldn't find clientId, but bot might still exist - try AI::delete anyway
-						echo("[SPAWN AI] Couldn't find clientId for " @ %newName @ ", trying AI::delete anyway");
-					}
-					
-					// ALWAYS try AI::delete by name - the bot was created by AI::spawn
-					// Even if we couldn't find the clientId, AI::delete(name) should work
-					AI::delete(%newName);
-					
-					// CRITICAL: Rollback spawn slot to prevent spawn point from being marked "busy" forever
-					RollbackSpawnSlot(%spawnPointId);
-					
-					Telemetry_RecordSpawnFailed("zoneempty");  // Track zone empty failure
-					
+					// Use consolidated helper for zone empty abort (replaces ~50 lines)
+					Spawn_AbortEmptyZone(%newName, %spawnPointId, %zoneIndex);
 					return; // Abort spawn
 				}
 			}
