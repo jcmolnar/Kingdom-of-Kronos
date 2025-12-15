@@ -54,18 +54,26 @@ This document lists all functions currently used in the spawn and despawn flows 
    - Checks for ghost client IDs
    - Skips if `SpawnBotInfo` is set (enemy bots)
 
-10. **`SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId)`** (`Ai.cs:3571`)
-    - Gets client ID via `AI::getId()` (fastest method)
-    - Falls back to `AI::getClientIdFromName()` if needed
-    - Validates player object exists
+10. **`SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId, %predictedId)`** (`Ai.cs:4987-7101`, **2,114 lines**)
+    - **WARNING**: This function is massive and scheduled for refactoring
+    - **Priority 1**: Checks predicted ID from `PlayerManager::getFreeId()` (O(1) lookup)
+    - **Priority 2**: Gets client ID via `AI::getId()` (engine lookup)
+    - **Priority 3**: Falls back to `NEWgetClientByName()` (display name search)
+    - **Priority 4**: Brute-force range loop (2049-2200)
+    - Validates player object exists via `Bot_GetValidatedPlayerObject()`
+    - Handles zone becoming empty during 3.0s spawn delay
+    - Cleans up stale bot data from reused client IDs
+    - Detects and handles ghost bots (shell bots)
+    - Multiple real player safeguards (save file checks)
     - Sets `BotInfoAiName` immediately
-    - Sets team immediately via `DetermineBotTeam()` and `GameBase::setTeam()`
+    - Sets team via `DetermineBotTeam()` + `GameBase::setTeam()`
     - Calls `ScheduleTeamEnforcement()` for aggressive team enforcement
     - Schedules `VerifyEnemyBotTeam()` for verification
     - Registers bot via `RegisterBot()`
     - Calls `CommitSpawnSlot()` to commit the reserved slot
     - Sets `HasLoadedAndSpawned` flag
     - Schedules `AI::setWeapons()` after 0.2s delay
+
 
 ### Team Management
 11. **`DetermineBotTeam(%botName, %displayName, %commandIssuer, %clientId)`** (`Ai.cs:3141`)
@@ -118,6 +126,37 @@ This document lists all functions currently used in the spawn and despawn flows 
 21. **`GetEveryoneIdList()`** (`rpgfunk.cs:4073`)
     - Gets list of all client IDs
     - Uses `Client::getFirst()` and `Client::getNext()` for iteration
+
+### PlayerManager (C++ Plugin Integration)
+22. **`PlayerManager::getFreeId()`** (`Plugins/PlayerManager.dll`)
+    - Returns next available client ID (O(1) lookup)
+    - Called from `SpawnAI()` to predict client ID before `AI::spawn()`
+    - Passed to `SpawnAIGetClientId()` as `%predictedId`
+
+23. **`PlayerManager::isIdFree(%id)`** (`Plugins/PlayerManager.dll`)
+    - Checks if specific client ID is available
+    - Used for validation before spawn
+
+### Helper Functions (Bot Detection & Cleanup)
+24. **`HasEnemyBotNamePrefix(%name)`** (`Ai.cs:2053`)
+    - Checks if name starts with enemy bot prefix
+    - Covers: Alien, Admin, Angel, Demon, God, Minotaur, Ogre, Orc, Pigman, Undead, Zombie, Seal, Enemy, Void
+    - Consolidates 14+ inline pattern checks
+
+25. **`IsSafeToModify(%clientId, %context)`** (`Ai.cs:~1200`)
+    - Unified safeguard for bot vs real player detection
+    - Checks: save file, AI-controlled flag, bot markers
+    - Returns true if safe to modify (is a bot)
+
+26. **`PreSpawnCleanup(%clientId)`** (`Ai.cs:1891`)
+    - Clears all stale bot data from client ID
+    - Called before reusing a client ID for new bot
+    - Handles ghost bot cleanup
+
+27. **`Bot_GetValidatedPlayerObject(%clientId)`** (`Ai.cs:~4800`)
+    - Validates player object exists and is valid
+    - Returns player object ID or empty string
+
 
 ---
 

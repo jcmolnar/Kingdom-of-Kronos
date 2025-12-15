@@ -70,14 +70,26 @@ The central "Brain" of the AI system.
     *   `$ActiveEnemyBots`, `$ActiveTownBots`: Specific counters for enemy/town bots.
     *   `$BotRegistry`: Master registry mapping clientIDs to bot data.
     *   `$aiNumTable`: Lookup table for AI number allocation.
+    *   `$ClientIdRecentlyFreed[]`: Prevents immediate client ID reuse after bot death.
 
 *   **Enemy Bot Spawn Flow**:
     1.  `InitSpawnPoints()`: Server startup - initializes spawn points.
     2.  `SpawnLoop(...)`: Main loop managing spawn slots and cooldowns.
     3.  `AI::helper(...)`: Prepares bot name and calls spawn.
     4.  `SpawnAI(...)`: **CORE**. Creates the AI object (`createAI`) and schedules setups.
-    5.  `SpawnAIGetClientId(...)`: **CRITICAL**. Retrieve clientID, sets team, and registers bot.
+    5.  `SpawnAIGetClientId(...)`: **CRITICAL** (2,114 lines). Retrieve clientID, validates, sets team, registers bot.
     6.  `AI::setWeapons(...)`: Equips weapons and initializes skills.
+
+*   **Client ID Management (PlayerManager integration in C++ plugin)**:
+    *   `PlayerManager::getFreeId()`: Returns next available client ID (O(1) lookup).
+    *   `PlayerManager::isIdFree(%id)`: Checks if client ID is available.
+    *   `Bot_GetValidatedPlayerObject(%clientId)`: Validates player object exists.
+
+*   **Helper Functions**:
+    *   `HasEnemyBotNamePrefix(%name)`: Checks if name starts with enemy bot prefix (Alien, Admin, Demon, etc.).
+    *   `Bot_MatchesEnemyPattern(%name)`: Extended check including Colloseum patterns.
+    *   `IsSafeToModify(%clientId, %context)`: Unified safeguard for bot vs player detection.
+    *   `PreSpawnCleanup(%clientId)`: Clears all stale bot data from client ID.
 
 *   **Town Bot Spawn Flow**:
     1.  `InitTownBots()`: Server startup - triggers zone spawns.
@@ -97,6 +109,7 @@ The central "Brain" of the AI system.
     *   `AI::onDroneAI(...)`: Main thinking loop for AI.
     *   `BotIndex_Add/Remove(...)`: Manages O(1) lookup tables.
     *   `RegisterBot(...)` / `UnregisterBot(...)`: Manages the `$BotRegistry`.
+
 
 ### `Spawn.cs`
 *   **Purpose**: Handles physical spawning logic (locations, markers).

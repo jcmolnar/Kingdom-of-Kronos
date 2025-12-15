@@ -1733,7 +1733,9 @@ function ReconcileSpawnCounters()
 	// Verify registry list integrity - remove any invalid entries
 	%newList = "";
 	%removedCount = 0;
-	for(%i = 0; GetWord($BotRegistryList, %i) != -1; %i++)
+	// SAFETY: Add max iteration limit to prevent infinite loop if registry is corrupted
+	%maxIterations = 500;
+	for(%i = 0; GetWord($BotRegistryList, %i) != -1 && %i < %maxIterations; %i++)
 	{
 		%clientId = GetWord($BotRegistryList, %i);
 		
@@ -1799,8 +1801,11 @@ function ReconcileSpawnCounters()
 				
 				// Additional check: Verify this is not a connected real player
 				%isReconcileConnected = false;
-				for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
+				// SAFETY: Add max iteration limit to prevent infinite loop
+				%clientCheckCount = 0;
+				for(%cl = Client::getFirst(); %cl != -1 && %clientCheckCount < 200; %cl = Client::getNext(%cl))
 				{
+					%clientCheckCount++;
 					if(%cl == %clientId)
 					{
 						%isReconcileConnected = true;
@@ -2045,6 +2050,36 @@ function PreSpawnCleanup(%clientId)
 // Consolidated functions to determine bot type
 // ============================================================================
 
+// HasEnemyBotNamePrefix: Check if a name starts with a known enemy bot prefix
+// Centralized check based on NameForRace values in EnemyArmors.cs
+// Returns: true if name starts with an enemy bot prefix, false otherwise
+function HasEnemyBotNamePrefix(%name)
+{
+	if(%name == "" || %name == -1)
+		return false;
+	
+	// Enemy bot prefixes from EnemyArmors.cs NameForRace values
+	// Covers: Alien, Admin, Angel, Demon, God, Minotaur, Ogre, Orc, Pigman, Undead, Zombie, Seal, Enemy, Void
+	if(String::findSubStr(%name, "Alien") == 0 || 
+	   String::findSubStr(%name, "Admin") == 0 ||
+	   String::findSubStr(%name, "Angel") == 0 ||
+	   String::findSubStr(%name, "Demon") == 0 ||
+	   String::findSubStr(%name, "God") == 0 ||
+	   String::findSubStr(%name, "Minotaur") == 0 ||
+	   String::findSubStr(%name, "Ogre") == 0 ||
+	   String::findSubStr(%name, "Orc") == 0 ||
+	   String::findSubStr(%name, "Pigman") == 0 ||
+	   String::findSubStr(%name, "Undead") == 0 ||
+	   String::findSubStr(%name, "Zombie") == 0 ||
+	   String::findSubStr(%name, "Seal") == 0 ||
+	   String::findSubStr(%name, "Enemy") == 0 ||
+	   String::findSubStr(%name, "Void") == 0)
+	{
+		return true;
+	}
+	return false;
+}
+
 // Check if a client ID belongs to a town bot
 function isTownBot(%clientId)
 {
@@ -2128,23 +2163,11 @@ function isEnemyBot(%clientId)
 	}
 	
 	// Fallback: Check display name patterns
-	// CRITICAL: Use != -1 to match pattern anywhere in name (allows "Giant Demon Lord" to match "Demon")
 	%playerName = Client::getName(%clientId);
 	if(%playerName != "" && %playerName != -1)
 	{
-		// Check for enemy bot name patterns (anywhere in name, not just start)
-		if(String::findSubStr(%playerName, "Alien") != -1 || 
-		   String::findSubStr(%playerName, "Admin") != -1 ||
-		   String::findSubStr(%playerName, "Angel") != -1 ||
-		   String::findSubStr(%playerName, "Demon") != -1 ||
-		   String::findSubStr(%playerName, "Zombie") != -1 ||
-		   String::findSubStr(%playerName, "Ogre") != -1 ||
-		   String::findSubStr(%playerName, "Orc") != -1 ||
-		   String::findSubStr(%playerName, "Pigman") != -1 ||
-		   String::findSubStr(%playerName, "Undead") != -1 ||
-		   String::findSubStr(%playerName, "Minotaur") != -1 ||
-		   String::findSubStr(%playerName, "Seal") != -1 ||
-		   String::findSubStr(%playerName, "God") != -1)
+		// Check for enemy bot name patterns (at start of name)
+		if(HasEnemyBotNamePrefix(%playerName))
 		{
 			return true;
 		}
@@ -2300,6 +2323,15 @@ function getAInumberFromName(%aiName)
 //---------------------------------
 function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck)
 {
+	// CRITICAL INTEGRATION: Server capacity check at lowest level
+	// This provides defense-in-depth - even if higher-level callers skip the check
+	%predictedId = PlayerManager::getFreeId();
+	if(%predictedId == -1)
+	{
+		echo("CRITICAL: createAI - Server is FULL! Aborting spawn for " @ %aiName);
+		return -1;
+	}
+	
 	dbecho($dbechoMode, "createAI(" @ %aiName @ ", " @ %markerGroup @ ", " @ %name @ ", " @ %skipPostSpawn @ ")");
 	//echo("[SPAWN DEBUG] createAI(): aiName=" @ %aiName @ ", markerGroup=" @ %markerGroup @ ", name=" @ %name);
 	
@@ -4148,20 +4180,7 @@ function IsEnemyBot(%clientId)
 	if(%playerName != "" && %playerName != -1)
 	{
 		// Check for enemy bot name patterns (must be at start of name)
-		if(String::findSubStr(%playerName, "Alien") == 0 || 
-		   String::findSubStr(%playerName, "Admin") == 0 ||
-		   String::findSubStr(%playerName, "Angel") == 0 ||
-		   String::findSubStr(%playerName, "Demon") == 0 ||
-		   String::findSubStr(%playerName, "Zombie") == 0 ||
-		   String::findSubStr(%playerName, "Ogre") == 0 ||
-		   String::findSubStr(%playerName, "Orc") == 0 ||
-		   String::findSubStr(%playerName, "Pigman") == 0 ||
-		   String::findSubStr(%playerName, "Pigmen") == 0 ||
-		   String::findSubStr(%playerName, "Undead") == 0 ||
-		   String::findSubStr(%playerName, "Minotaur") == 0 ||
-		   String::findSubStr(%playerName, "Seal") == 0 ||
-		   String::findSubStr(%playerName, "God") == 0 ||
-		   String::findSubStr(%playerName, "Enemy") == 0)
+		if(HasEnemyBotNamePrefix(%playerName))
 		{
 			return true;
 		}
@@ -4276,6 +4295,8 @@ function DetermineBotTeam(%botName, %displayName, %commandIssuer, %clientId)
 			return 8; // Seals
 		else if(String::findSubStr(%displayName, "Angel") != -1)
 			return 10; // Angels
+		else if(String::findSubStr(%displayName, "Void") != -1)
+			return 12; // Void enemies
 	}
 	
 	// Default: team 1 (Enemy)
@@ -4383,6 +4404,20 @@ Telemetry_RecordSpawnAttempt();  // Track spawn attempt
 }
 function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId)
 {
+	// CRITICAL INTEGRATION: Check server capacity before attempting spawn
+	// This prevents the engine from rejecting spawns or crashing when full
+	%predictedId = PlayerManager::getFreeId();
+	if(%predictedId == -1)
+	{
+		echo("CRITICAL: SpawnAI - Server is FULL! Aborting spawn for " @ %newName @ " (displayName: " @ %displayName @ ")");
+		// Rollback spawn slot if this was a spawn point spawn
+		if(%spawnPointId != "" && %spawnPointId != -1)
+		{
+			RollbackSpawnSlot(%spawnPointId);
+		}
+		Telemetry_RecordSpawnFailed("serverfull");
+		return -1;
+	}
 	// Initialize %loadout to empty string if not provided
 	if(%loadout == "")
 		%loadout = "";
@@ -4559,7 +4594,8 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 			%spawnPointIdForGetId = "";
 			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 				%spawnPointIdForGetId = %spawnPointId;
-			schedule("SpawnAIGetClientId(\"" @ %newName @ "\", \"" @ %displayName @ "\", \"" @ %aiSpawnPos @ "\", \"" @ %commandIssuer @ "\", \"" @ %loadout @ "\", \"" @ %spawnPointIdForGetId @ "\");", 3.0);
+			// CRITICAL INTEGRATION: Pass predicted ID to avoid expensive lookups
+			schedule("SpawnAIGetClientId(\"" @ %newName @ "\", \"" @ %displayName @ "\", \"" @ %aiSpawnPos @ "\", \"" @ %commandIssuer @ "\", \"" @ %loadout @ "\", \"" @ %spawnPointIdForGetId @ "\", \"" @ %predictedId @ "\");", 3.0);
 			return %newName; // Return immediately, client ID lookup happens in scheduled call
 		}
 		else
@@ -4708,28 +4744,10 @@ function Bot_CleanupStaleIds()
 					%stalePlayerObj = Client::getOwnedObject(%checkId);
 					if(%stalePlayerObj != -1 && %stalePlayerObj != "" && isObject(%stalePlayerObj))
 					{
-						// All checks passed - safe to delete stale bot using AI::delete
-						%staleAiName = $BotInfoAiName[%checkId];
-						if(%staleAiName == "") %staleAiName = $EnemyBotData[%checkId, "BotInfoAiName"];
-						if(%staleAiName == "") %staleAiName = $TownBotData[%checkId, "BotInfoAiName"];
-						if(%staleAiName == "") %staleAiName = fetchData(%checkId, "BotInfoAiName");
-						
-						if(%staleAiName != "" && %staleAiName != -1 && %staleAiName != "0")
-						{
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-								echo("[SPAWN FLOW] Bot_CleanupStaleIds(): Deleting stale bot via AI::delete: " @ %staleAiName @ " (clientId=" @ %checkId @ ")");
-							AI::delete(%staleAiName);
-						}
-						else
-						{
-							// Fallback: No AI name found
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-								echo("[SPAWN FLOW] Bot_CleanupStaleIds(): WARNING - No AI name for stale bot, using deleteObject fallback");
-							deleteObject(%stalePlayerObj);
-							Client::setOwnedObject(%checkId, -1);
-						}
-						PreSpawnCleanup(%checkId);
-						%cleanupPerformed = true;
+						// Use consolidated cleanup helper
+						%staleAiName = fetchData(%checkId, "BotInfoAiName");
+						if(Spawn_CleanupStaleClientId(%checkId, %staleAiName))
+							%cleanupPerformed = true;
 					}
 				}
 			}
@@ -4802,12 +4820,8 @@ function Bot_CleanupStaleIds()
 								continue;
 							}
 							
-							// All checks passed - safe to delete stale bot object
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-								echo("[SPAWN FLOW] Bot_CleanupStaleIds(): WARNING - Found stale player object " @ %stalePlayerObj @ " for recently freed bot clientId " @ %checkId @ ". Deleting to prevent shell bot.");
-							deleteObject(%stalePlayerObj);
-							Client::setOwnedObject(%checkId, -1);
-							PreSpawnCleanup(%checkId);
+							// All checks passed - use consolidated cleanup helper
+							Spawn_CleanupStaleClientId(%checkId, %botInfoAiName);
 						}
 					}
 				}
@@ -4900,21 +4914,8 @@ function Bot_MatchesEnemyPattern(%name)
 {
 	if(%name == "" || %name == -1) return false;
 	
-	// Standard enemy bot prefixes (from NameForRace in EnemyArmors.cs)
-	if(String::findSubStr(%name, "Alien") == 0 ||
-	   String::findSubStr(%name, "Admin") == 0 ||
-	   String::findSubStr(%name, "Angel") == 0 ||
-	   String::findSubStr(%name, "Demon") == 0 ||
-	   String::findSubStr(%name, "Zombie") == 0 ||
-	   String::findSubStr(%name, "Ogre") == 0 ||
-	   String::findSubStr(%name, "Orc") == 0 ||
-	   String::findSubStr(%name, "Pigman") == 0 ||
-	   String::findSubStr(%name, "Pigmen") == 0 ||
-	   String::findSubStr(%name, "Undead") == 0 ||
-	   String::findSubStr(%name, "Minotaur") == 0 ||
-	   String::findSubStr(%name, "Seal") == 0 ||
-	   String::findSubStr(%name, "God") == 0 ||
-	   String::findSubStr(%name, "Enemy") == 0)
+	// Standard enemy bot prefixes - use consolidated helper
+	if(HasEnemyBotNamePrefix(%name))
 	{
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] Bot_MatchesEnemyPattern(): Name '" @ %name @ "' matches enemy pattern");
 		return true;
@@ -4931,6 +4932,74 @@ function Bot_MatchesEnemyPattern(%name)
 	}
 	
 	return false;
+}
+
+// ============================================================================
+// SPAWN HELPER: Full cleanup for stale/orphaned client ID before reuse
+// Consolidates: player object deletion, counter decrements, AI number freeing, data clearing
+// Returns: true if cleanup performed, false if skipped (real player or invalid)
+// ============================================================================
+function Spawn_CleanupStaleClientId(%clientId, %oldBotInfoAiName)
+{
+	if(%clientId == "" || %clientId == -1) return false;
+	
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+		echo("[SPAWN FLOW] Spawn_CleanupStaleClientId(): Cleaning up stale client ID " @ %clientId @ " (old BotInfoAiName='" @ %oldBotInfoAiName @ "')");
+	
+	// Get existing BotInfoAiName if not provided
+	if(%oldBotInfoAiName == "" || %oldBotInfoAiName == -1)
+		%oldBotInfoAiName = fetchData(%clientId, "BotInfoAiName");
+	
+	// Delete any existing player object to prevent shell bots
+	%oldPlayerObj = Client::getOwnedObject(%clientId);
+	if(%oldPlayerObj != -1 && %oldPlayerObj != "" && isObject(%oldPlayerObj))
+	{
+		if(IsSafeToDeletePlayerObject(%oldPlayerObj, %clientId, "Spawn_CleanupStaleClientId"))
+		{
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+				echo("[SPAWN FLOW] Spawn_CleanupStaleClientId(): Deleting old bot (AI name='" @ %oldBotInfoAiName @ "')");
+			
+			// CRITICAL: Use AI::delete for named bots to properly unregister from engine
+			// Without this, the AI drone remains registered in the Torque AI engine
+			if(%oldBotInfoAiName != "" && %oldBotInfoAiName != -1 && %oldBotInfoAiName != "0")
+			{
+				AI::delete(%oldBotInfoAiName);
+			}
+			else
+			{
+				// Fallback: No AI name, use direct deleteObject
+				// Decrement $numAI for the old bot being replaced
+				if($numAI > 0)
+				{
+					$numAI--;
+					$Telemetry_NumAI_Dec++;
+				}
+				Client::setOwnedObject(%clientId, -1);
+				deleteObject(%oldPlayerObj);
+			}
+		}
+	}
+	
+	// Decrement spawn counter BEFORE clearing SpawnBotInfo
+	DecrementSpawnCounter(%clientId);
+	
+	// Free AI number BEFORE clearing BotInfoAiName
+	if(%oldBotInfoAiName != "" && %oldBotInfoAiName != -1 && %oldBotInfoAiName != "0")
+	{
+		%aiNumber = $tmpbotn[%oldBotInfoAiName];
+		if(%aiNumber != "" && %aiNumber != -1)
+		{
+			$aiNumTable[%aiNumber] = "";
+			$tmpbotn[%oldBotInfoAiName] = "";
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+				echo("[SPAWN FLOW] Spawn_CleanupStaleClientId(): Freed AI number " @ %aiNumber @ " for bot " @ %oldBotInfoAiName);
+		}
+	}
+	
+	// Clear all bot data
+	Bot_ClearStaleData(%clientId);
+	
+	return true;
 }
 
 // Clear all stale bot data from a client ID
@@ -4955,9 +5024,31 @@ function Bot_ClearStaleData(%clientId)
 		echo("[SPAWN FLOW] Bot_ClearStaleData(): Cleared stale data for clientId=" @ %clientId);
 }
 
-function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId)
+function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId, %predictedId)
 {
-	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] SpawnAIGetClientId: ENTRY spawnPointId='" @ %spawnPointId @ "' for " @ %newName);
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] SpawnAIGetClientId: ENTRY spawnPointId='" @ %spawnPointId @ "' for " @ %newName @ ", predictedId=" @ %predictedId);
+	
+	// CRITICAL INTEGRATION: Check predicted ID first (O(1) lookup)
+	// If the predicted ID matches our bot name, we found it immediately!
+	if(%predictedId != "" && %predictedId != -1)
+	{
+		%checkName = Client::getName(%predictedId);
+		if(%checkName == %newName)
+		{
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+				echo("[SPAWN FLOW] SpawnAIGetClientId(): Prediction SUCCESS! Found bot " @ %newName @ " at ID " @ %predictedId);
+			
+			// Inject this ID into AI::getId's typical result path to skip other searches
+			// Just ensure we use it below
+		}
+		else
+		{
+			// Prediction failed (race condition or mismatch) - log and fall back to standard search
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+				echo("[SPAWN FLOW] SpawnAIGetClientId(): Prediction mismatch (ID " @ %predictedId @ " has name '" @ %checkName @ "', expected '" @ %newName @ "'). Falling back to standard search.");
+			%predictedId = ""; // Clear so we don't use it
+		}
+	}
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 		echo("[SPAWN FLOW] SpawnAIGetClientId(): ENTRY - newName=" @ %newName @ ", displayName=" @ %displayName @ ", spawnPointId=" @ %spawnPointId @ " @ " @ getSimTime());
 	
@@ -4996,6 +5087,18 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						%ghostBotId = AI::getClientIdFromName(%newName);
 					if(%ghostBotId == "" || %ghostBotId == -1)
 						%ghostBotId = NEWgetClientByName(%newName);
+					
+					// CRITICAL FIX: Set SealBattleBot flag IMMEDIATELY if this is a seal battle bot
+					// This ensures that when HardcodeAIskills runs (before SetupBot), RefreshAll() knows to calculate stats
+					// Seal battle bot names start with "RoundOne", "RoundTwo", "RoundThree"
+					if(String::findSubStr(%newName, "RoundOne") == 0 || String::findSubStr(%newName, "RoundTwo") == 0 || String::findSubStr(%newName, "RoundThree") == 0)
+					{
+						if(%ghostBotId != -1 && %ghostBotId != "")
+						{
+							storeData(%ghostBotId, "SealBattleBot", true);
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Flagged existing ghost bot " @ %newName @ " as SealBattleBot");
+						}
+					}
 					
 					// Clear spawn flags first
 					$SpawnAIScheduled[%newName] = "";
@@ -5037,9 +5140,19 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 		echo("[SPAWN FLOW] SpawnAIGetClientId(): Attempting to get client ID for " @ %newName @ " (displayName: " @ %displayName @ ")");
 	
+	// Priority 0: Use Predicted ID if validated
+	if(%predictedId != "" && %predictedId != -1)
+	{
+		%aiIdFromGetId = %predictedId;
+	}
+	else
+	{
+		%aiIdFromGetId = AI::getId(%newName);
+	}
+	
 	// Priority 1: Try AI::getId() first (most reliable for newly spawned bots, works immediately)
 	// This is the fastest and most reliable way to find a bot that was just spawned
-	%aiIdFromGetId = AI::getId(%newName);
+	// %aiIdFromGetId = AI::getId(%newName); // REPLACED BY ABOVE BLOCK
 	if(%aiIdFromGetId != -1 && %aiIdFromGetId != "" && %aiIdFromGetId != "False" && %aiIdFromGetId != "false")
 	{
 		// CRITICAL SAFEGUARD: Check if a player is actively connecting to this client ID
@@ -5074,10 +5187,47 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			if(Player::isAiControlled(%aiIdFromGetId))
 			{
 				%aiId = %aiIdFromGetId;
+				
+				// CRITICAL FIX: Even in fast-path/Priority 1, we MUST check for stale data!
+				// If this ID was recently freed (recycled by engine), it might still have old bot data (stats, flags)
+				%recentlyFreed = $ClientIdRecentlyFreed[%aiId];
+				if(%recentlyFreed != "" && %recentlyFreed != "0" && %recentlyFreed != -1)
+				{
+					// CRITICAL: Check if a new valid player object exists at this clientId
+					// If so, the new bot has already spawned - do NOT clear its data!
+					%playerObj = Client::getOwnedObject(%aiId);
+					if(%playerObj == -1 || !isObject(%playerObj))
+					{
+						// No valid player object - safe to clear stale data
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+							echo("[SPAWN FLOW] SpawnAIGetClientId(): Fast-path ID " @ %aiId @ " was recently freed! FORCING stale data cleanup.");
+						
+						// Force clean the ID to prevent stat inheritance (God Mode exploit)
+						Bot_ClearStaleData(%aiId);
+					}
+					else
+					{
+						// Valid player object exists - new bot already spawned, skip cleanup
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) 
+							echo("[SPAWN FLOW] SpawnAIGetClientId(): Fast-path ID " @ %aiId @ " was recently freed BUT new player object exists - skipping cleanup to preserve new bot.");
+					}
+					
+					// Clear the flag so we don't check it again
+					$ClientIdRecentlyFreed[%aiId] = "";
+				}
+				
 				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found client ID " @ %aiId @ " via AI::getId() (fastest method)");
 				
 				// Store zone data so DespawnZoneBots can find this bot
 				Bot_StoreZoneData(%aiId, %spawnPointId);
+				
+				// CRITICAL FIX: Set SealBattleBot flag IMMEDIATELY if this is a seal battle bot
+				// This ensures that when HardcodeAIskills runs (before SetupBot), RefreshAll() knows to calculate stats
+				if(String::findSubStr(%newName, "RoundOne") == 0 || String::findSubStr(%newName, "RoundTwo") == 0 || String::findSubStr(%newName, "RoundThree") == 0)
+				{
+					storeData(%aiId, "SealBattleBot", true);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Flagged new bot " @ %newName @ " (clientId=" @ %aiId @ ") as SealBattleBot");
+				}
 			}
 		}
 	}
@@ -5106,6 +5256,14 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						
 						// Store zone data so DespawnZoneBots can find this bot
 						Bot_StoreZoneData(%aiId, %spawnPointId);
+						
+						// CRITICAL FIX: Set SealBattleBot flag IMMEDIATELY if this is a seal battle bot
+						// This ensures that when HardcodeAIskills runs (before SetupBot), RefreshAll() knows to calculate stats
+						if(String::findSubStr(%newName, "RoundOne") == 0 || String::findSubStr(%newName, "RoundTwo") == 0 || String::findSubStr(%newName, "RoundThree") == 0)
+						{
+							storeData(%aiId, "SealBattleBot", true);
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Flagged new bot " @ %newName @ " (clientId=" @ %aiId @ ") as SealBattleBot");
+						}
 					}
 					else
 					{
@@ -5139,6 +5297,12 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 								if(IsSafeToDeletePlayerObject(%oldPlayerObj, %aiId, "SpawnAIGetClientId-OldBotCleanup"))
 								{
 									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting old bot player object " @ %oldPlayerObj @ " for client ID " @ %aiId @ " to prevent shell bot");
+									// CRITICAL FIX: Decrement $numAI for the old bot being replaced
+									if($numAI > 0)
+									{
+										$numAI--;
+										$Telemetry_NumAI_Dec++;
+									}
 									Client::setOwnedObject(%aiId, -1);
 									deleteObject(%oldPlayerObj);
 								}
@@ -5529,8 +5693,24 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				// Only proceed with deletion if we confirmed it's not a real player
 				if(%aiId != -1 && %aiId != "" && %aiId != "False" && %aiId != "false")
 				{
+					// CRITICAL FIX: Check if the current display name matches our new bot
+					// If it does, this IS our newly spawned bot - stale BotInfoAiName is from a previous bot
+					// Just clear the stale data instead of deleting the player object!
+					if(String::ICompare(%existingName, %displayName) == 0)
+					{
+						// This is our new bot! Don't delete it - just clear stale BotInfoAiName if present
+						if(%existingBotInfoAiName != "" && %existingBotInfoAiName != -1 && %existingBotInfoAiName != "0" && %existingBotInfoAiName != %newName)
+						{
+							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Found OUR bot " @ %displayName @ " with stale BotInfoAiName='" @ %existingBotInfoAiName @ "'. Clearing stale data, NOT deleting.");
+							storeData(%aiId, "BotInfoAiName", "");
+							$BotInfoAiName[%aiId] = "";
+							$EnemyBotData[%aiId, "BotInfoAiName"] = "";
+							$TownBotData[%aiId, "BotInfoAiName"] = "";
+						}
+						// Skip the deletion block - this is our bot
+					}
 					// If the name doesn't match OR BotInfoAiName is set to a different bot, this is an old player object
-					if((%existingName != "" && %existingName != -1 && String::ICompare(%displayName, %existingName) != 0) || 
+					else if((%existingName != "" && %existingName != -1 && String::ICompare(%displayName, %existingName) != 0) || 
 					   (%existingBotInfoAiName != "" && %existingBotInfoAiName != -1 && %existingBotInfoAiName != "0" && %existingBotInfoAiName != %newName))
 					{
 						// CRITICAL: Final verification immediately before deletion (prevents race condition)
@@ -5548,15 +5728,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							}
 							
 							// Additional check: Verify name doesn't match player pattern (not bot pattern)
-							if(String::findSubStr(%finalNameCheck, "Alien") == -1 && 
-							   String::findSubStr(%finalNameCheck, "Admin") == -1 &&
-							   String::findSubStr(%finalNameCheck, "Demon") == -1 &&
-							   String::findSubStr(%finalNameCheck, "Ogre") == -1 &&
-							   String::findSubStr(%finalNameCheck, "Pigman") == -1 &&
-							   String::findSubStr(%finalNameCheck, "Undead") == -1 &&
-							   String::findSubStr(%finalNameCheck, "Minotaur") == -1 &&
-							   String::findSubStr(%finalNameCheck, "Seal") == -1 &&
-							   String::findSubStr(%finalNameCheck, "God") == -1)
+							if(!HasEnemyBotNamePrefix(%finalNameCheck))
 							{
 								// Name doesn't match bot patterns - could be a real player
 								// Double-check with save file one more time
@@ -5978,16 +6150,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						if(%ghostName != "" && %ghostName != -1)
 						{
 							// Check if name matches bot patterns
-							if(String::findSubStr(%ghostName, "Alien") == 0 || 
-							   String::findSubStr(%ghostName, "Admin") == 0 ||
-							   String::findSubStr(%ghostName, "Angel") == 0 ||
-							   String::findSubStr(%ghostName, "Demon") == 0 ||
-							   String::findSubStr(%ghostName, "Ogre") == 0 ||
-							   String::findSubStr(%ghostName, "Pigman") == 0 ||
-							   String::findSubStr(%ghostName, "Undead") == 0 ||
-							   String::findSubStr(%ghostName, "Minotaur") == 0 ||
-							   String::findSubStr(%ghostName, "Seal") == 0 ||
-							   String::findSubStr(%ghostName, "God") == 0)
+							if(HasEnemyBotNamePrefix(%ghostName))
 							{
 								%isActuallyBot = true;
 							}
@@ -6298,10 +6461,9 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			
 			// PRIORITY 3: Check if internal name (%newName) matches known bot patterns
 			// This catches Colloseum bots and other bots with non-standard display names
-			// Colloseum bots have internal names like "BattleOx1", "Invader2", "MoonBreaker3", etc.
 			if(!%isBotName)
 			{
-				// Check for common bot internal name patterns
+				// Check for Colloseum-specific bot internal name patterns
 				if(String::findSubStr(%newName, "BattleOx") == 0 ||
 				   String::findSubStr(%newName, "Invader") == 0 ||
 				   String::findSubStr(%newName, "MoonBreaker") == 0 ||
@@ -6313,18 +6475,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				   String::findSubStr(%newName, "roundTwo") != -1 ||
 				   String::findSubStr(%newName, "roundThree") != -1 ||
 				   String::findSubStr(%newName, "Round") != -1 ||
-				   String::findSubStr(%newName, "Alien") == 0 ||
-				   String::findSubStr(%newName, "Admin") == 0 ||
-				   String::findSubStr(%newName, "Demon") == 0 ||
-				   String::findSubStr(%newName, "Zombie") == 0 ||
-				   String::findSubStr(%newName, "Ogre") == 0 ||
-				   String::findSubStr(%newName, "Orc") == 0 ||
-				   String::findSubStr(%newName, "Pigman") == 0 ||
-				   String::findSubStr(%newName, "Undead") == 0 ||
-				   String::findSubStr(%newName, "Minotaur") == 0 ||
-				   String::findSubStr(%newName, "Seal") == 0 ||
-				   String::findSubStr(%newName, "God") == 0 ||
-				   String::findSubStr(%newName, "Enemy") == 0)
+				   // Use consolidated helper for enemy prefixes
+				   HasEnemyBotNamePrefix(%newName))
 				{
 					%isBotName = true;  // Internal name matches bot patterns
 					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by internal name pattern (newName=" @ %newName @ ") for clientId=" @ %aiId);
@@ -6362,21 +6514,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by explicit Colloseum/Seal Battle display name (playerName=" @ %playerName @ ") for clientId=" @ %aiId);
 				}
 				// Standard bot name patterns
-				else if(String::findSubStr(%playerName, "Alien") == 0 || 
-				   String::findSubStr(%playerName, "Admin") == 0 ||
-				   String::findSubStr(%playerName, "Angel") == 0 ||
-				   String::findSubStr(%playerName, "Demon") == 0 ||
-				   String::findSubStr(%playerName, "Zombie") == 0 ||
-				   String::findSubStr(%playerName, "Ogre") == 0 ||
-				   String::findSubStr(%playerName, "Orc") == 0 ||
-				   String::findSubStr(%playerName, "Pigman") == 0 ||
-				   String::findSubStr(%playerName, "Pigmen") == 0 ||
-				   String::findSubStr(%playerName, "Undead") == 0 ||
-				   String::findSubStr(%playerName, "Minotaur") == 0 ||
-				   String::findSubStr(%playerName, "Seal") == 0 ||
-				   String::findSubStr(%playerName, "God") == 0 ||
-				   String::findSubStr(%playerName, "Enemy") == 0 ||
-				   String::findSubStr(%playerName, "Round") != -1)  // Changed from == 0 to != -1 (check for "Round" anywhere, not just prefix)
+				else if(HasEnemyBotNamePrefix(%playerName) ||
+				   String::findSubStr(%playerName, "Round") != -1)  // Check for "Round" anywhere
 				{
 					%isBotName = true;
 					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Identified bot by display name pattern (playerName=" @ %playerName @ ") for clientId=" @ %aiId);
@@ -6459,20 +6598,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		// Check 4: Display name matches enemy bot patterns (God, Admin, Alien, etc.)
 		if(!%isOurBot && %currentDisplayName != "" && %currentDisplayName != -1)
 		{
-			if(String::findSubStr(%currentDisplayName, "Alien") == 0 || 
-			   String::findSubStr(%currentDisplayName, "Admin") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Angel") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Demon") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Zombie") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Ogre") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Orc") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Pigman") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Pigmen") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Undead") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Minotaur") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Seal") == 0 ||
-			   String::findSubStr(%currentDisplayName, "God") == 0 ||
-			   String::findSubStr(%currentDisplayName, "Enemy") == 0)
+			if(HasEnemyBotNamePrefix(%currentDisplayName))
 			{
 				%isOurBot = true;  // Display name matches enemy bot pattern, so it's an enemy bot
 			}
@@ -7246,14 +7372,7 @@ function Bot_DetermineType(%aiId, %spawnBotInfo, %botInfoAiName)
 	%displayName = Client::getName(%aiId);
 	if(%displayName != "" && %displayName != -1)
 	{
-		if(String::findSubStr(%displayName, "Enemy") >= 0 || 
-		   String::findSubStr(%displayName, "Ogre") >= 0 ||
-		   String::findSubStr(%displayName, "Pigmen") >= 0 ||
-		   String::findSubStr(%displayName, "Undead") >= 0 ||
-		   String::findSubStr(%displayName, "Demon") >= 0 ||
-		   String::findSubStr(%displayName, "Minotaur") >= 0 ||
-		   String::findSubStr(%displayName, "Alien") >= 0 ||
-		   String::findSubStr(%displayName, "Seal") >= 0)
+		if(HasEnemyBotNamePrefix(%displayName))
 		{
 			return "enemy";
 		}
@@ -8205,7 +8324,7 @@ function HardcodeAIskills(%aiId)
 		$PlayerSkill[%aiId, $SkillBludgeoning] = (getRandom() * $SkillRangePerLevel) + ((fetchData(%aiId, "LVL")+1) * $SkillRangePerLevel);
 		$PlayerSkill[%aiId, $SkillDodging] = (getRandom() * $SkillRangePerLevel) + ((fetchData(%aiId, "LVL")-2) * $SkillRangePerLevel);
 		$PlayerSkill[%aiId, $SkillVehicleCombat] = (getRandom() * $SkillRangePerLevel) + ((fetchData(%aiId, "LVL")-1) * $SkillRangePerLevel);
-		$PlayerSkill[%aiId, $SkillOffensiveCasting] = (getRandom() * $SkillRangePerLevel) + ((fetchData(%aiId, "LVL")-1) * $SkillRangePerLevel);
+		// SKIP: $PlayerSkill[%aiId, $SkillOffensiveCasting] - scaled by SetupBot() for spell damage
 		$PlayerSkill[%aiId, $SkillDefensiveCasting] = (getRandom() * $SkillRangePerLevel) + ((fetchData(%aiId, "LVL")-1) * $SkillRangePerLevel);
 		$PlayerSkill[%aiId, $SkillNeutralCasting] = (getRandom() * $SkillRangePerLevel) + ((fetchData(%aiId, "LVL")-1) * $SkillRangePerLevel);
 		// SKIP: $PlayerSkill[%aiId, $SkillEnergy] - scaled by SetupBot()
@@ -9846,19 +9965,7 @@ function RetryGetAIId(%aiName, %botName, %displayName, %zoneIndex)
 	if(%actualName != "" && %actualName != -1)
 	{
 		// Check if the name matches enemy bot patterns (enemy bots have prefixes like "Alien", "Admin", "Demon", etc.)
-		%isEnemyBotName = false;
-		if(String::findSubStr(%actualName, "Alien") == 0 || 
-		   String::findSubStr(%actualName, "Admin") == 0 ||
-		   String::findSubStr(%actualName, "Demon") == 0 ||
-		   String::findSubStr(%actualName, "Ogre") == 0 ||
-		   String::findSubStr(%actualName, "Pigmen") == 0 ||
-		   String::findSubStr(%actualName, "Undead") == 0 ||
-		   String::findSubStr(%actualName, "Minotaur") == 0 ||
-		   String::findSubStr(%actualName, "Seal") == 0 ||
-		   String::findSubStr(%actualName, "God") == 0)
-		{
-			%isEnemyBotName = true;
-		}
+		%isEnemyBotName = HasEnemyBotNamePrefix(%actualName);
 		
 		// Check if isRPGAI() returns true (bot data is set)
 		%hasBotData = isRPGAI(%clientId);
@@ -10080,6 +10187,14 @@ function SpawnSingleZoneBot(%botName, %zoneIndex)
 		%spawnPos = $BotInfo[%botName, SPAWN_POS];
 		%spawnRot = $BotInfo[%botName, SPAWN_ROT];
 		%displayName = $BotInfo[%botName, NAME];
+		
+		// CRITICAL INTEGRATION: Check server capacity before spawning
+		%predictedId = PlayerManager::getFreeId();
+		if(%predictedId == -1)
+		{
+			echo("CRITICAL: SpawnSingleZoneBot - Server is FULL! Aborting spawn for " @ %botName);
+			return;
+		}
 		
 		if(AI::spawn(%aiName, %armor, %spawnPos, %spawnRot, %displayName, "male2") != "false")
 	{
@@ -10323,9 +10438,9 @@ function ScheduleZoneSpawn(%zoneIndex)
 	if(%zoneIndex == 0 || %zoneIndex == "")
 		return;
 	
-	// EXEMPTION: Zone 23 (Colosseum) is managed by the Seal Battle system in remortseal.cs
+	// EXEMPTION: Zone 24 (Colloseum) is managed by the Seal Battle system in remortseal.cs
 	// Do not use normal spawn verification - let the seal battle handle its own bots
-	if(%zoneIndex == 23)
+	if(%zoneIndex == 24)
 		return;
 	
 	// Mark that we have a pending spawn for this zone
@@ -10420,128 +10535,26 @@ function SpawnZoneBots(%zoneIndex)
 {
 	%zoneDesc = $Zone::Desc[%zoneIndex];
 	%zoneShortName = GetZoneShortName(%zoneDesc);
-	// DEBUG: Commented out to reduce server lag
-	//echo("[ZONE DEBUG] SpawnZoneBots called for zone " @ %zoneIndex @ " (" @ %zoneDesc @ ")");
-	//echo("[TOWN BOT DEBUG] ========== SpawnZoneBots FUNCTION START ==========");
-	//echo("[TOWN BOT DEBUG] Zone: " @ %zoneIndex @ " (" @ %zoneDesc @ "), Short Name: " @ %zoneShortName);
 	
 	if(%zoneIndex == 0 || %zoneIndex == "")
-	{
-		// DEBUG: Commented out to reduce server lag
-		//echo("[TOWN BOT DEBUG] EARLY RETURN - zoneIndex is 0 or empty");
 		return;
-	}
 	
 	// Clear any pending despawn for this zone (Tribes doesn't have cancel() function)
 	// Set flag to empty to prevent scheduled despawn from executing
 	$ZoneBotDespawnSchedule[%zoneIndex] = "";
 	
-	// Spawn all bots in this zone
-	// Debug: Log registry count at start and check for banker1
-	%registryCount = GetWordCount($TownBotRegistry);
-	// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] SpawnZoneBots - Registry contains " @ %registryCount @ " bots for zone " @ %zoneIndex);
-	
-	// Debug: Check if banker1 is in registry
-	%banker1InRegistry = false;
-	%banker1Zone = $TownBotZone["banker1"];
-	%banker1Spawned = $TownBotSpawned["banker1"];
-	// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] banker1 check - Zone: " @ %banker1Zone @ ", Spawned: " @ %banker1Spawned @ ", Target zone: " @ %zoneIndex);
-	
-	// Debug: Check if banker1 actually appears in the registry string
-	%banker1Pos = String::findSubStr($TownBotRegistry, "banker1");
-	// DEBUG: Commented out to reduce server lag
-	//if(%banker1Pos >= 0)
-		//echo("[TOWN BOT DEBUG] banker1 found in registry string at position " @ %banker1Pos);
-	//else
-		//echo("[TOWN BOT DEBUG] ERROR: banker1 NOT found in registry string! Registry: '" @ String::getSubStr($TownBotRegistry, 0, 200) @ "...'");
-	
-	// Debug: Show first few words from registry to see what GetWord returns
-	if(%zoneIndex == 1)
-	{
-		// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] First 5 words from registry:");
-		for(%d = 0; %d < 5; %d++)
-		{
-			%word = GetWord($TownBotRegistry, %d);
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG]   Word " @ %d @ ": '" @ %word @ "'");
-		}
-		// Check word 1 specifically before loop
-		%testWord1 = GetWord($TownBotRegistry, 1);
-		// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] PRE-LOOP CHECK: GetWord(registry, 1) = '" @ %testWord1 @ "' (len=" @ String::len(%testWord1) @ ", ==banker1: " @ (%testWord1 == "banker1") @ ")");
-	}
-	
 	%wordCount = GetWordCount($TownBotRegistry);
-	// DEBUG: Commented out to reduce server lag
-	//if(%zoneIndex == 1)
-		//echo("[TOWN BOT DEBUG] Loop starting - WordCount: " @ %wordCount @ ", will iterate 0 to " @ (%wordCount - 1));
 	
 	for(%i = 0; %i < %wordCount; %i++)
 	{
-		// CRITICAL: Log EVERY iteration for zone 1, first 3 iterations unconditionally
-		if(%zoneIndex == 1)
-		{
-			// DEBUG: Commented out to reduce server lag
-			//if(%i <= 2)
-				//echo("[TOWN BOT DEBUG] *** LOOP ITERATION " @ %i @ " ENTERED ***");
-		}
-		
 		%botName = GetWord($TownBotRegistry, %i);
-		
-		// Log immediately after GetWord for first 3 iterations
-		// DEBUG: Commented out to reduce server lag
-		//if(%zoneIndex == 1 && %i <= 2)
-			//echo("[TOWN BOT DEBUG] After GetWord(" @ %i @ "): botName='" @ %botName @ "', len=" @ String::len(%botName));
-		
-		// Debug: Log every bot name we encounter (first 20 for zone 1)
-		if(%zoneIndex == 1 && %i < 20)
-		{
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] Iteration " @ %i @ " - botName: '" @ %botName @ "' (len=" @ String::len(%botName) @ ")");
-			// Special debug for iteration 1 where banker1 should be
-			if(%i == 1)
-			{
-				// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] Iteration 1 - botName value: '" @ %botName @ "', length: " @ String::len(%botName) @ ", isEmpty: " @ (%botName == "") @ ", is-1: " @ (%botName == -1));
-			}
-		}
 		
 		// Skip invalid bot names (like "0" which can appear in lists)
 		if(%botName == "" || %botName == "0" || %botName == -1)
-		{
-			// DEBUG: Commented out to reduce server lag
-			//if(%zoneIndex == 1 && %i == 1)
-				//echo("[TOWN BOT DEBUG] ERROR: Iteration 1 was skipped - botName='" @ %botName @ "' (should be banker1)");
-			// DEBUG: Commented out to reduce server lag
-			//if(%botName == "banker1")
-				//echo("[TOWN BOT DEBUG] ERROR: banker1 was skipped as invalid!");
 			continue;
-		}
-		
-		// Debug logging for banker1
-		if(%botName == "banker1")
-		{
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] Found banker1 in registry - Zone: " @ $TownBotZone[%botName] @ ", Spawned: " @ $TownBotSpawned[%botName] @ ", Target zone: " @ %zoneIndex);
-			if($TownBotZone[%botName] != %zoneIndex)
-			{
-				// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] banker1 SKIPPED - assigned to zone " @ $TownBotZone[%botName] @ " but we're spawning zone " @ %zoneIndex);
-			}
-			if($TownBotSpawned[%botName] != "")
-			{
-				// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] banker1 SKIPPED - already spawned with clientId: " @ $TownBotSpawned[%botName]);
-			}
-		}
 		
 		if($TownBotZone[%botName] == %zoneIndex && $TownBotSpawned[%botName] == "")
 		{
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] ========== Processing bot: " @ %botName @ " ==========");
 			// Spawn this bot
 			%aiName = "TownBot_" @ %botName;
 			
@@ -10583,22 +10596,6 @@ function SpawnZoneBots(%zoneIndex)
 			{
 				%displayName = %zoneShortName @ " " @ %baseDisplayName;
 			}
-			
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] ========== BEFORE AI::spawn() for " @ %botName @ " ==========");
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG]   AI Name: " @ %aiName);
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG]   Zone: " @ %zoneIndex @ " (" @ %zoneDesc @ "), Armor: " @ %armor);
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG]   Position: " @ %spawnPos @ ", Rotation: " @ %spawnRot);
-			// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG]   Base Display Name: " @ %baseDisplayName);
-			// DEBUG: Commented out to reduce server lag
-			//if(%isMerchant || %isBanker)
-				//echo("[TOWN BOT DEBUG]   Display Name (with zone prefix): " @ %displayName);
-			//else
-				//echo("[TOWN BOT DEBUG]   Display Name (no prefix needed): " @ %displayName);
 			
 			// Check if we already have a stored ID for this bot
 			%storedId = $TownBotSpawned[%botName];
@@ -10669,18 +10666,7 @@ function SpawnZoneBots(%zoneIndex)
 					%isBotName = false;
 					
 					// Check enemy bot patterns
-					if(String::findSubStr(%existingPlayerName, "Alien") == 0 || 
-					   String::findSubStr(%existingPlayerName, "Admin") == 0 ||
-					   String::findSubStr(%existingPlayerName, "Demon") == 0 ||
-					   String::findSubStr(%existingPlayerName, "Ogre") == 0 ||
-					   String::findSubStr(%existingPlayerName, "Pigmen") == 0 ||
-					   String::findSubStr(%existingPlayerName, "Undead") == 0 ||
-					   String::findSubStr(%existingPlayerName, "Minotaur") == 0 ||
-					   String::findSubStr(%existingPlayerName, "Seal") == 0 ||
-					   String::findSubStr(%existingPlayerName, "God") == 0)
-					{
-						%isBotName = true;
-					}
+					%isBotName = HasEnemyBotNamePrefix(%existingPlayerName);
 					
 					// Check if it matches expected town bot display name
 					%expectedDisplayName = $BotInfo[%botName, NAME];
@@ -10807,6 +10793,17 @@ function SpawnZoneBots(%zoneIndex)
 			// AI::spawn() will handle any orphaned AIs with this name
 			
 			if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: CALLING AI::spawn() for " @ %botName @ " with armor='" @ %armor @ "'");
+			
+			// CRITICAL INTEGRATION: Check server capacity before spawning
+			%predictedId = PlayerManager::getFreeId();
+			if(%predictedId == -1)
+			{
+				echo("CRITICAL: SpawnZoneBots - Server is FULL! Aborting spawn for " @ %botName);
+				// Clean up stored pending state?
+				// Just continue, maybe next slot frees up?
+				continue;
+			}
+			
 			if(AI::spawn(%aiName, %armor, %spawnPos, %spawnRot, %displayName, "male2") != "false")
 			{
 				if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: AI::spawn() SUCCEEDED for " @ %botName);
@@ -10815,7 +10812,18 @@ function SpawnZoneBots(%zoneIndex)
 				// CRITICAL: Try to get client ID immediately to set team before UpdateTeam() runs
 				// UpdateTeam() may be called by Game::playerSpawned() before SpawnZoneBotPostSpawn() runs
 				// If we can get the client ID now, set team immediately to prevent UpdateTeam() from setting it to team 1
-				%immediateClientId = NEWgetClientByName(%displayName);
+				
+				// CRITICAL INTEGRATION: Check predicted ID first
+				%immediateClientId = "";
+				if(%predictedId != "" && %predictedId != -1 && Client::getName(%predictedId) == %displayName)
+				{
+					%immediateClientId = %predictedId;
+					if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Prediction SUCCESS for " @ %botName @ " (ID: " @ %immediateClientId @ ")");
+				}
+				else
+				{
+					%immediateClientId = NEWgetClientByName(%displayName);
+				}
 				if(%immediateClientId != -1 && %immediateClientId != "")
 			{
 					// DEBUG: Check what armor the bot actually got
@@ -10895,21 +10903,8 @@ function SpawnZoneBots(%zoneIndex)
 				schedule("SpawnZoneBotPostSpawn(\"" @ %aiName @ "\", \"" @ %botName @ "\", \"" @ %displayName @ "\", " @ %zoneIndex @ ");", 1.0);
 				continue; // Continue to next bot - this one will be initialized in scheduled call
 			}
-			else
-			{
-				// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] AI::spawn() returned FALSE for " @ %botName);
-			}
-		}
-		else
-		{
-			// DEBUG: Commented out to reduce server lag
-			//if($TownBotSpawned[%botName] != "")
-				//echo("[TOWN BOT DEBUG] Skipping " @ %botName @ " - already spawned (clientId=" @ $TownBotSpawned[%botName] @ ")");
 		}
 	}
-	// DEBUG: Commented out to reduce server lag
-	//echo("[TOWN BOT DEBUG] ========== SpawnZoneBots FUNCTION END for zone " @ %zoneIndex @ " ==========");
 }
 
 // Despawn all bots for a specific zone
