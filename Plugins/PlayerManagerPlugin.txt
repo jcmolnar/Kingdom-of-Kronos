@@ -1,0 +1,33 @@
+PlayerManagerPlugin
+===================
+
+Minimal plugin for managing client IDs in bot spawning.
+
+Functions
+---------
+PlayerManager::getFreeId()
+    Returns the client ID that will be assigned to the next spawned bot/client.
+    Use this BEFORE spawning a bot to know what ID it will get.
+    Returns -1 if playerManager is not initialized.
+
+PlayerManager::isIdFree(clientId)
+    Returns "True" if the specified client ID is at the head of the free list.
+    Returns "False" otherwise.
+
+Usage Example
+-------------
+// Before spawning a bot, check what ID it will get
+%nextId = PlayerManager::getFreeId();
+echo("Next bot will be assigned ID: " @ %nextId);
+
+if (%nextId == %recentlyDisconnectedPlayerId) {
+    echo("Warning: Bot would get ID of recently disconnected player!");
+    // Handle conflict here
+}
+
+Technical Details
+-----------------
+- sg.playerManager address: 0x006A842C
+- clientFreeList offset: 0x24E2C (151084 bytes)
+- Console pointer: 0x6E284C
+- addCommand function: 0x403600

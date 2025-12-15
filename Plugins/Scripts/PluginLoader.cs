@@ -25,3 +25,10 @@ $PluginLoader::PatchesPlugin = true;
 $PluginLoader::CommLinkPlugin = true;
 $PluginLoader::BovExpansionPlugin = true;
 $PluginLoader::ServerSidePlugin = true;
+//$PluginLoader::TribesXT = true;  // Disabled - conflicts with existing plugins
+$PluginLoader::PlayerManagerPlugin = true;
+
+// Load Script-based Implementation since Native DLL is blocked
+// Execution from 'config' folder (which is in search path)
+echo("Loading support_getFreeId.cs...");
+exec("support_getFreeId.cs");

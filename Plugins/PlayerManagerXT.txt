@@ -1,0 +1,36 @@
+General Description:
+--------------------
+The PlayerManagerXT Plugin originally intended to be a DLL, is now implemented as a lightweight Script Addon (`support_getFreeId.cs`) due to engine restrictions on loading third-party DLLs.
+
+It provides the necessary console commands to find available Client IDs, essential for spawning bots or managing connections.
+
+Since it is script-based, it works on ALL Tribes versions without compatibility issues.
+
+Functions
+---------
+PlayerManager::getFreeId()
+    Returns the client ID that will be assigned to the next spawned bot/client.
+    Use this BEFORE spawning a bot to know what ID it will get.
+    Returns -1 if playerManager is not initialized.
+
+PlayerManager::isIdFree(clientId)
+    Returns "True" if the specified client ID is at the front of the free list.
+    Returns "False" otherwise.
+
+Usage Example
+-------------
+// Before spawning a bot, get what ID it will be assigned
+%nextId = PlayerManager::getFreeId();
+if (%nextId == %recentlyDisconnectedPlayerId) {
+    // Skip this spawn or handle conflict
+    echo("Warning: Bot would get ID of recently disconnected player!");
+}
+
+// Spawn the bot
+%botId = AI::spawn(...);
+
+Technical Details
+-----------------
+- sg.playerManager base address: 0x006A842C
+- clientFreeList offset: 0x24E2C (151084 bytes)
+- Uses TribesXT plugin framework
