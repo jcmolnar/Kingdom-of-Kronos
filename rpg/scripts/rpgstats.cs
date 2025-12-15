@@ -145,6 +145,17 @@ function fetchData(%clientId, %type)
 
 	if(%type == "LVL")
 	{
+		// CRITICAL: For seal battle bots, use the stored LVL directly
+		// The standard GetLevel(EXP) calculation returns 1 for bots (0 EXP) regardless of difficultly
+		// We MUST use the manually set LVL from SetupBot for stat scaling to work
+		%isSealBattleBot = GetDataFromArray(%clientId, "SealBattleBot");
+		if(%isSealBattleBot == "true" || %isSealBattleBot == "True" || %isSealBattleBot == "1")
+		{
+			%storedLVL = GetDataFromArray(%clientId, "LVL");
+			if(%storedLVL != "" && %storedLVL != -1 && %storedLVL != 0)
+				return %storedLVL;
+		}
+
 		%a = GetLevel(fetchData(%clientId, "EXP"), %clientId);
 		return %a;
 	}

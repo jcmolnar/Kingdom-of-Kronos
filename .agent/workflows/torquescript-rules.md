@@ -4,6 +4,10 @@ description: Critical TorqueScript/Tribes 1 scripting rules and constraints
 
 # TorqueScript Rules for Tribes 1
 
+## HEA V - CODEBASE MAP
+For a "helicopter view" of the entire scripts directory and file architecture, see:
+[SCRIPT_OVERVIEW.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/SCRIPT_OVERVIEW.md)
+
 ## CRITICAL SYNTAX RULES
 
 ### 1. NO TERNARY OPERATORS

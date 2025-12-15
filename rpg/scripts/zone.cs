@@ -336,77 +336,81 @@ function UpdateZone(%object)
 		%lastPos = $LastTownBotCheckPos[%clientId];
 		%lastResult = $LastTownBotCheckResult[%clientId];
 		
-		// If position hasn't changed much, skip entire check (regardless of previous result)
+		// If position hasn't changed much, skip town bot distance check (but NOT zone processing!)
 		if(%lastPos != "")
 		{
 			%distMoved = Vector::getDistance(%lastPos, %clientPos);
 			if(%distMoved < 10)  // Player hasn't moved more than 10 units
 			{
-				// Skip check - state hasn't changed
-				return;  // Early return to avoid unnecessary processing
+				// Skip ONLY town bot distance check - still need to process zone changes below!
+				%skipTownBotDistanceCheck = true;
 			}
 		}
 		
-		// Player moved significantly or first check - need to recalculate
-		%tooFarFromAll = True;
-		%previousResult = %lastResult;
-		
-		if($DebugTownBotDistance)
-			echo("[TOWNBOT DEBUG] UpdateZone - Checking distance from townbots for player " @ %clientId);
-		
-		// Check distance to all town bots
-		for(%i = 0; (%id = GetWord($TownBotList, %i)) != -1; %i++)
+		// Only run town bot distance check if player moved significantly
+		if(!%skipTownBotDistanceCheck)
 		{
-			%botPos = GameBase::getPosition(%id);
-			if(%botPos != "" && %botPos != -1)
+			// Player moved significantly or first check - need to recalculate
+			%tooFarFromAll = True;
+			%previousResult = %lastResult;
+			
+			if($DebugTownBotDistance)
+				echo("[TOWNBOT DEBUG] UpdateZone - Checking distance from townbots for player " @ %clientId);
+			
+			// Check distance to all town bots
+			for(%i = 0; (%id = GetWord($TownBotList, %i)) != -1; %i++)
 			{
-				if($DebugTownBotDistance)
-					echo("[TOWNBOT DEBUG] UpdateZone - Checking bot " @ %id);
-				
-				// Quick distance check using squared distance (avoids sqrt calculation)
-				%dx = GetWord(%clientPos, 0) - GetWord(%botPos, 0);
-				%dy = GetWord(%clientPos, 1) - GetWord(%botPos, 1);
-				%dz = GetWord(%clientPos, 2) - GetWord(%botPos, 2);
-				%distSq = %dx * %dx + %dy * %dy + %dz * %dz;
-				
-				if($DebugTownBotDistance)
+				%botPos = GameBase::getPosition(%id);
+				if(%botPos != "" && %botPos != -1)
 				{
-					%dist = Vector::getDistance(%clientPos, %botPos);
-					echo("[TOWNBOT DEBUG] UpdateZone - Bot " @ %id @ " distance: " @ %dist @ " (max: " @ %maxInteractionDist @ ")");
-				}
-				
-				// If player is within range of at least one bot, don't reset
-				if(%distSq <= %maxDistSq)
-				{
-					%tooFarFromAll = False;
 					if($DebugTownBotDistance)
-						echo("[TOWNBOT DEBUG] UpdateZone - Player within range of bot " @ %id @ " - NOT resetting states");
-					break;
+						echo("[TOWNBOT DEBUG] UpdateZone - Checking bot " @ %id);
+					
+					// Quick distance check using squared distance (avoids sqrt calculation)
+					%dx = GetWord(%clientPos, 0) - GetWord(%botPos, 0);
+					%dy = GetWord(%clientPos, 1) - GetWord(%botPos, 1);
+					%dz = GetWord(%clientPos, 2) - GetWord(%botPos, 2);
+					%distSq = %dx * %dx + %dy * %dy + %dz * %dz;
+					
+					if($DebugTownBotDistance)
+					{
+						%dist = Vector::getDistance(%clientPos, %botPos);
+						echo("[TOWNBOT DEBUG] UpdateZone - Bot " @ %id @ " distance: " @ %dist @ " (max: " @ %maxInteractionDist @ ")");
+					}
+					
+					// If player is within range of at least one bot, don't reset
+					if(%distSq <= %maxDistSq)
+					{
+						%tooFarFromAll = False;
+						if($DebugTownBotDistance)
+							echo("[TOWNBOT DEBUG] UpdateZone - Player within range of bot " @ %id @ " - NOT resetting states");
+						break;
+					}
 				}
-			}
-			else if($DebugTownBotDistance)
-			{
-				echo("[TOWNBOT DEBUG] UpdateZone - Bot " @ %id @ " has invalid position, skipping");
-			}
-		}
-		
-		// Update cache
-		$LastTownBotCheckPos[%clientId] = %clientPos;
-		if(%tooFarFromAll)
-		{
-			$LastTownBotCheckResult[%clientId] = "tooFar";
-			// Only reset if state changed from inRange to tooFar (not if already tooFar)
-			if(%previousResult == "inRange" || %previousResult == "")
-			{
-				for(%i = 0; (%id = GetWord($TownBotList, %i)) != -1; %i++)
+				else if($DebugTownBotDistance)
 				{
-					$state[%id, %clientId] = "";
+					echo("[TOWNBOT DEBUG] UpdateZone - Bot " @ %id @ " has invalid position, skipping");
 				}
 			}
-		}
-		else
-		{
-			$LastTownBotCheckResult[%clientId] = "inRange";
+			
+			// Update cache
+			$LastTownBotCheckPos[%clientId] = %clientPos;
+			if(%tooFarFromAll)
+			{
+				$LastTownBotCheckResult[%clientId] = "tooFar";
+				// Only reset if state changed from inRange to tooFar (not if already tooFar)
+				if(%previousResult == "inRange" || %previousResult == "")
+				{
+					for(%i = 0; (%id = GetWord($TownBotList, %i)) != -1; %i++)
+					{
+						$state[%id, %clientId] = "";
+					}
+				}
+			}
+			else
+			{
+				$LastTownBotCheckResult[%clientId] = "inRange";
+			}
 		}
 	}
 	

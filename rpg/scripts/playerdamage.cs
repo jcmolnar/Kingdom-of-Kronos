@@ -2712,6 +2712,19 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 			}
 		}
 		if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Shooter Resolved: " @ %shooterClient @ " (Original: " @ %object @ ")");
+
+		// PHASE 5 FIX: Check if the shooter's client ID was recently freed
+		// This blocks "ghost damage" from projectiles of dead bots whose IDs were immediately reused
+		%shooterRecentlyFreed = $ClientIdRecentlyFreed[%shooterClient];
+		if(%shooterRecentlyFreed != "" && %shooterRecentlyFreed != "0" && %shooterRecentlyFreed != -1)
+		{
+			// Safety window of 5 seconds (matching SpawnAIGetClientId window)
+			if((getSimTime() - %shooterRecentlyFreed) < 5000)
+			{
+				if($DamageDebugEnabled) echo("[DAMAGE FIX] BLOCKED ghost damage from recently freed Client ID " @ %shooterClient @ ". Timestamp: " @ %shooterRecentlyFreed);
+				return;
+			}
+		}
 		
 		%damagedClientPos = GameBase::getPosition(%damagedClient);
 		%shooterClientPos = GameBase::getPosition(%shooterClient);

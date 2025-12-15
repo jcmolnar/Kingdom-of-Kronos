@@ -498,19 +498,19 @@ $BotEquipment[TranscendentRoundThree] = 	"CLASS Fighter LVL 2400 REMORT 30 COINS
 $BotEquipment[Master] =         "CLASS Fighter LVL 2600 REMORT 31 COINS 200000 LCK 12 DiamondLegendSword 1";
 $BotEquipment[Ripper] =         "CLASS Mage LVL 2900 REMORT 31 COINS 400000 LCK 12 CastingBlade 1";
 
-$BotEquipment[RoundOne] =         "CLASS Fighter LVL 1000 REMORT 15 LCK 1 DiamondLegendSword 1";
+$BotEquipment[RoundOne] =         "CLASS Fighter LVL 1000 REMORT 15 LCK 1 SealFighterBlade 1";
 $BotEquipment[RoundTwo] =         "CLASS Mage LVL 1200 REMORT 10 LCK 1 CastingBlade 1";			//MAGE
-$BotEquipment[RoundThree] =         "CLASS Fighter LVL 1500 REMORT 15 LCK 1 DiamondLegendSword 1";
+$BotEquipment[RoundThree] =         "CLASS Fighter LVL 1500 REMORT 15 LCK 1 SealGuardianBlade 1";
 //end of remort 20 seal
-$BotEquipment[RoundFour] =         "CLASS Fighter LVL 1500 REMORT 30 LCK 4 diamondlegendsword 1";
+$BotEquipment[RoundFour] =         "CLASS Fighter LVL 1500 REMORT 30 LCK 4 SealFighterBlade 1";
 $BotEquipment[RoundFive] =         "CLASS Mage LVL 1700 REMORT 30 LCK 6 CastingBlade 1"; //MAGE
-$BotEquipment[RoundSix] =         "CLASS Fighter LVL 1900 REMORT 40 LCK 5 diamondlegendsword 1";	
+$BotEquipment[RoundSix] =         "CLASS Fighter LVL 1900 REMORT 40 LCK 5 SealGuardianBlade 1";	
 //end of remort 40 seal
 $BotEquipment[RoundSeven] =         "CLASS Fighter LVL 1900 REMORT 50 LCK 7 BlackDiamondDreamSword 1";
 $BotEquipment[RoundEight] =         "CLASS Mage LVL 2100 REMORT 50 LCK 6 CastingBlade 1";		//MAGE
 $BotEquipment[RoundNine] =         "CLASS Fighter LVL 2300 REMORT 55 LCK 9 BlackDiamondDreamSword 1";
 //end of remort 60 seal
-$BotEquipment[RoundTen] =        "CLASS Fighter LVL 2300 REMORT 80 LCK 11 diamondlegendsword 1";
+$BotEquipment[RoundTen] =        "CLASS Fighter LVL 2300 REMORT 80 LCK 11 SealFighterBlade 1";
 $BotEquipment[RoundEleven] =        "CLASS Mage LVL 2500 REMORT 70 LCK 10 CastingBlade 1";
 $BotEquipment[RoundTwelve] =        "CLASS Fighter LVL 2700 REMORT 75 LCK 12 blackdiamonddreamsword 1";
 

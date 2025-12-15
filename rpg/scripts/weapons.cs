@@ -83,6 +83,8 @@ $AccessoryVar[DiamondClaymore, $AccessoryType] = $SwordAccessoryType;
 $AccessoryVar[DiamondDeathSpear, $AccessoryType] = $PolearmAccessoryType;
 $AccessoryVar[DiamondBrainSpiller, $AccessoryType] = $BludgeonAccessoryType;
 $AccessoryVar[DiamondLegendSword, $AccessoryType] = $SwordAccessoryType;
+$AccessoryVar[SealFighterBlade, $AccessoryType] = $SwordAccessoryType;
+$AccessoryVar[SealGuardianBlade, $AccessoryType] = $SwordAccessoryType;
 $AccessoryVar[DiamondLegendSpear, $AccessoryType] = $PolearmAccessoryType;
 $AccessoryVar[DiamondLegendMace, $AccessoryType] = $BludgeonAccessoryType;
 $AccessoryVar[BlackDiamondDreamSword, $AccessoryType] = $SwordAccessoryType;
@@ -106,6 +108,8 @@ $AccessoryVar[TemperedCrystalBastardSword, $SpecialVar] = "6 140";
 $AccessoryVar[CrystalClaymore, $SpecialVar] = "6 165";
 $AccessoryVar[DiamondClaymore, $SpecialVar] = "6 195";
 $AccessoryVar[DiamondLegendSword, $SpecialVar] = "6 220";
+$AccessoryVar[SealFighterBlade, $SpecialVar] = "6 220";
+$AccessoryVar[SealGuardianBlade, $SpecialVar] = "6 220";
 $AccessoryVar[BlackDiamondDreamSword, $SpecialVar] = "6 300";
 $AccessoryVar[BlackDiamondAtomSplitter, $SpecialVar] = "6 450";
 //.................................................................................
@@ -162,6 +166,8 @@ $AccessoryVar[TemperedCrystalBastardSword, $Weight] = "8";
 $AccessoryVar[CrystalClaymore, $Weight] = "8.5";
 $AccessoryVar[DiamondClaymore, $Weight] = "8.5";
 $AccessoryVar[DiamondLegendSword, $Weight] = "4";
+$AccessoryVar[SealFighterBlade, $Weight] = "4";
+$AccessoryVar[SealGuardianBlade, $Weight] = "4";
 $AccessoryVar[BlackDiamondDreamSword, $Weight] = "3.5";
 $AccessoryVar[BlackDiamondAtomSplitter, $Weight] = "3";
 //.................................................................................
@@ -244,6 +250,8 @@ $AccessoryVar[DiamondClaymore, $MiscInfo] = "An extremely devastatingly strong d
 $AccessoryVar[DiamondDeathSpear, $MiscInfo] = "A destructive spear whose soul purpose is to cause death";
 $AccessoryVar[DiamondBrainSpiller, $MiscInfo] = "A diamond mace that is extremely good at spilling the brains of its foes";
 $AccessoryVar[DiamondLegendSword, $MiscInfo] = "A blessed sword of legends";
+$AccessoryVar[SealFighterBlade, $MiscInfo] = "A sacred blade wielded by Seal Fighters";
+$AccessoryVar[SealGuardianBlade, $MiscInfo] = "A sacred blade wielded by Seal Guardians";
 $AccessoryVar[DiamondLegendSpear, $MiscInfo] = "A blessed spear of legends";
 $AccessoryVar[DiamondLegendMace, $MiscInfo] = "A blessed mace of legends";
 $AccessoryVar[BlackDiamondDreamSword, $MiscInfo] = "A sword of dreams made from the rare black diamond";
@@ -296,6 +304,8 @@ $SkillType[DiamondClaymore] = $SkillSlashing;
 $SkillType[DiamondDeathSpear] = $SkillPiercing;
 $SkillType[DiamondBrainSpiller] = $SkillBludgeoning;
 $SkillType[DiamondLegendSword] = $SkillSlashing;
+$SkillType[SealFighterBlade] = $SkillSlashing;
+$SkillType[SealGuardianBlade] = $SkillSlashing;
 $SkillType[DiamondLegendSpear] = $SkillPiercing;
 $SkillType[DiamondLegendMace] = $SkillBludgeoning;
 $SkillType[BlackDiamondDreamSword] = $SkillSlashing;
@@ -1275,6 +1285,91 @@ function DiamondLegendSword::onMount(%player,%item,$WeaponSlot)
 {   %client = Player::getclient(%player); 
    bottomprint(%client, "<f1>Diamond Legend Sword: <f0>Attack: <f2>220    <f0>Skill Slashing Req @ <f2>840 Remort 1    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$9,425,500    <f0>Weight: <f2>4 Lbs");
 }
+
+//****************************************************************************************************
+//   SEAL FIGHTER BLADE (Dedicated Seal Battle weapon - prevents collision with world mobs)
+//****************************************************************************************************
+
+ItemImageData SealFighterBladeImage
+{
+	shapeFile  = "elfinblade";
+	mountPoint = 0;
+
+	weaponType = 0; // Single Shot
+	reloadTime = 0;
+	fireTime = GetDelay(SealFighterBlade);
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing2;
+	sfxActivate = ActivateAS;
+};
+ItemData SealFighterBlade
+{
+	heading = "bWeapons";
+	description = "Seal Fighter Blade";
+	className = "Weapon";
+	shapeFile  = "elfinblade";
+	hudIcon = "blaster";
+	shadowDetailMask = 4;
+	imageType = SealFighterBladeImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function SealFighterBladeImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(SealFighterBlade), SealFighterBlade);
+}
+
+function SealFighterBlade::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>Seal Fighter Blade: <f0>Attack: <f2>220    <f0>Skill Slashing    <f0>Speed: <f2>0.89 Seconds");
+}
+
+//****************************************************************************************************
+//   SEAL GUARDIAN BLADE (Dedicated Seal Battle weapon - prevents collision with world mobs)
+//****************************************************************************************************
+
+ItemImageData SealGuardianBladeImage
+{
+	shapeFile  = "elfinblade";
+	mountPoint = 0;
+
+	weaponType = 0; // Single Shot
+	reloadTime = 0;
+	fireTime = GetDelay(SealGuardianBlade);
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing2;
+	sfxActivate = ActivateAS;
+};
+ItemData SealGuardianBlade
+{
+	heading = "bWeapons";
+	description = "Seal Guardian Blade";
+	className = "Weapon";
+	shapeFile  = "elfinblade";
+	hudIcon = "blaster";
+	shadowDetailMask = 4;
+	imageType = SealGuardianBladeImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function SealGuardianBladeImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(SealGuardianBlade), SealGuardianBlade);
+}
+
+function SealGuardianBlade::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>Seal Guardian Blade: <f0>Attack: <f2>220    <f0>Skill Slashing    <f0>Speed: <f2>0.89 Seconds");
+}
+
 //****************************************************************************************************
 //   BLACK DIAMOND DREAM SWORD
 //****************************************************************************************************

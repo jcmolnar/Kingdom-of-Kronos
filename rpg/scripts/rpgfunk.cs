@@ -2148,6 +2148,43 @@ function LoadCharacter(%clientId)
 		// 3. RefreshAll() is already called by GiveThisStuff() during Game::playerSpawned() after spawn
 		// This prevents redundant calls and potential client crashes from calling RefreshAll before spawn
 		
+		// ===== DEBUG: COMPLETE INVENTORY SUMMARY =====
+		echo("===== INVENTORY SUMMARY for " @ %name @ " (" @ %clientId @ ") =====");
+		
+		// Player Inventory (regular items - not belt)
+		echo("--- PLAYER INVENTORY ---");
+		echo("  spawnStuff: " @ fetchData(%clientId, "spawnStuff"));
+		echo("  savedMountedWeapon: " @ fetchData(%clientId, "savedMountedWeapon"));
+		
+		// Regular Bank Storage (main bank - not belt storage)
+		echo("--- REGULAR BANK STORAGE ---");
+		echo("  BankStorage: " @ fetchData(%clientId, "BankStorage"));
+		
+		// Belt Items (carried)
+		echo("--- BELT ITEMS (Carried) ---");
+		echo("  QuestItems: " @ fetchData(%clientId, "QuestItems"));
+		echo("  KeyItems: " @ fetchData(%clientId, "KeyItems"));
+		echo("  Consumables: " @ fetchData(%clientId, "Consumables"));
+		echo("  Armor: " @ fetchData(%clientId, "Armor"));
+		echo("  Accessories: " @ fetchData(%clientId, "Accessories"));
+		echo("  Other: " @ fetchData(%clientId, "Other"));
+		
+		// Equipped Belt Items
+		echo("--- EQUIPPED BELT ITEMS ---");
+		echo("  EquippedBeltArmor: " @ fetchData(%clientId, "EquippedBeltArmor"));
+		echo("  EquippedBeltAccessories: " @ fetchData(%clientId, "EquippedBeltAccessories"));
+		
+		// Belt Storage at Banker (stored belt items)
+		echo("--- BELT STORAGE (at Banker) ---");
+		echo("  StoredQuestItems: " @ fetchData(%clientId, "StoredQuestItems"));
+		echo("  StoredKeyItems: " @ fetchData(%clientId, "StoredKeyItems"));
+		echo("  StoredConsumables: " @ fetchData(%clientId, "StoredConsumables"));
+		echo("  StoredArmor: " @ fetchData(%clientId, "StoredArmor"));
+		echo("  StoredAccessories: " @ fetchData(%clientId, "StoredAccessories"));
+		echo("  StoredOther: " @ fetchData(%clientId, "StoredOther"));
+		
+		echo("==============================================");
+		
 		//echo("===== DEBUG LoadCharacter: COMPLETE =====");
 		echo("Load complete.");
 	}
@@ -4002,6 +4039,7 @@ function ClearFunkVar(%name)
 	}
 
 }
+
 
 function Down(%t)
 {
@@ -6802,26 +6840,32 @@ function InitObjectives()
 {
 	dbecho($dbechoMode, "InitObjectives()");
 
-	Team::setObjective(0, 1, "<jc><f8>Welcome To The Kingdom of Kronos RPG!");
-	Team::setObjective(0, 2, "<jc><f5>Your Host: Jobo");
-	Team::setObjective(0, 3, "<f5>PK Rules:");
-	Team::setObjective(0, 4, "<f1>1) If any player involved in the PK is less than remort level 5, then the players must be within a 20 level range.");
-	Team::setObjective(0, 5, "<f1>2) If all players involved in the PK are remort level 5 or above, there is no level restrictions to PK. By this point the players SHOULD be smart enough to know when to run.");
-	Team::setObjective(0, 6, "<f1>3) You are not allowed to PK a single player more than once a day.");
-	Team::setObjective(0, 7, "<f1>Anyone caught breaking these rules will be jailed for 10 minutes, this will become more severe if the player continues to break these rules.");
-	Team::setObjective(0, 9, "<jc><f4>If you have suggestions on how to improve the server, message Jobo.");
-	Team::setObjective(0, 10, "<f2>-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-	Team::setObjective(0, 11, "<f2>For a list of spells use #offensivespells #neutralspells #defensivespells.");
-	Team::setobjective(0, 12, "<f2>Weapons and armor lists: #slash, #pierce, #bludge, #armor and #defense");
-	Team::setobjective(0, 13, "<f8>If you need to contact me my Discord is: Joblantski");
-	Team::setobjective(0, 14, "<f5>Credits: Asnabel for making the mod, Superfat for continuing it, Panda, Scorpion, Xan, DeraJ.");
-	Team::setobjective(0, 15, "<f5>Xan(Serene, Dog, RPGDog,) Has contributed to this mod in extraordinary ways. Thank you Dog.");
-	Team::setobjective(0, 16, "<f2>-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-	Team::setobjective(0, 17, "<f5>Bases / Artifacts / Members Online:");
-	Team::setobjective(0, 18, "<f1>  House Yuliple: " @ $BaseControl[HouseYuliple] @ " bases, " @ $FlagCommand[HouseYuliple] @ " artifacts, " @ $HouseMember[HouseYuliple] @ " members online");
-	Team::setobjective(0, 19, "<f1>  House Curama: " @ $BaseControl[HouseCurama] @ " bases, " @ $FlagCommand[HouseCurama] @ " artifacts, " @ $HouseMember[HouseCurama] @ " members online");
-	Team::setobjective(0, 20, "<f1>  House Arbal: " @ $BaseControl[HouseArbal] @ " bases, " @ $FlagCommand[HouseArbal] @ " artifacts, " @ $HouseMember[HouseArbal] @ " members online");
-	Team::setobjective(0, 21, "<f1>  House Kronos: " @ $BaseControl[HouseKronos] @ " bases, " @ $FlagCommand[HouseKronos] @ " artifacts, " @ $HouseMember[HouseKronos] @ " members online");
+	Team::setObjective(0, 1, "<jc><f2>Welcome To The Kingdom of Kronos RPG!");
+	Team::setObjective(0, 2, "");
+	Team::setObjective(0, 3, "<jc><f2>For eons, the Kingdom of Kronos was an advanced technological hub.");
+	Team::setObjective(0, 4, "<jc><f2>The Krono Stone stood as the fundamental pillar - a divine artifact");
+	Team::setObjective(0, 5, "<jc><f2>that stabilized reality, anchoring the simulation in a golden age of peace.");
+	Team::setObjective(0, 6, "<jc><f2>But the Stone fell into the wrong hands. The magi-scientists of the");
+	Team::setObjective(0, 7, "<jc><f2>Arbal Research Center sought to harness its infinite processing power.");
+	Team::setObjective(0, 8, "<jc><f2>In their hubris, they cracked the artifact, unleashing a catastrophic");
+	Team::setObjective(0, 9, "<jc><f2>Exception that shattered the timeline and rewrote the laws of physics.");
+	Team::setObjective(0, 10, "<jc><f2>Now, the Kingdom is a broken loop. High-tech weaponry devolved into");
+	Team::setObjective(0, 11, "<jc><f2>swords and spears. Nano-Tech armor lost to space, replaced with forged metal.");
+	Team::setObjective(0, 12, "<jc><f2>Citizens exposed to raw, corrupted data transformed into Pig Men, Ogres,");
+	Team::setObjective(0, 13, "<jc><f2>Undead, Minotaurs, Aliens, Demons, Gods, Angels, and Invisible Voids.");
+	Team::setObjective(0, 14, "<jc><f2>Even the Admin Bots, once guardians, have gone rogue - desperate to purge all life.");
+	Team::setObjective(0, 15, "<jc><f2>Hope lies only in the Remort. Fight your way to the Seal of Kronos,");
+	Team::setObjective(0, 16, "<jc><f2>sacrifice your form to be reborn with a Soul resilient to corruption.");
+	Team::setObjective(0, 17, "<jc><f2>From the safe haven of Yuliple City, to the chaotic darkness of The Void,");	
+	Team::setObjective(0, 18, "<jc><f2>you must master the broken world to restore the Kingdom - or rule its ruins");
+	Team::setObjective(0, 19, "");	
+	Team::setObjective(0, 20, "");
+	Team::setObjective(0, 21, "<jc><f2>----------------------------------------------------------------Hosted and Modified Heavily by Jobo---------------------------------------------------------------------------------");
+	Team::setObjective(0, 22, "<jc><f2>Bases / Artifacts / Members Online:");
+	Team::setObjective(0, 23, "<jc><f2>  House Yuliple: " @ $BaseControl[HouseYuliple] @ " bases, " @ $FlagCommand[HouseYuliple] @ " artifacts, " @ $HouseMember[HouseYuliple] @ " members online");
+	Team::setObjective(0, 24, "<jc><f2>  House Curama: " @ $BaseControl[HouseCurama] @ " bases, " @ $FlagCommand[HouseCurama] @ " artifacts, " @ $HouseMember[HouseCurama] @ " members online");
+	Team::setObjective(0, 25, "<jc><f2>  House Arbal: " @ $BaseControl[HouseArbal] @ " bases, " @ $FlagCommand[HouseArbal] @ " artifacts, " @ $HouseMember[HouseArbal] @ " members online");
+	Team::setObjective(0, 26, "<jc><f2>  House Kronos: " @ $BaseControl[HouseKronos] @ " bases, " @ $FlagCommand[HouseKronos] @ " artifacts, " @ $HouseMember[HouseKronos] @ " members online");
 
 	for(%i = 1; %i < getNumTeams(); %i++)
 	{
@@ -6866,10 +6910,10 @@ function UpdateHouseObjectivesDisplay()
 	
 	// Update the house objectives display with current BaseControl, FlagCommand, and HouseMember values
 	// Update only the house data lines (slots 18-21) - header at slot 17 stays the same
-	Team::setobjective(0, 18, "<f1>  House Yuliple: " @ $BaseControl[HouseYuliple] @ " bases, " @ $FlagCommand[HouseYuliple] @ " artifacts, " @ $HouseMember[HouseYuliple] @ " members online");
-	Team::setobjective(0, 19, "<f1>  House Curama: " @ $BaseControl[HouseCurama] @ " bases, " @ $FlagCommand[HouseCurama] @ " artifacts, " @ $HouseMember[HouseCurama] @ " members online");
-	Team::setobjective(0, 20, "<f1>  House Arbal: " @ $BaseControl[HouseArbal] @ " bases, " @ $FlagCommand[HouseArbal] @ " artifacts, " @ $HouseMember[HouseArbal] @ " members online");
-	Team::setobjective(0, 21, "<f1>  House Kronos: " @ $BaseControl[HouseKronos] @ " bases, " @ $FlagCommand[HouseKronos] @ " artifacts, " @ $HouseMember[HouseKronos] @ " members online");
+	Team::setobjective(0, 23, "<jc><f2>  House Yuliple: " @ $BaseControl[HouseYuliple] @ " bases, " @ $FlagCommand[HouseYuliple] @ " artifacts, " @ $HouseMember[HouseYuliple] @ " members online");
+	Team::setobjective(0, 24, "<jc><f2>  House Curama: " @ $BaseControl[HouseCurama] @ " bases, " @ $FlagCommand[HouseCurama] @ " artifacts, " @ $HouseMember[HouseCurama] @ " members online");
+	Team::setobjective(0, 25, "<jc><f2>  House Arbal: " @ $BaseControl[HouseArbal] @ " bases, " @ $FlagCommand[HouseArbal] @ " artifacts, " @ $HouseMember[HouseArbal] @ " members online");
+	Team::setobjective(0, 26, "<jc><f2>  House Kronos: " @ $BaseControl[HouseKronos] @ " bases, " @ $FlagCommand[HouseKronos] @ " artifacts, " @ $HouseMember[HouseKronos] @ " members online");
 }
 
 function RecursiveObjectivesRefresh()

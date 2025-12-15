@@ -37,3 +37,5 @@ $adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117
 $adminattempt::entry = "[Failed Admin Access Attempt] From Nubi (IP:207.6.39.117:57231). Tried to use password: GNAA";
 $adminattempt::entry = "[Failed Admin Access Attempt] From Nubi (IP:207.6.39.117:57231). Tried to use password: GNAA";
 $adminattempt::entry = "[Failed Admin Access Attempt] From Jobo (IP:207.6.39.117:64728). Tried to use password: GNAa";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jarn (IP:207.6.39.117:65146). Tried to use password: GNAA";
+$adminattempt::entry = "[Failed Admin Access Attempt] From Jarn (IP:207.6.39.117:65146). Tried to use password: dashoe";

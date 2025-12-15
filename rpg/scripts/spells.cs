@@ -3015,15 +3015,15 @@ function SpellDamage(%clientId, %targetId, %damageValue, %index)
 		}
 	}
 
-	// SEAL BATTLE: Check if caster is a seal battle bot with spell damage multiplier
-	%spellMult = $SealBattleSpellDmgMult[%clientId];
-	if(%spellMult != "" && %spellMult > 0)
-	{
-		%originalDamage = %damageValue;
-		%damageValue = floor(%damageValue * %spellMult);
-		// DEBUG: Disabled to prevent console spam during seal battles
-		// echo("[SEAL BATTLE] SpellDamage: Applied spell damage multiplier " @ %spellMult @ " to caster " @ %clientId @ " (damage: " @ %originalDamage @ " -> " @ %damageValue @ ")");
-	}
+	// SEAL BATTLE: Spell damage multiplier system DISABLED
+	// Instead, relying on high OffensiveCasting skill (~14390) set by SetupBot
+	// to naturally produce high spell damage through the game's formulas
+	// %spellMult = $SealBattleSpellDmgMult[%clientId];
+	// if(%spellMult != "" && %spellMult > 0)
+	// {
+	// 	%originalDamage = %damageValue;
+	// 	%damageValue = floor(%damageValue * %spellMult);
+	// }
 
 	GameBase::virtual(%targetId, "onDamage", $SpellDamageType, %damageValue, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, $Spell::keyword[%index]);
 }

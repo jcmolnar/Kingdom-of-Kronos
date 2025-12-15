@@ -26,7 +26,7 @@ $PluginLoader::CommLinkPlugin = true;
 $PluginLoader::BovExpansionPlugin = true;
 $PluginLoader::ServerSidePlugin = true;
 //$PluginLoader::TribesXT = true;  // Disabled - conflicts with existing plugins
-$PluginLoader::PlayerManagerPlugin = true;
+//$PluginLoader::PlayerManagerPlugin = true;
 
 // Load Script-based Implementation since Native DLL is blocked
 // Execution from 'config' folder (which is in search path)

@@ -1899,8 +1899,6 @@ function PreSpawnCleanup(%clientId)
 	
 	echo("[PRE-SPAWN CLEANUP] Cleaning up stale data for clientId " @ %clientId);
 
-	// If a player object still exists, delete it to prevent shells before reuse
-	%pobj = Client::getOwnedObject(%clientId);
 	if(%pobj != -1 && %pobj != "" && isObject(%pobj))
 	{
 		// (Redundant safeguards removed - handled by IsSafeToModify at top of function)
@@ -1910,6 +1908,10 @@ function PreSpawnCleanup(%clientId)
 		if(%aiName == "") %aiName = $EnemyBotData[%clientId, "BotInfoAiName"];
 		if(%aiName == "") %aiName = $TownBotData[%clientId, "BotInfoAiName"];
 		if(%aiName == "") %aiName = fetchData(%clientId, "BotInfoAiName");
+		
+		// Check for Enemy Bot status (SpawnBotInfo) to handle $numAI decrement
+		%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+		%isEnemyBot = (%spawnBotInfo != "" && %spawnBotInfo != -1 && %spawnBotInfo != "0");
 		
 		if(%aiName != "" && %aiName != -1 && %aiName != "0")
 		{
@@ -1922,6 +1924,15 @@ function PreSpawnCleanup(%clientId)
 			{
 				// Bot is on this clientId - safe to delete by name
 				echo("[PRE-SPAWN CLEANUP] Deleting bot via AI::delete: " @ %aiName @ " (clientId=" @ %clientId @ ")");
+				
+				// CRITICAL: Decrement $numAI if this is an Enemy Bot
+				if(%isEnemyBot && $numAI > 0)
+				{
+					$numAI--;
+					$Telemetry_NumAI_Dec++;
+					echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
+				}
+				
 				AI::delete(%aiName);
 			}
 			else if(%actualClientId != -1 && %actualClientId != "" && %actualClientId != "False" && %actualClientId != "false")
@@ -1929,6 +1940,15 @@ function PreSpawnCleanup(%clientId)
 				// Bot is ALIVE on a different clientId - DON'T delete by name!
 				// Just delete the player object on THIS clientId and clear the stale data
 				echo("[PRE-SPAWN CLEANUP] WARNING: Bot " @ %aiName @ " is alive on clientId " @ %actualClientId @ ", NOT deleting by name. Clearing stale data from clientId " @ %clientId);
+				
+				// CRITICAL: Decrement $numAI if this is an Enemy Bot
+				if(%isEnemyBot && $numAI > 0)
+				{
+					$numAI--;
+					$Telemetry_NumAI_Dec++;
+					echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
+				}
+				
 				deleteObject(%pobj);
 				Client::setOwnedObject(%clientId, -1);
 			}
@@ -1936,6 +1956,15 @@ function PreSpawnCleanup(%clientId)
 			{
 				// Bot name not found in AI engine - delete player object directly
 				echo("[PRE-SPAWN CLEANUP] Bot " @ %aiName @ " not found in AI engine, deleting player object for clientId " @ %clientId);
+				
+				// CRITICAL: Decrement $numAI if this is an Enemy Bot
+				if(%isEnemyBot && $numAI > 0)
+				{
+					$numAI--;
+					$Telemetry_NumAI_Dec++;
+					echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
+				}
+				
 				deleteObject(%pobj);
 				Client::setOwnedObject(%clientId, -1);
 			}
@@ -1944,6 +1973,15 @@ function PreSpawnCleanup(%clientId)
 		{
 			// Fallback: No AI name found, delete player object directly
 			echo("[PRE-SPAWN CLEANUP] WARNING: No AI name found, using deleteObject fallback for clientId " @ %clientId);
+			
+			// CRITICAL: Decrement $numAI if this is an Enemy Bot
+			if(%isEnemyBot && $numAI > 0)
+			{
+				$numAI--;
+				$Telemetry_NumAI_Dec++;
+				echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %clientId);
+			}
+			
 			deleteObject(%pobj);
 			Client::setOwnedObject(%clientId, -1);
 		}
@@ -5025,11 +5063,17 @@ function Spawn_CleanupStaleClientId(%clientId, %oldBotInfoAiName)
 			else
 			{
 				// Fallback: No AI name, use direct deleteObject
-				// Decrement $numAI for the old bot being replaced
-				if($numAI > 0)
+				// Decrement $numAI ONLY if this is an Enemy Bot that hasn't been processed by Player::onKilled
+				// (Player::onKilled clears SpawnBotInfo, so if it's still here, we need to decrement)
+				%checkSpawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+				if(%checkSpawnBotInfo != "" && %checkSpawnBotInfo != -1 && %checkSpawnBotInfo != "0")
 				{
-					$numAI--;
-					$Telemetry_NumAI_Dec++;
+					if($numAI > 0)
+					{
+						$numAI--;
+						$Telemetry_NumAI_Dec++;
+						if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] Spawn_CleanupStaleClientId: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %clientId);
+					}
 				}
 				Client::setOwnedObject(%clientId, -1);
 				deleteObject(%oldPlayerObj);
@@ -9005,6 +9049,19 @@ function CleanupGhostClientId(%clientId, %aiName)
 	// CRITICAL: Try to delete AI name from engine registry
 	if(%aiName != "" && %aiName != -1 && %aiName != "0")
 	{
+		// CRITICAL: Decrement $numAI if this was an Enemy Bot (had SpawnBotInfo)
+		// We explicitly check SpawnBotInfo to distinguish from Town Bots (which don't track $numAI)
+		%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
+		if(%spawnBotInfo != "" && %spawnBotInfo != -1 && %spawnBotInfo != "0")
+		{
+			if($numAI > 0)
+			{
+				$numAI--;
+				$Telemetry_NumAI_Dec++;
+				echo("[SPAWN COUNTER] CleanupGhostClientId: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
+			}
+		}
+		
 		%escapedAiName = String::replace(%aiName, "\"", "\\\"");
 		// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
 		schedule("AI::delete(\"" @ %escapedAiName @ "\");", 1.0);
@@ -9146,27 +9203,30 @@ function PeriodicGhostClientIdCleanup()
 			if(%name == "" || %name == -1)
 			{
 				// This is a ghost client ID - check if it's a bot (not a real player)
-				// Real players should have names set immediately, so empty name = likely a bot ghost
-				%botInfoAiName = fetchData(%checkId, "BotInfoAiName");
-				%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
-				
-				// Only cleanup if we have confirmed bot data AND no save file AND not a connected real player
-				if((%botInfoAiName != "" || %spawnBotInfo != "") && !%isConnected)
+				// Found a ghost!
+				// Check if it has bot data
+				%aiName = fetchData(%checkId, "BotInfoAiName");
+				if(%aiName != "" && %aiName != -1 && %aiName != "0")
 				{
-					// Try to get AI name from BotInfoAiName or infer from data
-					%aiName = %botInfoAiName;
-					if(%aiName == "" || %aiName == -1 || %aiName == "0")
+					// CRITICAL: Decrement $numAI if this was an Enemy Bot (had SpawnBotInfo)
+					%spawnBotInfo = fetchData(%checkId, "SpawnBotInfo");
+					if(%spawnBotInfo != "" && %spawnBotInfo != -1 && %spawnBotInfo != "0")
 					{
-						// Try to infer from SpawnBotInfo or use client ID
-						%aiName = "GhostBot_" @ %checkId;
+						if($numAI > 0)
+						{
+							$numAI--;
+							$Telemetry_NumAI_Dec++;
+							echo("[SPAWN COUNTER] PeriodicGhostClientIdCleanup: Decremented $numAI (now " @ $numAI @ ") for ghost enemy bot " @ %aiName);
+						}
 					}
 					
-					echo("WARNING: PeriodicGhostClientIdCleanup - Found ghost client ID " @ %checkId @ " (name: '" @ %name @ "', BotInfoAiName: '" @ %botInfoAiName @ "'). Cleaning up...");
+					echo("PeriodicGhostClientIdCleanup: Found ghost client ID " @ %checkId @ " (AI: " @ %aiName @ ") - cleaning up");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] PeriodicGhostClientIdCleanup: Found ghost client ID " @ %checkId @ " (AI: " @ %aiName @ ") - cleaning up");
 					CleanupGhostClientId(%checkId, %aiName);
 					%ghostCount++;
 				}
 			}
-		}
+	}
 	}
 	
 	if(%ghostCount > 0)

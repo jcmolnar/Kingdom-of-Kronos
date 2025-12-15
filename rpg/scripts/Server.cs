@@ -255,6 +255,7 @@ function createServer(%mission, %dedicated)
 	// Load Ai.cs (from base\scripts.vol - we can't override it easily)
 	exec(Ai);
 	exec(rpgfunk);
+	exec(EngineResultFix);
 	exec(skills);
 	exec(house);
 	exec(rpgarena);

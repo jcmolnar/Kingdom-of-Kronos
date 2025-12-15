@@ -231,6 +231,26 @@ function Server::onClientConnect(%clientId)
 	// This prevents race conditions where a bot spawn might try to use this ID while
 	// the player connection is being processed. Bot spawn code should check this flag.
 	$ClientIdPlayerConnecting[%clientId] = getSimTime();
+	
+	// CRITICAL INTEGRATION: Check if a BOT is occupying this client ID
+	// NOTE: By the time this runs, the engine has already created the player object
+	// for the connecting player, so we must check if it's AI-controlled (bot) vs real player
+	%occupyingObj = Client::getOwnedObject(%clientId);
+	if(%occupyingObj != -1 && %occupyingObj != "" && isObject(%occupyingObj))
+	{
+		// Check if this is an AI-controlled bot (not the player who just connected)
+		if(Player::isAiControlled(%clientId))
+		{
+			%occupyingName = Client::getName(%clientId);
+			echo("CRITICAL: Server::onClientConnect - Client ID " @ %clientId @ " occupied by BOT '" @ %occupyingName @ "'. Forcing cleanup...");
+			// Mark as no-drop to prevent lootbag spam
+			storeData(%clientId, "noDropLootbagFlag", True);
+			deleteObject(%occupyingObj);
+			// Clear any stale bot data
+			ClearAllBotData(%clientId, false);
+		}
+		// If not AI-controlled, it's the connecting player's object - that's normal
+	}
 
 
 	// this function located in connectivity.cs //
