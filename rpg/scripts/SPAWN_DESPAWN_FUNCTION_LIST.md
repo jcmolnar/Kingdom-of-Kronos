@@ -157,6 +157,30 @@ This document lists all functions currently used in the spawn and despawn flows 
     - Validates player object exists and is valid
     - Returns player object ID or empty string
 
+28. **`Spawn_AbortEmptyZone(%newName, %spawnPointId, %zoneIndex)`** (`Ai.cs:4943`)
+    - Aborts spawn when zone becomes empty during 3.0s spawn delay
+    - Finds ghost bot via AI::getId, clears data, calls AI::delete
+    - Calls RollbackSpawnSlot to prevent busy spawn point
+    - Tracks failure via Telemetry_RecordSpawnFailed("zoneempty")
+
+29. **`Spawn_CleanupStaleClientId(%clientId, %oldBotInfoAiName)`** (`Ai.cs:4999`)
+    - Comprehensive cleanup for stale/orphaned client IDs before reuse
+    - Uses AI::delete for named bots (proper engine cleanup)
+    - Falls back to deleteObject for unnamed bots
+    - Decrements spawn counters, frees AI numbers
+    - Calls Bot_ClearStaleData for data cleanup
+
+30. **`Bot_ClearStaleData(%clientId)`** (`Ai.cs:5064`)
+    - Clears all bot-specific data from a client ID
+    - Clears BotInfoAiName, SpawnBotInfo, HasLoadedAndSpawned
+    - Clears $EnemyBotData, $ClientData, $BotInfoAiName arrays
+    - Calls UnregisterBot to remove from registry
+
+31. **`Bot_CleanupStaleIds()`** (`Ai.cs:4725`)
+    - Pre-spawn cleanup function to find and clean stale client IDs
+    - Uses Spawn_CleanupStaleClientId for comprehensive cleanup
+    - Two-tier approach: Client::getFirst/getNext, then range loop fallback
+
 
 ---
 

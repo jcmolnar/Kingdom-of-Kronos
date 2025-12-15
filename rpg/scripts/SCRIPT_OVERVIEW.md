@@ -90,6 +90,9 @@ The central "Brain" of the AI system.
     *   `Bot_MatchesEnemyPattern(%name)`: Extended check including Colloseum patterns.
     *   `IsSafeToModify(%clientId, %context)`: Unified safeguard for bot vs player detection.
     *   `PreSpawnCleanup(%clientId)`: Clears all stale bot data from client ID.
+    *   `Spawn_AbortEmptyZone(%newName, %spawnPointId, %zoneIndex)`: Aborts spawn when zone becomes empty during delay.
+    *   `Spawn_CleanupStaleClientId(%clientId, %oldBotInfoAiName)`: Comprehensive cleanup for stale client IDs.
+    *   `Bot_ClearStaleData(%clientId)`: Clears bot-specific data from client ID.
 
 *   **Town Bot Spawn Flow**:
     1.  `InitTownBots()`: Server startup - triggers zone spawns.
