@@ -5294,42 +5294,8 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 						// If the old BotInfoAiName doesn't match the new bot name, we must clear it
 						if(%existingBotInfoAiName != "" && %existingBotInfoAiName != -1 && %existingBotInfoAiName != "0" && %existingBotInfoAiName != %newName)
 						{
-							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Clearing stale bot data from client ID " @ %aiId @ " (old BotInfoAiName='" @ %existingBotInfoAiName @ "', new='" @ %newName @ "')");
-							
-							// CRITICAL FIX: Delete any existing player object before reusing the client ID
-							// This prevents shell bots (orphaned player objects with no data/name)
-							%oldPlayerObj = Client::getOwnedObject(%aiId);
-							if(%oldPlayerObj != -1 && %oldPlayerObj != "" && isObject(%oldPlayerObj))
-							{
-								// Use unified safeguard function - replaces 5 nested safeguard checks
-								if(IsSafeToDeletePlayerObject(%oldPlayerObj, %aiId, "SpawnAIGetClientId-OldBotCleanup"))
-								{
-									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleting old bot player object " @ %oldPlayerObj @ " for client ID " @ %aiId @ " to prevent shell bot");
-									// CRITICAL FIX: Decrement $numAI for the old bot being replaced
-									if($numAI > 0)
-									{
-										$numAI--;
-										$Telemetry_NumAI_Dec++;
-									}
-									Client::setOwnedObject(%aiId, -1);
-									deleteObject(%oldPlayerObj);
-								}
-							}
-							
-							// CRITICAL FIX: Decrement spawn counter BEFORE clearing SpawnBotInfo
-							DecrementSpawnCounter(%aiId);
-							
-							// CRITICAL FIX: Free AI number BEFORE clearing BotInfoAiName
-							%aiNumber = $tmpbotn[%existingBotInfoAiName];
-							if(%aiNumber != "" && %aiNumber != -1)
-							{
-								$aiNumTable[%aiNumber] = "";
-								$tmpbotn[%existingBotInfoAiName] = "";
-								if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Freed AI number " @ %aiNumber @ " for bot " @ %existingBotInfoAiName @ " (via pre-clear cleanup)");
-							}
-							
-							// Clear all bot data to prevent shell bot detection
-							Bot_ClearStaleData(%aiId);
+							// Use consolidated cleanup helper (replaces 35 lines of inline code)
+							Spawn_CleanupStaleClientId(%aiId, %existingBotInfoAiName);
 						}
 						
 						// Now check if we can use this client ID (should be clean now)
