@@ -1419,6 +1419,22 @@ function IsRealPlayer(%clientId)
 		return true;
 	}
 	
+	// Priority 5: Town Bot List check
+	// Town bots may not have BotInfoAiName immediately set, but are in $TownBotList
+	if($TownBotList != "" && String::findSubStr($TownBotList, %clientId) != -1)
+	{
+		if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " found in $TownBotList = TOWN BOT (Not Real)");
+		return false;
+	}
+	
+	// Priority 6: Bot Registry check
+	// Enemy bots spawned from SpawnPoints are tracked in $BotRegistry
+	if($BotRegistry[%clientId, "spawnPoint"] != "" && $BotRegistry[%clientId, "spawnPoint"] != -1)
+	{
+		if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " found in $BotRegistry = ENEMY BOT (Not Real)");
+		return false;
+	}
+	
 	// Fallback: If we can't prove it's a bot, assume it's a player for safety
 	if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " fallback safety check = REAL PLAYER");
 	return true;
@@ -4775,8 +4791,21 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 		// We need to wait a moment before trying to get the client ID
 		// Schedule the client ID lookup with a short delay (0.5s; engine creates objects almost instantly)
 		// CRITICAL: Verify AI::spawn() actually succeeded before scheduling lookup
-		// createAI() returns the AI name on success, -1 on failure
-		if(%newName != "" && %newName != -1)
+		// createAI() returns the AI name on success, -1 on failure, "deferred" if delayed due to player connecting
+		if(%retval == "deferred")
+		{
+			// Spawn was deferred due to player actively connecting
+			// Don't schedule SpawnAIGetClientId - the deferred spawn will handle everything when it runs
+			// Rollback the reserved slot since we didn't actually spawn
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
+				echo("[SPAWN FLOW] SpawnAI(): Spawn deferred for " @ %newName @ " - rolling back slot and returning (deferred spawn will retry)");
+			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
+			{
+				RollbackSpawnSlot(%spawnPointId);
+			}
+			return "deferred";
+		}
+		else if(%newName != "" && %newName != -1)
 		{
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 				echo("[SPAWN FLOW] SpawnAI(): Scheduling client ID lookup in 0.5s (engine creates objects almost instantly)");
