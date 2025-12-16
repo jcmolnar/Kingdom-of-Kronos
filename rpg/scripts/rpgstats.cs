@@ -717,26 +717,21 @@ function DistributeExpForKilling(%damagedClient)
 {
 	dbecho($dbechoMode2, "DistributeExpForKilling(" @ %damagedClient @ ")");
 
-	// CRITICAL: Use BotInfoAiName for enemy bots, Client::getName() for regular players
-	// This ensures $damagedBy lookups work correctly for enemy bots
-	// EXCEPTION: For seal battle bots, use display name (Client::getName()) instead of BotInfoAiName
+	// CRITICAL: Use GetClientOrBotName() for consistent naming with damage tracking
+	// This ensures $damagedBy lookups use the SAME name that was used to track damage
+	// EXCEPTION: For seal battle bots, use display name (Client::getName()) instead
 	// so players see "SealFighter1" instead of "RoundOne3" in death messages
 	%isSealBattleBot = fetchData(%damagedClient, "SealBattleBot");
-	%botInfoAiName = fetchData(%damagedClient, "BotInfoAiName");
 	if(%isSealBattleBot == "true" || %isSealBattleBot == "True" || %isSealBattleBot == "1")
 	{
 		// Seal battle bot - use display name for death messages
 		%dname = Client::getName(%damagedClient);
 	}
-	else if(%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1)
-	{
-		// Regular enemy bot - use BotInfoAiName
-		%dname = %botInfoAiName;
-	}
 	else
 	{
-		// Regular player - use Client::getName()
-		%dname = Client::getName(%damagedClient);
+		// Regular player or enemy bot - use GetClientOrBotName() for consistency
+		// with damage tracking (same function used in Player::DealDamage)
+		%dname = GetClientOrBotName(%damagedClient);
 	}
 	
 	%dlvl = fetchData(%damagedClient, "LVL");
