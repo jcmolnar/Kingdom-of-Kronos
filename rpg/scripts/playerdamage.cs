@@ -365,12 +365,25 @@ function Client::onKilled(%clientId, %killerId, %damageType)
 // Helper function to get a consistent name for a client (player or bot)
 // For enemy bots, tries BotInfoAiName first, then falls back to Client::getName()
 // This ensures consistent naming for EXP distribution and damage tracking
+// CRITICAL: Uses $BotType[] for O(1) bot detection instead of slow isRPGAI()
 function GetClientOrBotName(%clientId)
 {
 	if(%clientId == "" || %clientId == -1)
 		return "";
 	
-	// For enemy bots, try BotInfoAiName first (more reliable than Client::getName)
+	// FAST PATH: Use $BotType[] cache for O(1) bot detection
+	// This is set when bots spawn and cleared when they die, so it's reliable
+	// Unlike isRPGAI() which can fail due to race conditions or file system checks
+	%botType = $BotType[%clientId];
+	if(%botType == "enemy" || %botType == "town")
+	{
+		%botName = fetchData(%clientId, "BotInfoAiName");
+		if(%botName != "" && %botName != -1 && %botName != "0")
+			return %botName;
+	}
+	
+	// SECONDARY PATH: Check isRPGAI() as fallback for edge cases
+	// (e.g., if $BotType wasn't set yet due to spawn timing)
 	if(isRPGAI(%clientId))
 	{
 		%botName = fetchData(%clientId, "BotInfoAiName");
