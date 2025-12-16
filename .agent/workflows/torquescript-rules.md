@@ -4,9 +4,29 @@ description: Critical TorqueScript/Tribes 1 scripting rules and constraints
 
 # TorqueScript Rules for Tribes 1
 
-## HEA V - CODEBASE MAP
-For a "helicopter view" of the entire scripts directory and file architecture, see:
-[SCRIPT_OVERVIEW.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/SCRIPT_OVERVIEW.md)
+## CODEBASE DOCUMENTATION
+
+### Critical Reference Files
+For understanding the codebase architecture and systems, see these key files:
+
+| File | Description |
+|------|-------------|
+| [CONTEXT_PROMPT.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/CONTEXT_PROMPT.md) | **Quick start guide** - current architecture summary for new sessions |
+| [SCRIPT_OVERVIEW.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/SCRIPT_OVERVIEW.md) | "Helicopter view" of entire scripts directory and file architecture |
+| [TOWN_BOT_CODE_LOCATIONS.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/TOWN_BOT_CODE_LOCATIONS.md) | Complete town bot function locations and code flow |
+| [SPAWN_DESPAWN_FUNCTION_LIST.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/SPAWN_DESPAWN_FUNCTION_LIST.md) | Enemy bot spawn/despawn function list |
+| [analysis/TRIBES_ENGINE_FUNDAMENTALS.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/analysis/TRIBES_ENGINE_FUNDAMENTALS.md) | Low-level Tribes engine behavior |
+| [analysis/SPAWN_DESPAWN_TIMING_ANALYSIS.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/analysis/SPAWN_DESPAWN_TIMING_ANALYSIS.md) | Spawn timing and schedule delays |
+| [REAL_PLAYER_SAFEGUARDS.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/REAL_PLAYER_SAFEGUARDS.md) | Player protection safeguards |
+
+
+### Engine Source Code
+**Location**: `C:\Users\Joe\Desktop\Kingdom of Kronos V0.8.1 Development\TribesSource`
+
+> [!TIP]
+> **Verifying Engine Commands**
+> To verify if a C++ function is exposed to TorqueScript, search `simGame.cpp` (or other plugin files) for `addCommand` calls within the `init()` function.
+> Seeing a function in `consoleCallback` logic (C++) is necessary but not sufficient; it must be explicitly registered with `addCommand` to be callable from script.
 
 ## CRITICAL SYNTAX RULES
 

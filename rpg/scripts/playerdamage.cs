@@ -458,6 +458,8 @@ function Game::clientKilled(%playerId, %killerId)
 
 function Player::onKilled(%this)
 {
+	// WATCHDOG: Track this function for freeze detection
+	Watchdog_Enter("Player::onKilled");
 	dbecho($dbechoMode, "Player::onKilled(" @ %this @ ")");
 
 	//At this point, the client can still be queried for getItemCounts, and is also still an object
@@ -1935,12 +1937,13 @@ function Player::onKilled(%this)
 				// Solution: If it exists (not empty, not -1), it's a valid number to free (including 0)
 				if(%aiNumber != "" && %aiNumber != -1)
 				{
-					// Valid number (including 0) - free it
+					// Valid number (including 0) - free it with cooldown
 					$aiNumTable[%aiNumber] = "";
+					$AINumberCooldown[%aiNumber] = getSimTime();  // Set cooldown timestamp
 					$tmpbotn[%aiName] = "";
 					%numberFreed = true;
 					Telemetry_RecordAINumberFreed();  // Track AI number freed
-					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %aiNumber @ " for enemy bot " @ %aiName @ " (via BotInfoAiName) - number can now be recycled");
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %aiNumber @ " for enemy bot " @ %aiName @ " (via BotInfoAiName) - cooldown set for 3s");
 				}
 			}
 			
@@ -1992,12 +1995,13 @@ function Player::onKilled(%this)
 								// The old check `%tryNumber != "0"` failed when %tryNumber was the number 0
 								if(%tryNumber != "" && %tryNumber != -1)
 								{
-									// Found it! Free the number (including 0)
+									// Found it! Free the number (including 0) with cooldown
 									$aiNumTable[%tryNumber] = "";
+									$AINumberCooldown[%tryNumber] = getSimTime();  // Set cooldown timestamp
 									$tmpbotn[%tryName] = "";
 									%numberFreed = true;
 									Telemetry_RecordAINumberFreed();  // Track AI number freed
-									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %tryNumber @ " for enemy bot " @ %tryName @ " (via display name fallback) - number can now be recycled");
+									if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %tryNumber @ " for enemy bot " @ %tryName @ " (via display name fallback) - cooldown set for 3s");
 									break;
 								}
 							}
@@ -2037,12 +2041,13 @@ function Player::onKilled(%this)
 									%expectedSuffix = %n;
 									if(String::findSubStr(%displayName, %expectedSuffix) != -1)
 									{
-										// Found it! Free the number (including 0)
+										// Found it! Free the number (including 0) with cooldown
 										$aiNumTable[%tryNumber] = "";
+										$AINumberCooldown[%tryNumber] = getSimTime();  // Set cooldown timestamp
 										$tmpbotn[%tryName] = "";
 										%numberFreed = true;
 										Telemetry_RecordAINumberFreed();  // Track AI number freed
-										if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %tryNumber @ " for enemy bot " @ %tryName @ " (via exhaustive search fallback) - number can now be recycled");
+										if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] Player::onKilled(): Freed AI number " @ %tryNumber @ " for enemy bot " @ %tryName @ " (via exhaustive search fallback) - cooldown set for 3s");
 										break;
 									}
 								}

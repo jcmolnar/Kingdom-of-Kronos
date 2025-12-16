@@ -174,21 +174,9 @@ function Game::playerSpawn(%clientId, %respawn)
 			%isBot = false;
 			if(%playerName != "" && %playerName != -1)
 			{
-				// Check for enemy bot name patterns (must be at start of name)
-				if(String::findSubStr(%playerName, "Alien") == 0 || 
-				   String::findSubStr(%playerName, "Admin") == 0 ||
-				   String::findSubStr(%playerName, "Angel") == 0 ||
-				   String::findSubStr(%playerName, "Demon") == 0 ||
-				   String::findSubStr(%playerName, "Zombie") == 0 ||
-				   String::findSubStr(%playerName, "Ogre") == 0 ||
-				   String::findSubStr(%playerName, "Orc") == 0 ||
-				   String::findSubStr(%playerName, "Pigman") == 0 ||
-				   String::findSubStr(%playerName, "Pigmen") == 0 ||
-				   String::findSubStr(%playerName, "Undead") == 0 ||
-				   String::findSubStr(%playerName, "Minotaur") == 0 ||
-				   String::findSubStr(%playerName, "Seal") == 0 ||
-				   String::findSubStr(%playerName, "God") == 0 ||
-				   String::findSubStr(%playerName, "Enemy") == 0)
+				// Use centralized HasEnemyBotNamePrefix() from Ai.cs for consistent bot detection
+				// This ensures all enemy races (Alien, Admin, Angel, Demon, God, Minotaur, Ogre, Orc, Pigman, Undead, Zombie, Seal, Enemy, Void) are detected
+				if(HasEnemyBotNamePrefix(%playerName))
 				{
 					%isBot = true;
 				}

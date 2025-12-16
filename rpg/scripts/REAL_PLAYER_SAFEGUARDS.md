@@ -2,6 +2,9 @@
 
 This document lists all safeguards implemented to prevent bot spawning and cleanup from affecting real players.
 
+> [!WARNING]
+> **Line numbers are approximate** and may have shifted due to ongoing development. Use function names for searching. Last verified: December 2025.
+
 ---
 
 ## 1. Character Save File Checks

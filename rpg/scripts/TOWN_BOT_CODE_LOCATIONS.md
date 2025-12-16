@@ -2,6 +2,9 @@
 
 This document lists all code related to town bots and where it's located in the codebase.
 
+> [!WARNING]
+> **Line numbers are approximate** and may have shifted due to ongoing development. Use function names for searching. Last verified: December 2025.
+
 ---
 
 ## PRIMARY FILE: `rpg/scripts/Ai.cs`
@@ -337,6 +340,44 @@ This document lists all code related to town bots and where it's located in the 
 - Clears directive tables
 - Clears belt cached lists
 - Used for both town bots and enemy bots
+
+---
+
+### Orphan Recovery (December 2025)
+
+#### 23. `CleanupOrphanedClientId(%clientId, %originalPlayerObj)`
+**Location:** `Ai.cs:1088-1205` (approximately)
+
+**Purpose:** Detects and recovers orphaned town bots when their client IDs are hijacked by enemy bots
+
+**Problem Solved:**
+- When enemy bots spawn/die rapidly, the engine may recycle a town bot's client ID
+- The town bot's Player object becomes orphaned (exists but no longer owns its client ID)
+- Without recovery, the town bot would silently disappear
+
+**Town Bot Detection:**
+```cpp
+%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+%isTownBot = (String::findSubStr(%botInfoAiName, "TownBot_") == 0);
+```
+
+**Recovery Flow:**
+1. Detects `BotInfoAiName` starts with "TownBot_"
+2. Extracts bot name from "TownBot_botname" format
+3. Clears spawn tracking:
+   - `$TownBotSpawned[%botName] = ""`
+   - Removes from `$TownBotList`
+   - Clears `$BotType[%clientId]` and `$TownBotData`
+4. Deletes the orphaned Player object
+5. If players are still in the zone, schedules `SpawnSingleZoneBot()` after 2s
+
+**Log Output:**
+```
+[ORPHAN CLEANUP] Town bot orphaned: TownBot_merchant20 (clientId=2069, zone=15) - triggering respawn
+[ORPHAN CLEANUP] Scheduling respawn for town bot merchant20 in zone 15
+```
+
+**Called from:** Orphan cleanup system when timing issue persists after 10s
 
 ---
 

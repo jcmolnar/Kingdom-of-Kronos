@@ -1,100 +1,183 @@
 # Kingdom of Kronos - Codebase Context Prompt
 
-Use this prompt at the start of a new chat session along with `AllScripts.txt` to provide context:
+Use this prompt at the start of a new chat session to provide context.
+
+> [!WARNING]
+> Last updated: **December 2025**. Line numbers in referenced documents are approximate.
 
 ---
 
-**I'm working on "Kingdom of Kronos", a TorqueScript-based RPG game. The main codebase is in `AllScripts.txt`, which is a concatenated file containing 144 individual script files.**
+## Overview
 
-## Recent Major Fixes (2025)
+**Kingdom of Kronos** is a TorqueScript-based RPG mod for Starsiege: Tribes 1.
 
-### 1. Bot Spawning System Overhaul
-- **Fixed race conditions** in bot spawning by switching from display names to internal names
-- **Implemented spawn transaction system** with `ReserveSpawnSlot()` and `RollbackSpawnSlot()` to prevent counter leaks
-- **Fixed guardtype extraction** in `createAI()` - replaced buggy `clipTrailingNumbers()` with reliable trailing digit removal
-- **Enhanced bot identification** in `SpawnAIGetClientId()` to correctly identify Colloseum/Seal Battle bots
+## Key Reference Documents
 
-### 2. Colloseum & Seal Battle Improvements
-- **Refactored to use internal names** (`AI::helper()` return values) instead of display names
-- **Added spawn cooldowns** to prevent premature death checks
-- **Implemented smart bot behavior flags** (`botAttackMode = 2`, `AImaxRangeOverride = 120`)
-- **Created dedicated Colloseum bot types** (33 new bots: `NewbieRoundOne`, `AdventurerRoundTwo`, etc.)
-- **Fixed ATK scaling order** in Seal Battle to ensure weapon damage is scaled before ATK calculation
+| Document | Purpose |
+|----------|---------|
+| [SCRIPT_OVERVIEW.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/SCRIPT_OVERVIEW.md) | High-level codebase architecture |
+| [TOWN_BOT_CODE_LOCATIONS.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/TOWN_BOT_CODE_LOCATIONS.md) | Town bot functions and code flow |
+| [SPAWN_DESPAWN_FUNCTION_LIST.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/SPAWN_DESPAWN_FUNCTION_LIST.md) | Complete spawn/despawn function list |
+| [REAL_PLAYER_SAFEGUARDS.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/rpg/scripts/REAL_PLAYER_SAFEGUARDS.md) | Player protection mechanisms |
+| [/.agent/workflows/torquescript-rules.md](file:///C:/Users/Joe/Desktop/Kingdom%20of%20Kronos%20V0.8.1%20Development/.agent/workflows/torquescript-rules.md) | TorqueScript syntax rules and gotchas |
 
-### 3. Key Technical Concepts
+---
 
-**Internal Name vs. Display Name:**
-- **Internal Name**: Unique identifier returned by `AI::helper()` (e.g., "RoundTwo497"), available immediately
-- **Display Name**: Human-readable name (e.g., "SealFighter2"), subject to replication lag (1-3 seconds)
+## Core Architecture (December 2025)
 
-**Name Replication Lag:**
-- Torque engine delay between bot creation and display name availability via `Client::getName()`
-- Solutions: Use internal names for immediate lookups, implement cooldowns, trust nameless fresh bots
+### 1. Bot Type System
 
-**Spawn Transaction System:**
-- `ReserveSpawnSlot(%spawnPointId)` - Atomically reserves a spawn slot
-- `CommitSpawnSlot(%spawnPointId)` - Commits the reservation after successful spawn
-- `RollbackSpawnSlot(%spawnPointId)` - Rolls back on failure to prevent counter leaks
+**Town Bots** (NPCs, Merchants, Bankers):
+- Spawned via `SpawnZoneBots()` → `SpawnSingleZoneBot()` → `AI::spawn()` directly
+- `BotInfoAiName` starts with **"TownBot_"** prefix (e.g., "TownBot_merchant1")
+- Do NOT have `SpawnBotInfo` (explicitly cleared)
+- Always team **0** (Citizen)
+- Dynamic loading: spawn when players enter zone, despawn when empty
 
-**Bot Lookup Priority:**
-1. `AI::getId(%internalName)` - Most reliable for newly spawned bots
-2. `AI::getClientIdFromName(%internalName)` - Custom lookup using internal name
-3. `NEWgetClientByName(%displayName)` - Legacy display name lookup (fallback)
+**Enemy Bots** (Monsters):
+- Spawned via `SpawnLoop()` → `AI::helper()` → `SpawnAI()` → `createAI()`
+- Have BOTH `BotInfoAiName` AND `SpawnBotInfo`
+- Team determined by race/zone
+- Use spawn transaction system (ReserveSpawnSlot/CommitSpawnSlot/RollbackSpawnSlot)
 
-## File Structure
+### 2. Data Storage Arrays
 
-**Key Files in AllScripts.txt:**
-- `Ai.cs` - Core AI functions, bot spawning, client ID lookup
-- `remortseal.cs` - Seal Battle event system
-- `rpgarena.cs` - Colloseum event system
-- `EnemyArmors.cs` - Bot race definitions, equipment loadouts
-- `classes.cs` - World ranks, Colloseum bot arrays
-- `rpgfunk.cs` - Utility functions, reserved words validation
-- `playerdamage.cs` - Damage calculation, bot loot dropping
-- `Admin.cs` - Administrative functions, stance restrictions
+| Array | Purpose |
+|-------|---------|
+| `$TownBotData[%id, "field"]` | Town bot data (BotInfoAiName, etc.) |
+| `$EnemyBotData[%id, "field"]` | Enemy bot data (SpawnBotInfo, etc.) |
+| `$ClientData[%id, "field"]` | Player + backwards-compatible bot data |
+| `$BotType[%id]` | Fast O(1) bot type lookup ("town" or "enemy") |
+| `storeData()/fetchData()` | Routes to correct array automatically |
+
+### 3. Critical Safeguards
+
+**Player Protection Priority Order:**
+1. **Save file check** - `isFile("temp\\" @ %name @ ".cs")` (most reliable)
+2. **AI-controlled check** - `Player::isAiControlled(%id)`
+3. **Bot data markers** - `BotInfoAiName`, `SpawnBotInfo`
+4. **Client ID range** - Players ≤2048, Bots 2049+
+
+**Key Functions:**
+- `IsRealPlayer(%clientId)` - Master check for real player detection
+- `IsSafeToModify(%clientId, %context)` - Use before any bot cleanup
+- `isTownBot(%clientId)` / `isEnemyBot(%clientId)` - Bot type detection
+
+### 4. Spawn Timing (Current Values)
+
+| Event | Delay |
+|-------|-------|
+| `SpawnAIGetClientId()` after spawn | **0.5s** |
+| `InitTownBotPostSpawn()` | 0.1s |
+| `VerifyTownBotTeam()` / `VerifyEnemyBotTeam()` | 0.2s |
+| `AI::setWeapons()` after spawn | 0.15s (relative) |
+| `InitTownBotItemsForBot()` | 1.5s |
+| Despawn schedule after zone empty | 30s |
+
+### 5. Watchdog System (Freeze Detection)
+
+- Heartbeat exports state to `temp\watchdog_state.cs` every 5s
+- Use `Watchdog_Enter("FunctionName")` / `Watchdog_Exit()` to track
+- Use `Watchdog_LoopCheck(%counter, %limit)` for loop guards
+- If server freezes, check `temp\watchdog_state.cs` for last function
+
+### 6. Town Bot Orphan Respawn
+
+When a town bot's client ID is hijacked by an enemy bot:
+1. `CleanupOrphanedClientId()` detects `BotInfoAiName` starts with "TownBot_"
+2. Clears `$TownBotSpawned[%botName]` and related data
+3. Schedules `SpawnSingleZoneBot()` after 2s if zone has players
+
+### 7. PlayerManager Plugin
+
+C++ plugin providing fast client ID lookup:
+- `PlayerManager::getFreeId()` - O(1) next free ID
+- `PlayerManager::isIdFree(%id)` - Check if ID available
+- Located in `Plugins/PlayerManager.dll`
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `Ai.cs` | Core bot spawning, despawning, safeguards, town bots |
+| `playerdamage.cs` | Death handling, damage, loot |
+| `spawn.cs` | SpawnLoop, spawn point management |
+| `zone.cs` | Zone system, player tracking |
+| `rpgfunk.cs` | Utilities, data storage, RefreshAll |
+| `Server.cs` | Server initialization |
+| `connectivity.cs` | Player connection handling |
+
+---
+
+## Common Patterns
+
+**Bot Identification:**
+```cpp
+// Town bot check
+if(String::findSubStr(%botInfoAiName, "TownBot_") == 0)
+    // It's a town bot
+
+// Enemy bot check  
+if(%spawnBotInfo != "" && %spawnBotInfo != -1)
+    // It's an enemy bot
+```
+
+**Safe Cleanup Pattern:**
+```cpp
+if(!IsRealPlayer(%clientId))
+{
+    // Safe to clean up bot data
+    deleteObject(%playerObj);
+}
+```
+
+---
 
 ## Working with AllScripts.txt
 
+`AllScripts.txt` is a concatenated file containing all script files for easy reference.
+
 **To extract a specific file:**
 - Search for `=== FILE START: filename.cs ===` and `=== FILE END: filename.cs ===`
-- The content between these markers is the file content
 
-**To update AllScripts.txt after editing individual files:**
+**To regenerate AllScripts.txt after editing files:**
+```powershell
+cd "C:\Users\Joe\Desktop\Kingdom of Kronos V0.8.1 Development\rpg\scripts"
+$output = @()
+Get-ChildItem -Filter "*.cs" | ForEach-Object {
+    $output += "=== FILE START: $($_.Name) ==="
+    $output += ""
+    $output += Get-Content $_.FullName
+    $output += ""
+    $output += "=== FILE END: $($_.Name) ==="
+    $output += ""
+}
+$output | Set-Content "..\AllScripts.txt" -Encoding UTF8
+Write-Host "AllScripts.txt regenerated with $((Get-ChildItem -Filter '*.cs').Count) files"
+```
+
+**To update a single file in AllScripts.txt:**
 ```python
 python -c "import re; content = open('AllScripts.txt', 'r', encoding='utf-8', errors='ignore').read(); file_content = open('filename.cs', 'r', encoding='utf-8', errors='ignore').read(); content = re.sub(r'=== FILE START: filename\.cs ===.*?=== FILE END: filename\.cs ===', '=== FILE START: filename.cs ===\n\n' + file_content + '\n\n=== FILE END: filename.cs ===', content, flags=re.DOTALL); open('AllScripts.txt', 'w', encoding='utf-8').write(content); print('AllScripts.txt updated')"
 ```
 
-## Common Patterns
-
-**Bot Name Format:**
-- Internal: `{BotType}{Number}` (e.g., "Obliterator0", "RoundTwo497")
-- Display: `{RacePrefix}{BotType}{Number}` (e.g., "AdminObliterator0", "SealFighter2")
-- Colloseum bots: `{RankName}{RoundWord}{Number}` (e.g., "NewbieRoundOne0")
-
-**Guardtype Extraction:**
-- Use trailing digit removal (backwards iteration) instead of `clipTrailingNumbers()`
-- Guardtype is the base bot name without the AI instance number
-
-**Spawn Flow:**
-1. `SpawnLoop()` → `ReserveSpawnSlot()` → `AI::helper()` → `SpawnAI()` → `createAI()`
-2. `SpawnAIGetClientId()` (scheduled 3.0s after spawn) → Bot registration
-3. `CommitSpawnSlot()` on success, `RollbackSpawnSlot()` on failure
+---
 
 ## Important Notes
 
-- **Always update AllScripts.txt** after editing individual script files
-- **Use internal names** for bot lookups when possible (more reliable)
-- **Implement rollbacks** in all failure paths to prevent spawn counter leaks
-- **Test spawn cooldowns** are respected before checking bot death
-- **Normalize empty strings** from `AI::getClientIdFromName()` to `-1` for consistency
+1. **Always use function names** for code search (line numbers shift frequently)
+2. **Check SCRIPT_OVERVIEW.md** first for architecture questions
+3. **Use IsRealPlayer()/IsSafeToModify()** before any bot cleanup
+4. **Town bots have no SpawnBotInfo** - this distinguishes them from enemies
+5. **Spawn timing is 0.5s**, not 3.0s (updated December 2025)
 
 ---
 
-**When I ask you to work on this codebase, please:**
-1. Read the relevant sections from AllScripts.txt
-2. Understand the context of recent fixes
-3. Follow the established patterns (internal names, transaction system, etc.)
-4. Update AllScripts.txt after making changes
-5. Check for lint errors before finalizing
-
+**When working on this codebase:**
+1. Read `/torquescript-rules` workflow for syntax rules
+2. Check relevant reference documents above
+3. Follow established safeguard patterns
+4. Test with watchdog active for freeze detection
 

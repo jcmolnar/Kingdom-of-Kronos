@@ -239,7 +239,7 @@ function createServer(%mission, %dedicated)
 		}
 	}
 
-	if(!%dedicated)
+	if(!$dedicated)
 	{
 		deleteServer();
 	      purgeResources();
@@ -255,7 +255,6 @@ function createServer(%mission, %dedicated)
 	// Load Ai.cs (from base\scripts.vol - we can't override it easily)
 	exec(Ai);
 	exec(rpgfunk);
-	exec(EngineResultFix);
 	exec(skills);
 	exec(house);
 	exec(rpgarena);
@@ -289,9 +288,6 @@ function createServer(%mission, %dedicated)
 	exec(mana);
 	exec(hp);
 	exec(rpgstats);
-	// rpghud.cs is client-side only (requires PrestoPack) - skip on dedicated servers
-	if(!$dedicated)
-		exec(rpghud);
 	exec(playerdamage);
 	exec(playerspawn);
 	exec(itemevents);
@@ -321,7 +317,7 @@ function createServer(%mission, %dedicated)
 	exec(advertisements);
 	exec(TaurikAdmins);
 	exec(remortseal);
-	exec(DebugInit);
+	//exec(DebugInit); only need if debugging
 	//exec(backpack); we implemented belt.cs instead of backpack.cs
 	
 	$Server::Info = "Running RPG Mod ver " @ $rpgver @ "\nThis version of RPGMod created by Asnabel,\n Further development by Jobo & Superfat.";
@@ -375,6 +371,9 @@ function createServer(%mission, %dedicated)
 	// Start overlevel AFK zone enforcement (low-level zones protection)
 	StartAFKZoneEnforcement();
 	
+	// Start watchdog heartbeat for freeze detection
+	StartWatchdog();
+	
 	// Schedule periodic validation of spawn point counters to fix drift issues
 	// ValidateSpawnPointCounters removed - replaced by ReconcileSpawnCounters()
 
@@ -403,7 +402,7 @@ function createServer(%mission, %dedicated)
 		DoubleExecWarning.schedule(500, "checkDouble");
 	}
 
-	if(!%dedicated)
+	if(!$dedicated)
 	{
 		focusClient();
 

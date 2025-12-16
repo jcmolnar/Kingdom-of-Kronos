@@ -1,3 +1,94 @@
+// ============================================================================
+// ADVERTISEMENTS SYSTEM - Order-Based
+// Ads play in the order they are defined below (top to bottom)
+// To add a new ad: Just call AddAd("line1", "line2", ...) anywhere
+// To insert between existing ads: Just add a new AddAd() call where you want it
+// ============================================================================
+
+// Reset ads when file loads (for hot-reload support)
+$AdList = "";
+$AdLineCount = "";
+$AdTotalCount = 0;
+
+// Helper function to register an ad (supports up to 5 lines per ad)
+function AddAd(%line0, %line1, %line2, %line3, %line4)
+{
+	$AdTotalCount++;
+	%idx = $AdTotalCount;
+	
+	// Store lines
+	$AdLine[%idx, 0] = %line0;
+	$AdLine[%idx, 1] = %line1;
+	$AdLine[%idx, 2] = %line2;
+	$AdLine[%idx, 3] = %line3;
+	$AdLine[%idx, 4] = %line4;
+}
+
+// ============================================================================
+// DEFINE YOUR ADS HERE - Just add/remove/reorder AddAd() calls as needed
+// Ads will play in the order they appear (top to bottom)
+// ============================================================================
+
+AddAd("Welcome to Kingdom of Kronos - Hosted by Jobo",
+      "       Active development by Jobo");
+
+AddAd("NEW DUNGEON ALERT!",
+      "The Void has been added as the newest high level dungeon",
+      "This one might be a little tricky to find your way into...",
+      "Hint 1: Think of an upside down Stone Henge entrance");
+
+AddAd("Join the TRPG Discord Server!",
+      "https://discord.gg/r3CGT9TY");
+
+AddAd("For a list of Armor/Spells/Items/Zones",
+      "Use the Help Commands in your tab menu");
+
+AddAd("BACKPACK IMPLEMENTED",
+      "Access it via option 2 in the tab menu",
+      "Use #bugreport if it's not working");
+
+AddAd("Credits:Asnabel,Superfat,Panda,Scorpion,Xan and DeraJ",
+      "They all put their part into helping.");
+
+AddAd("Critical Hit Skill Added",
+      "Depending on your skill level, your chance",
+      "at getting a 2X damage hit will increase.");
+
+AddAd("This server has been doned hack proof by:",
+      "Corona and Shorty.");
+
+AddAd("Special thanks to Superfat for keeping the mod from dying on a hard drive.");
+
+AddAd("Check out STANCES in the tab menu!");
+
+AddAd("Remort seal implemented - every 20 remorts",
+      "adventurers will need to venture in and break it!");
+
+AddAd("House Artifacts and Bases NOW SAVE",
+      "They will restore if the server crashes or restarts.",
+      "Let the battles begin!");
+
+AddAd("The server has been updated to v0.8.1",
+      "Please report any bugs to the TRPG Discord Server",
+      "In the KoK mod channel",
+      "Or use the #bugreport command");
+
+AddAd("Want to suggest a feature or idea?",
+      "Use #featurerequest or #requestfeature",
+      "Your ideas could be added to the server!");
+
+AddAd("Vehicle Combat Skill Added",
+      "Every 100 points in the skill, Scout damage increases by 1.",
+      "The skill is capped at 1000 points.");
+
+AddAd("LUCK toggle in tab menu now shows DEATH or MISS",
+      "It also shows a description when you choose each one",
+      "Please ensure you have the right one set");
+
+// ============================================================================
+// ADVERTISEMENT ENGINE - Don't modify below unless you know what you're doing
+// ============================================================================
+
 function Advertize(%stage)
 {
 	// Check if advertisements have been stopped (for manual re-execution)
@@ -7,99 +98,22 @@ function Advertize(%stage)
 		return;
 	}
 	
+	// Wrap around
 	if(%stage < 1) %stage = 1;
-	if(%stage > 14) %stage = 1;
-	echo(%stage);
-//	if(%stage == n)
-//	{
-//		Messageall(2,"");
-//		Messageall(2,"Should never make it longer than this!!!!!!!!!");
-//	}
-	if(%stage == 1)
+	if(%stage > $AdTotalCount) %stage = 1;
+	
+	echo("Advertize stage " @ %stage @ " of " @ $AdTotalCount);
+	
+	// Display all lines for this ad
+	for(%line = 0; %line < 5; %line++)
 	{
-		Messageall(2,"Welcome to Kingdom of Kronos - Hosted by Jobo");
-		Messageall(2,"       Active development by Jobo");
+		%text = $AdLine[%stage, %line];
+		if(%text != "")
+			Messageall(2, %text);
 	}
-		else if(%stage == 2)
-	{
-		Messageall(2,"Join the TRPG Discord Server!");
-		Messageall(2,"https://discord.gg/r3CGT9TY");
-	}
-	else if(%stage == 3)
-	{
-		Messageall(2,"For a list of Armor/Spells/Items/Zones");
-		Messageall(2,"Use the Help Commands in your tab menu");
-	}
-		else if(%stage == 4)
-	{
-		Messageall(2,"BACKPACK IS FIXED?!");
-		Messageall(2,"I think I finally fixed it...");
-		Messageall(2,"Access it via option 2 in the tab menu");
-		Messageall(2,"Use #bugreport if it's not working");
-	}
-	else if(%stage == 5)
-	{
-		Messageall(2,"Credits:Asnabel,Superfat,Panda,Scorpion,Xan and DeraJ");
-		Messageall(2,"They all put their part into helping.");
-	}
-	else if(%stage == 6)
-	{
-		Messageall(2,"Critical Hit Skill Added");
-		Messageall(2,"Depending on your skill level, your chance");
-		messageall(2,"at getting a 2X damage hit will increase.");
-	}
-	else if(%stage == 7)
-	{
-		Messageall(2,"This server has been doned hack proof by:");
-		Messageall(2,"Corona and Shorty.");
-	}
-	else if(%stage == 8)
-	{
-		Messageall(2,"Special thanks to Superfat for keeping the mod from dying on a hard drive.");
-	}
-	else if(%stage == 9)
-	{
-		Messageall(2,"Check out STANCES in the tab menu!");
-	}
-	else if(%stage == 10)
-	{
-		Messageall(2,"Remort seal implemented - every 20 remorts");
-		Messageall(2,"adventurers will need to venture in and break it!");
-	}
-	else if(%stage == 11)
-	{
-		Messageall(2,"House Artifacts and Bases NOW SAVE");
-		Messageall(2,"They will restore if the server crashes or restarts.");
-		Messageall(2,"Let the battles begin!");
-	}
-	else if(%stage == 12)
-	{
-		Messageall(2,"The server has been updated to v0.7.5");
-		Messageall(2,"Please report any bugs to the TRPG Discord Server");
-		Messageall(2,"In the KoK mod channel");
-		Messageall(2,"Or use the #bugreport command");
-	}
-		else if(%stage == 13)
-	{
-		Messageall(2,"Want to suggest a feature or idea?");
-		Messageall(2,"Use #featurerequest or #requestfeature");
-		Messageall(2,"Your ideas could be added to the server!");
-	}
-		else if(%stage == 14)
-	{
-		Messageall(2,"Vehicle Combat Skill Added");
-		Messageall(2,"Every 100 points in the skill, Scout damage increases by 1.");
-		Messageall(2,"The skill is capped at 1000 points.");
-	}
-	else if(%stage == 15)
-	{
-		Messageall(2,"LUCK toggle in tab menu now shows DEATH or MISS");
-		Messageall(2,"It also shows a description when you choose each one");
-		Messageall(2,"Please ensure you have the right one set");
-	}
-
- 	%stage++;
- 	schedule("Advertize("@%stage@");",300);
+	
+	%stage++;
+	schedule("Advertize(" @ %stage @ ");", 300);
 }
 
 // When file is manually executed, stop any existing advertisements and start fresh

@@ -2469,6 +2469,15 @@ function LoadServerTime() {
 function SaveWorldDeployables() {
     dbecho($dbechoMode, "SaveWorldDeployables()");
     
+    // OPTIMIZATION: Cache connected client names to prevent O(N*M) lookups
+    deleteVariables("$TempClientNameCache*");
+    for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
+    {
+        %clName = Client::getName(%cl);
+        if(%clName != "" && %clName != -1)
+            $TempClientNameCache[%clName] = %cl;
+    }
+    
     // Clear all old world data to prevent stale entries from being saved
     // Clear up to 1000 entries (should be more than enough)
     for(%clearIdx = 1; %clearIdx <= 1000; %clearIdx++)
@@ -2539,27 +2548,17 @@ function SaveWorldDeployables() {
                 %ownerName = getWord(%loot, 0);
                 if(%ownerName != "")
                 {
-                    // Check if owner name matches bot patterns (enemy bots: Alien, Admin, Angel, Demon, Ogre, Pigman, Undead, Minotaur, Seal, God)
-                    // Also check town bot pattern (names starting with town bot prefixes)
-                    %isBotName = false;
-                    if(String::findSubStr(%ownerName, "Alien") == 0 || 
-                       String::findSubStr(%ownerName, "Admin") == 0 ||
-                       String::findSubStr(%ownerName, "Angel") == 0 ||
-                       String::findSubStr(%ownerName, "Demon") == 0 ||
-                       String::findSubStr(%ownerName, "Ogre") == 0 ||
-                       String::findSubStr(%ownerName, "Pigman") == 0 ||
-                       String::findSubStr(%ownerName, "Undead") == 0 ||
-                       String::findSubStr(%ownerName, "Minotaur") == 0 ||
-                       String::findSubStr(%ownerName, "Seal") == 0 ||
-                       String::findSubStr(%ownerName, "God") == 0)
-                    {
-                        %isBotName = true;
-                    }
+                    // Use centralized HasEnemyBotNamePrefix() from Ai.cs for consistent bot detection
+                    // This ensures all enemy races are properly filtered from world saves
+                    %isBotName = HasEnemyBotNamePrefix(%ownerName);
                     
                     // Also check if owner is currently a bot (in case bot still exists)
                     if(!%isBotName)
                     {
-                        %ownerClientId = NEWgetClientByName(%ownerName);
+                        // Optimized: Use cache instead of NEWgetClientByName
+                        %ownerClientId = $TempClientNameCache[%ownerName];
+                        if(%ownerClientId == "") %ownerClientId = -1;
+                        
                         if(%ownerClientId != -1 && isRPGAI(%ownerClientId))
                         {
                             %isBotName = true;
@@ -2604,27 +2603,17 @@ function SaveWorldDeployables() {
                 %ownerName = $owner[%ID];
                 if(%ownerName != "")
                 {
-                    // Check if owner name matches bot patterns (enemy bots: Alien, Admin, Angel, Demon, Ogre, Pigman, Undead, Minotaur, Seal, God)
-                    // Also check town bot pattern (names starting with town bot prefixes)
-                    %isBotName = false;
-                    if(String::findSubStr(%ownerName, "Alien") == 0 || 
-                       String::findSubStr(%ownerName, "Admin") == 0 ||
-                       String::findSubStr(%ownerName, "Angel") == 0 ||
-                       String::findSubStr(%ownerName, "Demon") == 0 ||
-                       String::findSubStr(%ownerName, "Ogre") == 0 ||
-                       String::findSubStr(%ownerName, "Pigman") == 0 ||
-                       String::findSubStr(%ownerName, "Undead") == 0 ||
-                       String::findSubStr(%ownerName, "Minotaur") == 0 ||
-                       String::findSubStr(%ownerName, "Seal") == 0 ||
-                       String::findSubStr(%ownerName, "God") == 0)
-                    {
-                        %isBotName = true;
-                    }
+                    // Use centralized HasEnemyBotNamePrefix() from Ai.cs for consistent bot detection
+                    // This ensures all enemy races are properly filtered from world saves
+                    %isBotName = HasEnemyBotNamePrefix(%ownerName);
                     
                     // Also check if owner is currently a bot (in case bot still exists)
                     if(!%isBotName)
                     {
-                        %ownerClientId = NEWgetClientByName(%ownerName);
+                        // Optimized: Use cache instead of NEWgetClientByName
+                        %ownerClientId = $TempClientNameCache[%ownerName];
+                        if(%ownerClientId == "") %ownerClientId = -1;
+                        
                         if(%ownerClientId != -1 && isRPGAI(%ownerClientId))
                         {
                             %isBotName = true;
@@ -2669,6 +2658,9 @@ function SaveWorldDeployables() {
     
     // Save server time so timestamps persist across restarts
     SaveServerTime();
+    
+    // Cleanup cache
+    deleteVariables("$TempClientNameCache*");
 }
 
 function SaveWorld() {
@@ -2799,7 +2791,7 @@ function DeployLootbag(%pos, %rot, %special)
 // This runs every 2 minutes and combines lootbags within 25 units of each other
 //=============================================================================
 
-$LootbagAggregateRadius = 25;      // Distance within which lootbags are merged
+$LootbagAggregateRadius = 5;      // Distance within which lootbags are merged
 $LootbagAggregateInterval = 60;    // Interval in seconds (60 = 1 minute)
 
 // Helper: determine if a lootbag owner name belongs to a bot (enemy or town)
@@ -4076,7 +4068,11 @@ function Down(%t)
 		SaveWorld();
 	}
 	
-	schedule("focusserver();quit();", %tinsec);
+	// Set shutdown flag to prevent onClientDrop and other callbacks from running
+	// complex logic during shutdown (which can cause freezes)
+	$ServerShuttingDown = true;
+	
+	schedule("focusServer();quit();", %tinsec);
 }
 function d(%t)
 {
@@ -4116,6 +4112,9 @@ function GetEveryoneNameList()
 
 function GetBotIdList()
 {
+	// WATCHDOG: Track this function for freeze detection
+	Watchdog_Enter("GetBotIdList");
+	
 	dbecho($dbechoMode, "GetBotIdList()");
 
 	// Use engine-native BaseRep::getFirst()/getNext() which includes BOTH players AND AI bots
@@ -4739,6 +4738,9 @@ function round(%n)
 
 function RefreshAll(%clientId, %fromSkillUpgrade)
 {
+	// WATCHDOG: Track this function for freeze detection
+	Watchdog_Enter("RefreshAll");
+	
 	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] RefreshAll: ENTRY - clientId=" @ %clientId @ ", fromSkillUpgrade=" @ %fromSkillUpgrade);
 	dbecho($dbechoMode, "RefreshAll(" @ %clientId @ ", " @ %fromSkillUpgrade @ ")");
 
@@ -4993,6 +4995,9 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	// Enemy bots return early, so this code only runs for players and town bots
 
 //	echo("===== DEBUG RefreshAll: COMPLETE =====");
+	
+	// WATCHDOG: Clear tracking for this function
+	Watchdog_Exit();
 }
 
 // CRITICAL: New function specifically for enemy bots - does NOT touch team at all

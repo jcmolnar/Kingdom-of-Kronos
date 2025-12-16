@@ -1,5 +1,8 @@
 # Tribes Engine Fundamentals - Comprehensive Reference
 
+> [!NOTE]
+> This document covers **stable engine fundamentals** that rarely change. Line numbers in function examples are approximations.
+
 ## Repository Structure
 Based on [TribesRebirth](https://github.com/AlexHuck/TribesRebirth/tree/master):
 - **darkstar/**: Core engine code (C++)

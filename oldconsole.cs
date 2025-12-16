@@ -45,33 +45,31 @@ $numExecFiles = 0;
 
 for(%i = 1; $cargv[%i] != ""; %i++)
 {
-   if($cargv[%i] == "-mod")
-   {
-      %mod = $cargv[%i + 1];
-      %i++;
-      $modList = %mod @ " " @ $modList;
+	if($cargv[%i] == "-mod")
+	{
+		%mod = $cargv[%i + 1];
+		%i++;
+		$modList = %mod @ " " @ $modList;
 		$modCount++;
-   }
-   else if($cargv[%i] == "-dedicated")
-   {
-      $dedicated = true;
-      %mission = $cargv[%i + 1];
-      if(%mission != "")
-      {
-         $HostMission = %mission;
-         %i++;
-      }
-   }
+	}
+	else if($cargv[%i] == "-dedicated")
+	{
+		$Console::LogMode = "1";
+		//$dedicated = true;
+		%mission = $cargv[%i + 1];
+		if(%mission != "")
+		{
+			if(%mission != "-mod" && %mission != "+exec" && %mission != "+password" && %mission != "-host" && %mission != "+maxplayers" && %mission != "+record"){
+				$HostMission = %mission;
+				%i++;
+			}
+		}
+	}
    else if($cargv[%i] == "+exec")
    {
       $execFile[$numExecFiles] = $cargv[%i+1];
       %i++;
       $numExecFiles++;
-   }
-   else if($cargv[%i] == "+connect")
-   {
-      $connectAddress = $cargv[%i+1];
-      %i++;
    }
    else if($cargv[%i] == "+password")
    {
@@ -101,9 +99,8 @@ for(%i = 1; $cargv[%i] != ""; %i++)
       %i++;
    }
 }
-
-
-
+$dedicated = True;
+$Console::LogMode = "1";
 $WinConsoleEnabled = $dedicated;
 $Console::logBufferEnabled = !$dedicated; // turn off window scroll back
 $Console::Prompt = "% ";
@@ -219,7 +216,7 @@ exec("client.cs");
 exec("server.cs");
 exec("tsDefaultMatProps.cs");
 exec("game.cs");
-//exec("GenericTriggers.cs");
+exec("GenericTriggers.cs");
 exec("chatmenu.cs");
 exec("menu.cs");
 exec("observer.cs");
@@ -245,15 +242,13 @@ bind(keyboard, make, control, "-", to, "prevRes(MainWindow);");
 bind(keyboard, make, control, "+",  to, "nextRes(MainWindow);");
 
 
-
-
-
 // Load prefs and execute any autoexec commands...
 exec("clientDefaults.cs");
 exec("serverDefaults.cs");
 exec("clientPrefs.cs");
 exec("ServerPrefs.cs");
 exec("config.cs");
+exec("extra-controls.cs");
 if(isFile("badwords.cs"))
    exec("badwords.cs");
 if(isFile("autoexec.cs"))
@@ -312,11 +307,13 @@ else
    	$pref::cdVolume = 0.5;
    if ($pref::userCDOverride == "")
    	$pref::userCDOverride = False;
-   if ($pref::cdMusic || $pref::userCDOverrride)
-   {
-   	newRedBook (CD, MainWindow);
-   	rbSetVolume (CD, 1 - $pref::cdVolume);
-   }
+if($pref::sfx2DVolume < 0.015 && $pref::sfx3DVolume < 0.015 && $pref::cdVolume < 0.015 && !$pref::cdMusic && !$pref::playVoices)
+	sfxclose();
+else if ($pref::cdMusic || $pref::userCDOverrride)
+{
+	newRedBook (CD, MainWindow);
+	rbSetVolume (CD, 1 - $pref::cdVolume);
+}
    if($HostingGame)
    {
       setCursor(MainWindow, "Cur_Arrow.bmp");

@@ -2,6 +2,9 @@
 
 This document lists all functions currently used in the spawn and despawn flows for enemy bots and town bots.
 
+> [!WARNING]
+> **Line numbers are approximate** and may have shifted due to ongoing development. Use function names for searching. Last verified: December 2025.
+
 ---
 
 ## ENEMY BOT SPAWN FLOW
@@ -41,7 +44,7 @@ This document lists all functions currently used in the spawn and despawn flows 
    - Checks if bot already exists via `AI::getClientIdFromName()`
    - Checks scheduled spawn flag `$SpawnAIScheduled[%newName]`
    - Calls `createAI()` to create the bot
-   - Schedules `SpawnAIGetClientId()` after 3.0s delay
+   - Schedules `SpawnAIGetClientId()` after **0.5s** delay (reduced from 3.0s)
 
 8. **`createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck)`** (`Ai.cs:1189`)
    - Calls `AI::spawn()` to create the bot object
@@ -463,9 +466,10 @@ This document lists all functions currently used in the spawn and despawn flows 
 
 ### Timing Considerations
 
-- Enemy bots: `SpawnAIGetClientId()` scheduled 3.0s after `createAI()` to allow Player object to register
+- Enemy bots: `SpawnAIGetClientId()` scheduled **0.5s** after `createAI()` to allow Player object to register
 - Town bots: `SpawnZoneBotPostSpawn()` called immediately, with `RetryGetAIId()` scheduled 0.1s if lookup fails
 - Team verification: Scheduled 0.2s after spawn to catch `UpdateTeam()` overrides
 - AI number freeing: Scheduled 1.0s after death to allow engine to finish death callback chain
+- **Town bot orphan respawn**: When a town bot's client ID is hijacked by an enemy bot, orphan cleanup detects this and schedules a respawn via `SpawnSingleZoneBot()` after 2s
 
 

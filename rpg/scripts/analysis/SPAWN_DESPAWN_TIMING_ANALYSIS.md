@@ -1,5 +1,8 @@
 # Spawn/Despawn Timing Analysis
 
+> [!WARNING]
+> **Line numbers are approximate** and may have shifted due to ongoing development. Last verified: December 2025.
+
 ## TOWN BOT SPAWN FLOW
 
 ### SpawnSingleZoneBot() / SpawnZoneBotPostSpawn()
@@ -36,8 +39,8 @@
 
 ### SpawnAI() → createAI()
 - **T+0.0s**: `AI::spawn()` called
-- **T+0.0s**: `createAIPostSpawn()` scheduled for **0.5s** (line 146)
-- **T+0.0s**: `SpawnAIGetClientId()` scheduled for **0.5s** (line 1461)
+- **T+0.0s**: `createAIPostSpawn()` scheduled for **0.5s** (line ~146)
+- **T+0.0s**: `SpawnAIGetClientId()` scheduled for **0.5s** (line ~1461)
 
 ### createAIPostSpawn() (runs at T+0.5s)
 - Validates Player object exists
@@ -165,6 +168,7 @@ All delays are properly sequenced:
 - Town bots: T+0.0s (spawn) → T+0.1s (init) → T+0.2s (verify) → T+1.5s (items)
 - Enemy bots: T+0.0s (spawn) → T+0.5s (get ID) → T+0.65s (weapons) → T+1.0s (verify)
 - Despawn: T+0.0s (trigger) → T+1.5s (despawn)
+- **Town bot orphan respawn**: When a town bot's client ID is hijacked by an enemy bot, `CleanupOrphanedClientId()` detects this and schedules `SpawnSingleZoneBot()` after 2s if players are still in the zone.
 
 No overlapping critical operations, no premature checks, all dependencies satisfied.
 

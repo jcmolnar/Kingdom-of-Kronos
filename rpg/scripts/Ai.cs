@@ -141,8 +141,9 @@ function Watchdog_Heartbeat()
 	// Write to both console and file
 	echo("[WATCHDOG] " @ %status);
 	
-	// Write to dedicated file (overwrites each time - last state before freeze)
-	export("$Watchdog_*", "config/watchdog_state.cs", false);
+	// Write to dedicated file in temp directory (same location as other game exports)
+	// Overwrites each time - last state before freeze is captured
+	export("$Watchdog_*", "temp\\watchdog_state.cs", false);
 	
 	schedule("Watchdog_Heartbeat();", 5);
 }
@@ -174,8 +175,19 @@ function Watchdog_LoopCheck(%context)
 	return false;
 }
 
-// Start watchdog on server load
-schedule("Watchdog_Heartbeat();", 10);
+// CRITICAL: Watchdog is started by calling StartWatchdog() from Server.cs
+// This ensures reliable initialization after all scripts are loaded
+function StartWatchdog()
+{
+	if(!$Watchdog_Enabled) return;
+	
+	if($Watchdog_Started != "true")
+	{
+		$Watchdog_Started = "true";
+		schedule("Watchdog_Heartbeat();", 10);
+		echo("[WATCHDOG] Started watchdog heartbeat (every 5 seconds, output to temp\\watchdog_state.cs)");
+	}
+}
 
 // ============================================================================
 // PERIODIC AI NUMBER RECONCILIATION
@@ -1097,8 +1109,55 @@ function CleanupOrphanedClientId(%clientId, %originalPlayerObj)
 			if(!IsRealPlayer(%clientId))
 			{
 				%dataName = GameBase::getDataName(%originalPlayerObj);
-				echo("[ORPHAN CLEANUP] Delayed cleanup: Object " @ %originalPlayerObj @ " (data=" @ %dataName @ ") is still orphaned for clientId=" @ %clientId @ " after 10s - deleting");
-				deleteObject(%originalPlayerObj);
+				
+				// TOWN BOT RESPAWN: Check if this is an orphaned town bot
+				// Town bots have BotInfoAiName starting with "TownBot_"
+				%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+				%isTownBot = (String::findSubStr(%botInfoAiName, "TownBot_") == 0);
+				
+				if(%isTownBot)
+				{
+					// Extract bot name from "TownBot_botname"
+					%botName = String::getSubStr(%botInfoAiName, 8, 100);
+					%zoneIndex = $TownBotZone[%botName];
+					
+					echo("[ORPHAN CLEANUP] Town bot orphaned: " @ %botInfoAiName @ " (clientId=" @ %clientId @ ", zone=" @ %zoneIndex @ ") - triggering respawn");
+					
+					// Clear spawn tracking so the bot can respawn
+					$TownBotSpawned[%botName] = "";
+					
+					// Remove from TownBotList
+					%newList = "";
+					for(%j = 0; (%id = GetWord($TownBotList, %j)) != -1; %j++)
+					{
+						if(%id != %clientId)
+							%newList = %newList @ %id @ " ";
+					}
+					$TownBotList = %newList;
+					
+					// Clear bot type cache
+					$BotType[%clientId] = "";
+					
+					// Clear TownBotData
+					$TownBotData[%clientId, "BotInfoAiName"] = "";
+					$TownBotData[%clientId, "SpawnBotInfo"] = "";
+					
+					// Delete the orphaned object
+					deleteObject(%originalPlayerObj);
+					
+					// Schedule respawn if players are still in the zone
+					if(%zoneIndex != "" && %zoneIndex != -1 && $ZonePlayerCount[%zoneIndex] > 0)
+					{
+						echo("[ORPHAN CLEANUP] Scheduling respawn for town bot " @ %botName @ " in zone " @ %zoneIndex);
+						schedule("SpawnSingleZoneBot(\"" @ %botName @ "\", " @ %zoneIndex @ ");", 2);
+					}
+				}
+				else
+				{
+					// Regular enemy bot orphan - just delete
+					echo("[ORPHAN CLEANUP] Delayed cleanup: Object " @ %originalPlayerObj @ " (data=" @ %dataName @ ") is still orphaned for clientId=" @ %clientId @ " after 10s - deleting");
+					deleteObject(%originalPlayerObj);
+				}
 			}
 			else
 			{
@@ -1125,7 +1184,19 @@ function CleanupOrphanedClientId(%clientId, %originalPlayerObj)
 				if(!IsRealPlayer(%clientId))
 				{
 					%dataName = GameBase::getDataName(%obj);
-					echo("[ORPHAN CLEANUP] Delayed cleanup: Additional orphaned object " @ %obj @ " (data=" @ %dataName @ ") found for clientId=" @ %clientId @ " - deleting");
+					
+					// Check if this is a town bot
+					%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
+					%isTownBot = (String::findSubStr(%botInfoAiName, "TownBot_") == 0);
+					
+					if(%isTownBot)
+					{
+						echo("[ORPHAN CLEANUP] Delayed cleanup: Additional orphaned town bot object " @ %obj @ " (data=" @ %dataName @ ") found for clientId=" @ %clientId @ " - deleting (respawn handled by primary cleanup)");
+					}
+					else
+					{
+						echo("[ORPHAN CLEANUP] Delayed cleanup: Additional orphaned object " @ %obj @ " (data=" @ %dataName @ ") found for clientId=" @ %clientId @ " - deleting");
+					}
 					deleteObject(%obj);
 				}
 			}
@@ -4522,10 +4593,11 @@ Telemetry_RecordSpawnAttempt();  // Track spawn attempt
 }
 function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId)
 {
-	// CRITICAL INTEGRATION: Check server capacity before attempting spawn
+	// CRITICAL: Check server capacity before attempting spawn
 	// This prevents the engine from rejecting spawns or crashing when full
-	%predictedId = PlayerManager::getFreeId();
-	if(%predictedId == -1)
+	// NOTE: We only use this for capacity check, NOT for prediction (prediction was always wrong)
+	%capacityCheck = PlayerManager::getFreeId();
+	if(%capacityCheck == -1)
 	{
 		echo("CRITICAL: SpawnAI - Server is FULL! Aborting spawn for " @ %newName @ " (displayName: " @ %displayName @ ")");
 		// Rollback spawn slot if this was a spawn point spawn
@@ -4707,13 +4779,14 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 		if(%newName != "" && %newName != -1)
 		{
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
-				echo("[SPAWN FLOW] SpawnAI(): Scheduling client ID lookup in 3.0s (waiting for Player object to register and name to replicate)");
-			// CRITICAL FIX #2: Pass spawnPointId to SpawnAIGetClientId
+				echo("[SPAWN FLOW] SpawnAI(): Scheduling client ID lookup in 0.5s (engine creates objects almost instantly)");
+			// Pass spawnPointId to SpawnAIGetClientId
 			%spawnPointIdForGetId = "";
 			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
 				%spawnPointIdForGetId = %spawnPointId;
-			// CRITICAL INTEGRATION: Pass predicted ID to avoid expensive lookups
-			schedule("SpawnAIGetClientId(\"" @ %newName @ "\", \"" @ %displayName @ "\", \"" @ %aiSpawnPos @ "\", \"" @ %commandIssuer @ "\", \"" @ %loadout @ "\", \"" @ %spawnPointIdForGetId @ "\", \"" @ %predictedId @ "\");", 3.0);
+			// NOTE: predictedId removed - was always returning wrong ID (town bot instead of new bot)
+			// AI::getId() inside SpawnAIGetClientId works correctly and finds the bot immediately
+			schedule("SpawnAIGetClientId(\"" @ %newName @ "\", \"" @ %displayName @ "\", \"" @ %aiSpawnPos @ "\", \"" @ %commandIssuer @ "\", \"" @ %loadout @ "\", \"" @ %spawnPointIdForGetId @ "\", \"\");", 0.5);
 			return %newName; // Return immediately, client ID lookup happens in scheduled call
 		}
 		else
@@ -5207,6 +5280,9 @@ function Bot_ClearStaleData(%clientId)
 
 function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, %spawnPointId, %predictedId)
 {
+	// WATCHDOG: Track this function for freeze detection
+	Watchdog_Enter("SpawnAIGetClientId");
+	
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] SpawnAIGetClientId: ENTRY spawnPointId='" @ %spawnPointId @ "' for " @ %newName @ ", predictedId=" @ %predictedId);
 	
 	// CRITICAL INTEGRATION: Check predicted ID first (O(1) lookup)
@@ -5447,9 +5523,9 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			}
 			else
 			{
-				// Player object invalid - skip and continue to brute-force
-				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): SKIPPING client ID " @ %checkId @ " - Player object is missing (likely freed or not ready yet, no bot markers).");
-				continue; // Skip this client ID, player object not ready
+				// Player object invalid - clear aiId so Priority 3 brute-force can be tried
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): NEWgetClientByName() returned " @ %aiId @ " but Player object is missing - falling through to brute-force search.");
+				%aiId = ""; // Clear so Priority 3 runs
 			}
 		}
 	}
@@ -8072,10 +8148,30 @@ function getAInumber()
 {
 	dbecho($dbechoMode, "getAInumber()");
 
+	%currentTime = getSimTime();
+	
 	for(%i = 0; %i <= 5000; %i++)
 	{
 		if($aiNumTable[%i] == "")
 		{
+			// COOLDOWN CHECK: Skip numbers that were freed recently (within 3 seconds)
+			// This prevents "An AI named X already exists!" errors when the engine
+			// hasn't finished cleaning up the old AI before we try to spawn a new one
+			%cooldownTime = $AINumberCooldown[%i];
+			if(%cooldownTime != "" && %cooldownTime != -1)
+			{
+				%timeSinceFreed = %currentTime - %cooldownTime;
+				if(%timeSinceFreed < 3)
+				{
+					// Still on cooldown - skip this number
+					continue;
+				}
+				else
+				{
+					// Cooldown expired - clear the flag
+					$AINumberCooldown[%i] = "";
+				}
+			}
 			return %i;
 		}
 	}
@@ -13204,6 +13300,9 @@ function ScheduleTeamEnforcement(%clientId, %expectedTeam)
 
 function VerifyEnemyBotTeam(%clientId, %botName, %expectedTeam)
 {
+	// WATCHDOG: Track this function for freeze detection
+	Watchdog_Enter("VerifyEnemyBotTeam");
+	
 	// Validate inputs
 	if(%clientId == -1 || %clientId == "" || %botName == "" || %botName == -1)
 		return;
@@ -13283,6 +13382,10 @@ function VerifyEnemyBotTeam(%clientId, %botName, %expectedTeam)
 // 2. Race Condition Prevention: Marking the ID as recently freed so it isn't reused immediately.
 function onClientDrop(%clientId)
 {
+	// Skip all logic during server shutdown to prevent freeze
+	if($ServerShuttingDown)
+		return;
+	
 	echo("[CLIENT DROP] onClientDrop(" @ %clientId @ ") called @ " @ getSimTime());
 	
 	// 1. Mark ID as recently freed (Critical for Race Condition Fix)

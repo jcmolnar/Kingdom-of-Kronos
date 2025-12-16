@@ -165,6 +165,9 @@ function InitSpawnPoints()
 
 function SpawnLoop(%this)
 {
+	// WATCHDOG: Track this function for freeze detection
+	Watchdog_Enter("SpawnLoop");
+	
 	dbecho($dbechoMode, "SpawnLoop(" @ %this @ ")");
 
 	%info = Object::getName(%this);

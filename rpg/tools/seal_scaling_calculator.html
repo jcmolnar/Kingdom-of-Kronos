@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seal Battle Scaling Calculator</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card-bg: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d29922;
+            --purple: #a371f7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        h1 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        h2 {
+            color: var(--green);
+            margin: 20px 0 10px;
+            font-size: 1.2rem;
+        }
+
+        h3 {
+            color: var(--yellow);
+            margin: 15px 0 8px;
+            font-size: 1rem;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .control-group label {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .control-group input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            padding: 6px 8px;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .control-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .bot-type-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .bot-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bot-header .fighter {
+            color: var(--red);
+        }
+
+        .bot-header .guardian {
+            color: var(--green);
+        }
+
+        .bot-header .mage {
+            color: var(--purple);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th,
+        td {
+            padding: 6px 4px;
+            text-align: right;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg);
+            color: var(--accent);
+            position: sticky;
+            top: 0;
+            font-size: 0.75rem;
+        }
+
+        th:first-child,
+        td:first-child {
+            text-align: left;
+        }
+
+        tr:hover {
+            background: rgba(88, 166, 255, 0.1);
+        }
+
+        .stat-hp {
+            color: var(--green);
+        }
+
+        .stat-atk {
+            color: var(--red);
+        }
+
+        .stat-def {
+            color: var(--yellow);
+        }
+
+        .stat-spell {
+            color: var(--purple);
+        }
+
+        .instructions {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .instructions code {
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: var(--accent);
+        }
+
+        button {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .formula {
+            background: var(--bg);
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .section-label {
+            color: var(--accent);
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .bot-mult-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .bot-mult-card {
+            background: var(--bg);
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .bot-mult-card h4 {
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .bot-mult-card.fighter h4 {
+            color: var(--red);
+        }
+
+        .bot-mult-card.guardian h4 {
+            color: var(--green);
+        }
+
+        .bot-mult-card.mage h4 {
+            color: var(--purple);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>⚔️ Seal Battle Scaling Calculator</h1>
+
+        <div class="instructions">
+            <strong>How to use:</strong> Adjust multipliers → Click "Calculate" → See all bot stats for R20-R300
+            <div class="formula">
+                <strong>Formula:</strong> BaseMult = (<code>baseMult</code> + sqrt(TotalSealValue/20) ×
+                <code>scaleFactor</code>) × <code>RoundMult</code><br>
+                FinalMult = BaseMult × <code>BotTypeMult</code>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="section-label">🎯 Core Scaling Settings</div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>Base Multiplier</label>
+                    <input type="number" id="baseMult" value="1.0" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Scale Factor (line 171)</label>
+                    <input type="number" id="scaleFactor" value="1.2" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Round 1 Mult</label>
+                    <input type="number" id="round1Mult" value="2.0" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Round 2 Mult</label>
+                    <input type="number" id="round2Mult" value="2.5" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Round 3 Mult</label>
+                    <input type="number" id="round3Mult" value="3.0" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="section-label">👤 Per-Bot-Type Multipliers (from remortseal.cs lines 86-108)</div>
+            <div class="bot-mult-grid">
+                <div class="bot-mult-card fighter">
+                    <h4>⚔️ FIGHTER (Glass Cannon)</h4>
+                    <div class="controls-grid">
+                        <div class="control-group"><label>HP</label><input type="number" id="fighterHP" value="0.9"
+                                step="0.1"></div>
+                        <div class="control-group"><label>ATK</label><input type="number" id="fighterATK" value="1.5"
+                                step="0.1"></div>
+                        <div class="control-group"><label>DEF</label><input type="number" id="fighterDEF" value="0.5"
+                                step="0.1"></div>
+                        <div class="control-group"><label>MDEF</label><input type="number" id="fighterMDEF" value="0.6"
+                                step="0.1"></div>
+                        <div class="control-group"><label>WeaponDmg</label><input type="number" id="fighterWeaponDmg"
+                                value="1.5" step="0.1"></div>
+                        <div class="control-group"><label>SpellDmg</label><input type="number" id="fighterSpellDmg"
+                                value="0.5" step="0.1"></div>
+                    </div>
+                </div>
+                <div class="bot-mult-card guardian">
+                    <h4>🛡️ GUARDIAN (Tank)</h4>
+                    <div class="controls-grid">
+                        <div class="control-group"><label>HP</label><input type="number" id="guardianHP" value="1.4"
+                                step="0.1"></div>
+                        <div class="control-group"><label>ATK</label><input type="number" id="guardianATK" value="1.0"
+                                step="0.1"></div>
+                        <div class="control-group"><label>DEF</label><input type="number" id="guardianDEF" value="1.0"
+                                step="0.1"></div>
+                        <div class="control-group"><label>MDEF</label><input type="number" id="guardianMDEF" value="1.2"
+                                step="0.1"></div>
+                        <div class="control-group"><label>WeaponDmg</label><input type="number" id="guardianWeaponDmg"
+                                value="1.0" step="0.1"></div>
+                        <div class="control-group"><label>SpellDmg</label><input type="number" id="guardianSpellDmg"
+                                value="0.3" step="0.1"></div>
+                    </div>
+                </div>
+                <div class="bot-mult-card mage">
+                    <h4>🔮 MAGE (Caster)</h4>
+                    <div class="controls-grid">
+                        <div class="control-group"><label>HP</label><input type="number" id="mageHP" value="0.7"
+                                step="0.1"></div>
+                        <div class="control-group"><label>ATK</label><input type="number" id="mageATK" value="0.5"
+                                step="0.1"></div>
+                        <div class="control-group"><label>DEF</label><input type="number" id="mageDEF" value="0.5"
+                                step="0.1"></div>
+                        <div class="control-group"><label>MDEF</label><input type="number" id="mageMDEF" value="1.5"
+                                step="0.1"></div>
+                        <div class="control-group"><label>WeaponDmg</label><input type="number" id="mageWeaponDmg"
+                                value="0.3" step="0.1"></div>
+                        <div class="control-group"><label>SpellDmg</label><input type="number" id="mageSpellDmg"
+                                value="2.0" step="0.1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="section-label">📊 Base Stats (before any scaling)</div>
+            <div class="controls-grid">
+                <div class="control-group"><label>Base LVL</label><input type="number" id="baseLVL" value="1500"></div>
+                <div class="control-group"><label>Base RemortStep</label><input type="number" id="baseRemortStep"
+                        value="15"></div>
+                <div class="control-group"><label>Base MaxHP</label><input type="number" id="baseMaxHP" value="23054">
+                </div>
+                <div class="control-group"><label>Base ATK</label><input type="number" id="baseATK" value="2064"></div>
+                <div class="control-group"><label>Base DEF</label><input type="number" id="baseDEF" value="30"></div>
+                <div class="control-group"><label>Base MDEF</label><input type="number" id="baseMDEF" value="30"></div>
+                <div class="control-group"><label>Base WeaponDmg</label><input type="number" id="baseWeaponDmg"
+                        value="220"></div>
+                <div class="control-group"><label>Base SpellDmg</label><input type="number" id="baseSpellDmg"
+                        value="500"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="section-label">🎮 Target Player Stats (auto-calculated from remort)</div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>Player Remort</label>
+                    <select id="playerRemort" onchange="updatePlayerStats()">
+                        <option value="20">R20</option>
+                        <option value="40">R40</option>
+                        <option value="60">R60</option>
+                        <option value="80">R80</option>
+                        <option value="100">R100</option>
+                        <option value="120">R120</option>
+                        <option value="140">R140</option>
+                        <option value="160" selected>R160</option>
+                        <option value="180">R180</option>
+                        <option value="200">R200</option>
+                        <option value="220">R220</option>
+                        <option value="240">R240</option>
+                        <option value="260">R260</option>
+                        <option value="280">R280</option>
+                        <option value="300">R300</option>
+                    </select>
+                </div>
+                <div class="control-group"><label>Player DEF (manual)</label><input type="number" id="playerDEF"
+                        value="300"></div>
+                <div class="control-group"><label>Player MDEF (manual)</label><input type="number" id="playerMDEF"
+                        value="300"></div>
+            </div>
+            <div id="playerCalcStats"
+                style="background: var(--bg); padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 0.85rem;">
+                <!-- Auto-calculated stats will appear here -->
+            </div>
+            <div class="formula" style="margin-top: 10px;">
+                <strong>Formulas:</strong> MaxLevel = 125 + RemortStep×8 | SkillCap = 10×Level + 20 + RemortStep×2<br>
+                <strong>Miss Chance:</strong> (DEF/5 + Dodging + 5) / (DEF/5 + Dodging + 5 + BotSkill + 5) × 100%
+            </div>
+        </div>
+
+        <div id="playerDamageResults"></div>
+
+        <button onclick="calculate()">📊 Calculate All Seal Values</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function getVal(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+        // Calculate player stats based on remort level
+        function getPlayerStats() {
+            const remortStep = parseInt(document.getElementById('playerRemort').value);
+
+            // MaxLevel = 125 + RemortStep * 8
+            const maxLevel = 125 + (remortStep * 8);
+
+            // SkillCap = (10 * Level) + 20 + (RemortStep * 2)
+            const skillCap = (10 * maxLevel) + 20 + (remortStep * 2);
+
+            // For max-level players, assume Endurance is at skill cap
+            const endurance = skillCap;
+
+            // Dodging and Spell Resistance also at skill cap
+            const dodging = skillCap;
+            const spellResist = skillCap;
+
+            // MaxHP = MinHP + (Endurance * 0.6) + (RemortStep * Endurance / 8) + Level
+            // MinHP for most races is around 100, assume average player has some item bonuses
+            const minHP = 100;
+            const itemBonus = 500; // Conservative estimate for equipment
+            const maxHP = Math.floor(minHP + (endurance * 0.6) + itemBonus + (remortStep * endurance / 8) + maxLevel);
+
+            // Bot attack skill is typically 1000 for seal bots
+            const botSkill = 1000;
+
+            return { remortStep, maxLevel, skillCap, endurance, dodging, spellResist, maxHP, botSkill };
+        }
+
+        function updatePlayerStats() {
+            const stats = getPlayerStats();
+            const html = `
+                <span style="color: var(--accent);">Level:</span> ${stats.maxLevel} | 
+                <span style="color: var(--green);">SkillCap:</span> ${stats.skillCap.toLocaleString()} | 
+                <span style="color: var(--green);">Endurance:</span> ${stats.endurance.toLocaleString()} | 
+                <span style="color: var(--green);">Dodging:</span> ${stats.dodging.toLocaleString()} | 
+                <span style="color: var(--purple);">SpellResist:</span> ${stats.spellResist.toLocaleString()} | 
+                <span style="color: var(--red);">MaxHP:</span> ${stats.maxHP.toLocaleString()}
+            `;
+            document.getElementById('playerCalcStats').innerHTML = html;
+        }
+
+        function getBaseStrengthMultiplier(totalSealValue) {
+            const baseMult = getVal('baseMult');
+            const scaleFactor = getVal('scaleFactor');
+            const steps = totalSealValue / 20;
+            const sqrtSteps = Math.sqrt(steps);
+            return baseMult + (sqrtSteps * scaleFactor);
+        }
+
+        function getRoundMultiplier(round, totalSealValue) {
+            const baseMult = getBaseStrengthMultiplier(totalSealValue);
+            const roundMults = [0, getVal('round1Mult'), getVal('round2Mult'), getVal('round3Mult')];
+            return baseMult * roundMults[round];
+        }
+
+        function getBotMults(botType) {
+            const prefix = botType.toLowerCase();
+            return {
+                HP: getVal(prefix + 'HP'),
+                ATK: getVal(prefix + 'ATK'),
+                DEF: getVal(prefix + 'DEF'),
+                MDEF: getVal(prefix + 'MDEF'),
+                WeaponDmg: getVal(prefix + 'WeaponDmg'),
+                SpellDmg: getVal(prefix + 'SpellDmg')
+            };
+        }
+
+        function getStatMultiplier(botType, stat, round, totalSealValue) {
+            const baseRoundMult = getRoundMultiplier(round, totalSealValue);
+            const botMults = getBotMults(botType);
+            const botTypeMult = botMults[stat] || 1.0;
+            return baseRoundMult * botTypeMult;
+        }
+
+        function formatNum(n) {
+            return Math.floor(n).toLocaleString();
+        }
+
+        function calculate() {
+            const baseStats = {
+                LVL: getVal('baseLVL'),
+                RemortStep: getVal('baseRemortStep'),
+                MaxHP: getVal('baseMaxHP'),
+                ATK: getVal('baseATK'),
+                DEF: getVal('baseDEF'),
+                MDEF: getVal('baseMDEF'),
+                WeaponDmg: getVal('baseWeaponDmg'),
+                SpellDmg: getVal('baseSpellDmg')
+            };
+
+            const botTypes = ['Fighter', 'Guardian', 'Mage'];
+            const rounds = [1, 2, 3];
+            const remorts = [];
+            for (let r = 20; r <= 300; r += 20) remorts.push(r);
+
+            let html = '';
+
+            // Group by ROUND first, then show all 3 bot types side-by-side
+            for (const round of rounds) {
+                const roundMult = getVal(`round${round}Mult`);
+                html += `<div class="bot-type-section">
+                    <h2>⚔️ Round ${round} (${roundMult}x Round Multiplier)</h2>`;
+
+                html += `<table>
+                    <tr>
+                        <th rowspan="2">Remort</th>
+                        <th rowspan="2">Mult</th>
+                        <th colspan="4" style="color: var(--red); border-left: 2px solid var(--red);">⚔️ Fighter</th>
+                        <th colspan="4" style="color: var(--green); border-left: 2px solid var(--green);">🛡️ Guardian</th>
+                        <th colspan="4" style="color: var(--purple); border-left: 2px solid var(--purple);">🔮 Mage</th>
+                    </tr>
+                    <tr>
+                        <th class="stat-hp" style="border-left: 2px solid var(--red);">HP</th>
+                        <th class="stat-atk">ATK</th>
+                        <th class="stat-def">DEF</th>
+                        <th class="stat-atk">WepDmg</th>
+                        <th class="stat-hp" style="border-left: 2px solid var(--green);">HP</th>
+                        <th class="stat-atk">ATK</th>
+                        <th class="stat-def">DEF</th>
+                        <th class="stat-atk">WepDmg</th>
+                        <th class="stat-hp" style="border-left: 2px solid var(--purple);">HP</th>
+                        <th class="stat-atk">ATK</th>
+                        <th>MDEF</th>
+                        <th class="stat-spell">SpellDmg</th>
+                    </tr>`;
+
+                for (const remort of remorts) {
+                    const totalSealValue = remort;
+                    const baseMult = getBaseStrengthMultiplier(totalSealValue);
+                    const finalBaseMult = baseMult * roundMult;
+
+                    // Calculate stats for all 3 bot types
+                    const stats = {};
+                    for (const botType of botTypes) {
+                        const hpMult = getStatMultiplier(botType, 'HP', round, totalSealValue);
+                        const atkMult = getStatMultiplier(botType, 'ATK', round, totalSealValue);
+                        const defMult = getStatMultiplier(botType, 'DEF', round, totalSealValue);
+                        const mdefMult = getStatMultiplier(botType, 'MDEF', round, totalSealValue);
+                        const wepMult = getStatMultiplier(botType, 'WeaponDmg', round, totalSealValue);
+                        const spellMult = getStatMultiplier(botType, 'SpellDmg', round, totalSealValue);
+
+                        stats[botType] = {
+                            HP: Math.floor(baseStats.MaxHP * hpMult),
+                            ATK: Math.floor(baseStats.ATK * atkMult),
+                            DEF: Math.floor(baseStats.DEF * defMult),
+                            MDEF: Math.floor(baseStats.MDEF * mdefMult),
+                            WepDmg: Math.floor(baseStats.WeaponDmg * wepMult),
+                            SpellDmg: Math.floor(baseStats.SpellDmg * spellMult)
+                        };
+                    }
+
+                    html += `<tr>
+                        <td>R${remort}</td>
+                        <td>${finalBaseMult.toFixed(1)}x</td>
+                        <td class="stat-hp" style="border-left: 2px solid var(--red);">${formatNum(stats.Fighter.HP)}</td>
+                        <td class="stat-atk">${formatNum(stats.Fighter.ATK)}</td>
+                        <td class="stat-def">${formatNum(stats.Fighter.DEF)}</td>
+                        <td class="stat-atk">${formatNum(stats.Fighter.WepDmg)}</td>
+                        <td class="stat-hp" style="border-left: 2px solid var(--green);">${formatNum(stats.Guardian.HP)}</td>
+                        <td class="stat-atk">${formatNum(stats.Guardian.ATK)}</td>
+                        <td class="stat-def">${formatNum(stats.Guardian.DEF)}</td>
+                        <td class="stat-atk">${formatNum(stats.Guardian.WepDmg)}</td>
+                        <td class="stat-hp" style="border-left: 2px solid var(--purple);">${formatNum(stats.Mage.HP)}</td>
+                        <td class="stat-atk">${formatNum(stats.Mage.ATK)}</td>
+                        <td>${formatNum(stats.Mage.MDEF)}</td>
+                        <td class="stat-spell">${formatNum(stats.Mage.SpellDmg)}</td>
+                    </tr>`;
+                }
+                html += '</table></div>';
+            }
+
+            // ===== PLAYER DAMAGE CALCULATOR SECTION (outputs to separate div above button) =====
+            const playerStats = getPlayerStats();
+            const playerDEF = getVal('playerDEF');
+            const playerMDEF = getVal('playerMDEF');
+            const playerDodging = playerStats.dodging;
+            const playerSpellResist = playerStats.spellResist;
+            const playerMaxHP = playerStats.maxHP;
+            const botSkill = playerStats.botSkill;
+            const playerRemort = playerStats.remortStep;
+            const playerLevel = playerStats.maxLevel;
+
+            // Miss chance formula: x = (DEF/5) + Dodging + 5, n = x + botSkill + 5, missChance = x/n
+            const physX = (playerDEF / 5) + playerDodging + 5;
+            const physN = physX + botSkill + 5;
+            const physMissChance = (physX / physN) * 100;
+
+            const spellX = (playerMDEF / 5) + playerSpellResist + 5;
+            const spellN = spellX + botSkill + 5;
+            const spellMissChance = (spellX / spellN) * 100;
+
+            let playerDamageHtml = `<div class="bot-type-section">
+                <h2>🎯 Damage vs R${playerRemort} Player (L${playerLevel})</h2>
+                <p style="color: var(--text-muted); margin-bottom: 10px;">
+                    <strong>DEF:</strong> ${playerDEF} | 
+                    <strong>MDEF:</strong> ${playerMDEF} | 
+                    <strong>Dodging:</strong> ${formatNum(playerDodging)} | 
+                    <strong>SpellResist:</strong> ${formatNum(playerSpellResist)} | 
+                    <strong>Physical Miss:</strong> ${physMissChance.toFixed(1)}% | 
+                    <strong>Spell Miss:</strong> ${spellMissChance.toFixed(1)}% | 
+                    <strong>HP:</strong> ${formatNum(playerMaxHP)}
+                </p>`;
+
+            playerDamageHtml += `<table>
+                <tr>
+                    <th rowspan="2">Remort</th>
+                    <th colspan="3" style="color: var(--red); border-left: 2px solid var(--red);">⚔️ Fighter Phys Dmg</th>
+                    <th colspan="3" style="color: var(--green); border-left: 2px solid var(--green);">🛡️ Guardian Phys Dmg</th>
+                    <th colspan="3" style="color: var(--purple); border-left: 2px solid var(--purple);">🔮 Mage Spell Dmg</th>
+                </tr>
+                <tr>
+                    <th style="border-left: 2px solid var(--red);">Avg Dmg</th>
+                    <th>Hits to Kill</th>
+                    <th>% HP/Hit</th>
+                    <th style="border-left: 2px solid var(--green);">Avg Dmg</th>
+                    <th>Hits to Kill</th>
+                    <th>% HP/Hit</th>
+                    <th style="border-left: 2px solid var(--purple);">Avg Dmg</th>
+                    <th>Hits to Kill</th>
+                    <th>% HP/Hit</th>
+                </tr>`;
+
+            for (const remort of remorts) {
+                const totalSealValue = remort;
+
+                // Calculate bot stats at this remort level (use Round 1 as baseline)
+                const fighterWepMult = getStatMultiplier('Fighter', 'WeaponDmg', 1, totalSealValue);
+                const fighterAtkMult = getStatMultiplier('Fighter', 'ATK', 1, totalSealValue);
+                const guardianWepMult = getStatMultiplier('Guardian', 'WeaponDmg', 1, totalSealValue);
+                const guardianAtkMult = getStatMultiplier('Guardian', 'ATK', 1, totalSealValue);
+                const mageSpellMult = getStatMultiplier('Mage', 'SpellDmg', 1, totalSealValue);
+
+                const fighterWepDmg = Math.floor(baseStats.WeaponDmg * fighterWepMult);
+                const fighterATK = Math.floor(baseStats.ATK * fighterAtkMult);
+                const guardianWepDmg = Math.floor(baseStats.WeaponDmg * guardianWepMult);
+                const guardianATK = Math.floor(baseStats.ATK * guardianAtkMult);
+                const mageSpellDmg = Math.floor(baseStats.SpellDmg * mageSpellMult);
+
+                // Physical damage formula: ((WepDmg + ATK) / 1000 * skill) - random(DEF/10)
+                const fighterRawDmg = ((fighterWepDmg + fighterATK) / 1000) * botSkill;
+                const fighterAvgDmg = Math.max(1, Math.floor(fighterRawDmg - (playerDEF / 20)));
+                const fighterHitsToKill = Math.ceil(playerMaxHP / fighterAvgDmg);
+                const fighterPctHP = ((fighterAvgDmg / playerMaxHP) * 100).toFixed(1);
+
+                const guardianRawDmg = ((guardianWepDmg + guardianATK) / 1000) * botSkill;
+                const guardianAvgDmg = Math.max(1, Math.floor(guardianRawDmg - (playerDEF / 20)));
+                const guardianHitsToKill = Math.ceil(playerMaxHP / guardianAvgDmg);
+                const guardianPctHP = ((guardianAvgDmg / playerMaxHP) * 100).toFixed(1);
+
+                // Spell damage formula: (SpellDmg * skill / 1000) - random(MDEF/10)
+                const mageRawDmg = (mageSpellDmg * botSkill) / 1000;
+                const mageAvgDmg = Math.max(1, Math.floor(mageRawDmg - (playerMDEF / 20)));
+                const mageHitsToKill = Math.ceil(playerMaxHP / mageAvgDmg);
+                const magePctHP = ((mageAvgDmg / playerMaxHP) * 100).toFixed(1);
+
+                playerDamageHtml += `<tr>
+                    <td>R${remort}</td>
+                    <td class="stat-atk" style="border-left: 2px solid var(--red);">${formatNum(fighterAvgDmg)}</td>
+                    <td>${fighterHitsToKill}</td>
+                    <td>${fighterPctHP}%</td>
+                    <td class="stat-atk" style="border-left: 2px solid var(--green);">${formatNum(guardianAvgDmg)}</td>
+                    <td>${guardianHitsToKill}</td>
+                    <td>${guardianPctHP}%</td>
+                    <td class="stat-spell" style="border-left: 2px solid var(--purple);">${formatNum(mageAvgDmg)}</td>
+                    <td>${mageHitsToKill}</td>
+                    <td>${magePctHP}%</td>
+                </tr>`;
+            }
+            playerDamageHtml += '</table></div>';
+
+            // Output to separate divs
+            document.getElementById('playerDamageResults').innerHTML = playerDamageHtml;
+            document.getElementById('results').innerHTML = html;
+        }
+
+        // Calculate on page load
+        updatePlayerStats();
+        calculate();
+
+        // Auto-recalculate when any input changes
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', () => {
+                updatePlayerStats();
+                calculate();
+            });
+            el.addEventListener('change', () => {
+                updatePlayerStats();
+                calculate();
+            });
+        });
+    </script>
+</body>
+
+</html>
