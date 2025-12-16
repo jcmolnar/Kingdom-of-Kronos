@@ -714,7 +714,8 @@ function RegisterBot(%clientId, %spawnPointId, %team, %aiName)
 }
 
 // Unregister a bot from the centralized registry
-function UnregisterBot(%clientId)
+// %excludeObject: Optional player object ID to skip when cleaning orphans (e.g., the dying bot in Player::onKilled)
+function UnregisterBot(%clientId, %excludeObject)
 {
 	if(%clientId == "" || %clientId == -1)
 		return;
@@ -777,8 +778,17 @@ function UnregisterBot(%clientId)
 			%objClientId = Player::getClient(%obj);
 			if(%objClientId == %clientId)
 			{
-				echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in BotGroup for clientId=" @ %clientId @ " - deleting");
-				deleteObject(%obj);
+				// CRITICAL: Skip if this is the dying object (passed via %excludeObject)
+				// This prevents use-after-free crash when called from Player::onKilled
+				if(%obj == %excludeObject)
+				{
+					if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Skipping dying object " @ %obj @ " in BotGroup for clientId=" @ %clientId @ " (excluded)");
+					continue;
+				}
+				
+				echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in BotGroup for clientId=" @ %clientId @ " - scheduling deletion");
+				// Schedule deletion to prevent crash during death processing
+				schedule("if(isObject(" @ %obj @ ")) deleteObject(" @ %obj @ ");", 0.5);
 			}
 		}
 	}
@@ -797,8 +807,17 @@ function UnregisterBot(%clientId)
 			%objClientId = Player::getClient(%obj);
 			if(%objClientId == %clientId)
 			{
-				echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " - deleting");
-				deleteObject(%obj);
+				// CRITICAL: Skip if this is the dying object (passed via %excludeObject)
+				// This prevents use-after-free crash when called from Player::onKilled
+				if(%obj == %excludeObject)
+				{
+					if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Skipping dying object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " (excluded)");
+					continue;
+				}
+				
+				echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " - scheduling deletion");
+				// Schedule deletion to prevent crash during death processing
+				schedule("if(isObject(" @ %obj @ ")) deleteObject(" @ %obj @ ");", 0.5);
 			}
 		}
 	}
@@ -1532,8 +1551,9 @@ function ClearPlayerSaveFileCache(%clientId)
 // ============================================================================
 
 // Decrement spawn counter for a bot - uses multiple fallback methods
+// %excludeObject: Optional player object ID to exclude from orphan cleanup (passed to UnregisterBot)
 // Returns true if counter was decremented, false if no spawn point found
-function DecrementSpawnCounter(%clientId)
+function DecrementSpawnCounter(%clientId, %excludeObject)
 {
 	if(%clientId == "" || %clientId == -1)
 	{
@@ -1605,8 +1625,8 @@ function DecrementSpawnCounter(%clientId)
 		if($numAIperSpawnPoint[%spawnPointId] < 0)
 			$numAIperSpawnPoint[%spawnPointId] = 0;
 		
-		// Unregister from bot registry
-		UnregisterBot(%clientId);
+		// Unregister from bot registry (pass excludeObject to prevent deleting dying player)
+		UnregisterBot(%clientId, %excludeObject);
 		
 		return true;
 	}

@@ -1880,7 +1880,8 @@ function Player::onKilled(%this)
 			
 			// CRITICAL: Use centralized DecrementSpawnCounter() for reliable counter management
 			// This function uses the bot registry and multiple fallbacks to find the spawn point
-			DecrementSpawnCounter(%clientId);
+			// Pass %this as excludeObject to prevent UnregisterBot from deleting the dying player object
+			DecrementSpawnCounter(%clientId, %this);
 			
 			// CRITICAL: Decrement bot tracking counters here (Player::onKilled is called first and is more reliable)
 			$ActiveEnemyBots--;
