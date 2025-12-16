@@ -121,6 +121,63 @@ function Telemetry_Reset()
 }
 
 // ============================================================================
+// WATCHDOG SYSTEM - Detects infinite loops and server freezes
+// Logs current function to file every 5 seconds. On freeze, check config/watchdog.log
+// ============================================================================
+$Watchdog_Enabled = true;           // Master switch for watchdog
+$Watchdog_CurrentFunction = "";     // Currently executing function
+$Watchdog_LoopCounter = 0;          // Current loop iteration
+$Watchdog_MaxIterations = 500;      // Max iterations before breaking (safety limit)
+
+// Heartbeat - writes to file every 5 seconds
+// If server freezes, watchdog.log shows what was running
+function Watchdog_Heartbeat()
+{
+	if(!$Watchdog_Enabled) return;
+	
+	%status = getSimTime() @ " | Func: " @ $Watchdog_CurrentFunction @ " | Loop: " @ $Watchdog_LoopCounter;
+	%status = %status @ " | Bots: " @ $ActiveEnemyBots @ "/" @ $numAI;
+	
+	// Write to both console and file
+	echo("[WATCHDOG] " @ %status);
+	
+	// Write to dedicated file (overwrites each time - last state before freeze)
+	export("$Watchdog_*", "config/watchdog_state.cs", false);
+	
+	schedule("Watchdog_Heartbeat();", 5);
+}
+
+// Call at start of high-risk functions
+function Watchdog_Enter(%funcName)
+{
+	$Watchdog_CurrentFunction = %funcName;
+	$Watchdog_LoopCounter = 0;
+	$Watchdog_EntryTime = getSimTime();
+}
+
+// Call at end of high-risk functions
+function Watchdog_Exit()
+{
+	$Watchdog_CurrentFunction = "";
+	$Watchdog_LoopCounter = 0;
+}
+
+// Call inside loops - returns true if should break (exceeded limit)
+function Watchdog_LoopCheck(%context)
+{
+	$Watchdog_LoopCounter++;
+	if($Watchdog_LoopCounter > $Watchdog_MaxIterations)
+	{
+		echo("WATCHDOG ALERT: Loop exceeded " @ $Watchdog_MaxIterations @ " iterations in " @ $Watchdog_CurrentFunction @ " (" @ %context @ ")! Breaking to prevent freeze.");
+		return true;
+	}
+	return false;
+}
+
+// Start watchdog on server load
+schedule("Watchdog_Heartbeat();", 10);
+
+// ============================================================================
 // PERIODIC AI NUMBER RECONCILIATION
 // Runs every 5 minutes to clean up orphaned AI numbers from $aiNumTable
 // ============================================================================
@@ -9093,6 +9150,7 @@ function CleanupGhostClientId(%clientId, %aiName)
 // PeriodicShellBotCheck: Scans for and detects shell bots (bots with no player object)
 function PeriodicShellBotCheck()
 {
+	Watchdog_Enter("PeriodicShellBotCheck");
 	%shellCount = 0;
 	// CRITICAL FIX: Client::getFirst()/getNext() only returns REAL player clients, NOT AI bots!
 	// Use $BotRegistryList to iterate enemy bots and $TownBotSpawned for town bots
@@ -9102,6 +9160,7 @@ function PeriodicShellBotCheck()
 	{
 		for(%i = 0; (%checkId = GetWord($BotRegistryList, %i)) != -1; %i++)
 		{
+			if(Watchdog_LoopCheck("BotRegistryList")) break;
 			if(%checkId != "" && %checkId != "0")
 			{
 				%name = Client::getName(%checkId);
@@ -9126,6 +9185,7 @@ function PeriodicShellBotCheck()
 	// Check town bots from registry
 	for(%i = 0; (%botName = GetWord($TownBotRegistry, %i)) != -1; %i++)
 	{
+		if(Watchdog_LoopCheck("TownBotRegistry")) break;
 		if(%botName != "" && %botName != "0")
 		{
 			%checkId = $TownBotSpawned[%botName];
@@ -9154,6 +9214,7 @@ function PeriodicShellBotCheck()
 	}
 	
 	// Schedule next check in 30 seconds
+	Watchdog_Exit();
 	schedule("PeriodicShellBotCheck();", 30);
 }
 
@@ -9163,6 +9224,7 @@ schedule("PeriodicShellBotCheck();", 60);
 // PeriodicGhostClientIdCleanup: Scans for and cleans up ghost client IDs periodically
 function PeriodicGhostClientIdCleanup()
 {
+	Watchdog_Enter("PeriodicGhostClientIdCleanup");
 	// Scan a range of client IDs for ghost objects (empty name Player objects that are bots)
 	%startId = 2000;  // Adjust based on your server's client ID range
 	%endId = %startId + 300;  // Check up to 300 IDs ahead
@@ -9170,6 +9232,7 @@ function PeriodicGhostClientIdCleanup()
 	%ghostCount = 0;
 	for(%checkId = %startId; %checkId <= %endId; %checkId++)
 	{
+		if(Watchdog_LoopCheck("ClientIdRange")) break;
 		%playerObj = Client::getOwnedObject(%checkId);
 		if(%playerObj != -1 && %playerObj != "")
 		{
@@ -9253,6 +9316,7 @@ function PeriodicGhostClientIdCleanup()
 		echo("PeriodicGhostClientIdCleanup: Cleaned up " @ %ghostCount @ " ghost client ID(s)");
 	
 	// Schedule next cleanup in 30 seconds
+	Watchdog_Exit();
 	schedule("PeriodicGhostClientIdCleanup();", 30);
 }
 
