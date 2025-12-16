@@ -2555,8 +2555,11 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 	if(%hasActiveConnection)
 	{
 		// Delay this spawn by 2 seconds to let player connection complete
-		// Return false to indicate spawn was deferred
-		schedule("createAI(\"" @ %aiName @ "\", \"" @ %armor @ "\", \"" @ %spawnPos @ "\", \"" @ %spawnRot @ "\", \"" @ %name @ "\");", 2.0);
+		// CRITICAL FIX: Pass original arguments matching createAI signature:
+		// createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck)
+		// Note: %markerGroup was originally passed in, can be position string or marker group name
+		// We pass %spawnPos since we've already resolved it from %markerGroup
+		schedule("createAI(\"" @ %aiName @ "\", \"" @ %spawnPos @ "\", \"" @ %name @ "\", " @ %skipPostSpawn @ ", " @ %bypassRaceCheck @ ");", 2.0);
 		return "deferred";
 	}
 	
