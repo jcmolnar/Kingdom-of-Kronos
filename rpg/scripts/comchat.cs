@@ -485,6 +485,20 @@ function remoteSay(%clientId, %team, %message, %senderName)
 		return;
 	}
 	
+	// DUAL WIELDING - Admin 10 only (experimental feature)
+	if(%w1 == "#dualwield")
+	{
+		if(%clientToServerAdminLevel >= 10)
+		{
+			DualWield::Command(%TrueClientId, %cropped);
+		}
+		else
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "You do not have permission to use this command. (Admin 10 required)");
+		}
+		return;
+	}
+	
 	if(%w1 == "#searchdts")
 		{
 			if(%cropped == "")

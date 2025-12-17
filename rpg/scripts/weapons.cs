@@ -3053,9 +3053,9 @@ function ListAllWeaponDPS()
 		
 		// Format numbers
 		%rank = %i + 1;
-		// FixDecimals only takes one parameter, so format manually
-		%dpsFormatted = FixDecimals(%dps);
+		%damageFormatted = FixDecimals(%damage);
 		%delayFormatted = FixDecimals(%delay);
+		%dpsFormatted = FixDecimals(%dps);
 		
 		// Pad name to 30 chars
 		%namePadded = %name;
@@ -3066,7 +3066,7 @@ function ListAllWeaponDPS()
 				%namePadded = %namePadded @ " ";
 		}
 		
-		echo(%rank @ "    | " @ %namePadded @ " | " @ %damage @ "     | " @ %delayFormatted @ "      | " @ %dpsFormatted @ " | " @ %typeName);
+		echo(%rank @ "    | " @ %namePadded @ " | " @ %damageFormatted @ "     | " @ %delayFormatted @ "      | " @ %dpsFormatted @ " | " @ %typeName);
 	}
 	
 	echo("");

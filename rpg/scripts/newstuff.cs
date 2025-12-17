@@ -5,6 +5,7 @@ $AccessoryVar[TerminusEst, $MiscInfo] = "A sword used by a great warrior Terminu
 $SkillType[TerminusEst] = $SkillSlashing;
 $ItemCost[TerminusEst] = 700000000;
 $SkillRestriction[TerminusEst] = $SkillSlashing @ " 2030 " @ $MinRemort @ " 50";
+$WeaponDelay[TerminusEst] = 0.5;
 //****************************************************************************************************
 //   Terminus Est
 //****************************************************************************************************
@@ -57,6 +58,7 @@ $AccessoryVar[AecoSeorei, $MiscInfo] = "A legendary spear of unmatched power and
 $SkillType[AecoSeorei] = $SkillPiercing;
 $ItemCost[AecoSeorei] = 700000000;
 $SkillRestriction[AecoSeorei] = $SkillPiercing @ " 2030 " @ $MinRemort @ " 50";
+$WeaponDelay[AecoSeorei] = 0.5;
 
 ItemImageData AecoSeoreiImage
 {
@@ -106,6 +108,7 @@ $AccessoryVar[MorningStar, $MiscInfo] = "A devastating mace of legendary power";
 $SkillType[MorningStar] = $SkillBludgeoning;
 $ItemCost[MorningStar] = 700000000;
 $SkillRestriction[MorningStar] = $SkillBludgeoning @ " 2030 " @ $MinRemort @ " 50";
+$WeaponDelay[MorningStar] = 0.5;
 
 ItemImageData MorningStarImage
 {
@@ -246,6 +249,7 @@ $AccessoryVar[WhiteDiamondVoidCutter, $MiscInfo] = "A blade forged from the rare
 $SkillType[WhiteDiamondVoidCutter] = $SkillSlashing;
 $ItemCost[WhiteDiamondVoidCutter] = 5000000000;
 $SkillRestriction[WhiteDiamondVoidCutter] = $SkillSlashing @ " 2500 " @ $MinRemort @ " 75";
+$WeaponDelay[WhiteDiamondVoidCutter] = 0.45;
 
 ItemImageData WhiteDiamondVoidCutterImage
 {
@@ -340,6 +344,7 @@ $AccessoryVar[WhiteDiamondVoidImpaler, $MiscInfo] = "A spear forged from the rar
 $SkillType[WhiteDiamondVoidImpaler] = $SkillPiercing;
 $ItemCost[WhiteDiamondVoidImpaler] = 5000000000;
 $SkillRestriction[WhiteDiamondVoidImpaler] = $SkillPiercing @ " 2500 " @ $MinRemort @ " 75";
+$WeaponDelay[WhiteDiamondVoidImpaler] = 0.45;
 
 ItemImageData WhiteDiamondVoidImpalerImage
 {

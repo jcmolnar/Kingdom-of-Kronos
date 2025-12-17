@@ -317,6 +317,7 @@ function createServer(%mission, %dedicated)
 	exec(advertisements);
 	exec(TaurikAdmins);
 	exec(remortseal);
+	exec(DualWielding);
 	//exec(DebugInit); only need if debugging
 	//exec(backpack); we implemented belt.cs instead of backpack.cs
 	

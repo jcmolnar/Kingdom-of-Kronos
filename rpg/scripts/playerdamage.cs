@@ -461,6 +461,48 @@ function Player::onKilled(%this)
 	// WATCHDOG: Track this function for freeze detection
 	Watchdog_Enter("Player::onKilled");
 	dbecho($dbechoMode, "Player::onKilled(" @ %this @ ")");
+	
+	// CRITICAL DEBUG: Log object ID and attempt to identify what this is
+	%playerObj = %this;
+	%clientIdFromGetClient = Player::getClient(%this);
+	%clientIdFromHelper = GetClientIdFromPlayerObject(%this);
+	%nameFromClient = "";
+	%nameFromAI = "";
+	%isAiControlled = Player::isAiControlled(%this);
+	
+	// Try to get name via client ID
+	if(%clientIdFromGetClient != -1 && %clientIdFromGetClient != "")
+		%nameFromClient = Client::getName(%clientIdFromGetClient);
+	if(%clientIdFromHelper != -1 && %clientIdFromHelper != "")
+		%nameFromClient = Client::getName(%clientIdFromHelper);
+	
+	// Get bot data for additional context
+	%botInfoAiName = fetchData(%this, "BotInfoAiName");
+	%spawnBotInfo = fetchData(%this, "SpawnBotInfo");
+	
+	echo("[ONKILLED DEBUG] === Player::onKilled() ENTRY ===");
+	echo("[ONKILLED DEBUG]   PlayerObject(%%this): " @ %playerObj);
+	echo("[ONKILLED DEBUG]   Player::getClient(): " @ %clientIdFromGetClient);
+	echo("[ONKILLED DEBUG]   GetClientIdFromPlayerObject(): " @ %clientIdFromHelper);
+	echo("[ONKILLED DEBUG]   Player::isAiControlled(): " @ %isAiControlled);
+	echo("[ONKILLED DEBUG]   Client::getName(): '" @ %nameFromClient @ "'");
+	echo("[ONKILLED DEBUG]   BotInfoAiName: '" @ %botInfoAiName @ "'");
+	echo("[ONKILLED DEBUG]   SpawnBotInfo: '" @ %spawnBotInfo @ "'");
+	
+	// CRITICAL: Detect if this might be a real player
+	%hasCharFile = false;
+	if(%nameFromClient != "" && %nameFromClient != -1)
+	{
+		%characterFile = "temp\\" @ %nameFromClient @ ".cs";
+		%hasCharFile = isFile(%characterFile);
+	}
+	
+	// WARNING: If this looks like a real player (has char file) but is being killed via this path
+	if(%hasCharFile && !%isAiControlled)
+	{
+		echo("*** CRITICAL WARNING *** Player::onKilled() called on REAL PLAYER: '" @ %nameFromClient @ "' (clientId=" @ %clientIdFromHelper @ ", playerObj=" @ %playerObj @ ") - THIS SHOULD NOT HAPPEN!");
+		echo("*** CRITICAL WARNING *** Stack trace context - BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'");
+	}
 
 	//At this point, the client can still be queried for getItemCounts, and is also still an object
 	//Player::Kill calls this function
@@ -2513,6 +2555,9 @@ function Player::onKilled(%this)
 						}
 					}
 				}
+				
+				// NEW: Clear O(1) lookup table and set cooldown
+				UnregisterTownBotClient(%clientId);
 				
 				// CRITICAL: DO NOT clear BotInfoAiName, SpawnBotInfo, or SpawnTime here
 				// AI::onDroneKilled needs to read these to identify bot type and perform cleanup

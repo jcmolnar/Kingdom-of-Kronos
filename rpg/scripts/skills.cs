@@ -969,7 +969,18 @@ function UseSkill(%clientId, %skilltype, %successful, %showmsg, %base, %refresha
 				if(%showmsg)
 					Client::sendMessage(%clientId, $MsgBeige, "You have increased your skill in " @ $SkillDesc[%skilltype] @ " (" @ FormatSkillDisplay(%clientId, %skilltype) @ ")");
 				if(%refreshall)
-					RefreshAll(%clientId, "true");
+				{
+					// THROTTLE: Instead of calling RefreshAll immediately for each skill gain,
+					// batch calls with a 2-second delay to prevent spam during rapid skill-ups
+					%lastRefreshScheduled = $SkillUpgradeRefreshScheduled[%clientId];
+					if(%lastRefreshScheduled != "true")
+					{
+						$SkillUpgradeRefreshScheduled[%clientId] = "true";
+						// Schedule a single RefreshAll after a short delay
+						schedule("$SkillUpgradeRefreshScheduled[" @ %clientId @ "] = \"\"; RefreshAll(" @ %clientId @ ", \"true\");", 2);
+					}
+					// If already scheduled, the pending call will handle this update too
+				}
 			}
 		}
 	}

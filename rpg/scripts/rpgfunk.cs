@@ -4155,6 +4155,7 @@ function GetBotIdList()
 	
 	if($GETBOTID_DEBUG) echo("[GETBOTIDLIST DEBUG] Using BaseRep iteration, found " @ %botsFound @ " bots");
 	
+	Watchdog_Exit();
 	return Trim(%list);
 }
 
@@ -6487,7 +6488,7 @@ function WhatIs(%item)
 	if(%c != "")
 		%msg = %msg @ "\nPrice: $" @ %c;
 	if(%sd != "")
-		%msg = %msg @ "\nDelay: " @ %sd @ " sec";
+		%msg = %msg @ "\nDelay: " @ FixDecimals(%sd) @ " sec";
 	if(%sr != "")
 		%msg = %msg @ "\nRecovery: " @ %sr @ " sec";
 	if(%sm != "")

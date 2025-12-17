@@ -128,6 +128,10 @@ function InitSpawnPoints()
 	dbecho($dbechoMode, "InitSpawnPoints()");
 
 	%group = nameToID("MissionGroup\\SpawnPoints");
+	
+	// Initialize global spawn point count and zone-to-spawnpoint mapping
+	$TotalSpawnPointsRegistered = 0;
+	$TotalZonesWithSpawnPoints = 0;
 
 	if(%group != -1)
 	{
@@ -157,9 +161,69 @@ function InitSpawnPoints()
 				echo("Marker Zone ID: " @ $MarkerZone[%this]);
 				echo("===================================================");
 
-				SpawnLoop(%this);
+				// OPTIMIZATION: Build zone-to-spawnpoints mapping instead of starting all loops
+				%zoneId = $MarkerZone[%this];
+				if(%zoneId != "" && %zoneId != -1)
+				{
+					// Add this spawn point to the zone's spawn point list
+					%existingList = $ZoneSpawnPoints[%zoneId];
+					if(%existingList == "" || %existingList == -1)
+					{
+						$ZoneSpawnPoints[%zoneId] = %this;
+						$TotalZonesWithSpawnPoints++;
+					}
+					else
+						$ZoneSpawnPoints[%zoneId] = %existingList @ " " @ %this;
+					
+					// Mark this spawn point's loop as sleeping (not running)
+					$SpawnLoopSleeping[%this] = "true";
+					$TotalSpawnPointsRegistered++;
+				}
+				else
+				{
+					// Unknown zone - start loop immediately (legacy behavior for edge cases)
+					echo("[SPAWN INIT] WARNING: Spawn point " @ %this @ " has no zone - starting loop immediately (legacy mode)");
+					SpawnLoop(%this);
+				}
 			}
 		}
+	}
+	
+	echo("[SPAWN INIT] Registered " @ $TotalSpawnPointsRegistered @ " spawn points across " @ $TotalZonesWithSpawnPoints @ " zones (loops will start when players enter zones)");
+}
+
+// OPTIMIZATION: Wake up spawn loops for a specific zone when a player enters
+// This should be called from Zone::DoEnter() when a real player enters a zone
+function WakeZoneSpawnLoops(%zoneId)
+{
+	if(%zoneId == "" || %zoneId == -1)
+		return;
+	
+	%spawnPointList = $ZoneSpawnPoints[%zoneId];
+	if(%spawnPointList == "" || %spawnPointList == -1)
+		return; // No spawn points registered for this zone
+	
+	%wokenCount = 0;
+	for(%i = 0; GetWord(%spawnPointList, %i) != -1; %i++)
+	{
+		%spawnPoint = GetWord(%spawnPointList, %i);
+		
+		// Only wake loops that are sleeping (not already running)
+		if($SpawnLoopSleeping[%spawnPoint] == "true")
+		{
+			$SpawnLoopSleeping[%spawnPoint] = ""; // Mark as running
+			SpawnLoop(%spawnPoint);
+			%wokenCount++;
+		}
+	}
+	
+	if(%wokenCount > 0)
+	{
+		%zoneIndex = Zone::getIndex(%zoneId);
+		%zoneDesc = "Unknown";
+		if(%zoneIndex > 0)
+			%zoneDesc = $Zone::Desc[%zoneIndex];
+		echo("[ZONE SPAWN] Woke " @ %wokenCount @ " spawn loops for zone " @ %zoneIndex @ " (" @ %zoneDesc @ ")");
 	}
 }
 
@@ -168,27 +232,48 @@ function SpawnLoop(%this)
 	// WATCHDOG: Track this function for freeze detection
 	Watchdog_Enter("SpawnLoop");
 	
+	// GRANULAR DEBUG: Log each step to find freeze location
+	echo("[SPAWNLOOP CHECKPOINT] Step 1 - Entry for spawnpoint " @ %this @ " @ " @ floor(getSimTime()));
+	
 	dbecho($dbechoMode, "SpawnLoop(" @ %this @ ")");
 
 	%info = Object::getName(%this);
+	
+	echo("[SPAWNLOOP CHECKPOINT] Step 2 - Got info: '" @ %info @ "'");
+	
+	// SAFETY: If %info is empty, exit early to prevent infinite loops
+	if(%info == "" || %info == -1)
+	{
+		echo("[SPAWNLOOP CHECKPOINT] ABORT - Invalid spawn point info, scheduling next loop and returning");
+		schedule("SpawnLoop(" @ %this @ ");", 30);
+		return;
+	}
 
 	%mindelay = GetWord(%info, 3);
 	%maxdelay = GetWord(%info, 4);
 	%diff = %maxdelay - %mindelay;
 	%delay = floor(getRandom() * %diff) + %mindelay;
+	
+	echo("[SPAWNLOOP CHECKPOINT] Step 3 - Delay calculated: " @ %delay);
 
 	%indexes = "";
 	for(%i = 5; GetWord(%info, %i) != -1; %i++)
 		%indexes = %indexes @ GetWord(%info, %i) @ " ";
+		
+	echo("[SPAWNLOOP CHECKPOINT] Step 4 - Indexes extracted, count: " @ (%i - 5));
 
 	%r = floor(getRandom() * (%i-5));
 	%index = GetWord(%indexes, %r);
+	
+	echo("[SPAWNLOOP CHECKPOINT] Step 5 - Selected index: " @ %index);
 
 	%flag = "";
 	if($SelectiveZoneBotSpawning)
 	{
 	%zoneId = $MarkerZone[%this];
+		echo("[SPAWNLOOP CHECKPOINT] Step 5a - Calling Zone::getNumPlayers(" @ %zoneId @ ")");
 		%zonePlayerCount = Zone::getNumPlayers(%zoneId);
+		echo("[SPAWNLOOP CHECKPOINT] Step 5b - Zone::getNumPlayers returned: " @ %zonePlayerCount);
 		// Spawn zone rules:
 		// - Zone is unknown/empty → NO spawning (spawn point must have valid zone)
 		// - Zone is valid AND has players → Allow spawning
@@ -207,6 +292,8 @@ function SpawnLoop(%this)
 	}
 	else
 		%flag = True;
+	
+	echo("[SPAWNLOOP CHECKPOINT] Step 6 - Zone check complete, flag=" @ %flag);
 
 	%currentCounter = $numAIperSpawnPoint[%this];
 	if(%currentCounter == "")
@@ -352,11 +439,26 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		}
 	}
 
-	// always call back the spawn loop, in case a spot is freed up for a helper to spawn
-	// NOTE: per-bot spawn now includes a 5s internal delay; leave the loop fast (random 1–2s) but avoid overlap with in-progress spawns
+	// OPTIMIZATION: If zone is empty and SelectiveZoneBotSpawning is enabled, go to SLEEP instead of looping
+	// The loop will be woken up by WakeZoneSpawnLoops() when a player enters the zone
+	if($SelectiveZoneBotSpawning && !%flag)
+	{
+		// Zone is empty - mark as sleeping and do NOT reschedule
+		$SpawnLoopSleeping[%this] = "true";
+		%zoneId = $MarkerZone[%this];
+		%zoneIndex = Zone::getIndex(%zoneId);
+		echo("[SPAWNLOOP CHECKPOINT] Step 7 - SLEEPING (zone " @ %zoneIndex @ " has no players)");
+		echo("[SPAWNLOOP CHECKPOINT] Step 8 - EXIT (no reschedule - waiting for WakeZoneSpawnLoops)");
+		return;
+	}
+	
+	// Zone has players or SelectiveZoneBotSpawning is disabled - continue normal loop
+	echo("[SPAWNLOOP CHECKPOINT] Step 7 - Scheduling next loop, delay=" @ %delay @ ", inProgress=" @ %spawnInProgress);
 	if(%spawnInProgress != "true")
 		schedule("SpawnLoop(" @ %this @ ");", %delay);
 	else
 		// If a spawn is already in progress, reschedule with a small backoff to avoid tight reentry
 		schedule("SpawnLoop(" @ %this @ ");", %delay + 1);
+	
+	echo("[SPAWNLOOP CHECKPOINT] Step 8 - EXIT (schedule called successfully)");
 }

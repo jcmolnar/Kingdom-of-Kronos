@@ -1058,7 +1058,18 @@ function Zone::DoEnter(%z, %clientId)
 		//echo("[ZONE DEBUG] Zone::DoEnter - Player " @ %playerName @ " (clientId=" @ %clientId @ ") entering zone " @ %z @ " (" @ %zoneDesc @ ", type=" @ %zoneType @ ") from zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ")");
 	}
 
+	// Store the zone data FIRST (before waking spawn loops)
 	storeData(%clientId, "zone", $Zone::FolderID[%z]);
+	
+	// OPTIMIZATION: Wake up spawn loops for this zone AFTER storing zone data
+	// This ensures Zone::getNumPlayers() will see the player when spawn loops check
+	if(!Player::isAiControlled(%clientId) && !%isTownBot)
+	{
+		if($Zone::Type[%z] == "DUNGEON" || $Zone::Type[%z] == "FREEFORALL")
+		{
+			WakeZoneSpawnLoops($Zone::FolderID[%z]);
+		}
+	}
 
 	if($Zone::Type[%z] == "PROTECTED")
 	{
