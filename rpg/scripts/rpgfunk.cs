@@ -807,6 +807,12 @@ function SaveCharacter(%clientId)
 	$funk::var["[\"" @ %name @ "\", 0, 52]"] = %equippedBeltAccessories;
 	//echo("DEBUG SaveCharacter: EquippedBeltAccessories = '" @ %equippedBeltAccessories @ "'");
 	
+	// Save equipped off-hand weapon for dual wielding (field 53)
+	%offHandWeapon = fetchData(%clientId, "DualWield_OffHandWeapon");
+	if(%offHandWeapon == "" || %offHandWeapon == "0" || %offHandWeapon == -1)
+		%offHandWeapon = "";
+	$funk::var["[\"" @ %name @ "\", 0, 53]"] = %offHandWeapon;
+	
 	//echo("DEBUG SaveCharacter: Syncing StoredQuestItems/StoredKeyItems from BeltStorage...");
 	// Sync StoredQuestItems and StoredKeyItems from BeltStorage before saving
 	// This ensures saved data matches what's in bank storage
@@ -1799,6 +1805,13 @@ function LoadCharacter(%clientId)
 		}
 		storeData(%clientId, "EquippedBeltAccessories", %equippedBeltAccessories);
 		echo("DEBUG: EquippedBeltAccessories FINAL = '" @ %equippedBeltAccessories @ "'");
+		
+		// Load equipped off-hand weapon for dual wielding (field 53)
+		%offHandWeapon = $funk::var[%name, 0, 53];
+		if(%offHandWeapon == "" || %offHandWeapon == " " || %offHandWeapon == "0" || %offHandWeapon == -1)
+			%offHandWeapon = "";
+		storeData(%clientId, "DualWield_OffHandWeapon", %offHandWeapon);
+		// Note: Visual re-mount happens in Game::playerSpawn via schedule
 		
 		echo("DEBUG: Loading stored belt items (StoredQuestItems/StoredKeyItems)...");
 		// Handle StoredQuestItems and StoredKeyItems - convert space or "0" to empty string if needed

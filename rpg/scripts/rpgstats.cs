@@ -1011,6 +1011,9 @@ function DoRemort(%clientId)
 	for(%i = 1; %i <= getNumSkills(); %i++)
 		AddSkillPoint(%clientId, %i, $autoStartupSP);
 
+	// Unequip dual-wielded weapon before remort (returns to inventory)
+	DualWield::UnequipOffHand(%clientId);
+	
 	UnequipMountedStuff(%clientId);
 	
 	Player::setDamageFlash(%clientId, 1.0);

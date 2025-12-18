@@ -1765,6 +1765,13 @@ function SpellCanCast(%clientId, %keyword)
 {
 	dbecho($dbechoMode, "SpellCanCast(" @ %clientId @ ", " @ %keyword @ ")");
 
+	// Block spellcasting while dual wielding
+	if(DualWield::IsEnabled(%clientId) && !$DualWield::AllowSpellcasting)
+	{
+		Client::sendMessage(%clientId, $MsgRed, "Cannot cast spells while dual wielding!");
+		return False;
+	}
+
 	for(%i = 1; $Spell::keyword[%i] != ""; %i++)
 	{
 		if(String::ICompare($Spell::keyword[%i], %keyword) == 0)

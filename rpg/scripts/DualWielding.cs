@@ -47,11 +47,21 @@
 // Configuration
 $DualWield::Enabled = true;                    // Master toggle for dual wielding
 $DualWield::OffHandSlot = 3;                   // Engine slot for off-hand weapon
-$DualWield::OffHandDamageMultiplier = 0.7;     // Off-hand deals 70% damage
 $DualWield::OffHandDelayOffset = 0.1;          // Slight delay between primary and off-hand fire (seconds)
 $DualWield::AllowForBots = false;              // Whether bots can dual wield
 $DualWield::RequiredSkillLevel = 300;          // Required Slashing skill to dual wield
 $DualWield::RequiredSkillType = 1;             // Skill type: 1 = Slashing ($SkillSlashing)
+
+// Damage multipliers (0.7 = 70% damage, 1.0 = full damage)
+// Per-weapon override: $DualWield::DamageMultiplier[DiamondClaymore] = 0.8;
+$DualWield::DefaultDamageMultiplier = 0.7;
+
+// Speed multipliers (1.0 = no penalty, 0.8 = 20% slower)  
+// Per-weapon override: $DualWield::SpeedMultiplier[DiamondClaymore] = 0.9;
+$DualWield::DefaultSpeedMultiplier = 1.0;
+
+// Spell casting restriction
+$DualWield::AllowSpellcasting = false;         // If false, cannot cast spells while dual wielding
 
 // Valid weapon types for dual wielding (melee weapons)
 // Uses $AccessoryType values: Sword=7, Axe=8, Polearm=9, Bludgeon=10
@@ -500,20 +510,36 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
     }
     
     %count = Player::getItemCount(%playerObj, %weaponItem);
-    if(%count < 1)
+    
+    // Check if trying to dual wield same weapon as primary
+    %primaryWeapon = Player::getMountedItem(%playerObj, $WeaponSlot);
+    %requiredCount = 1;
+    if(%weaponItem == %primaryWeapon)
     {
-        Client::sendMessage(%clientId, $MsgRed, "You don't have a " @ %weaponItem @ " to equip.");
+        // Need 2 of the same weapon (one in each hand)
+        %requiredCount = 2;
+    }
+    
+    if(%count < %requiredCount)
+    {
+        if(%requiredCount == 2)
+            Client::sendMessage(%clientId, $MsgRed, "You need 2 " @ %weaponItem @ " to dual wield the same weapon.");
+        else
+            Client::sendMessage(%clientId, $MsgRed, "You don't have a " @ %weaponItem @ " to equip.");
         return false;
     }
     
     // Unequip current off-hand if any
     DualWield::UnequipOffHand(%clientId);
     
-    // Store the off-hand weapon (just the name, not an item)
+    // INVENTORY TRANSFER: Decrement weapon count (move to off-hand)
+    Player::setItemCount(%playerObj, %weaponItem, %count - 1);
+    
+    // Store the off-hand weapon name
     storeData(%clientId, "DualWield_OffHandWeapon", %weaponItem);
     
-    // Note: We no longer manipulate item counts with "0" suffix - that pattern doesn't work
-    // The off-hand weapon is just a visual representation, not an actual inventory item
+    // DUPE PREVENTION: Save immediately after inventory change
+    SaveCharacter(%clientId);
     
     // Get the weapon's shape file using the $WeaponShape global (set where weapons are defined)
     // Fallback: try common shape names based on weapon type
@@ -530,9 +556,6 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
         else if(%weaponType == $BludgeonAccessoryType) %shapeFile = "mace";
         else %shapeFile = "katana";  // Default fallback
     }
-    
-    // DEBUG: Show what shape file was found
-    echo("[DUAL WIELD DEBUG] Weapon: " @ %weaponItem @ ", shapeFile: " @ %shapeFile);
     
     // Look up the generic off-hand item for this shape
     %offHandVisual = $DualWield::OffHandItem[%shapeFile];
@@ -586,11 +609,15 @@ function DualWield::UnequipOffHand(%clientId)
     // Unmount off-hand visual from slot 6
     Player::unMountItem(%playerObj, 6);
     
-    // Note: We no longer manipulate item counts with "0" suffix - that pattern doesn't work
-    // The off-hand was just a visual, not an actual inventory item
+    // INVENTORY TRANSFER: Return weapon to inventory (increment count)
+    %currentCount = Player::getItemCount(%playerObj, %currentWeapon);
+    Player::setItemCount(%playerObj, %currentWeapon, %currentCount + 1);
     
     // Clear stored data
     storeData(%clientId, "DualWield_OffHandWeapon", "");
+    
+    // DUPE PREVENTION: Save immediately after inventory change
+    SaveCharacter(%clientId);
     
     %itemData = getItemData(%currentWeapon);
     %weaponName = %itemData.description;
@@ -639,18 +666,9 @@ function DualWield::FireOffHand(%clientId, %offHandWeapon)
     if(DualWield::GetOffHandWeapon(%clientId) != %offHandWeapon)
         return;
     
-    // DEBUG: Check what's mounted in slot 6 before triggering
-    %mountedItem = Player::getMountedItem(%playerObj, 6);
-    %itemState = Player::getItemState(%playerObj, 6);
-    echo("[DUAL WIELD DEBUG] Before trigger - Slot 6 mounted: " @ %mountedItem @ ", state: " @ %itemState);
-    
     // Trigger the off-hand weapon on slot 6 (where it's visually mounted)
     // Using slot 6 ensures the weapon's fire animation plays from its DTS file
     Player::trigger(%playerObj, 6, true);
-    
-    // DEBUG: Check state after triggering
-    %itemStateAfter = Player::getItemState(%playerObj, 6);
-    echo("[DUAL WIELD DEBUG] After trigger - Slot 6 state: " @ %itemStateAfter);
     
     // Schedule trigger release
     schedule("DualWield::ReleaseOffHandTrigger(" @ %clientId @ ");", 0.1);
