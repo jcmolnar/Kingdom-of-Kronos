@@ -438,6 +438,23 @@ function MeleeAttack(%player, %length, %weapon)
 	}
 
 	PostAttack(%clientId, %weapon);
+	
+	// DUAL WIELD HOOK: Trigger off-hand attack if dual wielding is enabled
+	// Only trigger if this is a primary weapon attack (not already an off-hand attack)
+	if(DualWield::IsEnabled(%clientId) && !$DualWield::IsOffHandAttack[%clientId])
+	{
+		// Mark that we're doing an off-hand attack to prevent infinite recursion
+		$DualWield::IsOffHandAttack[%clientId] = true;
+		
+		// Trigger animation
+		DualWield::OnPrimaryFire(%clientId, %weapon);
+		
+		// Schedule off-hand damage
+		schedule("DualWield::FireOffHandMelee(" @ %clientId @ ", " @ %player @ ", " @ %weapon @ ");", $DualWield::OffHandDelayOffset);
+		
+		// Schedule clearing the flag
+		schedule("$DualWield::IsOffHandAttack[" @ %clientId @ "] = false;", $DualWield::OffHandDelayOffset + 0.1);
+	}
 }
 
 // Custom attack function for Void weapons with spell animations
@@ -532,6 +549,23 @@ function VoidWeaponAttack(%player, %length, %weapon)
 	}
 
 	PostAttack(%clientId, %weapon);
+	
+	// DUAL WIELD HOOK: Trigger off-hand attack if dual wielding is enabled
+	// Only trigger if this is a primary weapon attack (not already an off-hand attack)
+	if(DualWield::IsEnabled(%clientId) && !$DualWield::IsOffHandAttack[%clientId])
+	{
+		// Mark that we're doing an off-hand attack to prevent infinite recursion
+		$DualWield::IsOffHandAttack[%clientId] = true;
+		
+		// Trigger animation
+		DualWield::OnPrimaryFire(%clientId, %weapon);
+		
+		// Schedule off-hand damage
+		schedule("DualWield::FireOffHandMelee(" @ %clientId @ ", " @ %player @ ", " @ %weapon @ ");", $DualWield::OffHandDelayOffset);
+		
+		// Schedule clearing the flag
+		schedule("$DualWield::IsOffHandAttack[" @ %clientId @ "] = false;", $DualWield::OffHandDelayOffset + 0.1);
+	}
 }
 
 function ProjectileAttack(%clientId, %weapon, %vel)

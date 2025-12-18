@@ -55,7 +55,348 @@ $DualWield::RequiredSkillType = 1;             // Skill type: 1 = Slashing ($Ski
 
 // Valid weapon types for dual wielding (melee weapons)
 // Uses $AccessoryType values: Sword=7, Axe=8, Polearm=9, Bludgeon=10
-$DualWield::AllowedTypes = "7 8 10";  // Swords, Axes, Bludgeons (no polearms - too large)
+$DualWield::AllowedTypes = "7 8 9 10";  // All melee weapon types
+
+//============================================================================
+// WEAPON SHAPE MAPPING
+// Maps each weapon to its DTS shape file (from weapons.cs)
+//============================================================================
+// Swords - short_sword shape
+$WeaponShape[RustyIronBlade] = "short_sword";
+$WeaponShape[SharpIronBlade] = "short_sword";
+
+// Swords - sword shape
+$WeaponShape[IronBroadSword] = "sword";
+$WeaponShape[SteelBroadSword] = "sword";
+
+// Swords - long_sword shape
+$WeaponShape[SteelLongSword] = "long_sword";
+$WeaponShape[GoldenLongSword] = "long_sword";
+
+// Swords - katana shape
+$WeaponShape[GoldenBastardSword] = "katana";
+$WeaponShape[CrystalBastardSword] = "katana";
+$WeaponShape[TemperedCrystalBastardSword] = "katana";
+$WeaponShape[CrystalClaymore] = "katana";
+$WeaponShape[DiamondClaymore] = "katana";
+
+// Swords - elfinblade shape
+$WeaponShape[DiamondLegendSword] = "elfinblade";
+$WeaponShape[SealFighterBlade] = "elfinblade";
+$WeaponShape[SealGuardianBlade] = "elfinblade";
+$WeaponShape[BlackDiamondDreamSword] = "elfinblade";
+$WeaponShape[BlackDiamondAtomSplitter] = "elfinblade";
+
+// Daggers - dagger shape
+$WeaponShape[ButterKnife] = "dagger";
+$WeaponShape[LongKnife] = "dagger";
+$WeaponShape[Knife] = "dagger";
+$WeaponShape[Dagger] = "dagger";
+$WeaponShape[CastingBlade] = "dagger";
+
+// Polearms - spear shape
+$WeaponShape[IronSpear] = "spear";
+$WeaponShape[SteelSpear] = "spear";
+$WeaponShape[SteelPike] = "spear";
+$WeaponShape[GoldenPike] = "spear";
+$WeaponShape[CrystalPike] = "spear";
+$WeaponShape[DiamondDeathSpear] = "spear";
+$WeaponShape[DiamondLegendSpear] = "spear";
+$WeaponShape[BlackDiamondDreamSpear] = "spear";
+$WeaponShape[BlackDiamondAtomPiercer] = "spear";
+
+// Polearms - trident shape
+$WeaponShape[CrystalTrident] = "trident";
+$WeaponShape[TemperedCrystalTrident] = "trident";
+$WeaponShape[DiamondTrident] = "trident";
+
+// Bludgeons - mace shape
+$WeaponShape[CrackedStick] = "mace";
+$WeaponShape[IronStick] = "mace";
+$WeaponShape[IronMace] = "mace";
+$WeaponShape[SteelMace] = "mace";
+$WeaponShape[GoldenDivineMace] = "mace";
+$WeaponShape[CrystalDivineMace] = "mace";
+$WeaponShape[DiamondDivineMace] = "mace";
+$WeaponShape[DiamondBrainSpiller] = "mace";
+$WeaponShape[DiamondLegendMace] = "mace";
+$WeaponShape[BlackDiamondDreamMace] = "mace";
+$WeaponShape[BlackDiamondAtomSmasher] = "mace";
+$WeaponShape[Club] = "mace";
+
+// Bludgeons - hammer shape
+$WeaponShape[SteelHammer] = "hammer";
+$WeaponShape[SteelWarHammer] = "hammer";
+$WeaponShape[GoldenWarHammer] = "hammer";
+
+// Axes - hatchet shape
+$WeaponShape[Hatchet] = "hatchet";
+
+// Tools - Pick shape
+$WeaponShape[PickAxe] = "Pick";
+
+// New weapons (from newstuff.cs)
+$WeaponShape[TerminusEst] = "elfinblade";
+$WeaponShape[AecoSeorei] = "spear";
+$WeaponShape[MorningStar] = "mace";
+$WeaponShape[WhiteDiamondVoidCutter] = "elfinblade";
+$WeaponShape[WhiteDiamondVoidCrusher] = "hammer";
+$WeaponShape[WhiteDiamondVoidImpaler] = "trident";
+
+//============================================================================
+// OFF-HAND WEAPON DEFINITIONS (Generic per shape)
+// These provide left-hand visuals for any weapon using the same DTS shape
+//============================================================================
+
+// Standard off-hand offset (moves weapon to left hand)
+// X: -0.65 moves left, Y: 0 no forward/back, Z: -0.16 slight down adjustment
+
+//--- KATANA (needs special rotation) ---
+ItemImageData OffHand_KatanaImage
+{
+	shapeFile  = "katana";
+	mountPoint = 0;
+	mountRotation = { 0, 1.60, 0 };  // Katana needs extra rotation
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.9;
+	accuFire = true;
+	sfxFire = SoundSwing3;
+};
+ItemData OffHand_Katana { heading = "bWeapons"; description = "Off-Hand Katana"; className = "Weapon"; shapeFile = "katana"; imageType = OffHand_KatanaImage; };
+function OffHand_KatanaImage::onFire(%player, %slot) { }
+
+//--- SHORT SWORD ---
+ItemImageData OffHand_ShortSwordImage
+{
+	shapeFile  = "short_sword";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.9;
+	accuFire = true;
+	sfxFire = SoundSwing1;
+};
+ItemData OffHand_ShortSword { heading = "bWeapons"; description = "Off-Hand Short Sword"; className = "Weapon"; shapeFile = "short_sword"; imageType = OffHand_ShortSwordImage; };
+function OffHand_ShortSwordImage::onFire(%player, %slot) { }
+
+//--- SWORD ---
+ItemImageData OffHand_SwordImage
+{
+	shapeFile  = "sword";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.9;
+	accuFire = true;
+	sfxFire = SoundSwing1;
+};
+ItemData OffHand_Sword { heading = "bWeapons"; description = "Off-Hand Sword"; className = "Weapon"; shapeFile = "sword"; imageType = OffHand_SwordImage; };
+function OffHand_SwordImage::onFire(%player, %slot) { }
+
+//--- LONG SWORD ---
+ItemImageData OffHand_LongSwordImage
+{
+	shapeFile  = "long_sword";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.9;
+	accuFire = true;
+	sfxFire = SoundSwing2;
+};
+ItemData OffHand_LongSword { heading = "bWeapons"; description = "Off-Hand Long Sword"; className = "Weapon"; shapeFile = "long_sword"; imageType = OffHand_LongSwordImage; };
+function OffHand_LongSwordImage::onFire(%player, %slot) { }
+
+//--- ELFINBLADE ---
+ItemImageData OffHand_ElfinbladeImage
+{
+	shapeFile  = "elfinblade";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.9;
+	accuFire = true;
+	sfxFire = SoundSwing2;
+};
+ItemData OffHand_Elfinblade { heading = "bWeapons"; description = "Off-Hand Elfinblade"; className = "Weapon"; shapeFile = "elfinblade"; imageType = OffHand_ElfinbladeImage; };
+function OffHand_ElfinbladeImage::onFire(%player, %slot) { }
+
+//--- DAGGER ---
+ItemImageData OffHand_DaggerImage
+{
+	shapeFile  = "dagger";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.7;
+	accuFire = true;
+	sfxFire = SoundSwing1;
+};
+ItemData OffHand_Dagger { heading = "bWeapons"; description = "Off-Hand Dagger"; className = "Weapon"; shapeFile = "dagger"; imageType = OffHand_DaggerImage; };
+function OffHand_DaggerImage::onFire(%player, %slot) { }
+
+//--- SPEAR ---
+ItemImageData OffHand_SpearImage
+{
+	shapeFile  = "spear";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 1.2;
+	accuFire = true;
+	sfxFire = SoundSwing3;
+};
+ItemData OffHand_Spear { heading = "bWeapons"; description = "Off-Hand Spear"; className = "Weapon"; shapeFile = "spear"; imageType = OffHand_SpearImage; };
+function OffHand_SpearImage::onFire(%player, %slot) { }
+
+//--- TRIDENT ---
+ItemImageData OffHand_TridentImage
+{
+	shapeFile  = "trident";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 1.2;
+	accuFire = true;
+	sfxFire = SoundSwing3;
+};
+ItemData OffHand_Trident { heading = "bWeapons"; description = "Off-Hand Trident"; className = "Weapon"; shapeFile = "trident"; imageType = OffHand_TridentImage; };
+function OffHand_TridentImage::onFire(%player, %slot) { }
+
+//--- MACE ---
+ItemImageData OffHand_MaceImage
+{
+	shapeFile  = "mace";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 1.0;
+	accuFire = true;
+	sfxFire = SoundSwing5;
+};
+ItemData OffHand_Mace { heading = "bWeapons"; description = "Off-Hand Mace"; className = "Weapon"; shapeFile = "mace"; imageType = OffHand_MaceImage; };
+function OffHand_MaceImage::onFire(%player, %slot) { }
+
+//--- HAMMER ---
+ItemImageData OffHand_HammerImage
+{
+	shapeFile  = "hammer";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 1.2;
+	accuFire = true;
+	sfxFire = SoundSwing6;
+};
+ItemData OffHand_Hammer { heading = "bWeapons"; description = "Off-Hand Hammer"; className = "Weapon"; shapeFile = "hammer"; imageType = OffHand_HammerImage; };
+function OffHand_HammerImage::onFire(%player, %slot) { }
+
+//--- CLUB (uses mace shape in-game) ---
+ItemImageData OffHand_ClubImage
+{
+	shapeFile  = "mace";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.9;
+	accuFire = true;
+	sfxFire = SoundSwing4;
+};
+ItemData OffHand_Club { heading = "bWeapons"; description = "Off-Hand Club"; className = "Weapon"; shapeFile = "mace"; imageType = OffHand_ClubImage; };
+function OffHand_ClubImage::onFire(%player, %slot) { }
+
+//--- PICK (for PickAxe) ---
+ItemImageData OffHand_PickImage
+{
+	shapeFile  = "Pick";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 1.0;
+	accuFire = true;
+	sfxFire = SoundSwing1;
+};
+ItemData OffHand_Pick { heading = "bWeapons"; description = "Off-Hand Pick"; className = "Weapon"; shapeFile = "Pick"; imageType = OffHand_PickImage; };
+function OffHand_PickImage::onFire(%player, %slot) { }
+
+
+//--- BATTLEAXE ---
+ItemImageData OffHand_BattleAxeImage
+{
+	shapeFile  = "BattleAxe";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 1.0;
+	accuFire = true;
+	sfxFire = AxeSlash2;
+};
+ItemData OffHand_BattleAxe { heading = "bWeapons"; description = "Off-Hand Battle Axe"; className = "Weapon"; shapeFile = "BattleAxe"; imageType = OffHand_BattleAxeImage; };
+function OffHand_BattleAxeImage::onFire(%player, %slot) { }
+
+//--- HATCHET ---
+ItemImageData OffHand_HatchetImage
+{
+	shapeFile  = "hatchet";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.8;
+	accuFire = true;
+	sfxFire = AxeSlash2;
+};
+ItemData OffHand_Hatchet { heading = "bWeapons"; description = "Off-Hand Hatchet"; className = "Weapon"; shapeFile = "hatchet"; imageType = OffHand_HatchetImage; };
+function OffHand_HatchetImage::onFire(%player, %slot) { }
+
+//--- AXE (generic) ---
+ItemImageData OffHand_AxeImage
+{
+	shapeFile  = "axe";
+	mountPoint = 0;
+	mountRotation = { 0, 0, 0 };
+	mountOffSet = { -0.65, 0, -0.16 };
+	weaponType = 0;
+	fireTime = 0.9;
+	accuFire = true;
+	sfxFire = AxeSlash2;
+};
+ItemData OffHand_Axe { heading = "bWeapons"; description = "Off-Hand Axe"; className = "Weapon"; shapeFile = "axe"; imageType = OffHand_AxeImage; };
+function OffHand_AxeImage::onFire(%player, %slot) { }
+
+//============================================================================
+// OFF-HAND SHAPE MAPPING
+// Maps weapon shapeFile names to their off-hand ItemData
+//============================================================================
+$DualWield::OffHandItem["katana"] = OffHand_Katana;
+$DualWield::OffHandItem["short_sword"] = OffHand_ShortSword;
+$DualWield::OffHandItem["sword"] = OffHand_Sword;
+$DualWield::OffHandItem["long_sword"] = OffHand_LongSword;
+$DualWield::OffHandItem["elfinblade"] = OffHand_Elfinblade;
+$DualWield::OffHandItem["dagger"] = OffHand_Dagger;
+$DualWield::OffHandItem["spear"] = OffHand_Spear;
+$DualWield::OffHandItem["trident"] = OffHand_Trident;
+$DualWield::OffHandItem["mace"] = OffHand_Mace;
+$DualWield::OffHandItem["hammer"] = OffHand_Hammer;
+$DualWield::OffHandItem["BattleAxe"] = OffHand_BattleAxe;
+$DualWield::OffHandItem["hatchet"] = OffHand_Hatchet;
+$DualWield::OffHandItem["axe"] = OffHand_Axe;
+$DualWield::OffHandItem["Pick"] = OffHand_Pick;
+
+echo("[DUAL WIELD] Registered 14 off-hand weapon shapes.");
 
 //============================================================================
 // CORE FUNCTIONS
@@ -168,31 +509,57 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
     // Unequip current off-hand if any
     DualWield::UnequipOffHand(%clientId);
     
-    // Store the off-hand weapon
+    // Store the off-hand weapon (just the name, not an item)
     storeData(%clientId, "DualWield_OffHandWeapon", %weaponItem);
     
-    // Convert to equipped state: item -> item0 (like accessory equipping pattern)
-    // Decrement base item count
-    Player::setItemCount(%playerObj, %weaponItem, Player::getItemCount(%playerObj, %weaponItem) - 1);
-    // Increment equipped version (item + "0" suffix)
-    Player::setItemCount(%playerObj, %weaponItem @ "0", Player::getItemCount(%playerObj, %weaponItem @ "0") + 1);
+    // Note: We no longer manipulate item counts with "0" suffix - that pattern doesn't work
+    // The off-hand weapon is just a visual representation, not an actual inventory item
     
-    // Mount the off-hand VISUAL weapon to slot 6 (uses mountPoint=2 with offset for other hand)
-    // The off-hand item uses "2" suffix (e.g., DualWieldTest2, Rapier2)
-    %offHandVisual = %weaponItem @ "2";
-    %offHandData = getItemData(%offHandVisual);
+    // Get the weapon's shape file using the $WeaponShape global (set where weapons are defined)
+    // Fallback: try common shape names based on weapon type
+    %shapeFile = $WeaponShape[%weaponItem];
     
-    if(%offHandData != "" && %offHandData != -1)
+    // If no shape defined, try to determine from weapon type
+    if(%shapeFile == "" || %shapeFile == -1)
     {
-        // Off-hand visual item exists - mount it to slot 6
+        %weaponType = $AccessoryVar[%weaponItem, $AccessoryType];
+        // Default shapes by weapon type (can be overridden per-weapon)
+        if(%weaponType == $SwordAccessoryType) %shapeFile = "katana";
+        else if(%weaponType == $AxeAccessoryType) %shapeFile = "BattleAxe";
+        else if(%weaponType == $PolearmAccessoryType) %shapeFile = "spear";
+        else if(%weaponType == $BludgeonAccessoryType) %shapeFile = "mace";
+        else %shapeFile = "katana";  // Default fallback
+    }
+    
+    // DEBUG: Show what shape file was found
+    echo("[DUAL WIELD DEBUG] Weapon: " @ %weaponItem @ ", shapeFile: " @ %shapeFile);
+    
+    // Look up the generic off-hand item for this shape
+    %offHandVisual = $DualWield::OffHandItem[%shapeFile];
+    
+    if(%offHandVisual != "" && %offHandVisual != -1)
+    {
+        // Generic off-hand item exists for this shape - mount it to slot 6
         Player::mountItem(%playerObj, %offHandVisual, 6);
-        echo("[DUAL WIELD] Mounted off-hand visual '" @ %offHandVisual @ "' to slot 6");
+        echo("[DUAL WIELD] Mounted generic off-hand '" @ %offHandVisual @ "' for shape '" @ %shapeFile @ "' to slot 6");
     }
     else
     {
-        // No dedicated off-hand item - try mounting original to slot 6
-        Player::mountItem(%playerObj, %weaponItem, 6);
-        echo("[DUAL WIELD] No off-hand visual found, mounted '" @ %weaponItem @ "' to slot 6");
+        // No off-hand defined for this shape - try weapon-specific "2" suffix as fallback
+        %offHandVisual = %weaponItem @ "2";
+        %offHandData = getItemData(%offHandVisual);
+        
+        if(%offHandData != "" && %offHandData != -1)
+        {
+            Player::mountItem(%playerObj, %offHandVisual, 6);
+            echo("[DUAL WIELD] Mounted weapon-specific off-hand '" @ %offHandVisual @ "' to slot 6");
+        }
+        else
+        {
+            // Last resort: mount original weapon to slot 6 (won't animate properly)
+            Player::mountItem(%playerObj, %weaponItem, 6);
+            echo("[DUAL WIELD] WARNING: No off-hand visual found for shape '" @ %shapeFile @ "', mounted original weapon");
+        }
     }
     
     %weaponName = %itemData.description;
@@ -219,11 +586,8 @@ function DualWield::UnequipOffHand(%clientId)
     // Unmount off-hand visual from slot 6
     Player::unMountItem(%playerObj, 6);
     
-    // Convert from equipped state: item0 -> item (reverse of equip)
-    // Decrement equipped version (item + "0" suffix)
-    Player::setItemCount(%playerObj, %currentWeapon @ "0", Player::getItemCount(%playerObj, %currentWeapon @ "0") - 1);
-    // Increment base item count
-    Player::setItemCount(%playerObj, %currentWeapon, Player::getItemCount(%playerObj, %currentWeapon) + 1);
+    // Note: We no longer manipulate item counts with "0" suffix - that pattern doesn't work
+    // The off-hand was just a visual, not an actual inventory item
     
     // Clear stored data
     storeData(%clientId, "DualWield_OffHandWeapon", "");
@@ -550,21 +914,37 @@ function DualWield::FireOffHandMelee(%clientId, %player, %weaponType)
     if(!DualWield::IsEnabled(%clientId))
         return;
     
-    // Validate player still exists
+    // Get fresh player object from clientId (the passed %player may be stale from schedule string)
     %playerObj = Client::getOwnedObject(%clientId);
     if(%playerObj == "" || %playerObj == -1)
         return;
     
-    // Deal off-hand damage (with multiplier)
-    %range = $WeaponRange[%weaponType];
-    if(%range == "") %range = 4;
+    // Get the off-hand weapon being used
+    %offHandWeapon = DualWield::GetOffHandWeapon(%clientId);
+    if(%offHandWeapon == "" || %offHandWeapon == -1)
+        %offHandWeapon = %weaponType;  // Fallback to passed weapon
     
-    // Use reduced damage for off-hand
-    // The MeleeAttack function will be called, but we scale damage via the weapon lookup
-    // For now, just call MeleeAttack - integrating damage multiplier requires deeper hook
-    MeleeAttack(%playerObj, %range, %weaponType);
+    // Deal off-hand damage DIRECTLY (bypass MeleeAttack's anti-spam timer)
+    %range = $WeaponRange[%offHandWeapon];
+    if(%range == "" || %range == -1) %range = 4;
     
-    echo("[DUAL WIELD] Off-hand melee attack executed for " @ Client::getName(%clientId));
+    // Direct LOS check and damage (same logic as MeleeAttack but without anti-spam)
+    $los::object = "";
+    if(GameBase::getLOSinfo(%playerObj, %range))
+    {
+        %obj = getObjectType($los::object);
+        if(%obj == "Player")
+        {
+            // Deal damage with the off-hand weapon
+            GameBase::virtual($los::object, "onDamage", $BulletDamageType, 1.0, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, %offHandWeapon);
+            echo("[DUAL WIELD] Off-hand HIT on " @ $los::object @ " with " @ %offHandWeapon);
+        }
+    }
+    
+    // Still call PostAttack for any post-attack effects
+    PostAttack(%clientId, %offHandWeapon);
+    
+    echo("[DUAL WIELD] Off-hand attack executed for " @ Client::getName(%clientId) @ " with " @ %offHandWeapon);
 }
 
 echo("[DUAL WIELD] Test weapon 'DualWieldTest' registered.");

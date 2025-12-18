@@ -3613,6 +3613,7 @@ function UpdateTeam(%clientId)
 		   String::findSubStr(%playerName, "Minotaur") != -1 ||
 		   String::findSubStr(%playerName, "Seal") != -1 ||
 		   String::findSubStr(%playerName, "God") != -1 ||
+		   String::findSubStr(%playerName, "Void") != -1 ||
 		   String::findSubStr(%playerName, "Enemy") != -1)
 		{
 			%isBotByName = true;
