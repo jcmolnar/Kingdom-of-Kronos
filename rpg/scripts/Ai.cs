@@ -2540,7 +2540,7 @@ function CleanupBot(%clientId, %aiName)
 		%validationToken = "CleanupBot_" @ %clientId @ "_" @ getSimTime();
 	$ClientIdRecentlyFreedToken[%clientId] = %validationToken;
 	$ClientIdRecentlyFreed[%clientId] = getSimTime();
-	schedule("if($ClientIdRecentlyFreedToken[" @ %clientId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %clientId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %clientId @ "] = \"\"; }", 10.0);
+	schedule("if($ClientIdRecentlyFreedToken[" @ %clientId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %clientId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %clientId @ "] = \"\"; }", 30.0);
 	
 	echo("[BOT CLEANUP] Cleanup complete for clientId=" @ %clientId);
 }
@@ -3154,6 +3154,7 @@ function AI::setupAI(%key, %team)
 //------------------------------
 function AI::setWeapons(%aiName, %loadout)
 {
+	Watchdog_Enter("AI::setWeapons");
 	dbecho($dbechoMode, "AI::setWeapons(" @ %aiName @ ")");
 	%currentTime = getSimTime();
 	if($AI_PERIODIC_DEBUG)
@@ -4891,8 +4892,7 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 			// Schedule aggressive team enforcement with multiple retries
 			ScheduleTeamEnforcement(%immediateClientId, %botTeam);
 			
-			// Also schedule the standard verification as backup
-			schedule("VerifyEnemyBotTeam(" @ %immediateClientId @ ", \"" @ %newName @ "\", " @ %botTeam @ ");", 0.5);
+			// OPTIMIZED: Removed redundant VerifyEnemyBotTeam schedule - ScheduleTeamEnforcement handles this
 			
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 				echo("[SPAWN FLOW] SpawnAI(): Set team immediately to " @ %botTeam @ " for " @ %newName @ " (clientId=" @ %immediateClientId @ ") to prevent UpdateTeam() override");
@@ -6525,7 +6525,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 							%validationToken = %newName @ "_" @ getSimTime();
 							$ClientIdRecentlyFreedToken[%ghostBotId] = %validationToken;
 							$ClientIdRecentlyFreed[%ghostBotId] = getSimTime();
-							schedule("if($ClientIdRecentlyFreedToken[" @ %ghostBotId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %ghostBotId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %ghostBotId @ "] = \"\"; }", 10.0);
+							schedule("if($ClientIdRecentlyFreedToken[" @ %ghostBotId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %ghostBotId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %ghostBotId @ "] = \"\"; }", 30.0);
 							deleteObject(%ghostPlayerObj);
 							if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAIGetClientId(): Deleted ghost Player object for " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
 						}
@@ -7065,7 +7065,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					%validationToken = %newName @ "_" @ getSimTime();
 					$ClientIdRecentlyFreedToken[%aiId] = %validationToken;
 					$ClientIdRecentlyFreed[%aiId] = getSimTime();
-					schedule("if($ClientIdRecentlyFreedToken[" @ %aiId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %aiId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %aiId @ "] = \"\"; }", 10.0);
+					schedule("if($ClientIdRecentlyFreedToken[" @ %aiId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %aiId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %aiId @ "] = \"\"; }", 30.0);
 					deleteObject(%playerObj);
 				}
 				return -1;
@@ -7087,7 +7087,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					%validationToken = %newName @ "_" @ getSimTime();
 					$ClientIdRecentlyFreedToken[%aiId] = %validationToken;
 					$ClientIdRecentlyFreed[%aiId] = getSimTime();
-					schedule("if($ClientIdRecentlyFreedToken[" @ %aiId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %aiId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %aiId @ "] = \"\"; }", 10.0);
+					schedule("if($ClientIdRecentlyFreedToken[" @ %aiId @ "] == \"" @ %validationToken @ "\") { $ClientIdRecentlyFreed[" @ %aiId @ "] = \"\"; $ClientIdRecentlyFreedToken[" @ %aiId @ "] = \"\"; }", 30.0);
 					deleteObject(%playerObj);
 				}
 				return -1;
@@ -7360,8 +7360,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 		// Schedule aggressive team enforcement with multiple retries
 		ScheduleTeamEnforcement(%aiId, %botTeam);
 		
-		// Also schedule the standard verification as backup
-		schedule("VerifyEnemyBotTeam(" @ %aiId @ ", \"" @ %newName @ "\", " @ %botTeam @ ");", 0.5);
+		// OPTIMIZED: Removed redundant VerifyEnemyBotTeam schedule - ScheduleTeamEnforcement handles this
 			
 			// CRITICAL: Don't call UpdateTeam() for enemy bots - it may overwrite the team we just set
 			// UpdateTeam() is designed for players, not bots. Enemy bots have their team set explicitly above.
@@ -8489,6 +8488,7 @@ function AI::SelectMovement(%aiName)
 
 function HardcodeAIskills(%aiId)
 {
+	Watchdog_Enter("HardcodeAIskills");
 	dbecho($dbechoMode, "HardcodeAIskills(" @ %aiId @ ")");
 
 	// CRITICAL FIX #4: Check DontResetSkills flag at the very top
@@ -13578,6 +13578,7 @@ function ForceTownBotSkin(%clientId, %botName)
 
 function EnforceEnemyBotTeam(%clientId, %expectedTeam, %attempts)
 {
+	Watchdog_Enter("EnforceEnemyBotTeam");
 	// Validate inputs
 	if(%clientId == -1 || %clientId == "" || %expectedTeam == "")
 		return;
@@ -13635,12 +13636,10 @@ function ScheduleTeamEnforcement(%clientId, %expectedTeam)
 	
 	if($TEAM_ENFORCE_DEBUG) echo("[TEAM ENFORCE] ScheduleTeamEnforcement: Scheduling enforcement for clientId=" @ %clientId @ " with expectedTeam=" @ %expectedTeam);
 	
-	// Schedule multiple enforcement attempts at different intervals
-	schedule("EnforceEnemyBotTeam(" @ %clientId @ ", " @ %expectedTeam @ ", 0);", 0.1);
+	// OPTIMIZED: Single initial call at 0.3s - EnforceEnemyBotTeam has built-in retry logic
+	// with exponential backoff (up to 5 retries at 0.2s, 0.4s, 0.6s, 0.8s, 1.0s)
+	// Previous code scheduled 5 calls which could cascade to 30 schedules per bot!
 	schedule("EnforceEnemyBotTeam(" @ %clientId @ ", " @ %expectedTeam @ ", 0);", 0.3);
-	schedule("EnforceEnemyBotTeam(" @ %clientId @ ", " @ %expectedTeam @ ", 0);", 0.5);
-	schedule("EnforceEnemyBotTeam(" @ %clientId @ ", " @ %expectedTeam @ ", 0);", 1.0);
-	schedule("EnforceEnemyBotTeam(" @ %clientId @ ", " @ %expectedTeam @ ", 0);", 2.0);  // Add a longer delay attempt
 }
 
 function VerifyEnemyBotTeam(%clientId, %botName, %expectedTeam)

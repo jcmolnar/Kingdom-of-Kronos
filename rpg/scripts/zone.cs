@@ -511,20 +511,24 @@ function UpdateZone(%object)
 	if(%zoneflag != "")
 	{
 		//the player is inside a zone!
-	
+		// OPTIMIZATION: Cache fetchData result to avoid redundant calls below
+		%currentZoneId = fetchData(%clientId, "zone");
+		
 		//check if the player's current zone matches the one he's detected in
-		if(fetchData(%clientId, "zone") != $Zone::FolderID[%zoneflag])
+		if(%currentZoneId != $Zone::FolderID[%zoneflag])
 		{
 			// Simple rule: If an AI-controlled bot moves from Ghost Town to ANY other zone, kill it
 			if(Player::isAiControlled(%clientId))
 			{
-				%oldZoneId = fetchData(%clientId, "zone");
+				// Use cached zone ID instead of redundant fetchData call
+				%oldZoneId = %currentZoneId;
 				%newZoneId = $Zone::FolderID[%zoneflag];
+				
+				// OPTIMIZATION: Only lookup old zone desc, skip new zone (we only check if old == Ghost Town)
 				%oldZoneDesc = Zone::getDesc(%oldZoneId);
-				%newZoneDesc = Zone::getDesc(%newZoneId);
 				
 				// If bot is moving from Ghost Town to any other zone, kill it
-				if(%oldZoneDesc == "Ghost Town" && %newZoneDesc != "Ghost Town" && %newZoneDesc != "" && %newZoneDesc != -1)
+				if(%oldZoneDesc == "Ghost Town" && %newZoneId != "" && %newZoneId != -1)
 				{
 					// Kill the bot with no lootbag and no exp flags
 					storeData(%clientId, "noDropLootbagFlag", True);

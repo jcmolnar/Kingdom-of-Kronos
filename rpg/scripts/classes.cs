@@ -269,28 +269,5 @@ $ColloseumRoundOne[10] = "TranscendentRoundOne";
 $ColloseumRoundTwo[10] = "TranscendentRoundTwo";
 $ColloseumRoundThree[10] = "TranscendentRoundThree";
 
-// Team definitions (teams 0-11)
-$Server::teamName[0] = "Citizen";
-$Server::teamSkin[0] = "rpgbase";
-$Server::teamName[1] = "Enemy";
-$Server::teamSkin[1] = "robewhite";
-$Server::teamName[2] = "Ogres";
-$Server::teamSkin[2] = "rpgorc";
-$Server::teamName[3] = "Pigmen";
-$Server::teamSkin[3] = "rpggnoll";
-$Server::teamName[4] = "Undead";
-$Server::teamSkin[4] = "undead";
-$Server::teamName[5] = "Demons";
-$Server::teamSkin[5] = "fedmonster";
-$Server::teamName[6] = "Minotaur";
-$Server::teamSkin[6] = "min";
-$Server::teamName[7] = "Aliens";
-$Server::teamSkin[7] = "fedmonster";
-$Server::teamName[8] = "Seals";
-$Server::teamSkin[8] = "fedmonster";
-$Server::teamName[9] = "Gods";
-$Server::teamSkin[9] = "fedmonster";
-$Server::teamName[10] = "Angels";
-$Server::teamSkin[10] = "robewhite";
-$Server::teamName[11] = "Admins";
-$Server::teamSkin[11] = "robewhite";
+// Team definitions are in EnemyArmors.cs (loaded via ArmorData.cs)
+// Includes teams 0-12: Citizen, Enemy, Ogres, Pigmen, Undead, Demons, Minotaur, Aliens, Seals, Gods, Angels, Admins, Void

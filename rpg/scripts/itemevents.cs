@@ -468,8 +468,6 @@ function Item::onCollision(%this,%object)
 					}
 					$GamblePackList = "";
 				}
-				// Clean up lootbag timestamp BEFORE saving world
-				$lootbagTime[%this] = "";
 				
 				// Delete the lootbag object BEFORE saving world, so SaveWorldDeployables() won't find it
 				deleteObject(%this);

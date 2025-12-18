@@ -275,10 +275,18 @@ function DualWield::FireOffHand(%clientId, %offHandWeapon)
     if(DualWield::GetOffHandWeapon(%clientId) != %offHandWeapon)
         return;
     
-    // Trigger the off-hand weapon slot
-    // Note: This uses the same damage calculation as primary, 
-    // but we apply the damage multiplier in the damage handler
-    Player::setImageTrigger(%playerObj, $DualWield::OffHandSlot, true);
+    // DEBUG: Check what's mounted in slot 6 before triggering
+    %mountedItem = Player::getMountedItem(%playerObj, 6);
+    %itemState = Player::getItemState(%playerObj, 6);
+    echo("[DUAL WIELD DEBUG] Before trigger - Slot 6 mounted: " @ %mountedItem @ ", state: " @ %itemState);
+    
+    // Trigger the off-hand weapon on slot 6 (where it's visually mounted)
+    // Using slot 6 ensures the weapon's fire animation plays from its DTS file
+    Player::trigger(%playerObj, 6, true);
+    
+    // DEBUG: Check state after triggering
+    %itemStateAfter = Player::getItemState(%playerObj, 6);
+    echo("[DUAL WIELD DEBUG] After trigger - Slot 6 state: " @ %itemStateAfter);
     
     // Schedule trigger release
     schedule("DualWield::ReleaseOffHandTrigger(" @ %clientId @ ");", 0.1);
@@ -289,7 +297,7 @@ function DualWield::ReleaseOffHandTrigger(%clientId)
     %playerObj = Client::getOwnedObject(%clientId);
     if(%playerObj != "" && %playerObj != -1)
     {
-        Player::setImageTrigger(%playerObj, $DualWield::OffHandSlot, false);
+        Player::trigger(%playerObj, 6, false);  // Release on slot 6 to match fire trigger
     }
 }
 
@@ -391,7 +399,7 @@ echo("[DUAL WIELD] Skill requirement: " @ $DualWield::RequiredSkillLevel @ " Sla
 $WeaponRange[DualWieldTest] = 4;
 $WeaponDelay[DualWieldTest] = 0.9;
 $AccessoryVar[DualWieldTest, $AccessoryType] = $SwordAccessoryType;  // Type 7 = Sword
-$AccessoryVar[DualWieldTest, $SpecialVar] = "6 50";  // 50 ATK
+$AccessoryVar[DualWieldTest, $SpecialVar] = "6 500";  // 50 ATK
 $AccessoryVar[DualWieldTest, $Weight] = 5;
 $AccessoryVar[DualWieldTest, $MiscInfo] = "A test sword for dual wielding.";
 $SkillType[DualWieldTest] = $SkillSlashing;
@@ -437,9 +445,11 @@ ItemData DualWieldTest
 ItemImageData DualWieldTestImage2
 {
 	shapeFile  = "katana";
-	mountPoint = 2;
-	mountRotation = { -0.25, 0.6, 0 };
-	mountOffSet = { -0.1, 0.5, 0 };
+	// Use mountPoint 0 (same as primary weapons) to allow proper fire animation
+	// Use larger offset to position in left hand instead of right
+	mountPoint = 0;
+	mountRotation = { 0, 1.60, 0 }; // first is forward/backward rotation -- second is left/right rotation -- idk what third is i didnt need it
+	mountOffSet = { -0.65, 0, -0.16 };  // Move left (-X) to opposite hand -- first one is left/right, second is forwards/backward, third is vertical up/down
 	weaponType = 0;
 	reloadTime = 0;
 	fireTime = $WeaponDelay[DualWieldTest];
@@ -447,6 +457,10 @@ ItemImageData DualWieldTestImage2
 	maxEnergy = 0;
 
 	accuFire = true;
+	
+	// CRITICAL: Need sfxFire to trigger animation properly
+	sfxFire = SoundSwing3;
+	sfxActivate = AxeSlash2;
 };
 
 ItemData DualWieldTest2
@@ -461,6 +475,16 @@ ItemData DualWieldTest2
 	price = 0;
 	showWeaponBar = true;
 };
+
+// CRITICAL: onFire callback for off-hand weapon - called when setImageTrigger fires on slot 6
+function DualWieldTestImage2::onFire(%player, %slot)
+{
+	%clientId = Player::getClient(%player);
+	echo("[DUAL WIELD TEST] Off-hand fire from slot " @ %slot);
+	
+	// The actual damage is handled separately via FireOffHandMelee
+	// This callback processes the trigger event - animation should play automatically
+}
 
 //--------------------------------------------
 // MOUNT/UNMOUNT CALLBACKS
@@ -508,7 +532,10 @@ function DualWieldTestImage::onFire(%player, %slot)
 	// Trigger off-hand attack if dual wielding is active
 	if(DualWield::IsEnabled(%clientId))
 	{
-		// Schedule off-hand attack with slight delay
+		// Call OnPrimaryFire which triggers the animation via setImageTrigger
+		DualWield::OnPrimaryFire(%clientId, DualWieldTest);
+		
+		// Schedule off-hand DAMAGE with slight delay (after animation starts)
 		schedule("DualWield::FireOffHandMelee(" @ %clientId @ ", " @ %player @ ", DualWieldTest);", $DualWield::OffHandDelayOffset);
 	}
 }

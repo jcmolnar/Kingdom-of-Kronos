@@ -405,6 +405,7 @@ function DoCamp(%clientId, %savecharTry)
 }
 function SaveCharacter(%clientId)
 {
+	Watchdog_Enter("SaveCharacter");
 	dbecho($dbechoMode2, "SaveCharacter(" @ %clientId @ ")");
 
 	// CRITICAL: Prevent saving AI bots (both enemy bots and town bots) - CHECK FIRST BEFORE ANYTHING ELSE
@@ -2792,7 +2793,7 @@ function DeployLootbag(%pos, %rot, %special)
 //=============================================================================
 
 $LootbagAggregateRadius = 5;      // Distance within which lootbags are merged
-$LootbagAggregateInterval = 60;    // Interval in seconds (60 = 1 minute)
+$LootbagAggregateInterval = 30;    // Interval in seconds (30 = every 30 seconds)
 
 // Helper: determine if a lootbag owner name belongs to a bot (enemy or town)
 function IsLootOwnerBot(%ownerName)
@@ -2833,7 +2834,12 @@ function IsLootOwnerBot(%ownerName)
 
 function AggregateLootbags()
 {
+	Watchdog_Enter("AggregateLootbags");
 	dbecho($dbechoMode, "AggregateLootbags()");
+	
+	// Safety limit to prevent freeze from processing too many lootbags in one pass
+	// With O(n²) distance checks, 50 bags = 2500 iterations, 100 bags = 10000 iterations
+	%maxLootbagsPerPass = 30;
 	
 	%totalMerged = 0;
 	%totalLootbags = 0;
@@ -2992,6 +2998,14 @@ function AggregateLootbags()
 		return;
 	}
 	
+	// Safety limit: If too many lootbags, only process the first N to avoid O(n²) freeze
+	// Remaining lootbags will be processed in the next run
+	if(%lootbagCount > %maxLootbagsPerPass)
+	{
+		echo("[LOOTBAG AGGREGATE] WARNING: " @ %lootbagCount @ " lootbags found, limiting to " @ %maxLootbagsPerPass @ " to prevent freeze");
+		%lootbagCount = %maxLootbagsPerPass;
+	}
+	
 	// Track which lootbags have been merged (to skip them in future iterations)
 	%merged = "";
 	
@@ -3089,6 +3103,7 @@ function AggregateLootbags()
 // Merge the contents of bag2 into bag1, then delete bag2 if fully merged
 function MergeLootbags(%bag1, %bag2)
 {
+	Watchdog_Enter("MergeLootbags");
 	dbecho($dbechoMode, "MergeLootbags(" @ %bag1 @ ", " @ %bag2 @ ")");
 	
 	// CRITICAL SAFEGUARD: Never delete Player objects
@@ -3121,7 +3136,6 @@ function MergeLootbags(%bag1, %bag2)
 	{
 		// bag2 is empty, use safe delete wrapper
 		$loot[%bag2] = "";
-		$lootbagTime[%bag2] = "";
 		SafeDeleteLootbag(%bag2);
 		return true;
 	}
@@ -3174,7 +3188,6 @@ function MergeLootbags(%bag1, %bag2)
 		// Full merge success - safe delete bag2
 		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE DEBUG] Full merge successful. Deleting bag2=" @ %bag2);
 		$loot[%bag2] = "";
-		$lootbagTime[%bag2] = "";
 		SafeDeleteLootbag(%bag2);
 		return true;
 	}
@@ -4649,7 +4662,6 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 	%loot = %ownerName @ " " @ %namelist @ " " @ %loot;
 
 	$loot[%lootbag] = %loot;
-	$lootbagTime[%lootbag] = GetPersistentTime(); // Store creation timestamp for age checking (persistent across restarts)
 	storeData(%clientId, "lootbaglist", AddToCommaList(fetchData(%clientId, "lootbaglist"), %lootbag));
 
 	// CRITICAL: Validate MissionCleanup exists before adding lootbag

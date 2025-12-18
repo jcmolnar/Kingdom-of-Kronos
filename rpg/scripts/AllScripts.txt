@@ -4956,11 +4956,11 @@ function IsRealPlayer(%clientId)
 		return true;
 	}
 	
-	// Priority 5: Town Bot List check
-	// Town bots may not have BotInfoAiName immediately set, but are in $TownBotList
-	if($TownBotList != "" && String::findSubStr($TownBotList, %clientId) != -1)
+	// Priority 5: Town Bot Client check (O(1) lookup via $TownBotClient)
+	// This is faster than string search and more reliable
+	if(IsTownBotClientId(%clientId))
 	{
-		if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " found in $TownBotList = TOWN BOT (Not Real)");
+		if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " is town bot (via IsTownBotClientId) = NOT REAL");
 		return false;
 	}
 	
@@ -5573,8 +5573,68 @@ function ReconcileSpawnCounters()
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Completed: Checked " @ %totalChecked @ " spawn points, Fixed " @ %totalFixed @ " discrepancies, Removed " @ %removedCount @ " dead bots");
 	}
 	
+	// NEW: Also reconcile town bots
+	ReconcileTownBots();
+	
 	// Schedule next reconciliation in 30 seconds
 	schedule("ReconcileSpawnCounters();", 30);
+}
+
+//=============================================================================
+// Town Bot Reconciliation
+// Checks for stale $TownBotClient entries and cleans them up
+//=============================================================================
+function ReconcileTownBots()
+{
+	%fixed = 0;
+	%checked = 0;
+	
+	// Iterate through all registered town bot names
+	for(%i = 0; (%botName = GetWord($TownBotRegistry, %i)) != -1 && %i < 200; %i++)
+	{
+		if(%botName == "" || %botName == "0" || %botName == -1)
+			continue;
+			
+		%clientId = $TownBotSpawned[%botName];
+		if(%clientId == "" || %clientId == -1)
+			continue;
+			
+		%checked++;
+		
+		// Check if bot is still alive (has valid player object)
+		%playerObj = Client::getOwnedObject(%clientId);
+		
+		if(%playerObj == -1 || %playerObj == "")
+		{
+			// Bot died but wasn't cleaned up properly
+			echo("[RECONCILE TOWN] Town bot " @ %botName @ " (clientId=" @ %clientId @ ") is dead - cleaning up stale entry");
+			
+			// Clear all tracking
+			UnregisterTownBotClient(%clientId);
+			$TownBotSpawned[%botName] = "";
+			$TownBotList = RemoveFromCommaList($TownBotList, %clientId);
+			$BotType[%clientId] = "";
+			
+			%fixed++;
+		}
+		else
+		{
+			// Bot is alive - verify $TownBotClient is in sync
+			if(!IsTownBotClientId(%clientId))
+			{
+				// $TownBotClient not set but $TownBotSpawned says it exists - fix it
+				%zone = $TownBotZone[%botName];
+				if(%zone == "" || %zone == -1)
+					%zone = 0;
+				RegisterTownBotClient(%clientId, %botName, %zone);
+				echo("[RECONCILE TOWN] Fixed missing $TownBotClient entry for " @ %botName @ " (clientId=" @ %clientId @ ")");
+				%fixed++;
+			}
+		}
+	}
+	
+	if(%fixed > 0)
+		echo("[RECONCILE TOWN] Completed: Checked " @ %checked @ " town bots, Fixed " @ %fixed @ " stale entries");
 }
 
 // Start the reconciliation loop (call this from server init)
@@ -12998,6 +13058,113 @@ $TownBotSpawned[0] = "";  // Maps bot name to clientId if spawned, "" if not spa
 $ZonePlayerCount[0] = 0;  // Tracks number of players in each zone
 $ZoneBotDespawnSchedule[0] = "";  // Tracks scheduled despawn for each zone
 
+// NEW: Reverse lookup - clientId to bot info (O(1) lookup)
+// $TownBotClient[clientId, "botName"] = bot name
+// $TownBotClient[clientId, "zone"] = zone index
+// $TownBotClient[clientId, "spawnTime"] = getSimTime() when spawned
+// $TownBotClientCooldown[clientId] = getSimTime() when freed (3-second reuse cooldown)
+
+//=============================================================================
+// Town Bot Client Registry Functions
+// These provide O(1) lookup for "is this client ID a town bot?"
+//=============================================================================
+
+function RegisterTownBotClient(%clientId, %botName, %zone)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+		
+	$TownBotClient[%clientId, "botName"] = %botName;
+	$TownBotClient[%clientId, "zone"] = %zone;
+	$TownBotClient[%clientId, "spawnTime"] = getSimTime();
+	
+	echo("[TOWN BOT SPAWN] Registered " @ %botName @ " at clientId=" @ %clientId @ ", zone=" @ %zone);
+}
+
+function UnregisterTownBotClient(%clientId)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+		
+	%botName = $TownBotClient[%clientId, "botName"];
+	%zone = $TownBotClient[%clientId, "zone"];
+	
+	$TownBotClient[%clientId, "botName"] = "";
+	$TownBotClient[%clientId, "zone"] = "";
+	$TownBotClient[%clientId, "spawnTime"] = "";
+	
+	// Set cooldown to prevent immediate reuse
+	$TownBotClientCooldown[%clientId] = getSimTime();
+	
+	if(%botName != "" && %botName != -1)
+		echo("[TOWN BOT DESPAWN] Unregistered " @ %botName @ " from clientId=" @ %clientId @ ", cooldown set");
+}
+
+function IsTownBotClientId(%clientId)
+{
+	// O(1) check if client ID is a town bot
+	if(%clientId == "" || %clientId == -1)
+		return false;
+		
+	%botName = $TownBotClient[%clientId, "botName"];
+	return (%botName != "" && %botName != -1 && %botName != "0");
+}
+
+function ValidateTownBotSpawn(%clientId, %botName)
+{
+	// Returns true if safe to use this client ID for town bot
+	// Returns false if client ID is in use or on cooldown
+	
+	if(%clientId == "" || %clientId == -1)
+	{
+		echo("[TOWN BOT VALIDATION] Client ID " @ %clientId @ " invalid for " @ %botName);
+		return false;
+	}
+	
+	// Check 1: Not a real player (has save file)
+	if($PlayerHasSaveFile[%clientId] == true || $PlayerHasSaveFile[%clientId] == "1")
+	{
+		echo("[TOWN BOT VALIDATION] Client ID " @ %clientId @ " FAILED: Real player with save file");
+		return false;
+	}
+	
+	// Check 2: Not an active enemy bot (in $BotRegistry)
+	%enemySpawnPoint = $BotRegistry[%clientId, "spawnPoint"];
+	if(%enemySpawnPoint != "" && %enemySpawnPoint != -1 && %enemySpawnPoint != "0")
+	{
+		echo("[TOWN BOT VALIDATION] Client ID " @ %clientId @ " FAILED: Active enemy bot from SpawnPoint " @ %enemySpawnPoint);
+		return false;
+	}
+	
+	// Check 3: Not recently freed (cooldown)
+	%cooldown = $TownBotClientCooldown[%clientId];
+	if(%cooldown != "" && %cooldown != -1)
+	{
+		%timeSinceFreed = getSimTime() - %cooldown;
+		if(%timeSinceFreed < 3)
+		{
+			echo("[TOWN BOT VALIDATION] Client ID " @ %clientId @ " FAILED: On cooldown (" @ %timeSinceFreed @ "s elapsed, need 3s)");
+			return false;
+		}
+		else
+		{
+			// Cooldown expired, clear it
+			$TownBotClientCooldown[%clientId] = "";
+		}
+	}
+	
+	// Check 4: Not already a town bot
+	if(IsTownBotClientId(%clientId))
+	{
+		%existingBot = $TownBotClient[%clientId, "botName"];
+		echo("[TOWN BOT VALIDATION] Client ID " @ %clientId @ " FAILED: Already town bot " @ %existingBot);
+		return false;
+	}
+	
+	return true;
+}
+
+
 function InitTownBots()
 {
 	dbecho($dbechoMode, "InitTownBots() - Registering bots for dynamic loading");
@@ -13564,6 +13731,9 @@ function SpawnZoneBotPostSpawn(%aiName, %botName, %displayName, %zoneIndex)
 	// Reset retry counter on successful spawn
 	$TownBotSpawned[%botName] = %clientId;
 	
+	// NEW: Register in O(1) lookup table for fast client ID -> bot info lookups
+	RegisterTownBotClient(%clientId, %botName, %zoneIndex);
+	
 	// PRIORITY 2: Set $BotType cache for O(1) bot type detection
 	$BotType[%clientId] = "town";
 	
@@ -13878,6 +14048,10 @@ function RetryGetAIId(%aiName, %botName, %displayName, %zoneIndex)
 	$TownBotSpawnRetry[%botName] = "";
 	
 	$TownBotSpawned[%botName] = %clientId;
+	
+	// NEW: Register in O(1) lookup table for fast client ID -> bot info lookups
+	RegisterTownBotClient(%clientId, %botName, %zoneIndex);
+	
 	$BotType[%clientId] = "town";  // PRIORITY 2: Set $BotType cache
 	$TownBotList = $TownBotList @ %clientId @ " ";
 	// CRITICAL: Set BotInfoAiName in $TownBotData FIRST so GetClientDataType identifies it as a town bot
@@ -14130,6 +14304,10 @@ function SpawnSingleZoneBot(%botName, %zoneIndex)
 		$TownBotSpawnRetry[%botName] = "";
 		
 		$TownBotSpawned[%botName] = %clientId;
+		
+		// NEW: Register in O(1) lookup table for fast client ID -> bot info lookups
+		RegisterTownBotClient(%clientId, %botName, %zoneIndex);
+		
 		$BotType[%clientId] = "town";  // PRIORITY 2: Set $BotType cache
 		
 		// Add to TownBotList immediately so bots can be found for interaction
@@ -14504,6 +14682,9 @@ function SpawnZoneBots(%zoneIndex)
 				{
 					// Bot already exists and is valid - update stored ID and skip spawning
 					$TownBotSpawned[%botName] = %existingId;
+					// Ensure O(1) lookup table is also updated
+					if(!IsTownBotClientId(%existingId))
+						RegisterTownBotClient(%existingId, %botName, %zoneIndex);
 					continue;
 				}
 				
@@ -14909,6 +15090,9 @@ function DespawnZoneBots(%zoneIndex)
 			
 			// Clear spawn tracking
 			$TownBotSpawned[%botName] = "";
+			
+			// NEW: Clear O(1) lookup table and set cooldown
+			UnregisterTownBotClient(%clientId);
 			// Clear lingering no-drop flag so next occupant of this clientId can drop normally
 			storeData(%clientId, "noDropLootbagFlag", "");
 			$TownBotData[%clientId, "noDropLootbagFlag"] = "";
@@ -93152,6 +93336,9 @@ function Player::onKilled(%this)
 						}
 					}
 				}
+				
+				// NEW: Clear O(1) lookup table and set cooldown
+				UnregisterTownBotClient(%clientId);
 				
 				// CRITICAL: DO NOT clear BotInfoAiName, SpawnBotInfo, or SpawnTime here
 				// AI::onDroneKilled needs to read these to identify bot type and perform cleanup

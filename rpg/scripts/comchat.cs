@@ -6748,7 +6748,7 @@ if(%w1 == "#deletebot")
 						
 						// CRITICAL: Schedule clearing of $ClientIdRecentlyFreed flag after cleanup completes
 						// This allows the client ID to be reused after cleanup is fully done (10 seconds - extended to prevent shell bots)
-						schedule("$ClientIdRecentlyFreed[" @ %id @ "] = \"\";", 10.0);
+						schedule("$ClientIdRecentlyFreed[" @ %id @ "] = \"\";", 30.0);  // Extended from 10s to 30s
 						
 						// Force delete the broken bot object
 						deleteObject(%object);
@@ -7786,7 +7786,11 @@ if(%w1 == "#spawntelemetry")
 						if(%isEnemyBot)
 							%enemyBotsKilled++;
 						else if(%isTownBot)
-							%townBotsKilled++;
+						{
+							// Skip town bots - they don't respawn automatically and shouldn't be killed
+							echo("[ADMIN] #resetspawns - Skipping town bot " @ %botName @ " (clientId=" @ %botId @ ")");
+							continue;
+						}
 						
 						// CRITICAL: Use Player::Kill() instead of deleteObject() to trigger proper cleanup
 						// Player::Kill() calls Player::onKilled() which:
@@ -7848,8 +7852,8 @@ if(%w1 == "#spawntelemetry")
 				}
 			}
 			
-			Client::sendMessage(%TrueClientId, 0, "Wiped all bots (" @ %killedCount @ " killed: " @ %enemyBotsKilled @ " enemy, " @ %townBotsKilled @ " town) and reset " @ %resetCount @ " spawn point counters.");
-			echo("[ADMIN]: " @ %TCsenderName @ " wiped all bots (" @ %killedCount @ " killed: " @ %enemyBotsKilled @ " enemy, " @ %townBotsKilled @ " town) and reset " @ %resetCount @ " spawn point counters.");
+			Client::sendMessage(%TrueClientId, 0, "Wiped enemy bots (" @ %killedCount @ " killed, town bots skipped) and reset " @ %resetCount @ " spawn point counters.");
+			echo("[ADMIN]: " @ %TCsenderName @ " wiped enemy bots (" @ %killedCount @ " killed, town bots skipped) and reset " @ %resetCount @ " spawn point counters.");
 		}
 		return;
 	}

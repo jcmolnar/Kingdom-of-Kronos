@@ -7,7 +7,7 @@ if($arenaOn == "") $arenaOn = True;
 if($underwaterEffects == "") $underwaterEffects = False;
 if($postAttackGraphBar == "") $postAttackGraphBar = False;
 if($SaveWorldFreq == "") $SaveWorldFreq = 15 * 60;
-if($ChangeWeatherFreq == "") $ChangeWeatherFreq = 5 * 60;
+if($ChangeWeatherFreq == "") $ChangeWeatherFreq = 15 * 60;
 if($initlck == "") $initlck = 8;
 if($AIsmartFOVbots == "") $AIsmartFOVbots = True;
 if($exportChat == "") $exportChat = True;

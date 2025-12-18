@@ -258,7 +258,7 @@ function Server::onClientConnect(%clientId)
 
 
 	##### MODIFY "CONNECTING" SCREEN GREETING:
-	$Taurik::ConnectScreenMessage1 = "Kingdom of Kronos V0.8";
+	$Taurik::ConnectScreenMessage1 = "Kingdom of Kronos V0.8.1";
 	$Taurik::ConnectScreenMessage2 = "Updates Every Friday!";
 
 
@@ -300,13 +300,25 @@ function Server::onClientConnect(%clientId)
 	{
 		%currentTime = getSimTime();
 		%timeSinceFreed = %currentTime - %recentlyFreed;
-		if(%timeSinceFreed < 10)
+		if(%timeSinceFreed < 30)  // Extended from 10s to 30s to catch more contaminated IDs
 		{
-			// Client ID was recently freed - wait a bit for cleanup to complete
-			echo("WARNING: Server::onClientConnect - Client ID " @ %clientId @ " was recently freed " @ %timeSinceFreed @ "s ago. Delaying player spawn to allow cleanup...");
-			// Clear the flag and schedule a retry
+			// Client ID was recently freed - FORCE DEEP CLEANUP and wait for state to clear
+			echo("WARNING: Server::onClientConnect - Client ID " @ %clientId @ " was recently freed " @ %timeSinceFreed @ "s ago. Forcing deep cleanup and delaying player spawn...");
+			
+			// CRITICAL: Force deep cleanup of any leftover bot data BEFORE player spawns
+			// This prevents player from inheriting stale bot state that causes blackscreen
+			ClearAllBotData(%clientId, false);
+			
+			// Also clear any registry entries for this ID
+			if($BotRegistry[%clientId] != "")
+			{
+				$BotRegistry[%clientId] = "";
+				echo("Server::onClientConnect - Cleared contaminated BotRegistry for client " @ %clientId);
+			}
+			
+			// Clear the flag and schedule a retry with longer delay to allow ghost state to clear
 			$ClientIdRecentlyFreed[%clientId] = "";
-			schedule("Server::onClientConnect(" @ %clientId @ ");", 1.0);
+			schedule("Server::onClientConnect(" @ %clientId @ ");", 3.0);  // Extended from 1s to 3s for blackscreen fix
 			return;
 		}
 		else

@@ -391,7 +391,7 @@ function createServer(%mission, %dedicated)
 	InitObjectives();
 
 	// Initialize debug UDP broadcast (if enabled)
-	InitDebugBroadcast();
+	//initDebugBroadcast();
 
 	//permanent banlist
 	//**

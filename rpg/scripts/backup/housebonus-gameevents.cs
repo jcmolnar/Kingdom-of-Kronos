@@ -66,9 +66,8 @@ function RecursiveWorld(%seconds)
 	}
 	if($ticker[1] >= ($SaveWorldFreq / %seconds))
 	{
-		//check velocity of all the bots and kill off the bots that are falling too fast (ie, ran off the map)
-		//also check for BonusItems
-		%list = GetEveryoneIdList();
+		// Check if players are falling off the map (bots already die when leaving zones)
+		%list = GetPlayerIdList();  // Only check players, not bots
 		for(%i = 0; GetWord(%list, %i) != -1; %i++)
 		{
 			%id = GetWord(%list, %i);
@@ -77,9 +76,6 @@ function RecursiveWorld(%seconds)
 			{
 				FellOffMap(%id);
 			}
-
-			//bonus items
-
 		}
 
 		//Save World call
@@ -104,9 +100,10 @@ function RecursiveWorld(%seconds)
 
 		$ticker[2] = 0;
 	}
-	if($ticker[3] >= 1 && $nightDayCycle)
+	if($ticker[3] >= 60 && $nightDayCycle)  // Every 5 minutes (60 ticks × 5s = 300s)
 	{
-		%a = (($initHaze * 2) / $fullCycleTime) * %seconds;
+		// Multiply by 60 since we now update every 60 ticks instead of every 1 tick
+		%a = (($initHaze * 2) / $fullCycleTime) * %seconds * 60;
 
 		$currentHaze -= %a;
 
@@ -183,16 +180,19 @@ function RecursiveWorld(%seconds)
 
 	if($ticker[5] >= ($RecalcEconomyDelay) / %seconds)
 	{
-		//re-evaluate economy
-
-		%list = GetBotIdList();
-		for(%i = 0; GetWord(%list, %i) != -1; %i++)
+		//re-evaluate economy - OPTIMIZED: Only iterate spawned town merchants via $TownBotRegistry
+		// instead of all bots (enemy + town) via GetBotIdList()
+		
+		for(%i = 0; (%aiName = GetWord($TownBotRegistry, %i)) != -1; %i++)
 		{
-			%id = GetWord(%list, %i);
-			%aiName = fetchData(%id, "BotInfoAiName");
-
+			// Only process merchants (bots with SHOP defined)
 			if($BotInfo[%aiName, SHOP] != "")
 			{
+				// Check if this merchant is currently spawned
+				%clientId = $TownBotSpawned[%aiName];
+				if(%clientId == "" || %clientId == -1)
+					continue;  // Skip merchants that aren't spawned
+				
 				%max = getNumItems();
 				for(%z = 0; %z < %max; %z++)
 				{
@@ -304,7 +304,7 @@ function RecursiveWorld(%seconds)
 
 		$ticker[6] = 0;
 	}
-	if($ticker[7] >= (20 / %seconds))
+	if($ticker[7] >= (60 / %seconds))  // Every 60 seconds (was 20s)
 	{
 		//re-init the sound points.
 		InitSoundPoints();
