@@ -1,13 +1,20 @@
 //============================================================================
-// DUAL WIELDING SYSTEM - Kingdom of Kronos
+// DUAL WIELDING SYSTEM - Kingdom of Kronos - Made by Jobo
 //============================================================================
 // This module implements experimental dual-wielding functionality.
 // 
 // HOW IT WORKS:
-//   - Primary weapon uses engine slot 0 (standard behavior)
-//   - Off-hand weapon uses engine slot 3 (unused slot)
-//   - When primary weapon fires, off-hand weapon also fires (if equipped)
-//   - Off-hand weapon deals reduced damage (configurable via $DualWield::OffHandDamageMultiplier)
+//   - Primary weapon uses $WeaponSlot (slot 0 - standard behavior)
+//   - Off-hand weapon is stored in player data and mounted in slot 6 for visual
+//   - Off-hand weapon is removed from player inventory when equipped (returned on unequip)
+//   - When primary weapon fires, off-hand attack triggers after configurable delay ($DualWield::OffHandDelayOffset)
+//   - Off-hand damage uses its own weapon stats (configurable multiplier available)
+//
+// TOGGLE MODE:
+//   - Players can enter "dual wield mode" with #dualwield (no args)
+//   - While in toggle mode, equipping weapons automatically sets up dual wielding
+//   - Equipping a weapon pushes the current main weapon to off-hand
+//   - Toggle mode persists across death/respawn (disabled on remort)
 //
 // SKILL REQUIREMENT:
 //   - Players must have Slashing skill >= $DualWield::RequiredSkillLevel to dual wield
@@ -15,11 +22,9 @@
 //   - This simulates the training needed to fight with two weapons
 //
 // LIMITATIONS:
-//   - Player animations only support one weapon (visual may look odd)
-//   - Both weapons share the same fire animation timing
-//   - AI bots do not use dual wielding (slot 0 only)
-//   - Polearms cannot be dual wielded (too large)
-//   - Shields cannot be equipped while dual wielding
+//   - Off-hand weapon uses slot 6 for visual display
+//   - AI bots dual wielding is disabled by default ($DualWield::AllowForBots)
+//   - Weapons still require their individual skill/remort requirements
 //
 // USAGE:
 //   DualWield::EquipOffHand(%clientId, %weaponItem)   - Equip off-hand weapon
@@ -27,21 +32,66 @@
 //   DualWield::GetOffHandWeapon(%clientId)            - Get current off-hand weapon
 //   DualWield::IsEnabled(%clientId)                   - Check if dual wielding is active
 //   DualWield::CanDualWield(%clientId)                - Check if player meets skill requirement
+//   DualWield::GetToggleMode(%clientId)               - Get toggle mode state
+//   DualWield::SetToggleMode(%clientId, %enabled)     - Set toggle mode state
+//   DualWield::ToggleMode(%clientId)                  - Flip toggle mode on/off
+//   DualWield::HandleEquipInToggleMode(%clientId, %item) - Handle equip in toggle mode
 //
-// COMMANDS (for testing):
+// COMMANDS:
+//   #dualwield             - Toggle dual wield mode on/off
 //   #dualwield <weaponName>  - Equip specified weapon in off-hand
-//   #dualwield off           - Unequip off-hand weapon
-//   #dualwield status        - Show current off-hand and requirements
+//   #dualwield off         - Unequip off-hand weapon
+//   #dualwield status      - Show current off-hand, mode state, and requirements
+//   #dualwield help        - Show command help
 //
-// INTEGRATION REQUIRED:
-//   1. Add to comchat.cs command handling: 
-//      if(GetWord(%msg, 0) == "#dualwield") { DualWield::Command(%clientId, GetWords(%msg, 1, 99)); return; }
+//
+// INTEGRATION REQUIRED (other script modifications):
 //   
-//   2. Add to weapon fire logic (where damage is dealt):
-//      DualWield::OnPrimaryFire(%clientId, %weapon);
+//   1. comchat.cs - Command handling for #dualwield command:
+//      Add: if(GetWord(%msg, 0) == "#dualwield") { DualWield::Command(%clientId, GetWords(%msg, 1, 99)); return; }
 //   
-//   3. Optionally modify damage calculation to apply multiplier:
-//      %damageMultiplier = DualWield::GetDamageMultiplier(%clientId, %slot);
+//   2. weaponHandling.cs - Weapon fire logic (DealDamage or similar):
+//      Add: DualWield::OnPrimaryFire(%clientId, %weapon);
+//   
+//   3. weaponHandling.cs - remoteNextWeapon() function (near end):
+//      Add: DualWield::RefreshOffHandVisual(%clientId);
+//      Purpose: Re-mount off-hand visual after scroll wheel weapon switch
+//   
+//   4. weaponHandling.cs - remotePrevWeapon() function (near end):
+//      Add: DualWield::RefreshOffHandVisual(%clientId);
+//      Purpose: Re-mount off-hand visual after scroll wheel weapon switch
+//   
+//   5. weaponHandling.cs - Weapon::onUse() function (line ~149):
+//      Add: if(DualWield::HandleEquipInToggleMode(%clientId, %item)) return;
+//      Purpose: Allows GUI equipping to automatically set up dual wielding when toggle mode is active
+//
+//   6. rpgstats.cs - DoRemort() function (line ~1015):
+//      Add: DualWield::SetToggleMode(%clientId, false);
+//      Purpose: Disable toggle mode when player remorts
+//
+// GLOBAL VARIABLES USED FROM OTHER SCRIPTS:
+//   $PlayerSkill[%clientId, %skillType] - Player skill levels
+//   $SkillRestriction[%weapon] - Weapon skill/remort requirements
+//   $SkillName[%skillType] - Skill names for messages
+//   $WeaponSlot - Primary weapon slot (usually 0)
+//   $MsgRed, $MsgYellow, $MsgBeige, $MsgGreen - Message colors
+//   $MinLevel, $MinRemort - Restriction type constants
+//
+// DATA FIELDS STORED:
+//   DualWield_OffHandWeapon - Current off-hand weapon name
+//   DualWield_ToggleMode - Toggle mode state (1 = on, empty = off)
+//
+// FUNCTIONS CALLED FROM OTHER SCRIPTS:
+//   GetRemort(%clientId) - Get player remort count
+//   RPGlevel(%clientId) - Get player RPG level
+//   SaveCharacter(%clientId) - Persist character data
+//   Client::getOwnedObject(%clientId) - Get player object
+//   Player::getMountedItem(%player, %slot) - Get equipped weapon
+//   Player::getItemCount(%player, %item) - Get inventory count
+//   Player::setItemCount(%player, %item, %count) - Set inventory count
+//   Player::mountItem(%player, %item, %slot) - Mount item visual
+//   Player::unMountItem(%player, %slot) - Unmount item visual
+//   fetchData(%clientId, %key) / storeData(%clientId, %key, %value) - Data storage
 //============================================================================
 
 // Configuration
@@ -166,8 +216,8 @@ ItemImageData OffHand_KatanaImage
 {
 	shapeFile  = "katana";
 	mountPoint = 0;
-	mountRotation = { 0, 1.60, 0 };  // Katana needs extra rotation
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountRotation = { 0, 1.60, 0 }; // first is forward/backward rotation -- second is left/right rotation -- idk what third is i didnt need it
+	mountOffSet = { -0.65, 0, -0.16 };  // Move left (-X) to opposite hand -- first one is left/right, second is forwards/backward, third is vertical up/down
 	weaponType = 0;
 	fireTime = 0.9;
 	accuFire = true;
@@ -181,8 +231,8 @@ ItemImageData OffHand_ShortSwordImage
 {
 	shapeFile  = "short_sword";
 	mountPoint = 0;
-	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountRotation = { 0, 1.50, 0 };
+	mountOffSet = { -0.80, 0, 0 };
 	weaponType = 0;
 	fireTime = 0.9;
 	accuFire = true;
@@ -197,7 +247,7 @@ ItemImageData OffHand_SwordImage
 	shapeFile  = "sword";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 0.9;
 	accuFire = true;
@@ -212,7 +262,7 @@ ItemImageData OffHand_LongSwordImage
 	shapeFile  = "long_sword";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 0.9;
 	accuFire = true;
@@ -227,7 +277,7 @@ ItemImageData OffHand_ElfinbladeImage
 	shapeFile  = "elfinblade";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 0.9;
 	accuFire = true;
@@ -242,7 +292,7 @@ ItemImageData OffHand_DaggerImage
 	shapeFile  = "dagger";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 0.7;
 	accuFire = true;
@@ -257,7 +307,7 @@ ItemImageData OffHand_SpearImage
 	shapeFile  = "spear";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 1.2;
 	accuFire = true;
@@ -272,7 +322,7 @@ ItemImageData OffHand_TridentImage
 	shapeFile  = "trident";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 1.2;
 	accuFire = true;
@@ -287,7 +337,7 @@ ItemImageData OffHand_MaceImage
 	shapeFile  = "mace";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 1.0;
 	accuFire = true;
@@ -302,7 +352,7 @@ ItemImageData OffHand_HammerImage
 	shapeFile  = "hammer";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 1.2;
 	accuFire = true;
@@ -317,7 +367,7 @@ ItemImageData OffHand_ClubImage
 	shapeFile  = "mace";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 0.9;
 	accuFire = true;
@@ -332,7 +382,7 @@ ItemImageData OffHand_PickImage
 	shapeFile  = "Pick";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 1.0;
 	accuFire = true;
@@ -348,7 +398,7 @@ ItemImageData OffHand_BattleAxeImage
 	shapeFile  = "BattleAxe";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 1.0;
 	accuFire = true;
@@ -363,7 +413,7 @@ ItemImageData OffHand_HatchetImage
 	shapeFile  = "hatchet";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 0.8;
 	accuFire = true;
@@ -378,7 +428,7 @@ ItemImageData OffHand_AxeImage
 	shapeFile  = "axe";
 	mountPoint = 0;
 	mountRotation = { 0, 0, 0 };
-	mountOffSet = { -0.65, 0, -0.16 };
+	mountOffSet = { -0.85, 0, -0.16 };
 	weaponType = 0;
 	fireTime = 0.9;
 	accuFire = true;
@@ -469,6 +519,191 @@ function DualWield::CanDualWield(%clientId)
     return true;
 }
 
+//============================================================================
+// TOGGLE MODE STATE
+//============================================================================
+// Toggle mode allows players to equip weapons through the normal GUI
+// and have them automatically set up dual wielding.
+
+// Get the current toggle mode state for a player
+function DualWield::GetToggleMode(%clientId)
+{
+    %state = fetchData(%clientId, "DualWield_ToggleMode");
+    if(%state == "" || %state == "0" || %state == -1)
+        return false;
+    return true;
+}
+
+// Set the toggle mode state for a player
+function DualWield::SetToggleMode(%clientId, %enabled)
+{
+    if(%enabled)
+        storeData(%clientId, "DualWield_ToggleMode", "1");
+    else
+        storeData(%clientId, "DualWield_ToggleMode", "");
+}
+
+// Toggle the dual wield mode on/off
+function DualWield::ToggleMode(%clientId)
+{
+    if(!DualWield::CanDualWield(%clientId))
+    {
+        %currentSkill = $PlayerSkill[%clientId, $DualWield::RequiredSkillType];
+        if(%currentSkill == "") %currentSkill = 0;
+        Client::sendMessage(%clientId, $MsgRed, "You need " @ $DualWield::RequiredSkillLevel @ " Slashing skill to dual wield. (Current: " @ %currentSkill @ ")");
+        return;
+    }
+    
+    %currentState = DualWield::GetToggleMode(%clientId);
+    
+    if(%currentState)
+    {
+        // Turn off
+        DualWield::SetToggleMode(%clientId, false);
+        Client::sendMessage(%clientId, $MsgYellow, "Dual wield mode: OFF - Equipping weapons normally");
+    }
+    else
+    {
+        // Turn on
+        DualWield::SetToggleMode(%clientId, true);
+        Client::sendMessage(%clientId, $MsgGreen, "Dual wield mode: ON - Equipping weapons will set up dual wielding");
+    }
+}
+
+// Handle weapon equip when toggle mode is active
+// Returns true if handled (don't do normal equip), false to continue normal equip
+function DualWield::HandleEquipInToggleMode(%clientId, %weaponItem)
+{
+    // Double-check mode is active
+    if(!DualWield::GetToggleMode(%clientId))
+        return false;
+    
+    // Check if player can dual wield
+    if(!DualWield::CanDualWield(%clientId))
+        return false;
+    
+    // Check if this is a valid weapon type for dual wielding
+    if(!DualWield::IsValidWeaponType(%weaponItem))
+        return false;  // Not a dual-wieldable weapon, equip normally
+    
+    // Check weapon skill/remort requirements
+    if(!DualWield::CheckWeaponRestriction(%clientId, %weaponItem))
+        return false;  // Message already sent, let normal equip fail too
+    
+    %playerObj = Client::getOwnedObject(%clientId);
+    if(%playerObj == "" || %playerObj == -1)
+        return false;
+    
+    // Get current main weapon
+    %currentMain = Player::getMountedItem(%playerObj, $WeaponSlot);
+    
+    // Case 1: No main weapon - just equip normally
+    if(%currentMain == "" || %currentMain == -1)
+        return false;  // Let normal equip handle it
+    
+    // Case 2: Trying to equip same weapon as main
+    if(%currentMain == %weaponItem)
+    {
+        // Check if player has 2 of this weapon
+        %count = Player::getItemCount(%playerObj, %weaponItem);
+        if(%count < 2)
+        {
+            // Only have 1 - just let normal equip handle it (does nothing since already equipped)
+            return false;
+        }
+        // They have 2 - equip to off-hand
+        DualWield::EquipOffHand(%clientId, %weaponItem);
+        return true;  // We handled it
+    }
+    
+    // Case 3: Different weapon - push current main to off-hand
+    // First, unequip any existing off-hand (returns to inventory)
+    %currentOffHand = DualWield::GetOffHandWeapon(%clientId);
+    if(%currentOffHand != "" && %currentOffHand != -1)
+    {
+        DualWield::UnequipOffHand(%clientId);
+    }
+    
+    // Move current main weapon to off-hand
+    // The current main weapon is already in inventory (mounted items are still in inventory)
+    // We need to equip it as off-hand
+    DualWield::EquipOffHand(%clientId, %currentMain);
+    
+    // Let normal equip proceed to mount the new weapon as main
+    return false;
+}
+
+// Check if player meets the $SkillRestriction requirements for a weapon
+// Returns true if player can use the weapon, false if not
+// Sets %reasonOut to a message explaining why if check fails
+function DualWield::CheckWeaponRestriction(%clientId, %weaponItem)
+{
+    %restriction = $SkillRestriction[%weaponItem];
+    
+    // No restriction defined - weapon can be equipped
+    if(%restriction == "" || %restriction == -1)
+        return true;
+    
+    // Parse restriction format: "SkillType RequiredAmount [MinRemort RemortAmount]"
+    // Example: "$SkillSlashing 2500 $MinRemort 75"
+    %skillType = GetWord(%restriction, 0);
+    %skillRequired = GetWord(%restriction, 1);
+    %remortType = GetWord(%restriction, 2);
+    %remortRequired = GetWord(%restriction, 3);
+    
+    // Check skill requirement
+    if(%skillType != "" && %skillType != -1 && %skillRequired != "" && %skillRequired != -1)
+    {
+        // $MinLevel check
+        if(%skillType == $MinLevel)
+        {
+            %playerLevel = RPGlevel(%clientId);
+            if(%playerLevel < %skillRequired)
+            {
+                Client::sendMessage(%clientId, $MsgRed, "You need level " @ %skillRequired @ " to use this weapon. (Current: " @ %playerLevel @ ")");
+                return false;
+            }
+        }
+        // $MinRemort check (if only remort, no skill)
+        else if(%skillType == $MinRemort)
+        {
+            %playerRemort = GetRemort(%clientId);
+            if(%playerRemort < %skillRequired)
+            {
+                Client::sendMessage(%clientId, $MsgRed, "You need " @ %skillRequired @ " remorts to use this weapon. (Current: " @ %playerRemort @ ")");
+                return false;
+            }
+        }
+        // Regular skill check
+        else
+        {
+            %playerSkill = $PlayerSkill[%clientId, %skillType];
+            if(%playerSkill == "") %playerSkill = 0;
+            
+            if(%playerSkill < %skillRequired)
+            {
+                %skillName = $SkillName[%skillType];
+                if(%skillName == "") %skillName = "Skill #" @ %skillType;
+                Client::sendMessage(%clientId, $MsgRed, "You need " @ %skillRequired @ " " @ %skillName @ " skill to use this weapon. (Current: " @ %playerSkill @ ")");
+                return false;
+            }
+        }
+    }
+    
+    // Check additional remort requirement (word 2 and 3)
+    if(%remortType == $MinRemort && %remortRequired != "" && %remortRequired != -1)
+    {
+        %playerRemort = GetRemort(%clientId);
+        if(%playerRemort < %remortRequired)
+        {
+            Client::sendMessage(%clientId, $MsgRed, "You need " @ %remortRequired @ " remorts to use this weapon. (Current: " @ %playerRemort @ ")");
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 // Equip a weapon in the off-hand slot
 function DualWield::EquipOffHand(%clientId, %weaponItem)
 {
@@ -487,6 +722,15 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
         return false;
     }
     
+    // Check if already dual wielding - must unequip first to prevent inventory duplication
+    %currentOffHand = fetchData(%clientId, "DualWield_OffHandWeapon");
+    if(%currentOffHand != "" && %currentOffHand != -1 && %currentOffHand != "0")
+    {
+        Client::sendMessage(%clientId, $MsgYellow, "You already have " @ %currentOffHand @ " equipped in your off-hand.");
+        Client::sendMessage(%clientId, $MsgYellow, "Use #dualwield unequip first, then equip the new weapon.");
+        return false;
+    }
+    
     // Validate the weapon exists
     %itemData = getItemData(%weaponItem);
     if(%itemData == "" || %itemData == -1)
@@ -499,6 +743,13 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
     if(!DualWield::IsValidWeaponType(%weaponItem))
     {
         Client::sendMessage(%clientId, $MsgRed, "This weapon type cannot be dual-wielded. Only swords, axes, and bludgeons are allowed.");
+        return false;
+    }
+    
+    // Check if player meets the weapon's skill/remort requirements
+    if(!DualWield::CheckWeaponRestriction(%clientId, %weaponItem))
+    {
+        // Message already sent by CheckWeaponRestriction
         return false;
     }
     
@@ -585,13 +836,37 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
         }
     }
     
+    // Get weapon display name - prefer description, fall back to item name
     %weaponName = %itemData.description;
-    if(%weaponName == "") %weaponName = %weaponItem;
+    if(%weaponName == "" || %weaponName == "Tool" || %weaponName == "Weapon")
+        %weaponName = %weaponItem;
     
-    Client::sendMessage(%clientId, $MsgBeige, "Off-hand equipped: " @ %weaponName);
+    Client::sendMessage(%clientId, $MsgBeige, "Off-hand equipped: " @ %weaponName @ " (" @ %weaponItem @ ")");
     echo("[DUAL WIELD] " @ Client::getName(%clientId) @ " equipped off-hand weapon: " @ %weaponItem);
     
     return true;
+}
+
+// Refresh/re-mount the off-hand weapon visual (called after switching primary weapon)
+// This fixes the visual disappearing when using scroll wheel to switch weapons
+function DualWield::RefreshOffHandVisual(%clientId)
+{
+    // Check if player is dual wielding
+    %offHandWeapon = DualWield::GetOffHandWeapon(%clientId);
+    if(%offHandWeapon == "" || %offHandWeapon == -1)
+        return;  // Not dual wielding, nothing to refresh
+    
+    %playerObj = Client::getOwnedObject(%clientId);
+    if(%playerObj == "" || %playerObj == -1)
+        return;
+    
+    // Get the off-hand image data
+    %offHandImageData = $DualWield::OffHandImage[%offHandWeapon];
+    if(%offHandImageData == "" || %offHandImageData == -1)
+        return;  // No visual to mount
+    
+    // Re-mount the off-hand visual in slot 6
+    Player::mountItem(%playerObj, %offHandImageData, 6);
 }
 
 // Unequip the off-hand weapon
@@ -620,8 +895,19 @@ function DualWield::UnequipOffHand(%clientId)
     SaveCharacter(%clientId);
     
     %itemData = getItemData(%currentWeapon);
-    %weaponName = %itemData.description;
-    if(%weaponName == "") %weaponName = %currentWeapon;
+    // Use $AccessoryVar for proper weapon name, fallback to description or item name
+    %weaponName = $AccessoryVar[%currentWeapon, $MiscInfo];
+    if(%weaponName == "" || %weaponName == -1)
+    {
+        %weaponName = %itemData.description;
+        if(%weaponName == "" || %weaponName == "Weapon" || %weaponName == "Tool")
+            %weaponName = %currentWeapon;
+    }
+    else
+    {
+        // MiscInfo is description, use the item name for display
+        %weaponName = %currentWeapon;
+    }
     
     Client::sendMessage(%clientId, $MsgBeige, "Off-hand unequipped: " @ %weaponName);
     echo("[DUAL WIELD] " @ Client::getName(%clientId) @ " unequipped off-hand weapon");
@@ -705,12 +991,20 @@ function DualWield::Command(%clientId, %args)
 {
     %arg1 = GetWord(%args, 0);
     
-    if(%arg1 == "" || %arg1 == "help")
+    // No args = toggle mode
+    if(%arg1 == "" || %arg1 == -1)
+    {
+        DualWield::ToggleMode(%clientId);
+        return;
+    }
+    
+    if(%arg1 == "help")
     {
         Client::sendMessage(%clientId, $MsgBeige, "Dual Wield Commands:");
+        Client::sendMessage(%clientId, $MsgBeige, "  #dualwield           - Toggle dual wield mode on/off");
         Client::sendMessage(%clientId, $MsgBeige, "  #dualwield <weapon>  - Equip weapon in off-hand");
         Client::sendMessage(%clientId, $MsgBeige, "  #dualwield off       - Unequip off-hand");
-        Client::sendMessage(%clientId, $MsgBeige, "  #dualwield status    - Show current off-hand");
+        Client::sendMessage(%clientId, $MsgBeige, "  #dualwield status    - Show current off-hand and mode");
         return;
     }
     
@@ -723,10 +1017,23 @@ function DualWield::Command(%clientId, %args)
     if(%arg1 == "status")
     {
         %weapon = DualWield::GetOffHandWeapon(%clientId);
+        %modeState = DualWield::GetToggleMode(%clientId);
+        
+        if(%modeState)
+            Client::sendMessage(%clientId, $MsgGreen, "Dual wield mode: ON");
+        else
+            Client::sendMessage(%clientId, $MsgYellow, "Dual wield mode: OFF");
+        
         if(%weapon == "" || %weapon == -1)
             Client::sendMessage(%clientId, $MsgBeige, "Off-hand: None");
         else
             Client::sendMessage(%clientId, $MsgBeige, "Off-hand: " @ %weapon);
+        return;
+    }
+    
+    if(%arg1 == "mode" || %arg1 == "toggle")
+    {
+        DualWield::ToggleMode(%clientId);
         return;
     }
     
@@ -765,167 +1072,10 @@ echo("[DUAL WIELD] Off-hand slot: " @ $DualWield::OffHandSlot @ ", Damage multip
 echo("[DUAL WIELD] Skill requirement: " @ $DualWield::RequiredSkillLevel @ " Slashing");
 
 //============================================================================
-// TEST WEAPON: DualWieldTest
-//============================================================================
-// A test weapon for dual wielding using the DevilsClaw mount pattern.
-// Uses mountPoint = 2 with offset to position in the off-hand.
-//
-// USAGE:
-//   #give DualWieldTest 2
-//   Equip primary normally (press key to use weapon)
-//   Then: #dualwield DualWieldTest
-//
-// The off-hand weapon visually appears in the other hand via slot 6.
-
-// Weapon stats
-$WeaponRange[DualWieldTest] = 4;
-$WeaponDelay[DualWieldTest] = 0.9;
-$AccessoryVar[DualWieldTest, $AccessoryType] = $SwordAccessoryType;  // Type 7 = Sword
-$AccessoryVar[DualWieldTest, $SpecialVar] = "6 500";  // 50 ATK
-$AccessoryVar[DualWieldTest, $Weight] = 5;
-$AccessoryVar[DualWieldTest, $MiscInfo] = "A test sword for dual wielding.";
-$SkillType[DualWieldTest] = $SkillSlashing;
-$ItemCost[DualWieldTest] = 1;
-
-//--------------------------------------------
-// PRIMARY WEAPON (main hand, slot 0)
-// Copied from Rapier pattern
-//--------------------------------------------
-ItemImageData DualWieldTestImage
-{
-	shapeFile  = "katana";
-	mountPoint = 0;
-	weaponType = 0;
-	reloadTime = 0;
-	fireTime = $WeaponDelay[DualWieldTest];
-	minEnergy = 0;
-	maxEnergy = 0;
-
-	accuFire = true;
-
-	sfxFire = SoundSwing3;
-	sfxActivate = AxeSlash2;
-};
-
-ItemData DualWieldTest
-{
-	heading = "bWeapons";
-	description = "Dual Wield Test Sword";
-	className = "Weapon";
-	shapeFile  = "katana";
-	hudIcon = "katana";
-	shadowDetailMask = 4;
-	imageType = DualWieldTestImage;
-	price = 0;
-	showWeaponBar = true;
-};
-
-//--------------------------------------------
-// OFF-HAND WEAPON (other hand, slot 6)
-// mountPoint 2 = BackpackMount, using offset to move to left hand
-//--------------------------------------------
-ItemImageData DualWieldTestImage2
-{
-	shapeFile  = "katana";
-	// Use mountPoint 0 (same as primary weapons) to allow proper fire animation
-	// Use larger offset to position in left hand instead of right
-	mountPoint = 0;
-	mountRotation = { 0, 1.60, 0 }; // first is forward/backward rotation -- second is left/right rotation -- idk what third is i didnt need it
-	mountOffSet = { -0.65, 0, -0.16 };  // Move left (-X) to opposite hand -- first one is left/right, second is forwards/backward, third is vertical up/down
-	weaponType = 0;
-	reloadTime = 0;
-	fireTime = $WeaponDelay[DualWieldTest];
-	minEnergy = 0;
-	maxEnergy = 0;
-
-	accuFire = true;
-	
-	// CRITICAL: Need sfxFire to trigger animation properly
-	sfxFire = SoundSwing3;
-	sfxActivate = AxeSlash2;
-};
-
-ItemData DualWieldTest2
-{
-	heading = "bWeapons";
-	description = "Dual Wield Test Sword";
-	className = "Weapon";
-	shapeFile  = "katana";
-	hudIcon = "katana";
-	shadowDetailMask = 4;
-	imageType = DualWieldTestImage2;
-	price = 0;
-	showWeaponBar = true;
-};
-
-// CRITICAL: onFire callback for off-hand weapon - called when setImageTrigger fires on slot 6
-function DualWieldTestImage2::onFire(%player, %slot)
-{
-	%clientId = Player::getClient(%player);
-	echo("[DUAL WIELD TEST] Off-hand fire from slot " @ %slot);
-	
-	// The actual damage is handled separately via FireOffHandMelee
-	// This callback processes the trigger event - animation should play automatically
-}
-
-//--------------------------------------------
-// MOUNT/UNMOUNT CALLBACKS
-// For dual wielding: mount off-hand when primary is mounted
-// (opposite of normal Rapier which shows sheathed weapon)
-//--------------------------------------------
-
-function DualWieldTest::onMount(%player, %imageSlot)
-{
-	%client = GameBase::getOwnerClient(%player);
-	
-	// Clear any previously mounted off-hand items
-	Player::unmountItem(%player, 4);
-	Player::unmountItem(%player, 5);
-	Player::unmountItem(%player, 6);
-	
-	// If dual wielding is enabled, mount the off-hand weapon
-	if(DualWield::IsEnabled(%client))
-	{
-		Player::mountItem(%player, DualWieldTest2, 6);
-		echo("[DUAL WIELD TEST] Mounted off-hand to slot 6");
-	}
-}
-
-function DualWieldTest::onUnmount(%player, %imageSlot)
-{
-	// Unmount off-hand when primary is unmounted
-	Player::unmountItem(%player, 6);
-	echo("[DUAL WIELD TEST] Unmounted off-hand from slot 6");
-}
-
-//--------------------------------------------
-// FIRE CALLBACKS
-//--------------------------------------------
-
-function DualWieldTestImage::onFire(%player, %slot)
-{
-	%clientId = Player::getClient(%player);
-	
-	// Deal primary damage
-	MeleeAttack(%player, $WeaponRange[DualWieldTest], DualWieldTest);
-	
-	echo("[DUAL WIELD TEST] Primary fire from slot " @ %slot);
-	
-	// Trigger off-hand attack if dual wielding is active
-	if(DualWield::IsEnabled(%clientId))
-	{
-		// Call OnPrimaryFire which triggers the animation via setImageTrigger
-		DualWield::OnPrimaryFire(%clientId, DualWieldTest);
-		
-		// Schedule off-hand DAMAGE with slight delay (after animation starts)
-		schedule("DualWield::FireOffHandMelee(" @ %clientId @ ", " @ %player @ ", DualWieldTest);", $DualWield::OffHandDelayOffset);
-	}
-}
-
-//--------------------------------------------
 // OFF-HAND MELEE ATTACK HELPER
-//--------------------------------------------
-// Called via schedule from primary fire
+//============================================================================
+// Called via schedule from primary weapon fire callbacks in weapons.cs
+// This deals off-hand damage after the animation delay
 
 function DualWield::FireOffHandMelee(%clientId, %player, %weaponType)
 {
@@ -955,16 +1105,10 @@ function DualWield::FireOffHandMelee(%clientId, %player, %weaponType)
         {
             // Deal damage with the off-hand weapon
             GameBase::virtual($los::object, "onDamage", $BulletDamageType, 1.0, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, %offHandWeapon);
-            echo("[DUAL WIELD] Off-hand HIT on " @ $los::object @ " with " @ %offHandWeapon);
         }
     }
     
     // Still call PostAttack for any post-attack effects
     PostAttack(%clientId, %offHandWeapon);
-    
-    echo("[DUAL WIELD] Off-hand attack executed for " @ Client::getName(%clientId) @ " with " @ %offHandWeapon);
 }
-
-echo("[DUAL WIELD] Test weapon 'DualWieldTest' registered.");
-echo("[DUAL WIELD] Usage: #give DualWieldTest 2, equip primary, then #dualwield DualWieldTest");
 

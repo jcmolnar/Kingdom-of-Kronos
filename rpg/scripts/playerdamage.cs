@@ -476,9 +476,12 @@ function Player::onKilled(%this)
 	if(%clientIdFromHelper != -1 && %clientIdFromHelper != "")
 		%nameFromClient = Client::getName(%clientIdFromHelper);
 	
-	// Get bot data for additional context
-	%botInfoAiName = fetchData(%this, "BotInfoAiName");
-	%spawnBotInfo = fetchData(%this, "SpawnBotInfo");
+	// Get bot data for additional context - use clientId not playerObj as key
+	%debugClientId = %clientIdFromHelper;
+	if(%debugClientId == -1 || %debugClientId == "")
+		%debugClientId = %clientIdFromGetClient;
+	%botInfoAiName = fetchData(%debugClientId, "BotInfoAiName");
+	%spawnBotInfo = fetchData(%debugClientId, "SpawnBotInfo");
 	
 	echo("[ONKILLED DEBUG] === Player::onKilled() ENTRY ===");
 	echo("[ONKILLED DEBUG]   PlayerObject(%%this): " @ %playerObj);
@@ -486,8 +489,8 @@ function Player::onKilled(%this)
 	echo("[ONKILLED DEBUG]   GetClientIdFromPlayerObject(): " @ %clientIdFromHelper);
 	echo("[ONKILLED DEBUG]   Player::isAiControlled(): " @ %isAiControlled);
 	echo("[ONKILLED DEBUG]   Client::getName(): '" @ %nameFromClient @ "'");
-	echo("[ONKILLED DEBUG]   BotInfoAiName: '" @ %botInfoAiName @ "'");
-	echo("[ONKILLED DEBUG]   SpawnBotInfo: '" @ %spawnBotInfo @ "'");
+	echo("[ONKILLED DEBUG]   BotInfoAiName (via clientId " @ %debugClientId @ "): '" @ %botInfoAiName @ "'");
+	echo("[ONKILLED DEBUG]   SpawnBotInfo (via clientId " @ %debugClientId @ "): '" @ %spawnBotInfo @ "'");
 	
 	// CRITICAL: Detect if this might be a real player
 	%hasCharFile = false;
@@ -500,8 +503,26 @@ function Player::onKilled(%this)
 	// WARNING: If this looks like a real player (has char file) but is being killed via this path
 	if(%hasCharFile && !%isAiControlled)
 	{
-		echo("*** CRITICAL WARNING *** Player::onKilled() called on REAL PLAYER: '" @ %nameFromClient @ "' (clientId=" @ %clientIdFromHelper @ ", playerObj=" @ %playerObj @ ") - THIS SHOULD NOT HAPPEN!");
-		echo("*** CRITICAL WARNING *** Stack trace context - BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'");
+		// Get zone info for diagnostic purposes
+		%clientIdForZone = %clientIdFromHelper;
+		if(%clientIdForZone == "" || %clientIdForZone == -1)
+			%clientIdForZone = %clientIdFromGetClient;
+		%zoneIndex = fetchData(%clientIdForZone, "zone");
+		%zoneType = Zone::getType(%zoneIndex);
+		%hp = fetchData(%clientIdForZone, "HP");
+		%killerId = fetchData(%clientIdForZone, "tmpkillerid");
+		
+		echo("*** CRITICAL WARNING *** Player::onKilled() called on REAL PLAYER: '" @ %nameFromClient @ "' (clientId=" @ %clientIdForZone @ ", playerObj=" @ %playerObj @ ")");
+		echo("*** CRITICAL WARNING *** Zone: " @ %zoneIndex @ " (Type: " @ %zoneType @ "), HP: " @ %hp @ ", KillerID: " @ %killerId);
+		echo("*** CRITICAL WARNING *** BotInfoAiName='" @ %botInfoAiName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "'");
+		
+		// EXTRA CRITICAL: If player in PROTECTED zone - this should NEVER happen
+		if(%zoneType == "PROTECTED")
+		{
+			echo("*** CRITICAL ERROR *** REAL PLAYER DIED IN PROTECTED ZONE! This is a bug!");
+			echo("*** CRITICAL ERROR *** PlayerObj=" @ %playerObj @ " OwnsObj=" @ Client::getOwnedObject(%clientIdForZone));
+			echo("*** CRITICAL ERROR *** InLootbagGroup: " @ (String::findSubStr(Group::objectCount(nameToID("LootbagGroup")), %playerObj) != -1));
+		}
 	}
 
 	//At this point, the client can still be queried for getItemCounts, and is also still an object

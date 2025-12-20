@@ -1527,32 +1527,32 @@ instant SimGroup "MissionGroup" {
 				rotation = "0 0 0";
 			};
 		};
-//		instant SimGroup "PROTECTED Las Vegas" {
-//			instant SimGroup "DropPoints" {
-//				instant Marker "Marker1" {
-//					dataBlock = "PathMarker";
-//					name = "";
-//					position = "-4899.98 862 701.499";
-//					rotation = "0 -0 -0.939825";
-//				};
-//				instant Marker "Marker1" {
-//					dataBlock = "PathMarker";
-//					name = "";
-//					position = "-4900.04 867.261 701.499";
-//					rotation = "0 -0 -0.939824";
-//				};
-//			};
-//			instant SimGroup "MUSIC ethrenmusic.wav 29";
-//			instant SimGroup "MUSIC ethrenmusic2.wav 30";
-//			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
-//			instant SimGroup "ENTERSOUND ActivateAM.wav";
-//			instant Marker "300 300 150 0" {
-//				dataBlock = "PathMarker";
-//				name = "";
-//				position = "-4900 862 701";
-//				rotation = "0 0 0";
-//			};
-//		};
+		instant SimGroup "PROTECTED Las Vegas" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4899.98 862 701.499";
+					rotation = "0 -0 -0.939825";
+				};
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4900.04 867.261 701.499";
+					rotation = "0 -0 -0.939824";
+				};
+			};
+			instant SimGroup "MUSIC ethrenmusic.wav 29";
+			instant SimGroup "MUSIC ethrenmusic2.wav 30";
+			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
+			instant SimGroup "ENTERSOUND ActivateAM.wav";
+			instant Marker "300 300 150 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4900 862 701";
+				rotation = "0 0 0";
+			};
+		};
 		instant SimGroup "PROTECTED Empress Sanctuary" {
 			instant SimGroup "DropPoints" {
 				instant Marker "Marker1" {
@@ -4923,17 +4923,17 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 BlackDiamondAtomSmasher 1 BlackDiamondFullPlate 1";
 			instant SimGroup "RACE MaleHuman";
 		};
-//		instant SimGroup "banker9" {
-//			instant Marker "Las Vegas banker" {
-//				dataBlock = "PathMarker";
-//				name = "";
-//				position = "-4897.13 837.895 701.499";
-//				rotation = "0 0 0";
-//			};
-//			instant SimGroup "NAME banker";
-//			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 Dagger 1";
-//			instant SimGroup "RACE MaleHuman";
-//		};
+		instant SimGroup "banker9" {
+			instant Marker "Las Vegas banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4897.13 837.895 701.499";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME banker";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
 		instant SimGroup "banker10" {
 			instant Marker "Gian Echo banker" {
 				dataBlock = "PathMarker";
@@ -5016,17 +5016,54 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 IronSpear 1 RatSkinShirt 1";
 			instant SimGroup "RACE MaleHuman";
 		};
-//		instant SimGroup "gambler" {
-//			instant Marker "Las Vegas Gambler" {
-//				dataBlock = "PathMarker";
-//				name = "";
-//				position = "-4882.55 850.314 701.498";
-//				rotation = "0 -0 1.45708";
-//			};
-//			instant SimGroup "NAME Honest Jim";
-//			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 Dagger 1";
-//			instant SimGroup "RACE MaleHuman";
-//		};
+		instant SimGroup "gambler" {
+			instant Marker "Las Vegas Gambler" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4882.55 850.314 701.498";
+				rotation = "0 -0 1.45708";
+			};
+			instant SimGroup "NAME Honest Jim";
+			instant SimGroup "BOT gambler";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "carddealer1" {
+			instant Marker "Las Vegas Card Dealer" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4940.81 859.54 707.498";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Card Shark Charlie";
+			instant SimGroup "BOT carddealer";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "wheelmaster1" {
+			instant Marker "Las Vegas Wheel Master" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4941.7 860.657 713.998";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Wheel Master Wendy";
+			instant SimGroup "BOT wheelmaster";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 Dagger 1";
+			instant SimGroup "RACE FemaleHuman";
+		};
+		instant SimGroup "quickgames1" {
+			instant Marker "Las Vegas Quick Games" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4920.6 847.11 713.998";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Quick Quinn";
+			instant SimGroup "BOT quickgames";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 Dagger 1";
+			instant SimGroup "RACE MaleHuman";
+		};
 		instant SimGroup "hunt5" {
 			instant Marker "alien killing" {
 				dataBlock = "PathMarker";
@@ -5402,13 +5439,13 @@ instant SimGroup "MissionGroup" {
 		rotation = "0 0 0";
 		lightParams = "0 ";
 	};
-//	instant InteriorShape "ncity1" {
-//		fileName = "ncity.dis";
-//		isContainer = "1";
-//		position = "-4897.95 863.151 700.999";
-//		rotation = "0 -0 1.57079";
-//		lightParams = "0 ";
-//	};
+	instant InteriorShape "ncity1" {
+		fileName = "ncity.dis";
+		isContainer = "1";
+		position = "-4897.95 863.151 700.999";
+		rotation = "0 -0 1.57079";
+		lightParams = "0 ";
+	};
 };
 //--- export object end ---//
 $teamScoreLimit = 8;

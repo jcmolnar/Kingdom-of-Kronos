@@ -499,6 +499,7 @@ function MenuBeltDrop(%clientId, %item, %type)
 	
 	Client::addMenuItem(%clientId, %cnt++ @ "Drop (" @ %amnt @ ")", %type @ " drop " @ %item @ " " @ %amnt);
 	Client::addMenuItem(%clientId, %cnt++ @ "Examine", %type @ " examine " @ %item);
+	Client::addMenuItem(%clientId, "bBack", %type @ " back " @ %item);
 	Client::addMenuItem(%clientId, "xDone", "done");
 	return;
 }
@@ -518,10 +519,17 @@ function processMenuBeltDrop(%clientId, %opt)
 		if(%clientId.bulkNum > 500)	%clientId.bulkNum = 500;
 		MenuBeltDrop(%clientId, %item, %type);
 	}
+	else if(%option == "back")
+	{
+		// Go back to the category item list
+		MenuBeltGear(%clientId, %type, 1);
+	}
 	else if(%option == "use")
 	{
 		// Use consumable item (potions, etc.)
 		Belt::UseItem(%clientId, %item, %type);
+		// Refresh the menu to show updated counts (stay in belt menu)
+		MenuBeltDrop(%clientId, %item, %type);
 	}
 	else if(%option == "deploy")
 	{
@@ -530,10 +538,24 @@ function processMenuBeltDrop(%clientId, %opt)
 	else if(%option == "drop")
 	{
 		Belt::DropItem(%clientId, %item, %amnt, %type);
+		// Refresh the menu to show updated counts (stay in belt menu)
+		// Check if item still exists before refreshing to that item's menu
+		%remaining = Belt::HasThisStuff(%clientId, %item);
+		if(%remaining > 0)
+		{
+			MenuBeltDrop(%clientId, %item, %type);
+		}
+		else
+		{
+			// Item fully depleted - go back to category menu
+			MenuBeltGear(%clientId, %type, 1);
+		}
 	}
 	else if(%option == "examine")
 	{
 		Belt::WhatIs(%clientId, %item);
+		// Return to item menu after examine
+		MenuBeltDrop(%clientId, %item, %type);
 	}
 	else if(%option == "equip")
 	{
@@ -546,6 +568,8 @@ function processMenuBeltDrop(%clientId, %opt)
 		{
 			Belt::EquipAccessory(%clientId, %item);
 		}
+		// Refresh the menu to show updated equip status
+		MenuBeltDrop(%clientId, %item, %type);
 	}
 	else if(%option == "unequip")
 	{
@@ -558,6 +582,8 @@ function processMenuBeltDrop(%clientId, %opt)
 		{
 			Belt::UnequipAccessory(%clientId, %item);
 		}
+		// Refresh the menu to show updated equip status
+		MenuBeltDrop(%clientId, %item, %type);
 	}
 	return;
 }
@@ -2674,10 +2700,16 @@ function Belt::GiveThisStuff(%clientId, %item, %amnt, %echo)
 
 		if(%count > 0)
 		{
-			%list = Belt::RemoveFromList(%list, %item @ " " @ %count);
-			%amnt = %amnt + %count;
+			// CRITICAL: Use UpdateCountInPlace to preserve item position in list
+			// This prevents belt reordering when adding more of an existing item
+			%newCount = %count + %amnt;
+			%list = Belt::UpdateCountInPlace(%list, %item, %newCount);
 		}
-		%list = Belt::AddToList(%list, %item @ " " @ %amnt);
+		else
+		{
+			// Item doesn't exist yet - add it to the list (will append to end - this is expected for new items)
+			%list = Belt::AddToList(%list, %item @ " " @ %amnt);
+		}
 		
 		// DEBUG: Log final list after adding item for bots
 		if(%isBot && (%type == "QuestItems" || %type == "KeyItems" || %type == "Consumables"))
@@ -3703,13 +3735,11 @@ function Belt::TakeThisStuff(%clientId, %item, %amnt)
 		
 		%remainingAmnt = %count - %amnt;
 
-		%list = Belt::RemoveFromList(%list, %item @ " " @ %count);
+		// CRITICAL: Use UpdateCountInPlace to preserve item position in list
+		// This prevents belt reordering when item counts change
+		%list = Belt::UpdateCountInPlace(%list, %item, %remainingAmnt);
 		
-		if(%remainingAmnt > 0)
-		{
-			%list = Belt::AddToList(%list, %item @ " " @ %remainingAmnt);
-		}
-		else
+		if(%remainingAmnt <= 0)
 		{
 			// CRITICAL: If item was completely removed, ensure trailing space is preserved for equipped categories
 			// Equipped categories (QuestItems, KeyItems, Consumables, Armor, Accessories, Other) need trailing space
@@ -4631,6 +4661,65 @@ function Belt::DropItem(%clientId, %item, %amnt, %type)
 		// Save world after 3 second delay (allows character save to complete first)
 		schedule("SaveWorld();", 3, %clientId);
 	}
+}
+
+// CRITICAL: Update an item's count IN-PLACE without changing its position in the list
+// This prevents belt reordering when item counts change
+// Returns the updated list, or the original list if item not found
+function Belt::UpdateCountInPlace(%list, %itemName, %newCount)
+{
+	// If new count is 0 or less, remove the item entirely (use RemoveFromList for that)
+	if(%newCount <= 0)
+	{
+		// Find current count and remove
+		%currentCount = Belt::ItemCount(%itemName, %list);
+		if(%currentCount > 0)
+			return Belt::RemoveFromList(%list, %itemName @ " " @ %currentCount);
+		return %list;
+	}
+	
+	// Preserve trailing space status
+	%hadTrailingSpace = false;
+	%len = String::len(%list);
+	while(%len > 0 && String::getSubStr(%list, %len-1, 1) == " ")
+	{
+		%hadTrailingSpace = true;
+		%list = String::getSubStr(%list, 0, %len-1);
+		%len = String::len(%list);
+	}
+	
+	// Count words in list
+	%wordCount = 0;
+	for(%i = 0; GetWord(%list, %i) != -1; %i++)
+		%wordCount++;
+	
+	// Rebuild list, updating the count for the target item IN-PLACE
+	%rebuiltList = "";
+	%found = false;
+	
+	for(%i = 0; %i < %wordCount; %i += 2)
+	{
+		%currentItem = GetWord(%list, %i);
+		%currentCount = GetWord(%list, %i + 1);
+		
+		// If this is the target item, use the new count instead
+		if(%currentItem == %itemName)
+		{
+			%currentCount = %newCount;
+			%found = true;
+		}
+		
+		// Add item with proper spacing
+		if(%rebuiltList != "")
+			%rebuiltList = %rebuiltList @ " ";
+		%rebuiltList = %rebuiltList @ %currentItem @ " " @ %currentCount;
+	}
+	
+	// Restore trailing space if original had it
+	if(%hadTrailingSpace && %rebuiltList != "")
+		%rebuiltList = %rebuiltList @ " ";
+	
+	return %rebuiltList;
 }
 
 function Belt::AddToList(%list, %item)

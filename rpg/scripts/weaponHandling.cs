@@ -65,6 +65,10 @@ function remoteNextWeapon(%clientId)
 			}
 		}
 	}
+	
+	// DUAL WIELD: Re-mount off-hand weapon visual after switching primary weapon
+	// Switching weapons unmounts slot 6, so we need to refresh it
+	DualWield::RefreshOffHandVisual(%clientId);
 }
 
 function remotePrevWeapon(%clientId)
@@ -86,6 +90,10 @@ function remotePrevWeapon(%clientId)
 			}
 		}
 	}
+	
+	// DUAL WIELD: Re-mount off-hand weapon visual after switching primary weapon
+	// Switching weapons unmounts slot 6, so we need to refresh it
+	DualWield::RefreshOffHandVisual(%clientId);
 }
 
 function selectValidWeapon(%clientId)
@@ -146,6 +154,10 @@ function Weapon::onUse(%player,%item)
 
 	if(IsDead(%clientId) || !fetchData(%clientId, "HasLoadedAndSpawned") || %clientId.IsInvalid)
 		return 0;
+
+	// DUAL WIELD: Check if toggle mode is active and handle automatically
+	if(DualWield::HandleEquipInToggleMode(%clientId, %item))
+		return;  // Dual wield system handled it
 
 	%ammo = %item.imageType.ammoType;
 	if (%ammo == "") {

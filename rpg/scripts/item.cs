@@ -90,7 +90,33 @@ function Item::pop(%item)
 	dbecho($dbechoMode, "Item::pop(" @ %item @ ")");
 
  	GameBase::startFadeOut(%item);
-	schedule("deleteObject(" @ %item @ ");",2.5, %item);
+	// CRITICAL: Use SafeDeleteItem to prevent accidental Player deletion
+	// Object IDs may be reused, so we must verify type before deleting
+	schedule("SafeDeleteItem(" @ %item @ ");", 2.5, %item);
+}
+
+// CRITICAL SAFEGUARD: Safe item deletion that verifies object type before deleting
+// This prevents accidental Player deletion if object ID was recycled
+function SafeDeleteItem(%obj)
+{
+	if(!isObject(%obj))
+		return; // Object already deleted
+	
+	%type = getObjectType(%obj);
+	if(%type == "Player")
+	{
+		echo("CRITICAL SAFEGUARD: SafeDeleteItem called on Player object " @ %obj @ "! Object ID was likely recycled. Aborting delete.");
+		return;
+	}
+	
+	// Additional safety: verify it's an Item type before deleting
+	if(%type != "Item")
+	{
+		echo("SAFETY WARNING: SafeDeleteItem called on non-Item object " @ %obj @ " (Type: " @ %type @ "). Aborting.");
+		return;
+	}
+	
+	deleteObject(%obj);
 }
 
 

@@ -10121,6 +10121,11 @@ if(%w1 == "#spawntelemetry")
 			{
 				%botType = String::getSubStr(%aiName, 0, %len - String::len(%numStr));
 			}
+			
+			// Check if Las Vegas gambling bots handle this
+			if(LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName, %message, %cropped, %initTalk))
+				return;
+			
 			if(%botType == "merchant")
 			{
 				//process merchant code

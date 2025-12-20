@@ -1013,6 +1013,7 @@ function DoRemort(%clientId)
 
 	// Unequip dual-wielded weapon before remort (returns to inventory)
 	DualWield::UnequipOffHand(%clientId);
+	DualWield::SetToggleMode(%clientId, false);  // Disable toggle mode on remort
 	
 	UnequipMountedStuff(%clientId);
 	

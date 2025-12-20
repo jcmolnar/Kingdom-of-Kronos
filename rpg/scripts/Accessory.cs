@@ -1817,6 +1817,16 @@ function Lootbag::onAdd(%this, %obj)
 	// Double-check object is still valid before adding
 	if(isObject(%targetObj))
 	{
+		// CRITICAL SAFEGUARD: NEVER add Player objects to LootbagGroup
+		// If a Player object is accidentally passed here, reject it to prevent
+		// SafeDeleteLootbag or AggregateLootbags from affecting player objects
+		%objType = getObjectType(%targetObj);
+		if(%objType == "Player")
+		{
+			echo("CRITICAL WARNING: Lootbag::onAdd called with Player object " @ %targetObj @ "! Rejecting to prevent object corruption.");
+			return;
+		}
+		
 		addToSet(LootbagGroup, %targetObj);
 	}
 }
@@ -1846,7 +1856,16 @@ function Lootbag::retryAddToGroup(%obj)
 	}
 	
 	if(isObject(%obj))
+	{
+		// CRITICAL SAFEGUARD: NEVER add Player objects to LootbagGroup
+		%objType = getObjectType(%obj);
+		if(%objType == "Player")
+		{
+			echo("CRITICAL WARNING: Lootbag::retryAddToGroup called with Player object " @ %obj @ "! Rejecting.");
+			return;
+		}
 		addToSet(LootbagGroup, %obj);
+	}
 }
 
 //===================

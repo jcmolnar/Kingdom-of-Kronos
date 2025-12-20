@@ -2197,10 +2197,13 @@ function LoadCharacter(%clientId)
 		echo("  StoredAccessories: " @ fetchData(%clientId, "StoredAccessories"));
 		echo("  StoredOther: " @ fetchData(%clientId, "StoredOther"));
 		
-		echo("==============================================");
+		echo("=============================================");
 		
 		//echo("===== DEBUG LoadCharacter: COMPLETE =====");
 		echo("Load complete.");
+		
+		// Announce player join to all players in server chat (green text)
+		messageAll($MsgGreen, %name @ " has joined the server.");
 	}
 	else
 	{
@@ -2805,7 +2808,7 @@ function DeployLootbag(%pos, %rot, %special)
 // This runs every 2 minutes and combines lootbags within 25 units of each other
 //=============================================================================
 
-$LootbagAggregateRadius = 5;      // Distance within which lootbags are merged
+$LootbagAggregateRadius = 10;      // Distance within which lootbags are merged
 $LootbagAggregateInterval = 30;    // Interval in seconds (30 = every 30 seconds)
 
 // Helper: determine if a lootbag owner name belongs to a bot (enemy or town)
@@ -2880,8 +2883,14 @@ function AggregateLootbags()
 			// Track this object as processed
 			%processedObjects = %processedObjects @ %obj @ " ";
 			
-			// Optional: Double check it's not a player (should differ be in this group)
-			// But we keep SafeDeleteLootbag later anyway.
+			// CRITICAL SAFEGUARD: Skip Player objects that somehow got into LootbagGroup
+			// This should never happen but protects against accidental player object registration
+			%objType = getObjectType(%obj);
+			if(%objType == "Player")
+			{
+				echo("CRITICAL WARNING: AggregateLootbags found Player object " @ %obj @ " in LootbagGroup! Skipping to prevent player destruction.");
+				continue;
+			}
 			
 			%lootData = $loot[%obj];
 			if(%lootData == "" || %lootData == -1)
@@ -3011,12 +3020,38 @@ function AggregateLootbags()
 		return;
 	}
 	
-	// Safety limit: If too many lootbags, only process the first N to avoid O(n²) freeze
-	// Remaining lootbags will be processed in the next run
+	// Safety limit: If too many lootbags, only process N at a time to avoid O(n²) freeze
+	// Use a rotating offset so different lootbags get processed each pass
 	if(%lootbagCount > %maxLootbagsPerPass)
 	{
-		echo("[LOOTBAG AGGREGATE] WARNING: " @ %lootbagCount @ " lootbags found, limiting to " @ %maxLootbagsPerPass @ " to prevent freeze");
-		%lootbagCount = %maxLootbagsPerPass;
+		// Initialize offset on first use
+		if($LootbagAggregateOffset == "" || $LootbagAggregateOffset == -1)
+			$LootbagAggregateOffset = 0;
+		
+		// Build a windowed list starting from offset
+		%windowedList = "";
+		%windowedCount = 0;
+		%originalCount = %lootbagCount;
+		
+		// Start from offset, wrap around if needed
+		for(%w = 0; %w < %maxLootbagsPerPass && %w < %originalCount; %w++)
+		{
+			%idx = ($LootbagAggregateOffset + %w) % %originalCount;
+			%bag = GetWord(%lootbagList, %idx);
+			if(%bag != "" && %bag != -1)
+			{
+				%windowedList = %windowedList @ %bag @ " ";
+				%windowedCount++;
+			}
+		}
+		
+		// Advance offset for next pass (rotate through all bags)
+		$LootbagAggregateOffset = ($LootbagAggregateOffset + %maxLootbagsPerPass) % %originalCount;
+		
+		echo("[LOOTBAG AGGREGATE] " @ %originalCount @ " lootbags found, processing window of " @ %windowedCount @ " (offset=" @ ($LootbagAggregateOffset - %maxLootbagsPerPass) @ ")");
+		
+		%lootbagList = %windowedList;
+		%lootbagCount = %windowedCount;
 	}
 	
 	// Track which lootbags have been merged (to skip them in future iterations)

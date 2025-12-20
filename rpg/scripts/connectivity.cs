@@ -140,6 +140,13 @@ function Server::onClientDisconnect(%clientId)
 	// Handle zone player count for dynamic bot loading (skip AI bots)
 	if(!Player::isAiControlled(%clientId))
 	{
+		// Announce player disconnect to all players in server chat (red text)
+		// Only announce for players who have actually loaded and spawned (not connection attempts that failed)
+		%playerName = Client::getName(%clientId);
+		if(%playerName != "" && fetchData(%clientId, "HasLoadedAndSpawned"))
+		{
+			messageAll($MsgRed, %playerName @ " has disconnected from the server.");
+		}
 		%zone = fetchData(%clientId, "zone");
 		if(%zone != "")
 		{
