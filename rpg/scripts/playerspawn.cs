@@ -429,6 +429,10 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 		}
 	}
 	
+	// DUAL WIELD: Restore off-hand weapon visual on respawn/reconnect
+	// This is scheduled slightly later to ensure main weapon is mounted first
+	schedule("DualWield::RestoreOffHandVisual(" @ %clientId @ ");", 0.5);
+	
 	// Disable default command menu (Change Teams, etc) to allow RPG HUD on TAB
 	remoteEval(%clientId, "setCommandStatus", 0);
 	schedule("if(Client::getName(" @ %clientId @ ") != \"\") remoteEval(" @ %clientId @ ", \"setCommandStatus\", 0);", 0.5);

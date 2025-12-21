@@ -59,8 +59,10 @@ For understanding the codebase architecture and systems, see these key files:
 ## CLIENT ID RULES
 
 ### 7. BOT VS PLAYER PROTECTION
-- Client IDs 2048 and below are reserved for players
-- Bot IDs start at 2049
+- Client ID 2048 is reserved for the server
+- ALL client IDs (both players AND bots) start at 2049 and go UP
+- Players and bots share the same ID pool - you CANNOT distinguish them by ID range alone
+- Use `Player::isAiControlled()` to check if a clientId belongs to a bot
 - Always use `IsSafeToModify()` before modifying/deleting bot data
 - Use `IsSafeToModifyForEnemyBot()` in enemy bot spawn paths to protect town bots
 

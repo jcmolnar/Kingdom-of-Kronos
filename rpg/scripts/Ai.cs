@@ -1440,6 +1440,37 @@ function IsRealPlayer(%clientId)
 	return true;
 }
 
+// SafeAIDelete: Safely delete a bot after verifying it's still AI-controlled
+// This prevents ghost shell bots when a player connects on the same clientId during the delete delay
+// Called from scheduled deletion in Player::onKilled()
+function SafeAIDelete(%botName, %originalClientId)
+{
+	// First check: Is this clientId still AI-controlled?
+	%playerObj = Client::getOwnedObject(%originalClientId);
+	if(%playerObj != "" && %playerObj != -1 && isObject(%playerObj))
+	{
+		if(!Player::isAiControlled(%playerObj))
+		{
+			// A real player has connected on this clientId - DO NOT DELETE
+			echo("[SAFEGUARD] SafeAIDelete: ClientId " @ %originalClientId @ " is now a REAL PLAYER - skipping AI::delete for " @ %botName);
+			return;
+		}
+	}
+	
+	// Second check: Verify using AI::getId that this bot name still maps to the expected clientId
+	%currentClientId = AI::getId(%botName);
+	if(%currentClientId != %originalClientId && %currentClientId != "" && %currentClientId != -1 && %currentClientId != "False")
+	{
+		// Bot name now refers to a different clientId - a new bot spawned with same name
+		echo("[SAFEGUARD] SafeAIDelete: Bot " @ %botName @ " now on different clientId (" @ %currentClientId @ " vs original " @ %originalClientId @ ") - skipping delete");
+		return;
+	}
+	
+	// Safe to delete
+	if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] SafeAIDelete: Verified safe, calling AI::delete(" @ %botName @ ")");
+	AI::delete(%botName);
+}
+
 // IsSafeToModify: Master safeguard function - checks if safe to modify a client ID
 // Returns: true if safe to modify (is a bot), false if real player detected (UNSAFE)
 // Use this before ANY operation that could affect a player's game state
@@ -1494,14 +1525,7 @@ function IsSafeToModify(%clientId, %operation)
 		// If IsRealPlayer returns false here, it's a Ghost Bot -> Safe to modify (cleanup)
 	}
 	
-	// Layer 2: Client ID range (bot range is 2049+)
-	if(%clientId <= 2048)
-	{
-		echo("[BLOCKED] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " is in player range (<= 2048) - REAL PLAYER PROTECTED");
-		return false;
-	}
-	
-	// Layer 3: Filesystem save file check (fallback - catches cases where cache wasn't populated)
+	// Layer 2: Filesystem save file check (fallback - catches cases where cache wasn't populated)
 	%playerName = Client::getName(%clientId);
 	if(%playerName != "" && %playerName != -1)
 	{
@@ -9840,8 +9864,8 @@ function InitTownBots()
 						}
 					}
 				}
-				// Porellis merchant (merchant19) - position around -4479 1845 84
-				else if(%name == "merchant19" || (%posX >= -4500 && %posX <= -4450 && %posY >= 1830 && %posY <= 1860))
+				// Porellis bots (banker8, merchant19, quest21) - positions around -4477 to -4491, 1819 to 1845
+				else if(%name == "merchant19" || %name == "banker8" || %name == "quest21" || (%posX >= -4500 && %posX <= -4450 && %posY >= 1815 && %posY <= 1860))
 				{
 					for(%z = 1; %z <= $numZones; %z++)
 					{
@@ -10030,7 +10054,7 @@ function GetBotZone(%position)
 	if((%posX >= -2860 && %posX <= -2830 && %posY >= -1330 && %posY <= -1315) ||  // Sanctuary merchants (merchant4/5)
 	   (%posX >= -1200 && %posX <= -1195 && %posY >= 1500 && %posY <= 1510) ||  // manager1
 	   (%posX >= -2590 && %posX <= -2570 && %posY >= -1160 && %posY <= -1120) ||  // Black Market merchant14
-	   (%posX >= -4490 && %posX <= -4470 && %posY >= 1840 && %posY <= 1850))  // Porellis merchant19
+	   (%posX >= -4500 && %posX <= -4450 && %posY >= 1815 && %posY <= 1860))  // Porellis banker8/merchant19/quest21
 	{
 		%debugThis = true;
 		echo("DEBUG: GetBotZone checking position " @ %position @ " against " @ $numZones @ " zones");
@@ -10969,9 +10993,11 @@ function ScheduleZoneSpawn(%zoneIndex)
 	if(%zoneIndex == 0 || %zoneIndex == "")
 		return;
 	
-	// EXEMPTION: Zone 24 (Colloseum) is managed by the Seal Battle system in remortseal.cs
+	// EXEMPTION: Colloseum zone is managed by the Seal Battle system in remortseal.cs
 	// Do not use normal spawn verification - let the seal battle handle its own bots
-	if(%zoneIndex == 24)
+	// NOTE: Use zone description check instead of hardcoded index (zone indices can change)
+	%zoneDesc = $Zone::Desc[%zoneIndex];
+	if(String::findSubStr(%zoneDesc, "Colloseum") >= 0 || String::findSubStr(%zoneDesc, "Colosseum") >= 0)
 		return;
 	
 	// Mark that we have a pending spawn for this zone

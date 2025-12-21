@@ -2162,11 +2162,12 @@ function Player::onKilled(%this)
 				$SpawnAIScheduled[%botInfoAiName] = "";
 				if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Cleared $SpawnAIScheduled flag for bot " @ %botInfoAiName);
 				
-				// CRITICAL: Escape quotes in bot name to prevent syntax errors
+			// CRITICAL: Escape quotes in bot name to prevent syntax errors
 				%escapedName = String::replace(%botInfoAiName, "\"", "\\\"");
-				// CRITICAL: Add 1 second delay to deletion to help code load properly and functions/variables be called more effectively
-				schedule("AI::delete(\"" @ %escapedName @ "\");", 1.0);
-				if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Scheduled AI::delete() for bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ")");
+				// CRITICAL: Add 1 second delay to deletion to help code load properly
+				// Use SafeAIDelete wrapper to verify it's still a bot (prevents ghost shells if player connects during delay)
+				schedule("SafeAIDelete(\"" @ %escapedName @ "\", " @ %clientId @ ");", 1.0);
+				if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Scheduled SafeAIDelete() for bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ")");
 			}
 			
 			// CRITICAL FIX: Clear SpawnBotInfo and BotInfoAiName IMMEDIATELY!

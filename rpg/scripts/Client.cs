@@ -598,10 +598,14 @@ function onConnectionError(%clientId, %manager, %errorString)
 	}
 	else
 	{
-		Quickstart();
-		GuiPushDialog(MainWindow, "gui\\MessageDialog.gui");
-		$errorString = "Connection to server error:\n" @ %errorString;
-		schedule("Control::setValue(MessageDialogTextFormat, $errorString);", 0);
+		// CRITICAL: Only run client GUI code if not dedicated server
+		if(!$dedicated)
+		{
+			Quickstart();
+			GuiPushDialog(MainWindow, "gui\\MessageDialog.gui");
+			$errorString = "Connection to server error:\n" @ %errorString;
+			schedule("Control::setValue(MessageDialogTextFormat, $errorString);", 0);
+		}
 	}
 }
 
@@ -631,31 +635,39 @@ function onConnection(%message)
 	}
 	else if(%message == "Rejected")
 	{
-		Quickstart();
-		$errorString = "Connection to server rejected:\n" @ $errorString;
-		GuiPushDialog(MainWindow, "gui\\MessageDialog.gui");
-		schedule("Control::setValue(MessageDialogTextFormat, $errorString);", 0);
-	}
-	else
-	{
-		//startMainMenuScreen();
-		Quickstart();
-
-		if(%message == "Dropped")
+		// CRITICAL: Only run client GUI code if not dedicated server
+		if(!$dedicated)
 		{
-			if($errorString == "")
-				$errorString = "Connection to server lost:\nServer went down.";
-			else
-				$errorString = "Connection to server lost:\n" @ $errorString;
-
+			Quickstart();
+			$errorString = "Connection to server rejected:\n" @ $errorString;
 			GuiPushDialog(MainWindow, "gui\\MessageDialog.gui");
 			schedule("Control::setValue(MessageDialogTextFormat, $errorString);", 0);
 		}
-		else if(%message == "TimedOut")
+	}
+	else
+	{
+		// CRITICAL: Only run client GUI code if not dedicated server
+		if(!$dedicated)
 		{
-			$errorString = "Connection to server timed out.";
-			GuiPushDialog(MainWindow, "gui\\MessageDialog.gui");
-			schedule("Control::setValue(MessageDialogTextFormat, $errorString);", 0);
+			//startMainMenuScreen();
+			Quickstart();
+
+			if(%message == "Dropped")
+			{
+				if($errorString == "")
+					$errorString = "Connection to server lost:\nServer went down.";
+				else
+					$errorString = "Connection to server lost:\n" @ $errorString;
+
+				GuiPushDialog(MainWindow, "gui\\MessageDialog.gui");
+				schedule("Control::setValue(MessageDialogTextFormat, $errorString);", 0);
+			}
+			else if(%message == "TimedOut")
+			{
+				$errorString = "Connection to server timed out.";
+				GuiPushDialog(MainWindow, "gui\\MessageDialog.gui");
+				schedule("Control::setValue(MessageDialogTextFormat, $errorString);", 0);
+			}
 		}
 	}
 }
@@ -663,8 +675,12 @@ function onConnection(%message)
 function onPlaybackFinished()
 {
 	// called when a recording is done with playback.
-	cursorOn(MainWindow);
-	GuiLoadContentCtrl(MainWindow, "gui\\Recordings.gui");
+	// CRITICAL: Only run client GUI code if not dedicated server
+	if(!$dedicated)
+	{
+		cursorOn(MainWindow);
+		GuiLoadContentCtrl(MainWindow, "gui\\Recordings.gui");
+	}
 }
 
 function setupRecorderFile(%fileName)

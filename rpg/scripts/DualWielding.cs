@@ -66,8 +66,28 @@
 //      Purpose: Allows GUI equipping to automatically set up dual wielding when toggle mode is active
 //
 //   6. rpgstats.cs - DoRemort() function (line ~1015):
+//      Add: DualWield::UnequipOffHand(%clientId);
 //      Add: DualWield::SetToggleMode(%clientId, false);
-//      Purpose: Disable toggle mode when player remorts
+//      Purpose: Unequip off-hand and disable toggle mode when player remorts
+//
+//   7. playerspawn.cs - Game::playerSpawned() function (near end):
+//      Add: schedule("DualWield::RestoreOffHandVisual(" @ %clientId @ ");", 0.5);
+//      Purpose: Restore off-hand weapon visual after player spawn/reconnect
+//
+//   8. rpgfunk.cs - SaveCharacter() function:
+//      Add: Save DualWield_OffHandWeapon to $funk::var[%name, 0, 53]
+//      Purpose: Persist equipped off-hand weapon across sessions
+//
+//   9. rpgfunk.cs - LoadCharacter() function:
+//      Add: Load $funk::var[%name, 0, 53] to DualWield_OffHandWeapon
+//      Purpose: Restore off-hand weapon name on reconnect
+//
+// INVENTORY DESIGN (Option C):
+//   - Off-hand weapons STAY IN INVENTORY while equipped
+//   - No decrement/increment on equip/unequip
+//   - This prevents item loss on reconnect since save file only stores weapon name
+//   - Death: Weapons drop in pack since they're still in inventory
+//   - Remort: UnequipOffHand is called which clears the stored weapon name
 //
 // GLOBAL VARIABLES USED FROM OTHER SCRIPTS:
 //   $PlayerSkill[%clientId, %skillType] - Player skill levels
@@ -482,6 +502,57 @@ function DualWield::GetOffHandWeapon(%clientId)
     return fetchData(%clientId, "DualWield_OffHandWeapon");
 }
 
+// Restore off-hand weapon visual after player spawn/reconnect
+// Called from Game::playerSpawned with a short delay to ensure main weapon is mounted first
+function DualWield::RestoreOffHandVisual(%clientId)
+{
+    %offHandWeapon = fetchData(%clientId, "DualWield_OffHandWeapon");
+    
+    // No off-hand weapon saved
+    if(%offHandWeapon == "" || %offHandWeapon == -1 || %offHandWeapon == "0")
+        return;
+    
+    %playerObj = Client::getOwnedObject(%clientId);
+    if(%playerObj == "" || %playerObj == -1)
+        return;
+    
+    // Verify player still has the weapon in inventory (Option C: weapons stay in inventory)
+    %count = Player::getItemCount(%playerObj, %offHandWeapon);
+    if(%count < 1)
+    {
+        // Weapon no longer in inventory - clear the saved state
+        storeData(%clientId, "DualWield_OffHandWeapon", "");
+        return;
+    }
+    
+    // Check if player still meets dual wield requirements
+    if(!DualWield::CanDualWield(%clientId))
+    {
+        // No longer meets requirements - unequip and clear
+        storeData(%clientId, "DualWield_OffHandWeapon", "");
+        DualWield::SetToggleMode(%clientId, false);
+        return;
+    }
+    
+    // Get the visual item to mount
+    %shapeFile = $WeaponShape[%offHandWeapon];
+    if(%shapeFile == "" || %shapeFile == -1)
+    {
+        %weaponType = $AccessoryVar[%offHandWeapon, $AccessoryType];
+        if(%weaponType == $SwordAccessoryType) %shapeFile = "katana";
+        else if(%weaponType == $AxeAccessoryType) %shapeFile = "BattleAxe";
+        else if(%weaponType == $PolearmAccessoryType) %shapeFile = "spear";
+        else if(%weaponType == $BludgeonAccessoryType) %shapeFile = "mace";
+        else %shapeFile = "katana";
+    }
+    
+    %offHandVisual = $DualWield::OffHandItem[%shapeFile];
+    if(%offHandVisual != "" && %offHandVisual != -1)
+    {
+        Player::mountItem(%playerObj, %offHandVisual, 6);
+    }
+}
+
 // Check if a weapon type is valid for dual wielding
 function DualWield::IsValidWeaponType(%item)
 {
@@ -762,34 +833,24 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
     
     %count = Player::getItemCount(%playerObj, %weaponItem);
     
-    // Check if trying to dual wield same weapon as primary
-    %primaryWeapon = Player::getMountedItem(%playerObj, $WeaponSlot);
-    %requiredCount = 1;
-    if(%weaponItem == %primaryWeapon)
+    // Option C: Weapons stay in inventory while equipped. Player just needs to own at least 1.
+    if(%count < 1)
     {
-        // Need 2 of the same weapon (one in each hand)
-        %requiredCount = 2;
-    }
-    
-    if(%count < %requiredCount)
-    {
-        if(%requiredCount == 2)
-            Client::sendMessage(%clientId, $MsgRed, "You need 2 " @ %weaponItem @ " to dual wield the same weapon.");
-        else
-            Client::sendMessage(%clientId, $MsgRed, "You don't have a " @ %weaponItem @ " to equip.");
+        Client::sendMessage(%clientId, $MsgRed, "You don't have a " @ %weaponItem @ " to equip.");
         return false;
     }
     
     // Unequip current off-hand if any
     DualWield::UnequipOffHand(%clientId);
     
-    // INVENTORY TRANSFER: Decrement weapon count (move to off-hand)
-    Player::setItemCount(%playerObj, %weaponItem, %count - 1);
+    // NOTE (Option C): Weapon stays in inventory while equipped as off-hand.
+    // We just track it via DualWield_OffHandWeapon. This prevents item loss on reconnect
+    // since the save file only stores the weapon name, not a separate inventory count.
     
     // Store the off-hand weapon name
     storeData(%clientId, "DualWield_OffHandWeapon", %weaponItem);
     
-    // DUPE PREVENTION: Save immediately after inventory change
+    // Save to persist the equipped off-hand weapon
     SaveCharacter(%clientId);
     
     // Get the weapon's shape file using the $WeaponShape global (set where weapons are defined)
@@ -884,14 +945,13 @@ function DualWield::UnequipOffHand(%clientId)
     // Unmount off-hand visual from slot 6
     Player::unMountItem(%playerObj, 6);
     
-    // INVENTORY TRANSFER: Return weapon to inventory (increment count)
-    %currentCount = Player::getItemCount(%playerObj, %currentWeapon);
-    Player::setItemCount(%playerObj, %currentWeapon, %currentCount + 1);
+    // NOTE (Option C): Weapon stays in inventory - no transfer needed.
+    // We just clear the tracking variable.
     
     // Clear stored data
     storeData(%clientId, "DualWield_OffHandWeapon", "");
     
-    // DUPE PREVENTION: Save immediately after inventory change
+    // Save to persist the unequipped state
     SaveCharacter(%clientId);
     
     %itemData = getItemData(%currentWeapon);

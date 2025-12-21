@@ -1,10 +1,10 @@
 $Server::AutoAssignTeams = "true";
-$Server::Connect = "Welcome To Kingdom of Kronos v0.8";
+$Server::Connect = "Welcome To Kingdom of Kronos v0.8.5";
 $Server::CurrentMaster = "0";
 $Server::DuplicateIPs = "true";
 $Server::FileURL = "TribesRPG.org";
 $Server::FloodProtectionEnabled = "false";
-$Server::HostName = "Kingdom of Kronos V0.8 TESTING";
+$Server::HostName = "Kingdom of Kronos V0.8.5 TESTING";
 $Server::HostPublicGame = "true";
 $Server::Info = "Running RPG Mod ver 6.8\nThis version of RPGMod created by Asnabel,\n Further development by Jobo & Superfat.";
 $Server::JoinMOTD = "<jc><f1>\nWelcome to the Kingdom of Kronos!\n\n Thanks for joining us.\n\n Enjoy!";
