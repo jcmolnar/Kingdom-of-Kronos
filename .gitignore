@@ -7,3 +7,6 @@ Temp/
 *.rar
 OpenJDK25U-jdk_x64_windows_hotspot_25.0.1_8.msi
 TEMP/
+
+config/TaurikAdmins.cs
+config/Admin Attempts Log.txt
