@@ -4459,6 +4459,17 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "RACE MaleHuman";
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 DiamondClaymore 1 CrystalBandedMail 1";
 		};
+		instant SimGroup "ascensionnpc" {
+			instant Marker "ascensionnpc" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-3394.8 1718.61 1587";
+				rotation = "0 -0 1.56991";
+			};
+			instant SimGroup "NAME Ascension Master";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 DiamondBrainSpiller 1 TungstenSplintMail 1";
+		};
 		instant SimGroup "quest11" {
 			instant SimGroup "NAME Kronos";
 			instant SimGroup "RACE MaleHuman";
