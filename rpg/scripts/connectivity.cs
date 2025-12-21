@@ -316,6 +316,9 @@ function Server::onClientConnect(%clientId)
 			// This prevents player from inheriting stale bot state that causes blackscreen
 			ClearAllBotData(%clientId, false);
 			
+			// CRITICAL: Clear $BotType to ensure player is not identified as bot
+			$BotType[%clientId] = "";
+			
 			// Also clear any registry entries for this ID
 			if($BotRegistry[%clientId] != "")
 			{
@@ -357,6 +360,10 @@ function Server::onClientConnect(%clientId)
 				// Kill the bot's Player object
 				deleteObject(%playerObj);
 				echo("CRITICAL: Deleted bot Player object " @ %playerObj @ " for client ID " @ %clientId);
+				
+				// CRITICAL: Clear $BotType to prevent player from being identified as bot
+				// This fixes the "missing rpgmalehuman" error caused by armor type confusion
+				$BotType[%clientId] = "";
 			}
 		}
 	}
@@ -374,6 +381,9 @@ function Server::onClientConnect(%clientId)
 		
 		// PRIORITY 1: Use unified ClearAllBotData() for all bot data clearing
 		ClearAllBotData(%clientId, false);
+		
+		// CRITICAL: Clear $BotType to ensure player is not identified as bot
+		$BotType[%clientId] = "";
 		
 		// Also clean registry for this ID if it exists
 		if($BotRegistry[%clientId] != "")

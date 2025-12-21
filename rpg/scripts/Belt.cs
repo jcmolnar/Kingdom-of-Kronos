@@ -4895,6 +4895,7 @@ BeltItem::Add("Demon Breath", "DemonBreath", "QuestItems", 5.0, 500000);
 BeltItem::Add("Bible", "Bible", "QuestItems", 5.0, 800000);
 BeltItem::Add("Virus Fragment", "VirusFragment", "QuestItems", 2.0, 850000);
 BeltItem::Add("Angel's Tear", "AngelsTear", "QuestItems", 2.5, 900000);
+BeltItem::Add("Void Stone", "VoidStone", "QuestItems", 5.0, 1000000);
 
 $AccessoryVar[BlackStatue, $MiscInfo] = "A black statue";
 $AccessoryVar[EnchantedStone, $MiscInfo] = "An enchanted stone";
@@ -4910,6 +4911,7 @@ $AccessoryVar[DemonBreath, $MiscInfo] = "The very rare breath of a demon";
 $AccessoryVar[Bible, $MiscInfo] = "Do you have time to talk about your lord and savior?";
 $AccessoryVar[VirusFragment, $MiscInfo] = "A fragment of corrupted virus - be careful, it could be contagious!";
 $AccessoryVar[AngelsTear, $MiscInfo] = "A tear shed from an angel when it dies.";
+$AccessoryVar[VoidStone, $MiscInfo] = "A mysterious stone pulsing with void energy from beyond the realm.";
 
 //===================
 //  Key Items

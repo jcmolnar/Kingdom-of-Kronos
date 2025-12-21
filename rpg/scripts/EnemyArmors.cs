@@ -390,10 +390,10 @@ $BotEquipment[Eliminator] = 	"CLASS Fighter LVL 45 COINS 82 LCK 0 SteelBroadSwor
 $BotEquipment[Dreadnought] = 	"CLASS Fighter LVL 54 COINS 100 LCK 1 SteelLongSword 1 SkeletonBone 1/25";
 $BotEquipment[DeathKnight] =	"CLASS Mage LVL 130 COINS 900 LCK 1 CastingBlade 1 OgreTooth 1";
 //Ghost Town
-$BotEquipment[Villager] = 	"CLASS Fighter LVL 70 COINS 150 LCK 0 SteelLongSword 1 AncientScroll 1/2";
-$BotEquipment[Guard] =		"CLASS Fighter LVL 85 COINS 250 LCK 0 SteelLongSword 1 AncientScroll 1/5";
+$BotEquipment[Villager] = 	"CLASS Fighter LVL 70 COINS 150 LCK 0 SteelLongSword 1 AncientScroll 1/30";
+$BotEquipment[Guard] =		"CLASS Fighter LVL 85 COINS 250 LCK 0 SteelLongSword 1 AncientScroll 1/25";
 $BotEquipment[EliteGuard] = 	"CLASS Fighter LVL 100 COINS 350 LCK 0 SteelLongSword 1 AncientScroll 1/20";
-$BotEquipment[King] = 		"CLASS Fighter LVL 115 COINS 500 LCK 1 GoldenLongSword 1 AncientScroll 1/25";
+$BotEquipment[King] = 		"CLASS Fighter LVL 115 COINS 500 LCK 1 GoldenLongSword 1 AncientScroll 1/15";
 $BotEquipment[Emperor] = 	"CLASS Fighter LVL 180 COINS 5000 LCK 3 GoldenBastardSword 1";
 $BotEquipment[BanishedKing] = "CLASS Mage LVL 220 COINS 4000 LCK 2 CastingBlade 1 Crown 1";
 
@@ -420,34 +420,34 @@ $BotEquipment[Holocaust] = 	"CLASS Fighter LVL 370 COINS 3200 LCK 3 GoldenBastar
 $BotEquipment[MoonBreaker] = 	"CLASS Fighter LVL 450 COINS 4600 LCK 3 CrystalBastardSword 1 DuelCard 1/-10 AlienSpine 1/30";
 $BotEquipment[Queen] =		"CLASS Mage LVL 900 REMORT 5 COINS 30000 LCK 4 CastingBlade 1 AlienEye 1";
 //Demon Incubus
-$BotEquipment[Corrupter] = 	"CLASS Mage LVL 500 REMORT 1 COINS 14000 LCK 2 CastingBlade 1 DemonBreath 1/15";
+$BotEquipment[Corrupter] = 	"CLASS Mage LVL 500 REMORT 1 COINS 14000 LCK 2 CastingBlade 1 DemonBreath 1/25";
 $BotEquipment[Banisher] =	"CLASS Mage LVL 600 REMORT 2 COINS 22000 LCK 2 CastingBlade 1 DemonBreath 1/20";
-$BotEquipment[Incarnate] = 	"CLASS Mage LVL 700 REMORT 3 COINS 35000 LCK 3 CastingBlade 1 DemonBreath 1/25";
+$BotEquipment[Incarnate] = 	"CLASS Mage LVL 700 REMORT 3 COINS 35000 LCK 3 CastingBlade 1 DemonBreath 1/15";
 $BotEquipment[Disintegrator] = "CLASS Fighter LVL 800 REMORT 5 COINS 60000 LCK 4 TemperedCrystalBastardSword 1";
 //Gods Paradox
-$BotEquipment[Purifier] = 	"CLASS Fighter LVL 950 REMORT 7 COINS 90000 LCK 5 CrystalClaymore 1 Bible 1/15";
+$BotEquipment[Purifier] = 	"CLASS Fighter LVL 950 REMORT 7 COINS 90000 LCK 5 CrystalClaymore 1 Bible 1/25";
 $BotEquipment[Vaporizer] = 	"CLASS Mage LVL 1050 REMORT 8 COINS 120000 LCK 5 CastingBlade 1 Bible 1/20";
-$BotEquipment[Insurrector] = 	"CLASS Fighter LVL 1250 REMORT 10 COINS 200000 LCK 6 DiamondClaymore 1 Bible 1/25";
+$BotEquipment[Insurrector] = 	"CLASS Fighter LVL 1250 REMORT 10 COINS 200000 LCK 6 DiamondClaymore 1 Bible 1/15";
 $BotEquipment[SoulConsumer] =   "CLASS Fighter LVL 1400 REMORT 12 COINS 300000 LCK 7 DiamondLegendSword 1";
 $BotEquipment[SoulEraser] = 	"CLASS Mage LVL 1650 REMORT 15 COINS 700000 LCK 8 CastingBlade 1";
 $BotEquipment[EndGame] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 900000 LCK 10 DiamondLegendsword 1";
 $BotEquipment[Oni] = 		"CLASS Fighter LVL 2250 REMORT 25 COINS 1000000 LCK 10 DiamondLegendSword 1";
 $BotEquipment[Crest] = 		"CLASS Fighter LVL 2400 REMORT 30 COINS 1500000 LCK 10 DiamondLegendsword 1";
 //Admins Demise
-$BotEquipment[Liquifier] = 	"CLASS Fighter LVL 1500 REMORT 10 COINS 90000 LCK 7 BlackDiamondDreamSword 1/3 VirusFragment 1/10 AdminBoots 1/15000";
+$BotEquipment[Liquifier] = 	"CLASS Fighter LVL 1500 REMORT 10 COINS 90000 LCK 7 BlackDiamondDreamSword 1/3 VirusFragment 1/20 AdminBoots 1/15000";
 $BotEquipment[Obliterator] = 	"CLASS Mage LVL 1750 REMORT 15 COINS 150000 LCK 5 CastingBlade 1 VirusFragment 1/15 AdminBoots 1/10000";
-$BotEquipment[Abolisher] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/3 VirusFragment 1/20 AdminBoots 1/5000";
+$BotEquipment[Abolisher] = 	"CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/3 VirusFragment 1/10 AdminBoots 1/5000";
 //Angels Enigma
-$BotEquipment[Flux] =         "CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/10 AngelsTear 1/20";
-$BotEquipment[Protector] =         "CLASS Mage LVL 2250 REMORT 22 COINS 400000 LCK 9 CastingBlade 1 AngelsTear 1/25";
-$BotEquipment[Hybrid] =         "CLASS Fighter LVL 2500 REMORT 25 COINS 600000 LCK 10 BlackDiamondDreamSword 1/10 AngelsTear 1/30";
-$BotEquipment[Crucifier] =         "CLASS Fighter LVL 2650 REMORT 28 COINS 800000 LCK 10 BlackDiamondDreamSword 1/10 AngelsTear 1/35";
+$BotEquipment[Flux] =         "CLASS Fighter LVL 2000 REMORT 20 COINS 200000 LCK 9 BlackDiamondDreamSword 1/10 AngelsTear 1/35";
+$BotEquipment[Protector] =         "CLASS Mage LVL 2250 REMORT 22 COINS 400000 LCK 9 CastingBlade 1 AngelsTear 1/30";
+$BotEquipment[Hybrid] =         "CLASS Fighter LVL 2500 REMORT 25 COINS 600000 LCK 10 BlackDiamondDreamSword 1/10 AngelsTear 1/25";
+$BotEquipment[Crucifier] =         "CLASS Fighter LVL 2650 REMORT 28 COINS 800000 LCK 10 BlackDiamondDreamSword 1/10 AngelsTear 1/20";
 
 // The Void dungeon enemies (Remort 100+ tier)
-$BotEquipment[Stalker] =   "CLASS Mage LVL 2600 REMORT 30 COINS 2000000 LCK 10 CastingBlade 1";
-$BotEquipment[Fragment] =  "CLASS Fighter LVL 2800 REMORT 30 COINS 2200000 LCK 10 TerminusEst 1/5 1";
-$BotEquipment[Wraith] =    "CLASS Mage LVL 3100 REMORT 32 COINS 2500000 LCK 10 CastingBlade 1";
-$BotEquipment[Consumer] =  "CLASS Fighter LVL 3600 REMORT 35 COINS 3000000 LCK 10 TerminusEst 1/5 1";
+$BotEquipment[Stalker] =   "CLASS Mage LVL 2600 REMORT 30 COINS 2000000 LCK 10 CastingBlade 1 VoidStone 1/25";
+$BotEquipment[Fragment] =  "CLASS Fighter LVL 2800 REMORT 30 COINS 2200000 LCK 10 TerminusEst 1/5 VoidStone 1/20";
+$BotEquipment[Wraith] =    "CLASS Mage LVL 3100 REMORT 32 COINS 2500000 LCK 10 CastingBlade 1 VoidStone 1/15";
+$BotEquipment[Consumer] =  "CLASS Fighter LVL 3600 REMORT 35 COINS 3000000 LCK 10 TerminusEst 1/5 VoidStone 1/10";
 
 // Colloseum-specific bots - Equipment definitions (matching TournyRound bot equipment)
 // Rank 0 (Newbie): RoundOne=King, RoundTwo=Eradicator, RoundThree=DeathStar
