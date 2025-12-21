@@ -2809,6 +2809,13 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 		// Attempt to immediately tag invulnerability via display name if clientId is already resolvable
 		%preClient = NEWgetClientByName(%name);
 		
+		// CRITICAL: Set $BotType IMMEDIATELY to prevent GetClientDataType() confusion
+		// This closes the race window between spawn and RegisterBot()
+		if(%preClient != -1 && %preClient != "" && %preClient != "False")
+		{
+			$BotType[%preClient] = "enemy";
+		}
+		
 		// =========================================================================================================
 		// RACE CONDITION FIX
 		// prevent immediate reuse of Client IDs that were just freed (unless bypassed by critical systems)

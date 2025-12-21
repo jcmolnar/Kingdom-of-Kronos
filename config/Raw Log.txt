@@ -3699,3 +3699,4 @@ $connectlog::entry = "[Connection] Jobo (IP:207.6.39.117:53229)";
 $connectlog::entry = "[Connection] Jobo (IP:207.6.39.117:53229)";
 $connectlog::entry = "[Connection] Jobo (IP:207.6.39.117:58251)";
 $connectlog::entry = "[Connection] Jobo (IP:207.6.39.117:58251)";
+$connectlog::entry = "[Connection] Jobo (IP:207.6.39.117:58251)";

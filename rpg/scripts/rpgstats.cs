@@ -51,8 +51,14 @@ function GetClientDataType(%clientId)
 		%recentlyFreed = $ClientIdRecentlyFreed[%clientId];
 		if(%recentlyFreed == "" || %recentlyFreed == "0" || %recentlyFreed == -1)
 		{
-			// Not recently freed - this is unexpected, log warning
-			echo("WARNING: GetClientDataType - Bot " @ %clientId @ " has no $BotType and no data. Defaulting to player for safety.");
+			// Not recently freed - this is unexpected, log warning (throttled to prevent spam)
+			%now = getSimTime();
+			%lastWarned = $GetClientDataTypeLastWarning[%clientId];
+			if(%lastWarned == "" || %lastWarned == -1 || (%now - %lastWarned) > 5)
+			{
+				echo("WARNING: GetClientDataType - Bot " @ %clientId @ " has no $BotType and no data. Defaulting to player for safety.");
+				$GetClientDataTypeLastWarning[%clientId] = %now;
+			}
 		}
 		// Default to player (SAFE) - better to break bot than player
 		return "player";
