@@ -3688,12 +3688,42 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					if(%type != $SpellDamageType && fetchData(%damagedClient, "Stance") == "BladeBane")
 						%value = 0;
 					if(%type == $SpellDamageType && fetchData(%damagedClient, "Stance") == "BladeBane")
-						%value *= 2;
-				}
-				
-				// Ensure value doesn't become 0 or negative after stance modifiers
-				if(%value < 0)
+					%value *= 2;
+			}
+			
+			// =================================================================
+			// ASCENSION TALENTS (permanent abilities from remort/SP sacrifice)
+			// =================================================================
+			
+			// Berserker's Rage: +30% damage when attacker HP is below 25%
+			if(Ascension::HasTalent(%shooterClient, "BerserkerRage"))
+			{
+				%attackerHP = fetchData(%shooterClient, "HP");
+				%attackerMaxHP = fetchData(%shooterClient, "MaxHP");
+				if(%attackerMaxHP > 0 && %attackerHP <= (%attackerMaxHP * 0.25))
+					%value = floor(%value * 1.30);
+			}
+			
+			// Iron Skin: 15% damage reduction from all sources
+			if(Ascension::HasTalent(%damagedClient, "IronSkin"))
+				%value = floor(%value * 0.85);
+			
+			// Dodge Mastery: 10% chance to completely avoid damage
+			if(Ascension::HasTalent(%damagedClient, "DodgeMastery"))
+			{
+				if(floor(getRandom() * 100) < 10)
+				{
 					%value = 0;
+					%isMiss = true;
+					Client::sendMessage(%damagedClient, 0, "Dodge Mastery!");
+				}
+			}
+			
+			// =================================================================
+				
+			// Ensure value doesn't become 0 or negative after stance modifiers
+			if(%value < 0)
+				%value = 0;
 				
 				if(%Pierce)
 				{

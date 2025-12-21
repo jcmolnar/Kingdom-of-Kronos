@@ -1202,6 +1202,21 @@ function BeginCastSpell(%clientId, %keyword)
 
 					schedule("%retval=DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\"); if(%retval){refreshMANA(" @ %clientId @ ", " @ %tempManaCost @ ");}", $Spell::delay[%i]);
 					schedule("storeData(" @ %clientId @ ", \"SpellCastStep\", \"\");sendDoneRecovMsg(" @ %clientId @ ");", %recovTime);
+				
+					// ASCENSION: Spell Echo - 15% chance to cast offensive spells twice (no extra mana cost)
+					if(Ascension::HasTalent(%clientId, "SpellEcho") && $SkillType[%spellKeyword] == $SkillOffensiveCasting)
+					{
+						if(floor(getRandom() * 100) < 15)
+						{
+							// Schedule echo cast slightly after original
+							%echoDelay = $Spell::delay[%i] + 0.5;
+							schedule("DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\");", %echoDelay);
+							// CRITICAL: Clear SpellCastStep after echo completes to prevent casting lock
+							%echoClearDelay = %echoDelay + 0.5;
+							schedule("storeData(" @ %clientId @ ", \"SpellCastStep\", \"\");", %echoClearDelay);
+							Client::sendMessage(%clientId, 0, "Spell Echo!");
+						}
+					}
 		
 					return True;
 				}

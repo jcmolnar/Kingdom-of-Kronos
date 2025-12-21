@@ -98,3 +98,44 @@ Common replacements:
 - `•` becomes `*`
 - `—` becomes `--`
 
+### 12. ADDING NEW SCRIPT FILES
+**All RPG scripts are loaded from `rpg/scripts/Server.cs` in the `createServer()` function (lines 254-322).**
+
+To add a new script file:
+1. Create your `.cs` file in `rpg/scripts/`
+2. Add `exec(YourFileName);` in Server.cs (without the `.cs` extension)
+3. Scripts load in order - place your exec where dependencies are satisfied
+4. Example: `exec(Ascension);` loads `rpg/scripts/Ascension.cs`
+
+### 13. ADDING TOWN BOTS (NPCs)
+**Town bots are defined in the mission file and their dialogue handlers are in comchat.cs.**
+
+**Step 1: Add to Mission File** (`rpg/MISSIONS/KingdomKronos.mis`)
+Inside the `TownBots` SimGroup (line ~4020), add:
+```
+instant SimGroup "yourbotname" {
+    instant Marker "yourbotname" {
+        dataBlock = "PathMarker";
+        name = "";
+        position = "X Y Z";
+        rotation = "0 -0 1.56991";
+    };
+    instant SimGroup "NAME Display Name";
+    instant SimGroup "RACE MaleHuman";
+    instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 WeaponName 1 ArmorName 1";
+};
+```
+
+**Step 2: Add Dialogue Handler** (`rpg/scripts/comchat.cs`)
+For special NPCs (not merchants/bankers), add a handler after line ~10911:
+```cs
+else if(%botType == "yourbotname")
+{
+    if(%initTalk || $state[%closestId, %TrueClientId] != "")
+    {
+        // Your dialogue logic using $state and AI::sayLater()
+    }
+}
+```
+
+**Bot Types**: The bot name prefix determines type (e.g., "merchant1", "banker2", "sealnpc", "ascensionnpc")

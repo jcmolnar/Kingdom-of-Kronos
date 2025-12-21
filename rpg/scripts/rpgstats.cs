@@ -870,6 +870,9 @@ function DistributeExpForKilling(%damagedClient)
 				}
 
 				%value = (%c * %d) * (1 + (fetchData(%listClientId, "TournyRank") * 0.05));
+				
+				// ASCENSION: Experience Affinity (multiplicative, stacks before house bonus)
+				%value = %value * Ascension::GetExpMultiplier(%listClientId);
 			}
 			else
 			{

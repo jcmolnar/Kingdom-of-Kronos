@@ -485,17 +485,10 @@ function remoteSay(%clientId, %team, %message, %senderName)
 		return;
 	}
 	
-	// DUAL WIELDING - Admin 10 only (experimental feature)
+	// DUAL WIELDING - Requires Ascension DualWield talent (checked in DualWield::Command)
 	if(%w1 == "#dualwield")
 	{
-		if(%clientToServerAdminLevel >= 10)
-		{
-			DualWield::Command(%TrueClientId, %cropped);
-		}
-		else
-		{
-			Client::sendMessage(%TrueClientId, $MsgRed, "You do not have permission to use this command. (Admin 10 required)");
-		}
+		DualWield::Command(%TrueClientId, %cropped);
 		return;
 	}
 	
@@ -10905,6 +10898,116 @@ if(%w1 == "#spawntelemetry")
 								// Message is already sent in SealBattle::Begin()
 								$state[%closestId, %TrueClientId] = "";
 							}
+						}
+					}
+				}
+			}
+			else if(%botType == "ascensionnpc")
+			{
+				// Ascension NPC - talent purchasing with confirmation
+				if(%initTalk || $state[%closestId, %TrueClientId] != "")
+				{
+					if($state[%closestId, %TrueClientId] == "")
+					{
+						if(%initTalk)
+						{
+							%remort = fetchData(%TrueClientId, "RemortStep");
+							%sp = fetchData(%TrueClientId, "SPcredits");
+							AI::sayLater(%TrueClientId, %closestId, "Greetings, seeker of power. I am the Ascension Master. Here you can sacrifice remorts or SP for permanent talents. You have " @ %remort @ " remorts and " @ %sp @ " SP. Say [list] to see talents, or [buy] followed by a talent number.", True);
+							$state[%closestId, %TrueClientId] = 1;
+						}
+					}
+					else if($state[%closestId, %TrueClientId] == 1)
+					{
+						if(String::findSubStr(%message, "list") != -1)
+						{
+							// List all talents with numbers
+							Client::sendMessage(%TrueClientId, 0, "=== ASCENSION TALENTS ===");
+							%talentNum = 1;
+							for(%t = 0; (%talentId = GetWord($AscensionTalentList, %t)) != -1; %t++)
+							{
+								%name = $AscensionTalent[%talentId, Name];
+								%cost = $AscensionTalent[%talentId, Cost];
+								%costType = $AscensionTalent[%talentId, CostType];
+								%desc = $AscensionTalent[%talentId, Desc];
+								%owned = "";
+								if(Ascension::HasTalent(%TrueClientId, %talentId))
+									%owned = " [OWNED]";
+								
+								if(%costType == "remort")
+									Client::sendMessage(%TrueClientId, 0, "[" @ %talentNum @ "] " @ %name @ " - " @ %cost @ " remorts" @ %owned);
+								else
+									Client::sendMessage(%TrueClientId, 0, "[" @ %talentNum @ "] " @ %name @ " - " @ %cost @ " SP (min " @ $AscensionTalent[%talentId, MinRemort] @ " remorts)" @ %owned);
+								
+								Client::sendMessage(%TrueClientId, 0, "    " @ %desc);
+								%talentNum++;
+							}
+							Client::sendMessage(%TrueClientId, 0, "Say [buy #] to purchase a talent.");
+							$state[%closestId, %TrueClientId] = 1;
+						}
+						else if(String::findSubStr(%message, "buy") != -1)
+						{
+							// Parse talent number
+							%buyPos = String::findSubStr(%message, "buy");
+							%afterBuy = String::getSubStr(%message, %buyPos + 4, 99);
+							%talentNum = GetWord(%afterBuy, 0);
+							
+							if(%talentNum != "" && %talentNum != -1 && %talentNum >= 1 && %talentNum <= 10)
+							{
+								%talentId = GetWord($AscensionTalentList, %talentNum - 1);
+								if(%talentId != "" && %talentId != -1)
+								{
+									// Store selection and ask for confirmation
+									$AscensionPending[%TrueClientId] = %talentId;
+									%name = $AscensionTalent[%talentId, Name];
+									%cost = $AscensionTalent[%talentId, Cost];
+									%costType = $AscensionTalent[%talentId, CostType];
+									
+									if(%costType == "remort")
+										AI::sayLater(%TrueClientId, %closestId, "You want to unlock " @ %name @ " for " @ %cost @ " remorts. Say [confirm] to proceed or [back] to cancel.", True);
+									else
+										AI::sayLater(%TrueClientId, %closestId, "You want to unlock " @ %name @ " for " @ %cost @ " SP. Say [confirm] to proceed or [back] to cancel.", True);
+									
+									$state[%closestId, %TrueClientId] = 2;
+								}
+								else
+								{
+									AI::sayLater(%TrueClientId, %closestId, "Invalid talent number. Say [list] to see available talents.", True);
+									$state[%closestId, %TrueClientId] = 1;
+								}
+							}
+							else
+							{
+								AI::sayLater(%TrueClientId, %closestId, "Say [buy #] with a number from 1-10. Example: buy 1", True);
+								$state[%closestId, %TrueClientId] = 1;
+							}
+						}
+					}
+					else if($state[%closestId, %TrueClientId] == 2)
+					{
+						// Confirmation state
+						if(String::findSubStr(%message, "confirm") != -1)
+						{
+							%talentId = $AscensionPending[%TrueClientId];
+							if(%talentId != "" && %talentId != -1)
+							{
+								%result = Ascension::Purchase(%TrueClientId, %talentId);
+								if(%result)
+								{
+									AI::sayLater(%TrueClientId, %closestId, "The power flows through you! Your " @ $AscensionTalent[%talentId, Name] @ " has been unlocked.", True);
+								}
+								// Note: Ascension::Purchase already sends specific error messages
+							}
+							$AscensionPending[%TrueClientId] = "";
+							$state[%closestId, %TrueClientId] = "";
+						}
+						else if(String::findSubStr(%message, "back") != -1)
+						{
+							$AscensionPending[%TrueClientId] = "";
+							%remort = fetchData(%TrueClientId, "RemortStep");
+							%sp = fetchData(%TrueClientId, "SPcredits");
+							AI::sayLater(%TrueClientId, %closestId, "Very well. You have " @ %remort @ " remorts and " @ %sp @ " SP. Say [list] to see talents, or [buy] followed by a talent number.", True);
+							$state[%closestId, %TrueClientId] = 1;
 						}
 					}
 				}

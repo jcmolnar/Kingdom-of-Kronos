@@ -813,6 +813,12 @@ function SaveCharacter(%clientId)
 		%offHandWeapon = "";
 	$funk::var["[\"" @ %name @ "\", 0, 53]"] = %offHandWeapon;
 	
+	// Save Ascension talents (field 54)
+	%ascTalents = fetchData(%clientId, "AscensionTalents");
+	if(%ascTalents == "" || %ascTalents == "0" || %ascTalents == -1)
+		%ascTalents = "";
+	$funk::var["[\"" @ %name @ "\", 0, 54]"] = %ascTalents;
+	
 	//echo("DEBUG SaveCharacter: Syncing StoredQuestItems/StoredKeyItems from BeltStorage...");
 	// Sync StoredQuestItems and StoredKeyItems from BeltStorage before saving
 	// This ensures saved data matches what's in bank storage
@@ -1811,6 +1817,15 @@ function LoadCharacter(%clientId)
 		if(%offHandWeapon == "" || %offHandWeapon == " " || %offHandWeapon == "0" || %offHandWeapon == -1)
 			%offHandWeapon = "";
 		storeData(%clientId, "DualWield_OffHandWeapon", %offHandWeapon);
+		
+		// Load Ascension talents (field 54)
+		%ascTalents = $funk::var[%name, 0, 54];
+		if(%ascTalents == "" || %ascTalents == " " || %ascTalents == "0" || %ascTalents == -1)
+			%ascTalents = "";
+		else if(String::getSubStr(%ascTalents, 0, 2) == "0 ")
+			%ascTalents = String::getSubStr(%ascTalents, 2, 99999);
+		storeData(%clientId, "AscensionTalents", %ascTalents);
+		
 		// Note: Visual re-mount happens in Game::playerSpawn via schedule
 		
 		echo("DEBUG: Loading stored belt items (StoredQuestItems/StoredKeyItems)...");
@@ -2278,6 +2293,8 @@ function LoadCharacter(%clientId)
 		//echo("DEBUG: StoredAccessories = ''");
 		storeData(%clientId, "StoredOther", "");
 		//echo("DEBUG: StoredOther = ''");
+		storeData(%clientId, "AscensionTalents", "");
+		//echo("DEBUG: AscensionTalents = ''");
 		storeData(%clientId, "BeltStorage", "");
 		//echo("DEBUG: BeltStorage = ''");
 		storeData(%clientId, "Consumables", "");
@@ -5600,6 +5617,10 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 
 		if(%w == "COINS")
 		{
+			// ASCENSION: Gold Digger - +25% coin drops
+			if(Ascension::HasTalent(%clientId, "GoldDigger"))
+				%w2 = floor(%w2 * 1.25);
+			
 			storeData(%clientId, "COINS", %w2, "inc");
 			if(%echo) Client::sendMessage(%clientId, 0, "You received " @ %w2 @ " coins.");
 		}

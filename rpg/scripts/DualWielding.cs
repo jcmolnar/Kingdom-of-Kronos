@@ -1,14 +1,15 @@
 //============================================================================
 // DUAL WIELDING SYSTEM - Kingdom of Kronos - Made by Jobo
 //============================================================================
-// This module implements experimental dual-wielding functionality.
+// This module implements dual-wielding functionality.
 // 
 // HOW IT WORKS:
 //   - Primary weapon uses $WeaponSlot (slot 0 - standard behavior)
-//   - Off-hand weapon is stored in player data and mounted in slot 6 for visual
-//   - Off-hand weapon is removed from player inventory when equipped (returned on unequip)
-//   - When primary weapon fires, off-hand attack triggers after configurable delay ($DualWield::OffHandDelayOffset)
+//   - Off-hand weapon name is stored in player data, visual mounted in slot 6
+//   - Weapons STAY in inventory while equipped (no removal/duplication)
+//   - When primary weapon fires, off-hand attack triggers after delay ($DualWield::OffHandDelayOffset)
 //   - Off-hand damage uses its own weapon stats (configurable multiplier available)
+//   - Equipping a new weapon auto-cycles: old off-hand unequips, main becomes off-hand, new becomes main
 //
 // TOGGLE MODE:
 //   - Players can enter "dual wield mode" with #dualwield (no args)
@@ -17,10 +18,8 @@
 //   - Toggle mode persists across death/respawn (disabled on remort)
 //
 // SKILL REQUIREMENT:
-//   - Players must have Slashing skill >= $DualWield::RequiredSkillLevel to dual wield
-//   - Default requirement is 300 Slashing skill
-//   - This simulates the training needed to fight with two weapons
-//
+//   - Players must have Ascension talent "DualWield" to dual wield
+//  - Can be changed to skill requirement if needed 
 // LIMITATIONS:
 //   - Off-hand weapon uses slot 6 for visual display
 //   - AI bots dual wielding is disabled by default ($DualWield::AllowForBots)
@@ -116,22 +115,25 @@
 
 // Configuration
 $DualWield::Enabled = true;                    // Master toggle for dual wielding
-$DualWield::OffHandSlot = 3;                   // Engine slot for off-hand weapon
+// NOTE: Off-hand weapon is displayed in slot 6 (hardcoded)
 $DualWield::OffHandDelayOffset = 0.1;          // Slight delay between primary and off-hand fire (seconds)
 $DualWield::AllowForBots = false;              // Whether bots can dual wield
-$DualWield::RequiredSkillLevel = 300;          // Required Slashing skill to dual wield
-$DualWield::RequiredSkillType = 1;             // Skill type: 1 = Slashing ($SkillSlashing)
+
+// OLD SKILL REQUIREMENT (replaced by Ascension talent system)
+// $DualWield::RequiredSkillLevel = 300;        // Required Slashing skill to dual wield
+// $DualWield::RequiredSkillType = 1;           // Skill type: 1 = Slashing ($SkillSlashing)
+// NOTE: Dual wielding now requires the "DualWield" Ascension talent (purchased from Ascension NPC)
 
 // Damage multipliers (0.7 = 70% damage, 1.0 = full damage)
 // Per-weapon override: $DualWield::DamageMultiplier[DiamondClaymore] = 0.8;
-$DualWield::DefaultDamageMultiplier = 0.7;
+$DualWield::DefaultDamageMultiplier = 1.0;
 
 // Speed multipliers (1.0 = no penalty, 0.8 = 20% slower)  
 // Per-weapon override: $DualWield::SpeedMultiplier[DiamondClaymore] = 0.9;
 $DualWield::DefaultSpeedMultiplier = 1.0;
 
 // Spell casting restriction
-$DualWield::AllowSpellcasting = false;         // If false, cannot cast spells while dual wielding
+$DualWield::AllowSpellcasting = true;         // If false, cannot cast spells while dual wielding
 
 // Valid weapon types for dual wielding (melee weapons)
 // Uses $AccessoryType values: Sword=7, Axe=8, Polearm=9, Bludgeon=10
@@ -568,7 +570,7 @@ function DualWield::IsValidWeaponType(%item)
     return false;
 }
 
-// Check if a player meets the skill requirement to dual wield
+// Check if a player meets the requirement to dual wield (Ascension talent)
 function DualWield::CanDualWield(%clientId)
 {
     if(!$DualWield::Enabled)
@@ -578,13 +580,8 @@ function DualWield::CanDualWield(%clientId)
     if(!$DualWield::AllowForBots && isRPGAI(%clientId))
         return false;
     
-    // Check skill requirement
-    // $PlayerSkill is the global array that stores skill levels
-    // $SkillSlashing = 1 (defined elsewhere)
-    %skillLevel = $PlayerSkill[%clientId, $DualWield::RequiredSkillType];
-    if(%skillLevel == "") %skillLevel = 0;
-    
-    if(%skillLevel < $DualWield::RequiredSkillLevel)
+    // Check Ascension talent - this is the ONLY way to unlock dual wielding
+    if(!Ascension::HasTalent(%clientId, "DualWield"))
         return false;
     
     return true;
@@ -619,9 +616,7 @@ function DualWield::ToggleMode(%clientId)
 {
     if(!DualWield::CanDualWield(%clientId))
     {
-        %currentSkill = $PlayerSkill[%clientId, $DualWield::RequiredSkillType];
-        if(%currentSkill == "") %currentSkill = 0;
-        Client::sendMessage(%clientId, $MsgRed, "You need " @ $DualWield::RequiredSkillLevel @ " Slashing skill to dual wield. (Current: " @ %currentSkill @ ")");
+        Client::sendMessage(%clientId, $MsgRed, "You need the Ascension 'Dual Wielding' talent to dual wield.");
         return;
     }
     
@@ -784,22 +779,18 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
         return false;
     }
     
-    // Check skill requirement FIRST
+    // Check Ascension talent requirement FIRST
     if(!DualWield::CanDualWield(%clientId))
     {
-        %currentSkill = $PlayerSkill[%clientId, $DualWield::RequiredSkillType];
-        if(%currentSkill == "") %currentSkill = 0;
-        Client::sendMessage(%clientId, $MsgRed, "You need " @ $DualWield::RequiredSkillLevel @ " Slashing skill to dual wield. (Current: " @ %currentSkill @ ")");
+        Client::sendMessage(%clientId, $MsgRed, "You need the Ascension 'Dual Wielding' talent to dual wield.");
         return false;
     }
     
-    // Check if already dual wielding - must unequip first to prevent inventory duplication
+    // Auto-unequip existing off-hand before equipping new one
     %currentOffHand = fetchData(%clientId, "DualWield_OffHandWeapon");
     if(%currentOffHand != "" && %currentOffHand != -1 && %currentOffHand != "0")
     {
-        Client::sendMessage(%clientId, $MsgYellow, "You already have " @ %currentOffHand @ " equipped in your off-hand.");
-        Client::sendMessage(%clientId, $MsgYellow, "Use #dualwield unequip first, then equip the new weapon.");
-        return false;
+        DualWield::UnequipOffHand(%clientId);
     }
     
     // Validate the weapon exists
