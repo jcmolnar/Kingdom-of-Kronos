@@ -83,37 +83,16 @@ function GetDataFromArray(%clientId, %type)
 	}
 	else if(%clientType == "townbot")
 	{
-		// Check new array first
-		%data = $TownBotData[%clientId, %type];
-		// If data exists in new array (even if empty string), use it
-		// Check if key exists by comparing with a sentinel value
-		// Since TorqueScript returns "" for non-existent keys, we check old array as fallback
-		// If old array has data and new doesn't, it means migration hasn't happened yet
-		%oldData = $ClientData[%clientId, %type];
-		if(%oldData != "" && %data == "" && %oldData != -1)
-		{
-			// Data exists in old array but not in new - return old (migration not complete)
-			return %oldData;
-		}
-		// Return new array data (even if empty - empty is a valid value)
-		return %data;
+		// Town bots only use $TownBotData
+		return $TownBotData[%clientId, %type];
 	}
 	else if(%clientType == "enemybot")
 	{
-		// Check new array first
-		%data = $EnemyBotData[%clientId, %type];
-		// If data exists in old array but not new, return old (migration not complete)
-		%oldData = $ClientData[%clientId, %type];
-		if(%oldData != "" && %data == "" && %oldData != -1)
-		{
-			// Data exists in old array but not in new - return old (migration not complete)
-			return %oldData;
-		}
-		// Return new array data (even if empty - empty is a valid value)
-		return %data;
+		// Enemy bots only use $EnemyBotData
+		return $EnemyBotData[%clientId, %type];
 	}
 	
-	// Default fallback to old array
+	// Default fallback to old array (only for non-player/non-bot types if any exist)
 	return $ClientData[%clientId, %type];
 }
 
@@ -131,16 +110,18 @@ function SetDataInArray(%clientId, %type, %value)
 	else if(%clientType == "townbot")
 	{
 		$TownBotData[%clientId, %type] = %value;
-		// REMOVED: Dual-write to $ClientData (caused stale data pollution)
+		// CRITICAL: Ensure we also clear the legacy entry to prevent fallback/haunting
+		$ClientData[%clientId, %type] = "";
 	}
 	else if(%clientType == "enemybot")
 	{
 		$EnemyBotData[%clientId, %type] = %value;
-		// REMOVED: Dual-write to $ClientData (caused stale data pollution)
+		// CRITICAL: Ensure we also clear the legacy entry to prevent fallback/haunting
+		$ClientData[%clientId, %type] = "";
 	}
 	else
 	{
-		// Default fallback (should be player if GetClientDataType returns unknown)
+		// Default fallback
 		$ClientData[%clientId, %type] = %value;
 	}
 }

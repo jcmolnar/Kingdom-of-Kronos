@@ -330,7 +330,7 @@ if(%condition)
 ### 16. Torque Game Engine Foundation
 
 #### Engine History:
-- **Original**: Developed by Dynamix for Tribes 2
+- **Original**: Developed by Dynamix for Tribes 1
 - **Base**: Built on Starsiege: Tribes engine
 - **Language**: C++ core with TorqueScript scripting layer
 - **Architecture**: Client-server model with authoritative server

@@ -904,8 +904,13 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	if(%clientId == "" || %clientId == -1)
 		return;
 	
-	// NOTE: $BotType is cleared at END of function (after all storeData calls)
-	// Otherwise GetClientDataType() warns 100+ times during cleanup
+	// CRITICAL SAFETY CHECK: Never clear data if this client is an active player
+	// who has already loaded and spawned. This is a "Defense in Depth" measure.
+	if(GetClientDataType(%clientId) == "player" && fetchData(%clientId, "HasLoadedAndSpawned") == "true")
+	{
+		echo("WARNING: ClearAllBotData - Attempted to clear data for ACTIVE PLAYER " @ Client::getName(%clientId) @ " (ID: " @ %clientId @ "). ABORTING.");
+		return;
+	}
 	
 	// -------------------------------------------------------------------------
 	// 2. Clear storeData fields (routes to appropriate array based on type)
@@ -924,14 +929,54 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	storeData(%clientId, "tmpzone", "");
 	storeData(%clientId, "botTeam", "");
 	
-	// Belt items
+	// Belt items & Inventory
 	storeData(%clientId, "QuestItems", "");
 	storeData(%clientId, "KeyItems", "");
 	storeData(%clientId, "Consumables", "");
 	storeData(%clientId, "Armor", "");
 	storeData(%clientId, "Accessories", "");
 	storeData(%clientId, "Other", "");
+	storeData(%clientId, "spawnStuff", "");
+	storeData(%clientId, "BankStorage", "");
+	storeData(%clientId, "StoredQuestItems", "");
+	storeData(%clientId, "StoredKeyItems", "");
+	storeData(%clientId, "StoredConsumables", "");
+	storeData(%clientId, "StoredArmor", "");
+	storeData(%clientId, "StoredAccessories", "");
+	storeData(%clientId, "StoredOther", "");
+	storeData(%clientId, "EquippedBeltArmor", "");
+	storeData(%clientId, "EquippedBeltAccessories", "");
+	storeData(%clientId, "DualWield_OffHandWeapon", "");
+	
+	// RPG Stats & Identity
 	storeData(%clientId, "RemortStep", "");
+	storeData(%clientId, "LVL", "");
+	storeData(%clientId, "EXP", "");
+	storeData(%clientId, "SPcredits", "");
+	storeData(%clientId, "MyHouse", "");
+	storeData(%clientId, "RankPoints", "");
+	storeData(%clientId, "TournyRank", "");
+	storeData(%clientId, "GROUP", "");
+	storeData(%clientId, "CLASS", "");
+	storeData(%clientId, "LCK", "");
+	storeData(%clientId, "bounty", "");
+	storeData(%clientId, "inArena", "");
+	
+	// Feature variables
+	storeData(%clientId, "AscensionTalents", "");
+	storeData(%clientId, "AutoSkill_Priority", "");
+	storeData(%clientId, "AutoParty_Enabled", "");
+	
+	// Legacy / System variables
+	storeData(%clientId, "defaultTalk", "");
+	storeData(%clientId, "password", "");
+	storeData(%clientId, "PlayerInfo", "");
+	storeData(%clientId, "deathmsg", "");
+	storeData(%clientId, "campRot", "");
+	storeData(%clientId, "tmphp", "");
+	storeData(%clientId, "tmpmana", "");
+	storeData(%clientId, "tmpLastSaveVer", "");
+	storeData(%clientId, "savedMountedWeapon", "");
 	
 	// Flags
 	storeData(%clientId, "noExperienceFlag", "");
@@ -1008,11 +1053,57 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	// -------------------------------------------------------------------------
 	if(!%preserveBotInfoAiName)
 		$ClientData[%clientId, "BotInfoAiName"] = "";
+	// 5. CRITICAL: Explicitly clear legacy $ClientData array entries
+	// -------------------------------------------------------------------------
+	// This prevents GetDataFromArray() from falling back to player data
+	// from a previous player who used this same clientId.
+	// -------------------------------------------------------------------------
+	$ClientData[%clientId, "BotInfoAiName"] = "";
 	$ClientData[%clientId, "SpawnBotInfo"] = "";
 	$ClientData[%clientId, "SpawnTime"] = "";
 	$ClientData[%clientId, "zone"] = "";
+	$ClientData[%clientId, "AscensionTalents"] = "";
+	$ClientData[%clientId, "AutoSkill_Priority"] = "";
+	$ClientData[%clientId, "AutoParty_Enabled"] = "";
+	$ClientData[%clientId, "MyHouse"] = "";
+	$ClientData[%clientId, "RemortStep"] = "";
+	$ClientData[%clientId, "LVL"] = "";
+	$ClientData[%clientId, "EXP"] = "";
+	$ClientData[%clientId, "SPcredits"] = "";
+	$ClientData[%clientId, "RankPoints"] = "";
+	$ClientData[%clientId, "TournyRank"] = "";
+	$ClientData[%clientId, "GROUP"] = "";
+	$ClientData[%clientId, "CLASS"] = "";
+	$ClientData[%clientId, "LCK"] = "";
+	$ClientData[%clientId, "bounty"] = "";
+	$ClientData[%clientId, "inArena"] = "";
+	$ClientData[%clientId, "QuestItems"] = "";
+	$ClientData[%clientId, "KeyItems"] = "";
+	$ClientData[%clientId, "Consumables"] = "";
+	$ClientData[%clientId, "Armor"] = "";
+	$ClientData[%clientId, "Accessories"] = "";
+	$ClientData[%clientId, "Other"] = "";
+	$ClientData[%clientId, "spawnStuff"] = "";
+	$ClientData[%clientId, "BankStorage"] = "";
+	$ClientData[%clientId, "StoredQuestItems"] = "";
+	$ClientData[%clientId, "StoredKeyItems"] = "";
+	$ClientData[%clientId, "StoredConsumables"] = "";
+	$ClientData[%clientId, "StoredArmor"] = "";
+	$ClientData[%clientId, "StoredAccessories"] = "";
+	$ClientData[%clientId, "StoredOther"] = "";
+	$ClientData[%clientId, "EquippedBeltArmor"] = "";
+	$ClientData[%clientId, "EquippedBeltAccessories"] = "";
+	$ClientData[%clientId, "DualWield_OffHandWeapon"] = "";
+	$ClientData[%clientId, "defaultTalk"] = "";
+	$ClientData[%clientId, "password"] = "";
+	$ClientData[%clientId, "PlayerInfo"] = "";
+	$ClientData[%clientId, "deathmsg"] = "";
+	$ClientData[%clientId, "campRot"] = "";
+	$ClientData[%clientId, "tmphp"] = "";
+	$ClientData[%clientId, "tmpmana"] = "";
+	$ClientData[%clientId, "tmpLastSaveVer"] = "";
+	$ClientData[%clientId, "savedMountedWeapon"] = "";
 	
-	// -------------------------------------------------------------------------
 	// 6. Clear fast lookup arrays
 	// -------------------------------------------------------------------------
 	if(!%preserveBotInfoAiName)

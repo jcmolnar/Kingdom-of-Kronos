@@ -6414,9 +6414,9 @@ function DisplayGetInfo(%clientId, %id, %obj)
 	// Build display message
 	%msg = "<jc><f1>" @ Client::getName(%id) @ ", LEVEL " @ fetchData(%id, "LVL") @ " " @ getFinalCLASS(%id) @ " REMORT " @ fetchData(%id, "RemortStep") @ "<f0> " @ " " @ %showid @ %teamInfo @ "\n" @ %house @ "\nWorld Rank: " @ $WorldRank[fetchData(%id, "TournyRank")] @ "\nBounty: " @ fetchData(%id, "bounty");
 	
-	// Add Ascension talents if the player has any
+	// Add Ascension talents if the player has any (players only)
 	%talents = fetchData(%id, "AscensionTalents");
-	if(%talents != "" && %talents != "0")
+	if(%talents != "" && %talents != "0" && !Player::isAiControlled(%id) && !isRPGAI(%id))
 	{
 		%talentDisplay = "";
 		for(%t = 0; (%talentId = GetWord(%talents, %t)) != -1; %t++)

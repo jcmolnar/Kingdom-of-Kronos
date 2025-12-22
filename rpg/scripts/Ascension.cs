@@ -78,6 +78,10 @@ $AscensionTalentList = "DualWielding ExpAffinity1 ExpAffinity2 ExpAffinity3 Gold
 
 function Ascension::HasTalent(%clientId, %talentName)
 {
+	// SAFEGUARD: Bots are never allowed to have Ascension talents
+	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+		return false;
+		
 	// Check if player has unlocked a specific talent
 	%talents = fetchData(%clientId, "AscensionTalents");
 	if(%talents == "" || %talents == -1 || %talents == "0")
@@ -93,6 +97,11 @@ function Ascension::HasTalent(%clientId, %talentName)
 function Ascension::UnlockTalent(%clientId, %talentName)
 {
 	// Unlock a talent for a player after payment
+	
+	// SAFEGUARD: Bots cannot unlock talents
+	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+		return;
+		
 	%talents = fetchData(%clientId, "AscensionTalents");
 	if(%talents == "" || %talents == -1 || %talents == "0")
 		%talents = "";

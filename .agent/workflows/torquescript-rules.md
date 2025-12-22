@@ -259,3 +259,16 @@ Character data is saved to `$funk::var["[\"playername\", TYPE, SLOT]"]` in `rpgf
 | 56 | AutoParty Enabled (NEW) |
 
 **Before adding a new slot:** `grep -r ", 0, XX]" rpgfunk.cs` to verify it's not in use.
+### 18. BOT VS PLAYER PROTECTION
+**Prevent variable "haunting" by strictly separating bot and player data.**
+Client IDs are reused by the game engine. When a player disconnects, a bot might immediately take that ID. Without cleanup, the bot will inherit the player's level, house, and talents.
+
+**Rules for Data Safety:**
+1.  **NEVER use `$ClientData` for bots.** All bot data must reside in `$EnemyBotData` or `$TownBotData`.
+2.  **Explicit Cleanup**: When a bot spawns or a client connects/disconnects, use `ClearAllBotData(%clientId)` to wipe ALL player variables from that client ID.
+3.  **Disable Fallbacks**: `GetDataFromArray` in `rpgstats.cs` must NOT fall back to `$ClientData` for bots. 
+4.  **Bot Checks in Talents**: All Ascension talents or special player features must start with a bot check:
+    ```cs
+    if(Player::isAiControlled(%clientId) || isRPGAI(%clientId)) return false;
+    ```
+5.  **Display Filtering**: Functions like `DisplayGetInfo` must explicitly hide player-only headers (like "Ascension") when targeting a bot.
