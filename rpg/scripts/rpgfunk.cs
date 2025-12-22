@@ -446,30 +446,19 @@ function SaveCharacter(%clientId)
 	%player = Client::getOwnedObject(%clientId);
 	if(!IsDead(%clientId) && %player != -1 && %player != "")
 	{
-		// CRITICAL: Re-validate player object before each Player::getItemCount call
+		// CRITICAL: Validate player object ONCE before starting the inventory sanity check
+		// This test adds/removes a Tool item to verify inventory system is working
+		// The inc/dec sequence must run atomically to prevent Tool from getting stuck in inventory
 		%playerCheck = Client::getOwnedObject(%clientId);
 		if(%playerCheck == -1 || %playerCheck == "")
-			return False; // Player object became invalid
+			return False; // Player object became invalid - abort before modifying inventory
 		
+		// Atomic inventory sanity check - do NOT return early between inc and dec!
 		Player::incItemCount(%clientId, Tool);
-		
-		%playerCheck = Client::getOwnedObject(%clientId);
-		if(%playerCheck == -1 || %playerCheck == "")
-			return False; // Player object became invalid
-		
 		%x = SafeGetItemCount(%clientId, Tool, "AddPoints");
-		
-		%playerCheck = Client::getOwnedObject(%clientId);
-		if(%playerCheck == -1 || %playerCheck == "")
-			return False; // Player object became invalid
-		
 		Player::decItemCount(%clientId, Tool);
-		
-		%playerCheck = Client::getOwnedObject(%clientId);
-		if(%playerCheck == -1 || %playerCheck == "")
-			return False; // Player object became invalid
-		
 		%y = SafeGetItemCount(%clientId, Tool, "AddPoints");
+		
 		if(%x == %y)
 		{
 			//echo("DEBUG SaveCharacter: ABORT - player inventory test failed (x=" @ %x @ ", y=" @ %y @ ")");
@@ -819,7 +808,19 @@ function SaveCharacter(%clientId)
 		%ascTalents = "";
 	$funk::var["[\"" @ %name @ "\", 0, 54]"] = %ascTalents;
 	
-	//echo("DEBUG SaveCharacter: Syncing StoredQuestItems/StoredKeyItems from BeltStorage...");
+	// Save AutoSkill priority list (field 55)
+	%autoSkillPriority = fetchData(%clientId, "AutoSkill_Priority");
+	if(%autoSkillPriority == "" || %autoSkillPriority == "0" || %autoSkillPriority == -1)
+		%autoSkillPriority = "";
+	$funk::var["[\"" @ %name @ "\", 0, 55]"] = %autoSkillPriority;
+	
+	// Save AutoParty enabled state (field 56)
+	%autoPartyEnabled = fetchData(%clientId, "AutoParty_Enabled");
+	if(%autoPartyEnabled == "" || %autoPartyEnabled == "0" || %autoPartyEnabled == -1)
+		%autoPartyEnabled = "";
+	$funk::var["[\"" @ %name @ "\", 0, 56]"] = %autoPartyEnabled;
+	
+
 	// Sync StoredQuestItems and StoredKeyItems from BeltStorage before saving
 	// This ensures saved data matches what's in bank storage
 	// Validate and clean data to prevent negative values from being saved
@@ -1826,7 +1827,20 @@ function LoadCharacter(%clientId)
 			%ascTalents = String::getSubStr(%ascTalents, 2, 99999);
 		storeData(%clientId, "AscensionTalents", %ascTalents);
 		
+		// Load AutoSkill priority list (field 55)
+		%autoSkillPriority = $funk::var[%name, 0, 55];
+		if(%autoSkillPriority == "" || %autoSkillPriority == " " || %autoSkillPriority == "0" || %autoSkillPriority == -1)
+			%autoSkillPriority = "";
+		storeData(%clientId, "AutoSkill_Priority", %autoSkillPriority);
+		
+		// Load AutoParty enabled state (field 56)
+		%autoPartyEnabled = $funk::var[%name, 0, 56];
+		if(%autoPartyEnabled == "" || %autoPartyEnabled == " " || %autoPartyEnabled == "0" || %autoPartyEnabled == -1)
+			%autoPartyEnabled = "";
+		storeData(%clientId, "AutoParty_Enabled", %autoPartyEnabled);
+		
 		// Note: Visual re-mount happens in Game::playerSpawn via schedule
+
 		
 		echo("DEBUG: Loading stored belt items (StoredQuestItems/StoredKeyItems)...");
 		// Handle StoredQuestItems and StoredKeyItems - convert space or "0" to empty string if needed
@@ -6398,7 +6412,31 @@ function DisplayGetInfo(%clientId, %id, %obj)
 		%house = "";
 
 	// Build display message
-	%msg = "<jc><f1>" @ Client::getName(%id) @ ", LEVEL " @ fetchData(%id, "LVL") @ " " @ getFinalCLASS(%id) @ " REMORT " @ fetchData(%id, "RemortStep") @ "<f0> " @ " " @ %showid @ %teamInfo @ "\n" @ %house @ "\nWorld Rank: " @ $WorldRank[fetchData(%id, "TournyRank")] @ "\nBounty: " @ fetchData(%id, "bounty") @ "\n" @ fetchData(%id, "PlayerInfo");
+	%msg = "<jc><f1>" @ Client::getName(%id) @ ", LEVEL " @ fetchData(%id, "LVL") @ " " @ getFinalCLASS(%id) @ " REMORT " @ fetchData(%id, "RemortStep") @ "<f0> " @ " " @ %showid @ %teamInfo @ "\n" @ %house @ "\nWorld Rank: " @ $WorldRank[fetchData(%id, "TournyRank")] @ "\nBounty: " @ fetchData(%id, "bounty");
+	
+	// Add Ascension talents if the player has any
+	%talents = fetchData(%id, "AscensionTalents");
+	if(%talents != "" && %talents != "0")
+	{
+		%talentDisplay = "";
+		for(%t = 0; (%talentId = GetWord(%talents, %t)) != -1; %t++)
+		{
+			if(%talentId != "" && %talentId != "0")
+			{
+				%talentName = $AscensionTalent[%talentId, Name];
+				if(%talentName != "")
+				{
+					if(%talentDisplay != "")
+						%talentDisplay = %talentDisplay @ ", ";
+					%talentDisplay = %talentDisplay @ %talentName;
+				}
+			}
+		}
+		if(%talentDisplay != "")
+			%msg = %msg @ "\n<f2>Ascension:<f0> " @ %talentDisplay;
+	}
+	
+	%msg = %msg @ "\n" @ fetchData(%id, "PlayerInfo");
 	if(fetchData(%id, "PlayerInfo") == "")
 		%msg = %msg @ "A mere citizen of the Kingdom.";
 

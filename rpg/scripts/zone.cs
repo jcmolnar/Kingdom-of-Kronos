@@ -1105,7 +1105,12 @@ function Zone::DoEnter(%z, %clientId)
 	if(!Player::isAiControlled(%clientId) && !%isTownBot)
 		Game::refreshClientScore(%clientId);	//this is so players can see which zone this client is in
 
+	// Auto-party hook for DUNGEON zones (only for real players)
+	if(!Player::isAiControlled(%clientId) && !%isTownBot && %zoneType == "DUNGEON")
+		AutoParty_OnZoneEnter(%clientId, %oldZone, %newZone);
+
 	Zone::onEnter(%clientId, %oldZone, %newZone);
+
 }
 
 function Zone::DoExit(%z, %clientId)

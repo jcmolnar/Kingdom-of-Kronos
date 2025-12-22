@@ -32,13 +32,28 @@ function AddAd(%line0, %line1, %line2, %line3, %line4)
 AddAd("Welcome to Kingdom of Kronos - Hosted by Jobo",
       "       Active development by Jobo");
 
+
+
+AddAd("Ascension Talents are here!",
+      "Players are now able to spend Remorts and SP to unlock PERMANENT Ascension Talents - Boosting your player as you regain them!",
+      "Visit the Ascension Master in the Kingdom of Kronos to learn more.");
+
+AddAd("Auto Party now LIVE",
+      "Use #autoparty ON to enable, #autoparty OFF to disable",
+      "This will automatically party you with other players in DUNGEONS if they also have it enabled.");
+
+AddAd("Auto Skill Upgrades now LIVE",
+      "Use #autoskill for a description of how it works",
+      "This will automatically upgrade your skills as you level up!",
+      "No more manually increasing skills as you level.");
+
+AddAd("Join the TRPG Discord Server!",
+      "https://discord.gg/r3CGT9TY");
+
 AddAd("NEW DUNGEON ALERT!",
       "The Void has been added as the newest high level dungeon",
       "This one might be a little tricky to find your way into...",
       "Hint 1: Think of an upside down Stone Henge entrance");
-
-AddAd("Join the TRPG Discord Server!",
-      "https://discord.gg/r3CGT9TY");
 
 AddAd("For a list of Armor/Spells/Items/Zones",
       "Use the Help Commands in your tab menu");

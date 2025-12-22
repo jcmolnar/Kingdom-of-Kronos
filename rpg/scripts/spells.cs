@@ -1200,7 +1200,11 @@ function BeginCastSpell(%clientId, %keyword)
 					%rtHalf = %rt / 2;
 					%recovTime = $Spell::delay[%i] + Cap(%rtHalf + ((1000 - %sk) / 1000 * %rtHalf), %rtHalf, %rt);
 
-					schedule("%retval=DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\"); if(%retval){refreshMANA(" @ %clientId @ ", " @ %tempManaCost @ ");}", $Spell::delay[%i]);
+					// CRITICAL: Capture caster name at cast time for identity validation
+					// This prevents ghost damage if another bot takes this clientId before spell fires
+					%casterName = Client::getName(%clientId);
+
+					schedule("%retval=DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\", \"" @ %casterName @ "\"); if(%retval){refreshMANA(" @ %clientId @ ", " @ %tempManaCost @ ");}", $Spell::delay[%i]);
 					schedule("storeData(" @ %clientId @ ", \"SpellCastStep\", \"\");sendDoneRecovMsg(" @ %clientId @ ");", %recovTime);
 				
 					// ASCENSION: Spell Echo - 15% chance to cast offensive spells twice (no extra mana cost)
@@ -1210,7 +1214,8 @@ function BeginCastSpell(%clientId, %keyword)
 						{
 							// Schedule echo cast slightly after original
 							%echoDelay = $Spell::delay[%i] + 0.5;
-							schedule("DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\");", %echoDelay);
+							schedule("DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\", \"" @ %casterName @ "\");", %echoDelay);
+
 							// CRITICAL: Clear SpellCastStep after echo completes to prevent casting lock
 							%echoClearDelay = %echoDelay + 0.5;
 							schedule("storeData(" @ %clientId @ ", \"SpellCastStep\", \"\");", %echoClearDelay);
@@ -1234,9 +1239,22 @@ function BeginCastSpell(%clientId, %keyword)
 	return False;
 }
 
-function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2)
+function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expectedCasterName)
 {
-	dbecho($dbechoMode, "DoCastSpell(" @ %clientId @ ", " @ %index @ ", " @ %oldpos @ ", " @ %castPos @ ", " @ %castObj @ ", " @ %w2 @ ")");
+	dbecho($dbechoMode, "DoCastSpell(" @ %clientId @ ", " @ %index @ ", " @ %oldpos @ ", " @ %castPos @ ", " @ %castObj @ ", " @ %w2 @ ", " @ %expectedCasterName @ ")");
+
+	// CRITICAL: Caster identity validation to prevent ghost damage from clientId reuse
+	// If a bot dies after casting a spell and another bot takes its clientId, block the spell
+	if(%expectedCasterName != "" && %expectedCasterName != -1)
+	{
+		%currentCasterName = Client::getName(%clientId);
+		if(%currentCasterName != %expectedCasterName)
+		{
+			echo("[SPELL SAFETY] BLOCKED orphan spell - Original caster: " @ %expectedCasterName @ ", Current entity at clientId " @ %clientId @ ": " @ %currentCasterName);
+			storeData(%clientId, "SpellCastStep", "");
+			return False;
+		}
+	}
 
 	%player = Client::getOwnedObject(%clientId);
 
@@ -1247,6 +1265,7 @@ function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2)
 
 		return False;
 	}
+
 
 	//group-list check
 	if($Spell::groupListCheck[%index])

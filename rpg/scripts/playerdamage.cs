@@ -960,11 +960,19 @@ function Player::onKilled(%this)
 							// For players, use normal LCK logic
 							if(%isAI || fetchData(%clientId, "LCK") <= 0)
 							{
-								if(!%isAI)
-									Player::setItemCount(%clientId, %eammo, 0);
-								
 								%ammoDropCount = %ammoCount;
-								%tmploot = SetStuffString(%tmploot, %eammo, %ammoDropCount);
+								%newTmploot = SetStuffString(%tmploot, %eammo, %ammoDropCount);
+								// CRITICAL: Only remove from inventory AFTER successfully adding to lootbag
+								if(%newTmploot != "False" && %newTmploot != "")
+								{
+									%tmploot = %newTmploot;
+									if(!%isAI)
+										Player::setItemCount(%clientId, %eammo, 0);
+								}
+								else
+								{
+									echo("WARNING: playerdamage.cs - SetStuffString failed for ammo '" @ %eammo @ "'. NOT removing from inventory.");
+								}
 							}
 							else
 								Player::setItemCount(%clientId, %eammo, %ammoCount);
@@ -978,11 +986,21 @@ function Player::onKilled(%this)
 						// For players, use normal LCK logic
 						if(%isAI || fetchData(%clientId, "LCK") <= 0)
 						{
-							if(!%isAI && %player != -1)
-								Player::setItemCount(%clientId, %eitem, %eamnt - %weaponDropCount);
-							%tmploot = SetStuffString(%tmploot, %eitem, %weaponDropCount);
+							%newTmploot = SetStuffString(%tmploot, %eitem, %weaponDropCount);
+							// CRITICAL: Only remove from inventory AFTER successfully adding to lootbag
+							if(%newTmploot != "False" && %newTmploot != "")
+							{
+								%tmploot = %newTmploot;
+								if(!%isAI && %player != -1)
+									Player::setItemCount(%clientId, %eitem, %eamnt - %weaponDropCount);
+							}
+							else
+							{
+								echo("WARNING: playerdamage.cs - SetStuffString failed for weapon '" @ %eitem @ "'. NOT removing from inventory.");
+							}
 						}
 					}
+
 				}
 				else
 				{
@@ -1266,13 +1284,19 @@ function Player::onKilled(%this)
 
 					%newTmploot = SetStuffString(%tmploot, %b, %dropItemCount);
 					if(%newTmploot != "False" && %newTmploot != "")
+					{
 						%tmploot = %newTmploot;
+						// CRITICAL: Only remove from inventory AFTER successfully adding to lootbag
+						if(!isRPGAI(%clientId))	
+							Player::setItemCount(%clientId, %a, 0);
+					}
 					else
-						echo("WARNING: playerdamage.cs - SetStuffString returned invalid data ('" @ %newTmploot @ "'). Keeping original loot string.");
-					
-					if(!isRPGAI(%clientId))	
-						Player::setItemCount(%clientId, %a, 0);
+					{
+						// SetStuffString failed - DO NOT remove items from inventory!
+						echo("WARNING: playerdamage.cs - SetStuffString returned invalid data ('" @ %newTmploot @ "'). NOT removing item '" @ %a @ "' from player inventory to prevent item loss.");
+					}
 				}
+
 			}
 		}
 		
@@ -2752,7 +2776,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				%nameGuardTime = $SpawnInvulnByName[%damagedName];
 				if(%nameGuardTime != "" && %nameGuardTime != -1)
 				{
-					if((getSimTime() - %nameGuardTime) < 15000)
+					if((getSimTime() - %nameGuardTime) < 15)
 						%nameGuard = "true";
 				}
 			}
@@ -2800,17 +2824,19 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 		if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Shooter Resolved: " @ %shooterClient @ " (Original: " @ %object @ ")");
 
 		// PHASE 5 FIX: Check if the shooter's client ID was recently freed
-		// This blocks "ghost damage" from projectiles of dead bots whose IDs were immediately reused
+		// This blocks "ghost damage" from projectiles/spells of dead bots whose IDs were immediately reused
+		// CRITICAL: Window must be 30 seconds to match flag clearing duration and cover long-cast spells
 		%shooterRecentlyFreed = $ClientIdRecentlyFreed[%shooterClient];
 		if(%shooterRecentlyFreed != "" && %shooterRecentlyFreed != "0" && %shooterRecentlyFreed != -1)
 		{
-			// Safety window of 5 seconds (matching SpawnAIGetClientId window)
-			if((getSimTime() - %shooterRecentlyFreed) < 5000)
+			// Safety window of 30 seconds - matches flag clearing and covers longest spell cast times
+			if((getSimTime() - %shooterRecentlyFreed) < 30)
 			{
 				if($DamageDebugEnabled) echo("[DAMAGE FIX] BLOCKED ghost damage from recently freed Client ID " @ %shooterClient @ ". Timestamp: " @ %shooterRecentlyFreed);
 				return;
 			}
 		}
+
 		
 		%damagedClientPos = GameBase::getPosition(%damagedClient);
 		%shooterClientPos = GameBase::getPosition(%shooterClient);

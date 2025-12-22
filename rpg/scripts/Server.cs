@@ -256,6 +256,7 @@ function createServer(%mission, %dedicated)
 	exec(Ai);
 	exec(rpgfunk);
 	exec(skills);
+	exec(AutoSkill);
 	exec(house);
 	exec(rpgarena);
 	exec(sleep);
@@ -267,6 +268,7 @@ function createServer(%mission, %dedicated)
 	exec(spells);
 	exec(classes);
 	exec(party);
+	exec(AutoParty);
 	exec(jail);
 	exec(NSound);
 	exec(Help);

@@ -12,7 +12,7 @@ $SealBattleRound2Complete = false;  // Track if Round 2 was completed
 $SealBattleRound3Complete = false;  // Track if Round 3 was completed
 $SealBattleCurrentRound = 0;  // Track the current active round loop (prevents overlapping loops)
 $SealBattleLoopScheduled = false;  // Track if a loop is currently scheduled (prevents duplicate schedules)
-$SealBattleCooldownEnd = 0;  // Time when cooldown ends (getSimTime() in ms)
+$SealBattleCooldownEnd = 0;  // Time when cooldown ends (getSimTime() in seconds)
 $SealBattleCooldownDuration = 180;  // Cooldown duration in seconds (3 minutes)
 %i=0;
 

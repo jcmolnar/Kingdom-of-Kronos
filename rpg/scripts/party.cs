@@ -1,4 +1,4 @@
-$maxpartymembers = 4;
+$maxpartymembers = 8;
 
 function CreateParty(%clientId)
 {

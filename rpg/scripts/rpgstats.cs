@@ -904,7 +904,9 @@ function DistributeExpForKilling(%damagedClient)
 	              		Game::refreshClientScore(%listClientid);
 			}
 			%perc = %dCounter[%finalDamagedBy[%i]] / %total;
-			%final = Cap(round( %value * %perc ), "inf", (1000 + (fetchData(%listclientId, "RemortStep") * 50)));
+			// Cap EXP per kill - multiplied by Ascension Affinity
+			%expCap = (1000 + (fetchData(%listclientId, "RemortStep") * 50)) * Ascension::GetExpMultiplier(%listClientId);
+			%final = Cap(round( %value * %perc ), "inf", %expCap);
 
 			//determine party exp
 			%pf = %partyFactor[%finalDamagedBy[%i]];
@@ -968,7 +970,11 @@ function Game::refreshClientScore(%clientId)
 					Client::sendMessage(%clientId,0,"You have gained " @ %lvls @ " levels!");
 				Client::sendMessage(%clientId,0,"Welcome to level " @ fetchData(%clientId, "LVL"));
 				PlaySound(SoundLevelUp, GameBase::getPosition(%clientId));
+				
+				// Auto-spend SP on priority skills
+				AutoSkill_Process(%clientId);
 			}
+
 			else if(%lvls < 0)
 			{
 				if(%lvls == -1)
@@ -1021,8 +1027,8 @@ function DoRemort(%clientId)
 		AddSkillPoint(%clientId, %i, $autoStartupSP);
 
 	// Unequip dual-wielded weapon before remort (returns to inventory)
+	// (Toggle mode is preserved - Ascension talent persists through remort)
 	DualWield::UnequipOffHand(%clientId);
-	DualWield::SetToggleMode(%clientId, false);  // Disable toggle mode on remort
 	
 	UnequipMountedStuff(%clientId);
 	
@@ -1034,7 +1040,10 @@ function DoRemort(%clientId)
 	
 	RefreshAll(%clientId);
 
-	Client::sendMessage(%clientId, $MsgBeige, "Welcome to Remort Level " @ fetchData(%clientId, "RemortStep") @ "! Your stats have all increased!!");
+	// Process auto-skill spending after remort (player has fresh SP credits)
+	AutoSkill_Process(%clientId);
+
+	Client::sendMessage(%clientId, $MsgBeige, "Welcome to Remort Level " @ fetchData(%clientId, "RemortStep") @ "! Your stats have all increased!");
 
 	return %pos;
 }

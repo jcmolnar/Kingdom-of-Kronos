@@ -1960,7 +1960,7 @@ function ReconcileSpawnCounters()
 			}
 			
 			%age = %now - %lastSeen;
-			if(%age < 10000) // <10 seconds missing: keep
+			if(%age < 10) // <10 seconds missing: keep
 			{
 				if(%newList == "")
 					%newList = %clientId;
@@ -1970,7 +1970,7 @@ function ReconcileSpawnCounters()
 			}
 			
 			// Bot missing beyond grace: clean up registry
-			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Removing dead bot from registry: clientId=" @ %clientId @ " (missing " @ %age @ " ms)");
+			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[RECONCILE] Removing dead bot from registry: clientId=" @ %clientId @ " (missing " @ %age @ "s)");
 			
 			// Proactively delete any lingering player object to prevent shells
 			// CRITICAL: Check for save file before deletion to prevent deleting real players

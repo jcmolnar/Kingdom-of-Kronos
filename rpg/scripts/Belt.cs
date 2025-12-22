@@ -5564,24 +5564,59 @@ function processMenuBeltWithdrawCategory(%clientId, %option)
 	if(%option == "all")
 	{
 		// Show all items across all categories (old behavior)
-		Belt::ShowWithdrawMenu(%clientId);
+		Belt::ShowWithdrawMenu(%clientId, 1);
 		return;
 	}
 	
 	// Show items in the selected category
-	Belt::ShowWithdrawCategoryItems(%clientId, %option);
+	Belt::ShowWithdrawCategoryItems(%clientId, %option, 1);
 }
 
 // Show items in a specific category for withdraw
-function Belt::ShowWithdrawCategoryItems(%clientId, %category)
+function Belt::ShowWithdrawCategoryItems(%clientId, %category, %page)
 {
+	// Default to page 1 if not specified
+	if(%page == "" || %page < 1)
+		%page = 1;
+	
 	%displayName = Belt::Display(%category);
 	Client::buildMenu(%clientId, "Withdraw " @ %displayName @ ":", "BeltWithdrawCategoryItems", true);
 	
-	%cnt = 1;
 	%beltStorage = fetchData(%clientId, "BeltStorage");
+	
+	// Pagination settings
+	%l = 6; // Items per page
+	
+	// First pass: count total items in this category
+	%totalItems = 0;
+	for(%i = 0; GetWord(%beltStorage, %i) != -1; %i += 2)
+	{
+		%item = GetWord(%beltStorage, %i);
+		%count = GetWord(%beltStorage, %i + 1);
+		
+		if(%item != "" && %item != "0" && %count > 0)
+		{
+			%itemCategory = $BeltItem[%item, "Type"];
+			if(%itemCategory == "")
+				%itemCategory = "Other";
+			
+			if(%itemCategory == %category)
+				%totalItems++;
+		}
+	}
+	
+	// Calculate pagination
+	%np = floor((%totalItems - 1) / %l); // Number of pages (0-indexed)
+	%lb = (%page - 1) * %l; // Lower bound (0-indexed)
+	%ub = %lb + %l - 1; // Upper bound (0-indexed)
+	if(%ub >= %totalItems)
+		%ub = %totalItems - 1;
+	
+	%cnt = 1;
+	%itemIndex = 0;
 	%hasItems = false;
 	
+	// Second pass: display items for current page
 	for(%i = 0; GetWord(%beltStorage, %i) != -1; %i += 2)
 	{
 		%item = GetWord(%beltStorage, %i);
@@ -5595,15 +5630,20 @@ function Belt::ShowWithdrawCategoryItems(%clientId, %category)
 			
 			if(%itemCategory == %category)
 			{
-				%itemName = $BeltItem[%item, "Name"];
-				if(%itemName == "")
+				// Only display items within the current page range
+				if(%itemIndex >= %lb && %itemIndex <= %ub)
 				{
-					%itemName = $AccessoryVar[%item, $Name];
+					%itemName = $BeltItem[%item, "Name"];
 					if(%itemName == "")
-						%itemName = %item;
+					{
+						%itemName = $AccessoryVar[%item, $Name];
+						if(%itemName == "")
+							%itemName = %item;
+					}
+					Client::addMenuItem(%clientId, %cnt++ @ ": " @ %itemName @ " (" @ %count @ ")", %item @ " " @ %category @ " " @ %page);
+					%hasItems = true;
 				}
-				Client::addMenuItem(%clientId, %cnt++ @ %itemName @ " (" @ %count @ ")", %item @ " " @ %category);
-				%hasItems = true;
+				%itemIndex++;
 			}
 		}
 	}
@@ -5611,7 +5651,26 @@ function Belt::ShowWithdrawCategoryItems(%clientId, %category)
 	if(!%hasItems)
 		Client::addMenuItem(%clientId, "1No " @ %displayName @ " in storage", "none");
 	
-	Client::addMenuItem(%clientId, "xBack", "back");
+	// Add pagination buttons
+	if(%page == 1)
+	{
+		if(%totalItems > %l)
+			Client::addMenuItem(%clientId, "nNext >>", "page " @ (%page + 1) @ " " @ %category);
+		Client::addMenuItem(%clientId, "xBack", "back");
+	}
+	else if(%page >= %np + 1)
+	{
+		// Last page
+		Client::addMenuItem(%clientId, "p<< Prev", "page " @ (%page - 1) @ " " @ %category);
+		Client::addMenuItem(%clientId, "xBack", "back");
+	}
+	else
+	{
+		// Middle page
+		Client::addMenuItem(%clientId, "nNext >>", "page " @ (%page + 1) @ " " @ %category);
+		Client::addMenuItem(%clientId, "p<< Prev", "page " @ (%page - 1) @ " " @ %category);
+		Client::addMenuItem(%clientId, "xBack", "back");
+	}
 }
 
 function processMenuBeltWithdrawCategoryItems(%clientId, %option)
@@ -5625,8 +5684,18 @@ function processMenuBeltWithdrawCategoryItems(%clientId, %option)
 	if(%option == "none")
 		return;
 	
+	// Handle page navigation
+	if(GetWord(%option, 0) == "page")
+	{
+		%newPage = GetWord(%option, 1);
+		%category = GetWord(%option, 2);
+		Belt::ShowWithdrawCategoryItems(%clientId, %category, %newPage);
+		return;
+	}
+	
 	%item = GetWord(%option, 0);
 	%category = GetWord(%option, 1);
+	// Page is now word 2, but we don't need it for the final menu
 	
 	// Show the withdraw amount menu
 	MenuSellBeltItemFinal(%clientId, %item, %category, "withdraw");
@@ -6008,10 +6077,14 @@ function processMenuBeltDeposit(%clientId, %option)
 	MenuSellBeltItemFinal(%clientId, %item, %category, "store");
 }
 
-function Belt::ShowWithdrawMenu(%clientId)
+function Belt::ShowWithdrawMenu(%clientId, %page)
 {
 	%clientName = Client::getName(%clientId);
-	echo("DEBUG Belt::ShowWithdrawMenu: ENTER - clientId=" @ %clientId @ " (" @ %clientName @ ")");
+	echo("DEBUG Belt::ShowWithdrawMenu: ENTER - clientId=" @ %clientId @ " (" @ %clientName @ "), page=" @ %page);
+	
+	// Default to page 1 if not specified
+	if(%page == "" || %page < 1)
+		%page = 1;
 	
 	// Clean up BeltStorage first - remove any invalid entries (item "0", count 0, etc.)
 	%beltStorage = fetchData(%clientId, "BeltStorage");
@@ -6054,8 +6127,8 @@ function Belt::ShowWithdrawMenu(%clientId)
 		echo("DEBUG Belt::ShowWithdrawMenu: No cleanup needed");
 	}
 	
-	// Store the original order when first opening the menu
-	if(%clientId.beltWithdrawItemOrder == "")
+	// Store the original order when first opening the menu (page 1)
+	if(%page == 1 && %clientId.beltWithdrawItemOrder == "")
 	{
 		%orderList = "";
 		for(%i = 0; GetWord(%beltStorage, %i) != -1; %i+=2)
@@ -6072,7 +6145,41 @@ function Belt::ShowWithdrawMenu(%clientId)
 	
 	Client::buildMenu(%clientId, "Withdraw Backpack Items:", "BeltWithdraw", true);
 	
+	// Pagination settings
+	%l = 6; // Items per page
+	
+	// Count total items
+	%totalItems = 0;
+	if(%clientId.beltWithdrawItemOrder != "")
+	{
+		%storedOrder = %clientId.beltWithdrawItemOrder;
+		for(%i = 0; (%item = getWord(%storedOrder, %i)) != -1; %i++)
+		{
+			%count = Belt::ItemCount(%item, %beltStorage);
+			if(%count > 0)
+				%totalItems++;
+		}
+	}
+	else
+	{
+		for(%i = 0; GetWord(%beltStorage, %i) != -1; %i+=2)
+		{
+			%item = GetWord(%beltStorage, %i);
+			%count = GetWord(%beltStorage, %i+1);
+			if(%item != "" && %item != -1 && %item != "0" && %count > 0)
+				%totalItems++;
+		}
+	}
+	
+	// Calculate pagination
+	%np = floor((%totalItems - 1) / %l); // Number of pages (0-indexed)
+	%lb = (%page - 1) * %l; // Lower bound (0-indexed)
+	%ub = %lb + %l - 1; // Upper bound (0-indexed)
+	if(%ub >= %totalItems)
+		%ub = %totalItems - 1;
+	
 	%cnt = 1;
+	%itemIndex = 0;
 	
 	// Use stored order if available
 	if(%clientId.beltWithdrawItemOrder != "")
@@ -6083,16 +6190,21 @@ function Belt::ShowWithdrawMenu(%clientId)
 			%count = Belt::ItemCount(%item, %beltStorage);
 			if(%count > 0)
 			{
-				%itemName = $BeltItem[%item, "Name"];
-				if(%itemName == "")
+				// Only display items within the current page range
+				if(%itemIndex >= %lb && %itemIndex <= %ub)
 				{
-					// Fallback to AccessoryVar for non-belt items
-				%itemName = $AccessoryVar[%item, $Name];
-				if(%itemName == "")
-					%itemName = %item;
+					%itemName = $BeltItem[%item, "Name"];
+					if(%itemName == "")
+					{
+						// Fallback to AccessoryVar for non-belt items
+						%itemName = $AccessoryVar[%item, $Name];
+						if(%itemName == "")
+							%itemName = %item;
+					}
+					Client::addMenuItem(%clientId, %cnt @ ": " @ %itemName @ " (" @ %count @ ")", %item);
+					%cnt++;
 				}
-				Client::addMenuItem(%clientId, %cnt @ %itemName @ " (" @ %count @ ")", %item);
-				%cnt++;
+				%itemIndex++;
 			}
 		}
 	}
@@ -6108,24 +6220,48 @@ function Belt::ShowWithdrawMenu(%clientId)
 			if(%item == "" || %item == -1 || %item == "0" || %count <= 0)
 				continue;
 			
-			%itemName = $BeltItem[%item, "Name"];
-			if(%itemName == "")
+			// Only display items within the current page range
+			if(%itemIndex >= %lb && %itemIndex <= %ub)
 			{
-				// Fallback to AccessoryVar for non-belt items
-			%itemName = $AccessoryVar[%item, $Name];
-			if(%itemName == "")
-				%itemName = %item;
+				%itemName = $BeltItem[%item, "Name"];
+				if(%itemName == "")
+				{
+					// Fallback to AccessoryVar for non-belt items
+					%itemName = $AccessoryVar[%item, $Name];
+					if(%itemName == "")
+						%itemName = %item;
+				}
+				
+				Client::addMenuItem(%clientId, %cnt @ ": " @ %itemName @ " (" @ %count @ ")", %item);
+				%cnt++;
 			}
-			
-			Client::addMenuItem(%clientId, %cnt @ %itemName @ " (" @ %count @ ")", %item);
-			%cnt++;
+			%itemIndex++;
 		}
 	}
 	
 	if(%cnt == 1)
 		Client::addMenuItem(%clientId, "1No items in storage", "none");
 	
-	Client::addMenuItem(%clientId, "xBack", "back");
+	// Add pagination buttons
+	if(%page == 1)
+	{
+		if(%totalItems > %l)
+			Client::addMenuItem(%clientId, "nNext >>", "page " @ (%page + 1));
+		Client::addMenuItem(%clientId, "xBack", "back");
+	}
+	else if(%page >= %np + 1)
+	{
+		// Last page
+		Client::addMenuItem(%clientId, "p<< Prev", "page " @ (%page - 1));
+		Client::addMenuItem(%clientId, "xBack", "back");
+	}
+	else
+	{
+		// Middle page
+		Client::addMenuItem(%clientId, "nNext >>", "page " @ (%page + 1));
+		Client::addMenuItem(%clientId, "p<< Prev", "page " @ (%page - 1));
+		Client::addMenuItem(%clientId, "xBack", "back");
+	}
 }
 
 function processMenuBeltWithdraw(%clientId, %option)
@@ -6145,6 +6281,15 @@ function processMenuBeltWithdraw(%clientId, %option)
 	if(%option == "none")
 	{
 		echo("DEBUG processMenuBeltWithdraw: No items in storage");
+		return;
+	}
+	
+	// Handle page navigation
+	if(GetWord(%option, 0) == "page")
+	{
+		%newPage = GetWord(%option, 1);
+		echo("DEBUG processMenuBeltWithdraw: Navigating to page " @ %newPage);
+		Belt::ShowWithdrawMenu(%clientId, %newPage);
 		return;
 	}
 	

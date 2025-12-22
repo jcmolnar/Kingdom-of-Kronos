@@ -494,9 +494,15 @@ function DualWield::IsEnabled(%clientId)
     if(!$DualWield::AllowForBots && isRPGAI(%clientId))
         return false;
     
+    // CRITICAL: Verify player has the Ascension talent
+    // This prevents double attacks if off-hand weapon data exists but player lacks the talent
+    if(!Ascension::HasTalent(%clientId, "DualWield"))
+        return false;
+    
     %offHandWeapon = DualWield::GetOffHandWeapon(%clientId);
     return (%offHandWeapon != "" && %offHandWeapon != -1);
 }
+
 
 // Get the currently equipped off-hand weapon
 function DualWield::GetOffHandWeapon(%clientId)

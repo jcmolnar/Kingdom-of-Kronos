@@ -83,7 +83,35 @@ For understanding the codebase architecture and systems, see these key files:
 - `""` (empty string) and `-1` and `0` can all represent "not set" - check all three
 - `schedule()` requires string argument: `schedule("FunctionCall();", 1.0);`
 - String concatenation uses `@` not `+`
-- `getSimTime()` returns **SECONDS** (with decimals), NOT milliseconds
+## TIME FUNCTIONS
+
+### 14. getSimTime() vs getIntegerTime()
+
+**`getSimTime()`** - Returns time in **SECONDS** (with decimal precision)
+- Use for scheduling, delays, cooldowns, timeouts
+- Compare against values in seconds: `< 30`, `< 10`, `+ 3.0`
+
+**`getIntegerTime(true)`** - Returns time in **MILLISECONDS** (as integer)
+- Often used with `>> 5` to convert to ~32ms units for anti-spam checks
+- When used with `>> 5`, compare against smaller values
+
+### Common Usage Patterns:
+```javascript
+// getSimTime() - seconds
+%timestamp = getSimTime();
+if((getSimTime() - %timestamp) < 30)  // 30 seconds ago
+%cooldownEnd = getSimTime() + 60;      // 60 seconds from now
+
+// getIntegerTime() - milliseconds, often bit-shifted
+%time = getIntegerTime(true) >> 5;    // ~32ms units for anti-spam
+if(%time - %clientId.lastFireTime < $fireTimeDelay)  // Fire rate check
+```
+
+### ⚠️ Common Mistakes:
+- ❌ `if((getSimTime() - %time) < 5000)` - 5000 SECONDS is wrong!
+- ✅ `if((getSimTime() - %time) < 5)` - 5 seconds
+- The `schedule()` function also uses seconds: `schedule("...", 30.0)` = 30 seconds
+
 
 ### 11. ASCII-ONLY CHARACTERS
 **Only use ASCII characters in TorqueScript code and string literals.**
@@ -98,7 +126,25 @@ Common replacements:
 - `•` becomes `*`
 - `—` becomes `--`
 
-### 12. ADDING NEW SCRIPT FILES
+### 12. STRING CASE HANDLING
+**`String::toLower`, `String::toUpper`, `String::getAscii`, `String::getChar` DO NOT EXIST in TorqueScript.**
+
+For case-insensitive string comparison, use the built-in `String::ICompare`:
+```cs
+// ❌ WRONG - These functions don't exist:
+%lower = String::toLower(%str);
+%ascii = String::getAscii(%char);
+
+// ✅ CORRECT - Use String::ICompare for case-insensitive comparison:
+if(String::ICompare(%str1, %str2) == 0)  // Returns 0 if equal (ignoring case)
+
+// Example: checking command arguments
+%subCmd = GetWord(%cropped, 0);
+if(String::ICompare(%subCmd, "on") == 0)
+    // handle "on", "ON", "On", etc.
+```
+
+### 13. ADDING NEW SCRIPT FILES
 **All RPG scripts are loaded from `rpg/scripts/Server.cs` in the `createServer()` function (lines 254-322).**
 
 To add a new script file:
@@ -106,6 +152,26 @@ To add a new script file:
 2. Add `exec(YourFileName);` in Server.cs (without the `.cs` extension)
 3. Scripts load in order - place your exec where dependencies are satisfied
 4. Example: `exec(Ascension);` loads `rpg/scripts/Ascension.cs`
+
+**REQUIRED: HOOKS/INTEGRATIONS HEADER**
+Every new `.cs` file MUST include a header documenting which files it hooks into:
+```cs
+//====================================================================================================
+// MyFeature.cs - Description of the feature
+//====================================================================================================
+// Brief description of what this script does.
+//
+//----------------------------------------------------------------------------------------------------
+// HOOKS / INTEGRATIONS:
+//----------------------------------------------------------------------------------------------------
+// Server.cs        - exec(MyFeature); added to load this script
+// rpgfunk.cs       - SaveCharacter() saves MyData to funkvar slot XX
+// rpgfunk.cs       - LoadCharacter() loads MyData from funkvar slot XX
+// comchat_clean.cs - #mycommand handler added
+// otherfile.cs     - Description of integration
+//====================================================================================================
+```
+This makes it easy to find all touch points when debugging or modifying the feature.
 
 ### 13. ADDING TOWN BOTS (NPCs)
 **Town bots are defined in the mission file and their dialogue handlers are in comchat.cs.**
@@ -139,3 +205,57 @@ else if(%botType == "yourbotname")
 ```
 
 **Bot Types**: The bot name prefix determines type (e.g., "merchant1", "banker2", "sealnpc", "ascensionnpc")
+
+### 15. FUNKVAR SLOTS FOR CHARACTER SAVE DATA
+**Before using a new funkvar slot, ALWAYS check if it's already in use.**
+
+Character data is saved to `$funk::var["[\"playername\", TYPE, SLOT]"]` in `rpgfunk.cs`.
+- TYPE 0 = regular player variables
+- TYPE 1-6 = other data (skills, quest counters, bonus states, etc.)
+
+**Currently Used Slots (TYPE 0):**
+| Slot | Data |
+|------|------|
+| 1 | RACE |
+| 2 | EXP |
+| 3 | campPos |
+| 4 | COINS |
+| 5 | isMimic |
+| 6 | BANK |
+| 7 | PlayerName |
+| 8 | grouplist |
+| 9 | defaultTalk |
+| 10 | password |
+| 11 | bounty |
+| 12 | inArena |
+| 13 | PlayerInfo |
+| 14 | deathmsg |
+| 15 | Inventory (spawnStuff) |
+| 16 | BankStorage |
+| 17 | campRot |
+| 18 | HP |
+| 19 | MANA |
+| 20 | LCKconsequence |
+| 21 | RemortStep |
+| 22 | LCK |
+| 23 | RPG Version |
+| 26 | GROUP |
+| 27 | CLASS |
+| 28 | SPcredits |
+| 30 | MyHouse |
+| 31 | RankPoints |
+| 32 | TournyRank |
+| 35 | QuestItems |
+| 36 | KeyItems |
+| 38 | StoredQuestItems |
+| 39 | StoredKeyItems |
+| 44 | Stance |
+| 50 | Other belt items |
+| 51 | Equipped Belt Armor |
+| 52 | Equipped Belt Accessories |
+| 53 | Off-Hand Weapon |
+| 54 | Ascension Talents |
+| 55 | AutoSkill Priority |
+| 56 | AutoParty Enabled (NEW) |
+
+**Before adding a new slot:** `grep -r ", 0, XX]" rpgfunk.cs` to verify it's not in use.

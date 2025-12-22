@@ -2430,7 +2430,71 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 			Client::sendMessage(%TrueClientId, $MsgWhite, "TungstenSplintMail, TungstenPlateMail, DiamondFieldPlate, DiamondFullPlate");
 			Client::sendMessage(%TrueClientId, $MsgWhite, "BlackDiamondFullPlate, RedDiamondPlate, WhiteDiamondPlate");
 		}
+		if(%w1 == "#autoskill")
+		{
+			// Auto-skill point spending system
+			// Usage: #autoskill set <skill1>, <skill2>, ...
+			//        #autoskill show
+			//        #autoskill clear
+			%subCmd = GetWord(%cropped, 0);
+			
+			if(String::ICompare(%subCmd, "set") == 0)
+			{
+				// Get everything after "set " as the skill list
+				%skillList = "";
+				%setPos = String::findSubStr(%cropped, " ");
+				if(%setPos != -1)
+					%skillList = String::getSubStr(%cropped, %setPos + 1, 999);
+				
+				if(%skillList != "" && %skillList != -1)
+				{
+					AutoSkill_Set(%TrueClientId, %skillList);
+				}
+				else
+				{
+					Client::sendMessage(%TrueClientId, $MsgBeige, "Usage: #autoskill set <skill1>, <skill2>, ...");
+					Client::sendMessage(%TrueClientId, $MsgBeige, "Example: #autoskill set endurance, weight capacity, slashing");
+				}
+			}
+			else if(String::ICompare(%subCmd, "show") == 0)
+			{
+				AutoSkill_Show(%TrueClientId);
+			}
+			else if(String::ICompare(%subCmd, "clear") == 0)
+			{
+				AutoSkill_Clear(%TrueClientId);
+			}
+			else
+			{
+				Client::sendMessage(%TrueClientId, $MsgBeige, "Auto-Skill Commands:");
+				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill set <skill1>, <skill2>, ... - Set priority skills");
+				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill show - View current settings");
+				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill clear - Clear settings");
+			}
+			return;
+		}
+		if(%w1 == "#autoparty")
+		{
+			// Auto-party system for dungeons
+			// Usage: #autoparty on/off or just #autoparty for status
+			%subCmd = GetWord(%cropped, 0);
+			
+			if(String::ICompare(%subCmd, "on") == 0)
+			{
+				AutoParty_Enable(%TrueClientId);
+			}
+			else if(String::ICompare(%subCmd, "off") == 0)
+			{
+				AutoParty_Disable(%TrueClientId);
+			}
+			else
+			{
+				AutoParty_Show(%TrueClientId);
+			}
+			return;
+		}
 		if(%w1 == "#zonedis")
+
 		{
 			//Created by Carling
 			if(SkillCanUse(%TrueClientId, "#zonedis"))
