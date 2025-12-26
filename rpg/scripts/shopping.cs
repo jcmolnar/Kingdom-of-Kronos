@@ -60,8 +60,8 @@ function SetupShop(%clientId, %id)
 		
 		// Then, check all belt items (items without ItemData but registered in $BeltItem)
 		// Skip Deployables category since those still use ItemData (like DepBasePack)
-		// Iterate through belt categories: QuestItems, KeyItems, Consumables
-		for(%catIndex = 1; %catIndex <= 4; %catIndex++)
+		// Iterate through belt categories: QuestItems, KeyItems, Consumables, Accessories
+		for(%catIndex = 1; %catIndex <= 7; %catIndex++)
 		{
 			%category = $Belt::Categories[%catIndex];
 			// Skip Deployables (category index 3) since those still use ItemData

@@ -214,7 +214,12 @@ function buyItem(%clientId, %item)
 			{
 				if(checkResources(%player,%item,%cost,%clientId.bulkNum) && !IsDead(%clientId))
 				{
-					Player::incItemCount(%clientId, %item, %clientId.bulkNum);
+					// Route belt items to Belt system, others to player inventory
+					if(isBeltItem(%item))
+						Belt::GiveThisStuff(%clientId, %item, %clientId.bulkNum);
+					else
+						Player::incItemCount(%clientId, %item, %clientId.bulkNum);
+					
 					BuySell(%player, %item, %clientId.bulkNum, BUY);
 		
 					RefreshAll(%clientId);
@@ -474,7 +479,12 @@ function sellItem(%clientId, %item)
 			}
 			else
 			{
-				%itemCnt = Player::getItemCount(%clientId, %item);
+				// Check belt items first, then player inventory
+				if(isBeltItem(%item))
+					%itemCnt = Belt::HasThisStuff(%clientId, %item);
+				else
+					%itemCnt = Player::getItemCount(%clientId, %item);
+					
 				if(%item.className == Equipped)
 				{
 					Client::sendMessage(%clientId, $MsgRed, "You cannot sell an equipped item.~wC_BuySell.wav");
@@ -487,11 +497,21 @@ function sellItem(%clientId, %item)
 					if($LoreItem[%item])
 						Client::sendMessage(%clientId, $MsgRed, "(You have sold a lore item)");
 	
-					%count = Player::getItemCount(%clientId, %item);
+					// Get count from appropriate system
+					if(isBeltItem(%item))
+						%count = Belt::HasThisStuff(%clientId, %item);
+					else
+						%count = Player::getItemCount(%clientId, %item);
+						
 					%numsell = %clientId.bulkNum;
 	
 					BuySell(%player, %item, %clientId.bulkNum, SELL);
-					Player::setItemCount(%player, %item, (%count-%numsell));
+					
+					// Remove from appropriate system
+					if(isBeltItem(%item))
+						Belt::TakeThisStuff(%clientId, %item, %numsell);
+					else
+						Player::setItemCount(%player, %item, (%count-%numsell));
 					Client::SendMessage(%clientId, $MsgWhite, "~wbuysellsound.wav");
 	
 					RefreshAll(%clientId);

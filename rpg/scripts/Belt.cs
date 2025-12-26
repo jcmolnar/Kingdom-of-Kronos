@@ -4965,59 +4965,35 @@ $AccessoryVar[TestSteelArmor, $AccessoryType] = $BodyAccessoryType;
 // These are test accessory items to verify the belt system works correctly
 // Accessories include rings, necklaces, and belts
 
-// Test Rings (max 2 equipped at once)
-BeltItem::Add("Test Copper Ring", "TestCopperRing", "Accessories", 1.0, 100);
-BeltItem::Add("Test Silver Ring", "TestSilverRing", "Accessories", 2.0, 500);
-BeltItem::Add("Test Gold Ring", "TestGoldRing", "Accessories", 3.0, 2000);
+//===================
+//  Accessories - Rings, Necklaces, Belts (Migrated from ItemData)
+//===================
 
-$AccessoryVar[TestCopperRing, $MiscInfo] = "A simple copper ring. HP +5";
-$AccessoryVar[TestSilverRing, $MiscInfo] = "A shiny silver ring. HP +15, DEF +5";
-$AccessoryVar[TestGoldRing, $MiscInfo] = "A valuable gold ring. HP +30, DEF +10";
+// Power Rings (max 2 equipped) - $RingAccessoryType
+BeltItem::Add("Minor Power Ring", "MinorPowerRing", "Accessories", 2, 800);
+BeltItem::Add("Power Ring", "PowerRing", "Accessories", 5, 2500);
+BeltItem::Add("Major Power Ring", "MajorPowerRing", "Accessories", 15, 20000);
+BeltItem::Add("Extreme Power Ring", "ExtremePowerRing", "Accessories", 25, 300000);
+BeltItem::Add("Godly Power Ring", "GodlyPowerRing", "Accessories", 60, 2000000);
+BeltItem::Add("Heavenly Power Ring", "HeavenlyPowerRing", "Accessories", 90, 10000000);
 
-// Ring stat bonuses (4 = HP, 7 = DEF)
-$AccessoryVar[TestCopperRing, $SpecialVar] = "4 5";
-$AccessoryVar[TestSilverRing, $SpecialVar] = "4 15 7 5";
-$AccessoryVar[TestGoldRing, $SpecialVar] = "4 30 7 10";
+// Regeneration Necklaces (max 1 equipped) - $TalismanAccessoryType
+BeltItem::Add("Minor Regeneration Necklace", "MinorRegenerationNecklace", "Accessories", 20, 3000);
+BeltItem::Add("Regeneration Necklace", "RegenerationNecklace", "Accessories", 50, 40000);
+BeltItem::Add("Major Regeneration Necklace", "MajorRegenerationNecklace", "Accessories", 100, 10000000);
+BeltItem::Add("Extreme Regeneration Necklace", "ExtremeRegenerationNecklace", "Accessories", 250, 50000000);
+BeltItem::Add("Godly Regeneration Necklace", "GodlyRegenerationNecklace", "Accessories", 750, 120000000);
+BeltItem::Add("Heavenly Regeneration Necklace", "HeavenlyRegenerationNecklace", "Accessories", 1125, 300000000);
 
-$AccessoryVar[TestCopperRing, $AccessoryType] = $RingAccessoryType;
-$AccessoryVar[TestSilverRing, $AccessoryType] = $RingAccessoryType;
-$AccessoryVar[TestGoldRing, $AccessoryType] = $RingAccessoryType;
+// AntiMagic Belts (max 1 equipped) - $BeltAccessoryType
+BeltItem::Add("Antimagic Belt", "AntiMagicBelt", "Accessories", 20, 200000);
+BeltItem::Add("Major Antimagic Belt", "MajorAntiMagicBelt", "Accessories", 40, 1500000);
+BeltItem::Add("Extreme AntiMagic Belt", "ExtremeAntiMagicBelt", "Accessories", 70, 12000000);
+BeltItem::Add("Godly AntiMagic Belt", "GodlyAntiMagicBelt", "Accessories", 200, 75000000);
+BeltItem::Add("Heavenly AntiMagic Belt", "HeavenlyAntiMagicBelt", "Accessories", 300, 200000000);
 
-// Test Necklaces (max 1 equipped)
-BeltItem::Add("Test Leather Necklace", "TestLeatherNecklace", "Accessories", 2.0, 200);
-BeltItem::Add("Test Pearl Necklace", "TestPearlNecklace", "Accessories", 4.0, 1000);
-BeltItem::Add("Test Diamond Necklace", "TestDiamondNecklace", "Accessories", 6.0, 5000);
-
-$AccessoryVar[TestLeatherNecklace, $MiscInfo] = "A simple leather necklace. HP Regen +0.5";
-$AccessoryVar[TestPearlNecklace, $MiscInfo] = "An elegant pearl necklace. HP Regen +1, Mana Regen +1";
-$AccessoryVar[TestDiamondNecklace, $MiscInfo] = "A dazzling diamond necklace. HP Regen +2, Mana Regen +2";
-
-// Necklace stat bonuses (10 = HP regen, 11 = Mana regen)
-$AccessoryVar[TestLeatherNecklace, $SpecialVar] = "10 0.5";
-$AccessoryVar[TestPearlNecklace, $SpecialVar] = "10 1 11 1";
-$AccessoryVar[TestDiamondNecklace, $SpecialVar] = "10 2 11 2";
-
-$AccessoryVar[TestLeatherNecklace, $AccessoryType] = $TalismanAccessoryType;
-$AccessoryVar[TestPearlNecklace, $AccessoryType] = $TalismanAccessoryType;
-$AccessoryVar[TestDiamondNecklace, $AccessoryType] = $TalismanAccessoryType;
-
-// Test Belts (max 1 equipped)
-BeltItem::Add("Test Cloth Belt", "TestClothBelt", "Accessories", 1.0, 150);
-BeltItem::Add("Test Leather Belt", "TestLeatherBeltItem", "Accessories", 3.0, 750);
-BeltItem::Add("Test Chain Belt", "TestChainBelt", "Accessories", 5.0, 3000);
-
-$AccessoryVar[TestClothBelt, $MiscInfo] = "A simple cloth belt. MDEF +3";
-$AccessoryVar[TestLeatherBeltItem, $MiscInfo] = "A sturdy leather belt. MDEF +8";
-$AccessoryVar[TestChainBelt, $MiscInfo] = "A strong chain belt. MDEF +15";
-
-// Belt stat bonuses (3 = MDEF)
-$AccessoryVar[TestClothBelt, $SpecialVar] = "3 3";
-$AccessoryVar[TestLeatherBeltItem, $SpecialVar] = "3 8";
-$AccessoryVar[TestChainBelt, $SpecialVar] = "3 15";
-
-$AccessoryVar[TestClothBelt, $AccessoryType] = $BeltAccessoryType;
-$AccessoryVar[TestLeatherBeltItem, $AccessoryType] = $BeltAccessoryType;
-$AccessoryVar[TestChainBelt, $AccessoryType] = $BeltAccessoryType;
+// NOTE: $AccessoryVar definitions (type, stats, weight) remain in Accessory.cs
+// They are already properly defined and shared by both Belt.cs and the old ItemData system
 
 //===================
 //  Other (Miscellaneous belt items)
