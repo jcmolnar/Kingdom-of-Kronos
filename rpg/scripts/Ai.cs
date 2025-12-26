@@ -1011,6 +1011,9 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	storeData(%clientId, "blockHide", "");
 	storeData(%clientId, "lastPos", "");
 	
+	// CRITICAL: Admin privileges - bots should NEVER have admin access
+	%clientId.adminLevel = "";
+	
 	// Additional player-only flags that could cause issues if inherited
 	storeData(%clientId, "ignoreGlobal", "");
 	storeData(%clientId, "campPos", "");
