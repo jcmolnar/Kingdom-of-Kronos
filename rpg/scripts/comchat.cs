@@ -1566,6 +1566,13 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	      }
 		if(%w1 == "#hide")
 		{
+			// CRITICAL: Bots should never be able to use #hide (player-only ability)
+			if(Player::isAiControlled(%TrueClientId))
+			{
+				Client::sendMessage(%TrueClientId, $MsgRed, "Bots cannot use Hide In Shadows.");
+				return;
+			}
+			
 			if(SkillCanUse(%TrueClientId, "#hide"))
 			{
 				if(!fetchData(%TrueClientId, "invisible") && !fetchData(%TrueClientId, "blockHide"))
