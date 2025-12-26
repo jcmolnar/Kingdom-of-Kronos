@@ -480,20 +480,40 @@ function MenuBeltDrop(%clientId, %item, %type)
 		}
 	}
 	
-	// Check if item is Accessory - show Equip option
+	// Check if item is Accessory - show Equip/Unequip based on slot availability
 	if(%type == "Accessories")
 	{
-		// Check the accessory type to determine slot behavior
+		// Get accessory type and slot limits
 		%accessoryType = $AccessoryVar[%item, $AccessoryType];
-		%isEquipped = Belt::IsAccessoryEquipped(%clientId, %item);
+		%maxSlots = $maxAccessory[%accessoryType];
+		if(%maxSlots == "" || %maxSlots == 0)
+			%maxSlots = 1;
 		
-		if(%isEquipped)
+		// Check if this specific item is equipped
+		%isThisItemEquipped = Belt::IsAccessoryEquipped(%clientId, %item);
+		
+		if(%isThisItemEquipped)
 		{
+			// Item is equipped - show Unequip
 			Client::addMenuItem(%clientId, %cnt++ @ "Unequip", %type @ " unequip " @ %item);
 		}
 		else
 		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Equip", %type @ " equip " @ %item);
+			// Item not equipped - check if we have room
+			%currentCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
+			if(%currentCount < %maxSlots)
+			{
+				// Slots available - show Equip
+				Client::addMenuItem(%clientId, %cnt++ @ "Equip", %type @ " equip " @ %item);
+			}
+			else
+			{
+				// No slots available - show message
+				%typeName = $LocationDesc[%accessoryType];
+				if(%typeName == "")
+					%typeName = "accessory";
+				Client::addMenuItem(%clientId, %cnt++ @ "(At max " @ %typeName @ "s)", "disabled");
+			}
 		}
 	}
 	
