@@ -3911,6 +3911,66 @@ function ChangeRace(%clientId, %race)
 	}
 
 	RefreshAll(%clientId);
+	
+	// PHASE 2: Migrate old ItemData accessories to Belt system (one-time migration)
+	// This runs after all character data is loaded and before the player spawns
+	if(!fetchData(%clientId, "AccessoryMigrationComplete"))
+	{
+		MigrateOldAccessoriesToBelt(%clientId);
+	}
+}
+
+//=============================================================================
+// PHASE 2: Old Accessory Migration Function
+//=============================================================================
+function MigrateOldAccessoriesToBelt(%clientId)
+{
+	dbecho($dbechoMode, "MigrateOldAccessoriesToBelt(" @ %clientId @ ")");
+	
+	// CRITICAL: Only run for real players, never bots
+	if(Player::isAiControlled(%clientId))
+		return;
+	
+	// List of accessories migrated to belt (rings, necklaces, belts only)
+	%migrateItems = "MinorPowerRing PowerRing MajorPowerRing ExtremePowerRing GodlyPowerRing HeavenlyPowerRing MinorRegenerationNecklace RegenerationNecklace MajorRegenerationNecklace ExtremeRegenerationNecklace GodlyRegenerationNecklace HeavenlyRegenerationNecklace AntiMagicBelt MajorAntiMagicBelt ExtremeAntiMagicBelt GodlyAntiMagicBelt HeavenlyAntiMagicBelt";
+	
+	%migrationCount = 0;
+	
+	for(%i = 0; (%item = GetWord(%migrateItems, %i)) != -1; %i++)
+	{
+		// Check unequipped ItemData inventory
+		%count = Player::getItemCount(%clientId, %item);
+		if(%count > 0)
+		{
+			Belt::GiveThisStuff(%clientId, %item, %count);
+			Player::setItemCount(%clientId, %item, 0);
+			echo("[ACCESSORY MIGRATE] " @ %item @ " x" @ %count @ " -> Belt for " @ Client::getName(%clientId));
+			%migrationCount += %count;
+		}
+		
+		// Check equipped version (item0) - these need to be equipped in Belt too
+		%equippedItemName = %item @ "0";
+		%count0 = Player::getItemCount(%clientId, %equippedItemName);
+		if(%count0 > 0)
+		{
+			// Give to Belt storage first
+			Belt::GiveThisStuff(%clientId, %item, %count0);
+			// Remove from ItemData inventory
+			Player::setItemCount(%clientId, %equippedItemName, 0);
+			// Equip in Belt system
+			Belt::EquipAccessory(%clientId, %item);
+			echo("[ACCESSORY MIGRATE] Equipped " @ %item @ " (" @ %count0 @ "x) -> Belt for " @ Client::getName(%clientId));
+			%migrationCount += %count0;
+		}
+	}
+	
+	if(%migrationCount > 0)
+	{
+		echo("[ACCESSORY MIGRATE] Total migrated for " @ Client::getName(%clientId) @ ": " @ %migrationCount @ " accessories");
+	}
+	
+	// Mark that migration has run for this character
+	storeData(%clientId, "AccessoryMigrationComplete", true);
 }
 
 // Clear temporary player state variables (for players only)
