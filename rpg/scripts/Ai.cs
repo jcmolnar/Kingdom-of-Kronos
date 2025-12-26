@@ -1006,6 +1006,23 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	storeData(%clientId, "OriginalLootString", "");
 	storeData(%clientId, "Stance", "");
 	
+	// CRITICAL: Player visibility flags (from #hide command) - can make bots invisible if inherited
+	storeData(%clientId, "invisible", "");
+	storeData(%clientId, "blockHide", "");
+	storeData(%clientId, "lastPos", "");
+	
+	// Additional player-only flags that could cause issues if inherited
+	storeData(%clientId, "ignoreGlobal", "");
+	storeData(%clientId, "campPos", "");
+	storeData(%clientId, "BANK", "");
+	storeData(%clientId, "isMimic", "");
+	storeData(%clientId, "grouplist", "");
+	storeData(%clientId, "partyOwned", "");
+	storeData(%clientId, "partylist", "");
+	storeData(%clientId, "BeltStorage", "");
+	storeData(%clientId, "COINS", "");
+	storeData(%clientId, "tmpname", "");
+	
 	// -------------------------------------------------------------------------
 	// 3. Clear $EnemyBotData arrays directly (belt items + flags)
 	// -------------------------------------------------------------------------
@@ -1103,6 +1120,20 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	$ClientData[%clientId, "tmpmana"] = "";
 	$ClientData[%clientId, "tmpLastSaveVer"] = "";
 	$ClientData[%clientId, "savedMountedWeapon"] = "";
+	// CRITICAL: Player visibility and system flags - prevents inheritance issues
+	$ClientData[%clientId, "invisible"] = "";
+	$ClientData[%clientId, "blockHide"] = "";
+	$ClientData[%clientId, "lastPos"] = "";
+	$ClientData[%clientId, "ignoreGlobal"] = "";
+	$ClientData[%clientId, "campPos"] = "";
+	$ClientData[%clientId, "BANK"] = "";
+	$ClientData[%clientId, "isMimic"] = "";
+	$ClientData[%clientId, "grouplist"] = "";
+	$ClientData[%clientId, "partyOwned"] = "";
+	$ClientData[%clientId, "partylist"] = "";
+	$ClientData[%clientId, "BeltStorage"] = "";
+	$ClientData[%clientId, "COINS"] = "";
+	$ClientData[%clientId, "tmpname"] = "";
 	
 	// 6. Clear fast lookup arrays
 	// -------------------------------------------------------------------------
@@ -2859,6 +2890,39 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 				$PreSpawnPlayerName[%pCl] = %pName;
 				%preSpawnPlayerList = %preSpawnPlayerList @ %pCl @ " ";
 			}
+		}
+	}
+	
+	// =========================================================================================================
+	// CRITICAL PRE-SPAWN PROTECTION: Block spawn if predicted ID belongs to a real player
+	// This prevents the engine from assigning a zombie player's client ID to a bot, which causes black screens
+	// The post-spawn check was too late - by then the engine had already corrupted the player's session
+	// =========================================================================================================
+	%predictedSpawnId = PlayerManager::getFreeId();
+	if(%predictedSpawnId != -1)
+	{
+		// Check if this ID has a save file flag (real player, possibly zombie/disconnecting)
+		if($PlayerHasSaveFile[%predictedSpawnId] == true || $PlayerHasSaveFile[%predictedSpawnId] == "1")
+		{
+			// Track defer count to prevent infinite loops
+			$DeferredSpawnRetryCount[%aiName]++;
+			if($DeferredSpawnRetryCount[%aiName] > 5)
+			{
+				echo("[SPAWN ABORT] Max defer retries (5) exceeded for " @ %aiName @ " - predicted ID " @ %predictedSpawnId @ " still has PlayerHasSaveFile. Aborting spawn.");
+				// Clear the stale save file flag since it's clearly orphaned
+				$PlayerHasSaveFile[%predictedSpawnId] = "";
+				$DeferredSpawnRetryCount[%aiName] = "";
+				return "-1_MAX_RETRIES";
+			}
+			
+			echo("[PRE-SPAWN BLOCKED] Predicted ID " @ %predictedSpawnId @ " has PlayerHasSaveFile set (zombie player detected). Deferring spawn of " @ %aiName @ " (retry " @ $DeferredSpawnRetryCount[%aiName] @ "/5)");
+			schedule("createAI(\"" @ %aiName @ "\", \"" @ %spawnPos @ "\", \"" @ %name @ "\", " @ %skipPostSpawn @ ", " @ %bypassRaceCheck @ ");", 2.0);
+			return "deferred_player_zombie";
+		}
+		else
+		{
+			// Predicted ID is safe - clear any stale retry count
+			$DeferredSpawnRetryCount[%aiName] = "";
 		}
 	}
 	
@@ -5635,6 +5699,26 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			if(%timeSinceConnect < 30)
 			{
 				echo("CRITICAL SAFEGUARD: SpawnAIGetClientId - Client ID " @ %aiIdFromGetId @ " has active player connection (" @ %timeSinceConnect @ "s ago). ABORTING spawn for bot " @ %newName @ " to prevent collision.");
+				
+				// CRITICAL: Delete the orphaned bot that was already created by AI::spawn()
+				// Without this, the bot exists as a "shell" with no proper registration
+				%escapedName = String::replace(%newName, "\"", "\\\"");
+				echo("[SHELL CLEANUP] Deleting orphaned bot " @ %newName @ " (clientId=" @ %aiIdFromGetId @ ") to prevent shell bot");
+				
+				// SAFETY: Only clear bot data if this client ID is still AI-controlled
+				// If the player has already taken over the ID, we must NOT clear their data
+				if(Player::isAiControlled(%aiIdFromGetId))
+				{
+					ClearAllBotData(%aiIdFromGetId, false);
+				}
+				else
+				{
+					echo("[SHELL CLEANUP] WARNING: Client ID " @ %aiIdFromGetId @ " is no longer AI-controlled, skipping ClearAllBotData to protect player");
+				}
+				
+				// AI::delete works by name, not client ID, so it's safe regardless
+				AI::delete(%escapedName);
+				
 				// Rollback spawn slot
 				if(%spawnPointId != "" && %spawnPointId != -1)
 					RollbackSpawnSlot(%spawnPointId);
