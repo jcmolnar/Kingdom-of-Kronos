@@ -492,23 +492,30 @@ function MenuBeltDrop(%clientId, %item, %type)
 		// Check if this specific item is equipped
 		%isThisItemEquipped = Belt::IsAccessoryEquipped(%clientId, %item);
 		
+		// DEBUG: Log menu decision
+		echo("[BELT MENU DEBUG] Item: " @ %item @ ", AccessoryType: " @ %accessoryType @ ", IsEquipped: " @ %isThisItemEquipped @ ", MaxSlots: " @ %maxSlots);
+		
 		if(%isThisItemEquipped)
 		{
 			// Item is equipped - show Unequip
+			echo("[BELT MENU DEBUG] Showing Unequip (item is equipped)");
 			Client::addMenuItem(%clientId, %cnt++ @ "Unequip", %type @ " unequip " @ %item);
 		}
 		else
 		{
 			// Item not equipped - check if we have room
 			%currentCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
+			echo("[BELT MENU DEBUG] Current equipped count of type " @ %accessoryType @ ": " @ %currentCount);
 			if(%currentCount < %maxSlots)
 			{
 				// Slots available - show Equip
+				echo("[BELT MENU DEBUG] Showing Equip (" @ %currentCount @ "/" @ %maxSlots @ " slots used)");
 				Client::addMenuItem(%clientId, %cnt++ @ "Equip", %type @ " equip " @ %item);
 			}
 			else
 			{
 				// No slots available - show message
+				echo("[BELT MENU DEBUG] Showing 'At max' message (" @ %currentCount @ "/" @ %maxSlots @ " slots)");
 				%typeName = $LocationDesc[%accessoryType];
 				if(%typeName == "")
 					%typeName = "accessory";
@@ -4675,6 +4682,18 @@ function Belt::DropItem(%clientId, %item, %amnt, %type)
 	%chk = Belt::HasThisStuff(%clientId, %item);
 	if(%chk >= %amnt)
 	{
+		// CRITICAL: Auto-unequip if item is equipped before dropping
+		if(%type == "Accessories" && Belt::IsAccessoryEquipped(%clientId, %item))
+		{
+			echo("[BELT DROP] Auto-unequipping accessory before drop: " @ %item);
+			Belt::UnequipAccessory(%clientId, %item);
+		}
+		else if(%type == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+		{
+			echo("[BELT DROP] Auto-unequipping armor before drop: " @ %item);
+			Belt::UnequipArmor(%clientId, %item);
+		}
+		
 		Belt::TakeThisStuff(%clientId, %item, %amnt);
 		TossLootbag(%clientId, %item @ " " @ %amnt, 8, "*", 0, 1);
 		SaveCharacter(%clientId);
