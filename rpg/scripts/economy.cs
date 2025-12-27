@@ -507,6 +507,26 @@ function sellItem(%clientId, %item)
 	
 					BuySell(%player, %item, %clientId.bulkNum, SELL);
 					
+					// CRITICAL: Auto-unequip if selling equipped items
+					if(isBeltItem(%item))
+					{
+						// Check item category to determine equip type
+						%category = $BeltItem[%item, "Category"];
+						if(%category == "Accessories")
+						{
+							// Unequip as many instances as we're selling
+							for(%unequipCount = 0; %unequipCount < %numsell; %unequipCount++)
+							{
+								if(Belt::IsAccessoryEquipped(%clientId, %item))
+									Belt::UnequipAccessory(%clientId, %item);
+							}
+						}
+						else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+						{
+							Belt::UnequipArmor(%clientId, %item);
+						}
+					}
+					
 					// Remove from appropriate system
 					if(isBeltItem(%item))
 						Belt::TakeThisStuff(%clientId, %item, %numsell);

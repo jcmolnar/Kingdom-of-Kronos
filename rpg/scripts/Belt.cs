@@ -489,38 +489,46 @@ function MenuBeltDrop(%clientId, %item, %type)
 		if(%maxSlots == "" || %maxSlots == 0)
 			%maxSlots = 1;
 		
-		// Check if this specific item is equipped
-		%isThisItemEquipped = Belt::IsAccessoryEquipped(%clientId, %item);
+		// Count how many of THIS SPECIFIC ITEM are already equipped (not just this type)
+		%equippedList = fetchData(%clientId, "EquippedBeltAccessories");
+		%thisItemEquippedCount = 0;
+		for(%i = 0; GetWord(%equippedList, %i) != -1; %i++)
+		{
+			if(GetWord(%equippedList, %i) == %item)
+				%thisItemEquippedCount++;
+		}
+		
+		// Get how many of this item the player has in inventory
+		%inventoryCount = Belt::HasThisStuff(%clientId, %item);
 		
 		// DEBUG: Log menu decision
-		echo("[BELT MENU DEBUG] Item: " @ %item @ ", AccessoryType: " @ %accessoryType @ ", IsEquipped: " @ %isThisItemEquipped @ ", MaxSlots: " @ %maxSlots);
+		echo("[BELT MENU DEBUG] Item: " @ %item @ ", AccessoryType: " @ %accessoryType @ ", ThisItemEquipped: " @ %thisItemEquippedCount @ ", InInventory: " @ %inventoryCount @ ", MaxSlots: " @ %maxSlots);
 		
-		if(%isThisItemEquipped)
+		// Show Unequip if at least 1 of this item is equipped
+		// Show Equip if: (items in inventory > items equipped) AND (total equipped of this type < max slots)
+		if(%thisItemEquippedCount > 0)
 		{
-			// Item is equipped - show Unequip
-			echo("[BELT MENU DEBUG] Showing Unequip (item is equipped)");
+			// At least one is equipped - show Unequip
+			echo("[BELT MENU DEBUG] Showing Unequip (" @ %thisItemEquippedCount @ " equipped)");
 			Client::addMenuItem(%clientId, %cnt++ @ "Unequip", %type @ " unequip " @ %item);
 		}
-		else
+		
+		// Check if we can equip more
+		%currentTypeCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
+		if(%inventoryCount > %thisItemEquippedCount && %currentTypeCount < %maxSlots)
 		{
-			// Item not equipped - check if we have room
-			%currentCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
-			echo("[BELT MENU DEBUG] Current equipped count of type " @ %accessoryType @ ": " @ %currentCount);
-			if(%currentCount < %maxSlots)
-			{
-				// Slots available - show Equip
-				echo("[BELT MENU DEBUG] Showing Equip (" @ %currentCount @ "/" @ %maxSlots @ " slots used)");
-				Client::addMenuItem(%clientId, %cnt++ @ "Equip", %type @ " equip " @ %item);
-			}
-			else
-			{
-				// No slots available - show message
-				echo("[BELT MENU DEBUG] Showing 'At max' message (" @ %currentCount @ "/" @ %maxSlots @ " slots)");
-				%typeName = $LocationDesc[%accessoryType];
-				if(%typeName == "")
-					%typeName = "accessory";
-				Client::addMenuItem(%clientId, %cnt++ @ "(At max " @ %typeName @ "s)", "disabled");
-			}
+			// Have more in inventory and slots available - show Equip
+			echo("[BELT MENU DEBUG] Showing Equip (can equip more: inv=" @ %inventoryCount @ ", equipped=" @ %thisItemEquippedCount @ ", typeSlots=" @ %currentTypeCount @ "/" @ %maxSlots @ ")");
+			Client::addMenuItem(%clientId, %cnt++ @ "Equip", %type @ " equip " @ %item);
+		}
+		else if(%currentTypeCount >= %maxSlots && %thisItemEquippedCount == 0)
+		{
+			// No slots available and this item not equipped - show message
+			echo("[BELT MENU DEBUG] Showing 'At max' message");
+			%typeName = $LocationDesc[%accessoryType];
+			if(%typeName == "")
+				%typeName = "accessory";
+			Client::addMenuItem(%clientId, %cnt++ @ "(At max " @ %typeName @ "s)", "disabled");
 		}
 	}
 	
@@ -5071,13 +5079,18 @@ function Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType)
 	if(%equippedList == "" || %equippedList == "0")
 		return 0;
 	
+	echo("[COUNT DEBUG] Looking for type " @ %accessoryType @ " in equipped list: " @ %equippedList);
+	
 	%count = 0;
 	for(%i = 0; GetWord(%equippedList, %i) != -1; %i++)
 	{
 		%equippedItem = GetWord(%equippedList, %i);
-		if($AccessoryVar[%equippedItem, $AccessoryType] == %accessoryType)
+		%itemType = $AccessoryVar[%equippedItem, $AccessoryType];
+		echo("[COUNT DEBUG] Item: " @ %equippedItem @ ", Type: " @ %itemType @ ", Target: " @ %accessoryType @ ", Match: " @ (%itemType == %accessoryType));
+		if(%itemType == %accessoryType)
 			%count++;
 	}
+	echo("[COUNT DEBUG] Final count for type " @ %accessoryType @ ": " @ %count);
 	return %count;
 }
 
@@ -5158,6 +5171,7 @@ function Belt::UnequipArmor(%clientId, %item)
 	SaveCharacter(%clientId);
 }
 
+
 // Equip accessory from belt inventory
 function Belt::EquipAccessory(%clientId, %item)
 {
@@ -5166,14 +5180,7 @@ function Belt::EquipAccessory(%clientId, %item)
 	// Validate player has the item
 	if(!Belt::HasThisStuff(%clientId, %item))
 	{
-		Client::sendMessage(%clientId, $MsgRed, "You don't have that accessory in your backpack.");
-		return;
-	}
-	
-	// Check if already equipped
-	if(Belt::IsAccessoryEquipped(%clientId, %item))
-	{
-		Client::sendMessage(%clientId, $MsgRed, "That accessory is already equipped.");
+		Client::sendMessage(%clientId, $MsgRed, "You don't have that accessory.");
 		return;
 	}
 	
@@ -5183,9 +5190,10 @@ function Belt::EquipAccessory(%clientId, %item)
 	if(%maxSlots == "" || %maxSlots == 0)
 		%maxSlots = 1; // Default to 1 slot if not defined
 	
-	%currentCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
+	// Count total equipped of this TYPE (not just this item)
+	%currentTypeCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
 	
-	if(%currentCount >= %maxSlots)
+	if(%currentTypeCount >= %maxSlots)
 	{
 		%typeName = $LocationDesc[%accessoryType];
 		if(%typeName == "")
@@ -5194,7 +5202,7 @@ function Belt::EquipAccessory(%clientId, %item)
 		return;
 	}
 	
-	// Add to equipped list
+	// Add to equipped list (allow duplicates for items like rings)
 	%equippedList = fetchData(%clientId, "EquippedBeltAccessories");
 	if(%equippedList == "" || %equippedList == "0")
 		%equippedList = %item;
@@ -5229,23 +5237,30 @@ function Belt::UnequipAccessory(%clientId, %item)
 		return;
 	}
 	
-	// Remove from equipped list
+	// Remove ONE instance of the item from equipped list (important for items like rings where you can have 2 of the same)
 	%equippedList = fetchData(%clientId, "EquippedBeltAccessories");
 	%newList = "";
+	%removed = false;
+	
 	for(%i = 0; GetWord(%equippedList, %i) != -1; %i++)
 	{
 		%equippedItem = GetWord(%equippedList, %i);
-		if(%equippedItem != %item)
+		// Skip the first instance of the item we're unequipping
+		if(%equippedItem == %item && !%removed)
 		{
-			if(%newList == "")
-				%newList = %equippedItem;
-			else
-				%newList = %newList @ " " @ %equippedItem;
+			%removed = true;
+			continue; // Skip this one
 		}
+		// Keep all other items
+		if(%newList == "")
+			%newList = %equippedItem;
+		else
+			%newList = %newList @ " " @ %equippedItem;
 	}
+	
 	storeData(%clientId, "EquippedBeltAccessories", %newList);
 	
-	// Remove accessory stat bonuses
+	// Remove accessory stat bonuses (only once, for the one we unequipped)
 	Belt::ApplyAccessoryStats(%clientId, %item, false);
 	
 	// Get the item's display name

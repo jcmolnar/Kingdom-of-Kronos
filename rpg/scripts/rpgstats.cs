@@ -1011,6 +1011,20 @@ function DoRemort(%clientId)
 	// (Toggle mode is preserved - Ascension talent persists through remort)
 	DualWield::UnequipOffHand(%clientId);
 	
+	// Unequip all belt accessories and armor before remort
+	// This prevents stat bonuses from carrying over to level 1
+	%equippedAccessories = fetchData(%clientId, "EquippedBeltAccessories");
+	for(%i = 0; GetWord(%equippedAccessories, %i) != -1; %i++)
+	{
+		%accessory = GetWord(%equippedAccessories, %i);
+		if(Belt::IsAccessoryEquipped(%clientId, %accessory))
+			Belt::UnequipAccessory(%clientId, %accessory);
+	}
+	
+	%equippedArmor = fetchData(%clientId, "EquippedBeltArmor");
+	if(%equippedArmor != "" && %equippedArmor != "0")
+		Belt::UnequipArmor(%clientId, %equippedArmor);
+	
 	UnequipMountedStuff(%clientId);
 	
 	Player::setDamageFlash(%clientId, 1.0);
