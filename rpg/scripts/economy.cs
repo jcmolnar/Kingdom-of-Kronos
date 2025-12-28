@@ -511,7 +511,7 @@ function sellItem(%clientId, %item)
 					if(isBeltItem(%item))
 					{
 						// Check item category to determine equip type
-						%category = $BeltItem[%item, "Category"];
+						%category = $BeltItem[%item, "Type"];
 						if(%category == "Accessories")
 						{
 							// Unequip as many instances as we're selling

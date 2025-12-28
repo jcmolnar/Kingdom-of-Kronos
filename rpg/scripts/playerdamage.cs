@@ -414,9 +414,13 @@ function DisplayDamageMessage(%clientId, %message, %msgColor)
 	if(%displayType == "")
 		%displayType = "bottomprint"; // Default to bottomprint
 	
-	// If set to floating, don't show detailed messages (floating numbers handle it)
+	// If set to floating, send to ATKText system
 	if(%displayType == "floating")
+	{
+		// Send to floating damage display - use "defender" view type for miss/resist messages
+		remoteEval(%clientId, ATKText, %message, "", "defender");
 		return;
+	}
 	
 	if(%displayType == "chat")
 	{
@@ -1678,6 +1682,22 @@ function Player::onKilled(%this)
 						// This prevents items from being lost when only a portion should drop (e.g., bot has 2, drops 1, should keep 1)
 						// Use Belt::TakeThisStuff to remove only the dropped amount
 						// This properly consolidates items and preserves any remaining count
+						
+						// CRITICAL: Auto-unequip accessories/armor before removing on death
+						%itemCategory = $BeltItem[%beltItemName, "Type"];
+						if(%itemCategory == "Accessories")
+						{
+							for(%unequipCount = 0; %unequipCount < %dropCount; %unequipCount++)
+							{
+								if(Belt::IsAccessoryEquipped(%clientId, %beltItemName))
+									Belt::UnequipAccessory(%clientId, %beltItemName);
+							}
+						}
+						else if(%itemCategory == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %beltItemName)
+						{
+							Belt::UnequipArmor(%clientId, %beltItemName);
+						}
+						
 						Belt::TakeThisStuff(%clientId, %beltItemName, %dropCount);
 						
 						// DEBUG: Log when enemy bots have items removed after drop
@@ -1696,6 +1716,22 @@ function Player::onKilled(%this)
 						{
 							// Bot had items but drop rate failed - remove them (they weren't added to lootbag)
 							// Use Belt::TakeThisStuff to remove all items (dropCount would be 0, so remove the full count)
+							
+							// CRITICAL: Auto-unequip accessories/armor before removing on death
+							%itemCategory = $BeltItem[%beltItemName, "Type"];
+							if(%itemCategory == "Accessories")
+							{
+								for(%unequipCount = 0; %unequipCount < %beltItemCount; %unequipCount++)
+								{
+									if(Belt::IsAccessoryEquipped(%clientId, %beltItemName))
+										Belt::UnequipAccessory(%clientId, %beltItemName);
+								}
+							}
+							else if(%itemCategory == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %beltItemName)
+							{
+								Belt::UnequipArmor(%clientId, %beltItemName);
+							}
+							
 							Belt::TakeThisStuff(%clientId, %beltItemName, %beltItemCount);
 							
 							// DEBUG: Log when enemy bots have items removed due to failed drop rate

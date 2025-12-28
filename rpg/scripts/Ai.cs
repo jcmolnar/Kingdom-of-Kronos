@@ -4658,52 +4658,10 @@ function AI::initDrones(%team, %numAi)
 $numAI = 0;
 
 //------------------------------------------------------------------
-// Helper Functions for Bot Identification and Team Determination
+// Helper Functions for Bot Team Determination
+// NOTE: IsEnemyBot and IsTownBot are defined earlier in this file (around lines 2495, 2546)
+// to preserve comprehensive safeguards including save file checks and registry lookups
 //------------------------------------------------------------------
-
-// Determine if a client ID is an enemy bot
-function IsEnemyBot(%clientId)
-{
-	if(%clientId == -1 || %clientId == "")
-		return false;
-	
-	// Check SpawnBotInfo (enemy bots have this, town bots don't)
-	%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
-	if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
-		return true;
-	
-	// Check display name pattern (fallback for newly spawned bots)
-	%playerName = Client::getName(%clientId);
-	if(%playerName != "" && %playerName != -1)
-	{
-		// Check for enemy bot name patterns (must be at start of name)
-		if(HasEnemyBotNamePrefix(%playerName))
-		{
-			return true;
-		}
-	}
-	
-	return false;
-}
-
-// Determine if a client ID is a town bot
-function IsTownBot(%clientId)
-{
-	if(%clientId == -1 || %clientId == "")
-		return false;
-	
-	%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
-	%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
-	
-	// Town bots have BotInfoAiName but no SpawnBotInfo
-	if(%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1 && 
-	   (%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1))
-	{
-		return true;
-	}
-	
-	return false;
-}
 
 // Centralized function to determine bot team from various sources
 // Returns the team number, or -1 if unable to determine

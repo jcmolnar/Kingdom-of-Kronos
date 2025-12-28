@@ -550,6 +550,22 @@ function NullItemList(%clientId, %type, %msgcolor, %msg)
 				if(%name == "") %name = $AccessoryVar[%item, $Name];
 				%newmsg = nsprintf(%msg, %name);
 				Client::sendMessage(%clientId, %msgcolor, %newmsg);
+				
+				// CRITICAL: Auto-unequip accessories/armor before removing
+				%itemCategory = $BeltItem[%item, "Type"];
+				if(%itemCategory == "Accessories")
+				{
+					for(%unequipCount = 0; %unequipCount < %amnt; %unequipCount++)
+					{
+						if(Belt::IsAccessoryEquipped(%clientId, %item))
+							Belt::UnequipAccessory(%clientId, %item);
+					}
+				}
+				else if(%itemCategory == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+				{
+					Belt::UnequipArmor(%clientId, %item);
+				}
+				
 				Belt::TakeThisStuff(%clientid,%item,%amnt);
 			}
 		}

@@ -1235,22 +1235,6 @@ function WipeFromZone(%z)
 	}
 }
 
-// Helper function to check if a client is a town bot
-// Town bots have BotInfoAiName that starts with "TownBot_"
-function IsTownBot(%clientId)
-{
-	dbecho($dbechoMode, "IsTownBot(" @ %clientId @ ")");
-
-	%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
-	if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0")
-	{
-		// Check if BotInfoAiName starts with "TownBot_"
-		if(String::findSubStr(%botInfoAiName, "TownBot_") == 0)
-			return True;
-	}
-	return False;
-}
-
 function IsInBetween(%x, %r1, %r2)
 {
 	dbecho($dbechoMode, "IsInBetween(" @ %x @ ", " @ %r1 @ ", " @ %r2 @ ")");

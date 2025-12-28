@@ -1027,36 +1027,6 @@ function processMenuselectrweapon(%clientId, %item)
 	}
 	return;
 }
-function processMenuselectspell(%clientId, %option)
-{
-	dbecho($dbechoMode, "processMenuselectspell(" @ %clientId @ ", " @ %option @ ")");
-
-	%name = Client::getName(%clientId);
-
-	$playerCurrentSpell[%clientId] = $spellShell[%option];
-}
-function processMenuselectspell(%clientId, %option)
-{
-	dbecho($dbechoMode, "processMenuselectspell(" @ %clientId @ ", " @ %option @ ")");
-
-	%name = Client::getName(%clientId);
-
-	$playerCurrentSpell[%clientId] = $spellShell[%option];
-}
-function processMenuselectrweapon(%clientId, %item)
-{
-	%list = GetAccessoryList(%clientId, 10, -1);
-
-	Client::buildMenu(%clientId, "Projectiles:", "selectproj", true);
-	for(%i = 0; GetWord(%list, %i) != -1; %i++)
-	{
-		%proj = GetWord(%list, %i);
-
-		if(String::findSubStr($ProjRestrictions[%proj], "," @ %item @ ",") != -1)
-			Client::addMenuItem(%clientId, %curitem++ @ %proj.description, %item @ " " @ %proj);
-	}
-	return;
-}
 function processMenuselectproj(%clientId, %itemandproj)
 {
 	%item = GetWord(%itemandproj, 0);
