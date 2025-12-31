@@ -8,6 +8,12 @@ function GetClientIdFromPlayerObject(%playerObj)
 	if(!isObject(%playerObj))
 		return -1;
 	
+	// OPTIMIZATION: Check cache first to avoid O(N) lookup
+	// This dramatically speeds up damage processing in populated areas (e.g. AOE spells)
+	%cachedId = $BotClientCache[%playerObj];
+	if(%cachedId != "" && Client::getOwnedObject(%cachedId) == %playerObj)
+		return %cachedId;
+	
 	// Try Player::getClient() first (works for real players)
 	%clientId = Player::getClient(%playerObj);
 	if(%clientId != -1 && %clientId != "")
@@ -219,6 +225,7 @@ function GetClientIdFromPlayerObject(%playerObj)
 				// (Legacy validation removed - unified safeguards prioritize isFile() check elsewhere)
 				
 				%foundClientId = %checkId; // Found client ID for enemy bot or player
+				$BotClientCache[%playerObj] = %foundClientId; // Cache it for next time
 				break;
 			}
 		}
@@ -280,6 +287,7 @@ function GetClientIdFromPlayerObject(%playerObj)
 					// (Legacy validation removed - unified safeguards prioritize isFile() check elsewhere)
 					
 					%foundClientId = %checkId; // Found client ID for enemy bot or player
+					$BotClientCache[%playerObj] = %foundClientId; // Cache it for next time
 					break;
 				}
 			}
@@ -404,7 +412,8 @@ function GetClientOrBotName(%clientId)
 // %clientId: The client to send the message to
 // %message: The message text (may contain alignment tags like <jl> or <jr>)
 // %msgColor: Optional message color for chat mode (defaults to $MsgRed)
-function DisplayDamageMessage(%clientId, %message, %msgColor)
+// %viewType: Optional view type for floating damage ("attacker" or "defender", defaults to "defender")
+function DisplayDamageMessage(%clientId, %message, %msgColor, %viewType)
 {
 	if(%clientId == "" || %clientId == -1)
 		return;
@@ -417,8 +426,24 @@ function DisplayDamageMessage(%clientId, %message, %msgColor)
 	// If set to floating, send to ATKText system
 	if(%displayType == "floating")
 	{
-		// Send to floating damage display - use "defender" view type for miss/resist messages
-		remoteEval(%clientId, ATKText, %message, "", "defender");
+		// Get player's animation style preference
+		%animationStyle = fetchData(%clientId, "floatingAnimationStyle");
+		if(%animationStyle == "" || %animationStyle == -1)
+			%animationStyle = "float"; // Default style
+		
+		// Clean the message for ATKText (remove alignment tags)
+		%cleanMsg = %message;
+		%cleanMsg = String::replace(%cleanMsg, "<jl>", "");
+		%cleanMsg = String::replace(%cleanMsg, "<jr>", "");
+		%cleanMsg = String::replace(%cleanMsg, "<jc>", "");
+		%cleanMsg = String::replace(%cleanMsg, "<f1>", "");
+		
+		// Default view type to "defender" if not specified
+		if(%viewType == "" || %viewType == -1)
+			%viewType = "defender";
+		
+		// Send to floating damage display with appropriate view type
+		remoteEval(%clientId, "ATKText", %cleanMsg, %animationStyle, %viewType);
 		return;
 	}
 	
@@ -2727,7 +2752,7 @@ function Player::onKilled(%this)
 			schedule("SaveCharacter(" @ %clientId @ ");", 2, %clientId);
 			
 			// Save world after 3 second delay (allows character saves to complete first)
-			schedule("SaveWorld();", 3, %clientId);
+			schedule("SaveWorld();", 3);
 		}
 	}
 }
@@ -2820,8 +2845,33 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 			if(!%hasLoaded || %spawnInvuln || %nameGuard == "true")
 			{
 				// Hard ignore: exit immediately to prevent any processing, messages, or side effects
-				if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Early Exit: Invuln/Loading/NameGuard. Loaded=" @ %hasLoaded @ " Invuln=" @ %spawnInvuln @ " NameGuard=" @ %nameGuard);
+				if($DamageDebugEnabled) echo("[DAMAGE DEBUG] AI Early Exit: Invuln/Loading/NameGuard. Loaded=" @ %hasLoaded @ " Invuln=" @ %spawnInvuln @ " NameGuard=" @ %nameGuard);
 				return;
+			}
+		}
+		else
+		{
+			// HUMAN PLAYER spawn protection: 5 seconds of invincibility after connecting
+			// Prevents damage from bots attacking the previous clientId occupant
+			%spawnInvuln = fetchData(%damagedClient, "SpawnInvuln");
+			if(%spawnInvuln)
+			{
+				if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Player Early Exit: Spawn protection active");
+				return;
+			}
+			// Also check name-based guard
+			%damagedName = Client::getName(%damagedClient);
+			if(%damagedName != "" && %damagedName != -1)
+			{
+				%nameGuardTime = $SpawnInvulnByName[%damagedName];
+				if(%nameGuardTime != "" && %nameGuardTime != -1)
+				{
+					if((getSimTime() - %nameGuardTime) < 5)
+					{
+						if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Player Early Exit: Name guard active");
+						return;
+					}
+				}
 			}
 		}
 
@@ -3068,6 +3118,186 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				storeData(%shooterClient, "NextHitCleave", "");
 			}			
 
+			//============================================================================
+			// SPECIAL WEAPON EFFECTS
+			//============================================================================
+			
+			// Track hit counter for weapon effects
+			%weaponEffect = $WeaponEffect[%weapon];
+			if(%weaponEffect != "")
+			{
+				// Increment hit counter for this weapon on this target
+				// Use global array - TorqueScript doesn't support dynamic property access
+				%hitCount = $WeaponHitCount[%shooterClient, %weapon, %damagedClient];
+				if(%hitCount == "" || %hitCount == -1)
+					%hitCount = 0;
+				%hitCount++;
+				$WeaponHitCount[%shooterClient, %weapon, %damagedClient] = %hitCount;
+
+				
+				// FINAL VERDICT - 1% instant kill on non-boss targets
+				if(%weaponEffect == "INSTANT_KILL")
+				{
+					%chance = $WeaponEffectChance[%weapon];
+					if(%chance == "" || %chance == -1) %chance = 1;
+					
+					%roll = floor(getRandom() * 100) + 1;  // 1-100
+					if(%roll <= %chance)
+					{
+						// Check if target is protected (town bots, same team, party members, bosses)
+						%isProtected = false;
+						%targetName = Client::getName(%damagedClient);
+						%spawnBotInfo = fetchData(%damagedClient, "SpawnBotInfo");
+						
+						// Protection 1: Town bots are immune
+						if(isTownBot(%damagedClient))
+						{
+							%isProtected = true;
+						}
+						
+						// Protection 2: Same team players (unless in duel or on hit list)
+						if(!%isProtected)
+						{
+							%shooterTeam = GameBase::getTeam(%shooterClient);
+							%targetTeam = GameBase::getTeam(%damagedClient);
+							
+							// If same team and target is NOT an enemy bot
+							if(%shooterTeam == %targetTeam && !IsEnemyBot(%damagedClient))
+							{
+								// Check if in duel or on hit list
+								%inDuel = (fetchData(%shooterClient, "DuelTarget") == %damagedClient);
+								%onHitList = (String::findSubStr(fetchData(%shooterClient, "Hitlist"), Client::getName(%damagedClient)) != -1);
+								
+								if(!%inDuel && !%onHitList)
+								{
+									%isProtected = true;
+								}
+							}
+						}
+						
+						// Protection 3: Party members are immune
+						if(!%isProtected)
+						{
+							%shooterParty = fetchData(%shooterClient, "PARTY");
+							%targetParty = fetchData(%damagedClient, "PARTY");
+							if(%shooterParty != "" && %shooterParty != -1 && %shooterParty == %targetParty)
+							{
+								%isProtected = true;
+							}
+						}
+						
+						// Protection 4: Bosses are immune
+						if(!%isProtected)
+						{
+							if(String::findSubStr(%targetName, "Boss") != -1 || 
+							   String::findSubStr(%targetName, "King") != -1 ||
+							   String::findSubStr(%targetName, "Queen") != -1 ||
+							   String::findSubStr(%spawnBotInfo, "Boss") != -1)
+							{
+								%isProtected = true;
+							}
+						}
+						
+						// Protection 5: Seal Battle bots are immune
+						if(!%isProtected)
+						{
+							%isSealBot = fetchData(%damagedClient, "SealBattleBot");
+							if(%isSealBot == "true" || %isSealBot == "True" || %isSealBot == "1")
+							{
+								%isProtected = true;
+							}
+							// Also check for Seal in display name
+							if(String::findSubStr(%targetName, "SealFighter") == 0 || 
+							   String::findSubStr(%targetName, "SealMage") == 0 ||
+							   String::findSubStr(%targetName, "SealGuardian") == 0)
+							{
+								%isProtected = true;
+							}
+						}
+						
+						// Protection 6: Colloseum arena bots are immune
+						if(!%isProtected)
+						{
+							// Check if target is in Colloseum zone
+							%targetPos = GameBase::getPosition(Client::getOwnedObject(%damagedClient));
+							if(%targetPos != "" && %targetPos != -1)
+							{
+								%targetZone = Zone::fetchZone(getWord(%targetPos, 0), getWord(%targetPos, 1), getWord(%targetPos, 2), "DESC");
+								if(%targetZone == "Colloseum")
+								{
+									%isProtected = true;
+								}
+							}
+						}
+						
+						if(!%isProtected)
+						{
+							// INSTANT KILL! Call Player::kill directly to bypass LCK
+							%targetName = Client::getName(%damagedClient);
+							
+							// Send special message BEFORE killing
+							Client::sendMessage(%shooterClient, 0, "~wgame/explode3.wav");
+							Client::sendMessage(%shooterClient, $MsgRed, "FINAL VERDICT! " @ %targetName @ " has been judged!");
+							Client::sendMessage(%damagedClient, $MsgRed, "FINAL VERDICT! You have been instantly slain by Final Verdict!");
+							
+							// Kill the target directly - bypasses LCK and all other checks
+							Player::kill(%damagedClient);
+							
+							// Return early - don't process rest of damage logic
+							return;
+						}
+					}
+				}
+				
+				// STORM CALLER - Lightning strike every N hits
+				if(%weaponEffect == "LIGHTNING_STRIKE")
+				{
+					%frequency = $WeaponEffectFrequency[%weapon];
+					if(%frequency == "" || %frequency == -1) %frequency = 5;
+					
+					if((%hitCount % %frequency) == 0)
+					{
+						// Trigger lightning strike!
+						%targetPos = GameBase::getPosition(Client::getOwnedObject(%damagedClient));
+						if(%targetPos != "" && %targetPos != -1)
+						{
+							// Create lightning visual effect
+							CreateAndDetBomb(%shooterClient, "Bomb21", %targetPos, False, 0);
+							playSound(shockExplosion, %targetPos);
+							
+							// Calculate bonus magic damage (scales with Piercing skill)
+							%lightningDmg = 500;  // Base lightning damage
+							%piercingSkill = $PlayerSkill[%shooterClient, $SkillPiercing];
+							if(%piercingSkill == "" || %piercingSkill == -1) %piercingSkill = 1000;
+							%lightningDmg = round((%lightningDmg * %piercingSkill) / 1000);
+							
+							// Apply MDEF reduction for lightning damage
+							%targetMDEF = fetchData(%damagedClient, "MDEF");
+							if(%targetMDEF == "" || %targetMDEF == -1) %targetMDEF = 0;
+							%mdefReduction = (getRandom() * (%targetMDEF / 10)) + 1;
+							%lightningDmg = floor(Cap(%lightningDmg - %mdefReduction, 1, "inf"));
+							
+							// Add lightning damage to total
+							%value += %lightningDmg;
+							
+							Client::sendMessage(%shooterClient, $MsgYellow, "LIGHTNING STRIKE! +" @ %lightningDmg @ " bonus damage!");
+						}
+					}
+				}
+				
+				// WORLD SPLITTER - Alternating physical/magic damage
+				if(%weaponEffect == "ALTERNATING_DAMAGE")
+				{
+					// Odd hits = physical (DEF), Even hits = magic (MDEF)
+					if((%hitCount % 2) == 0)
+					{
+						// Even hit - use MDEF instead of DEF
+						%useMDEF = true;
+					}
+				}
+			}
+
+
 			if(%rweapon != "")
 				%rweapondamage = GetRoll(GetWord(GetAccessoryVar(%rweapon, $SpecialVar), 1));
 			else
@@ -3078,16 +3308,34 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 			%skillValue = $PlayerSkill[%shooterClient, %skilltype];
 			if(%skillValue == "" || %skillValue == -1)
 				%skillValue = 1000; // Default skill value if not set (for NPCs or edge cases)
-			%value = round((( (%weapondamage + (%playerattack + %rweapondamage)) / 1000) * %skillValue) * %multi);
+			
+			// Skip normal damage calculation if instant kill triggered (Final Verdict)
+			if(!%instantKill)
+			{
+				%value = round((( (%weapondamage + (%playerattack + %rweapondamage)) / 1000) * %skillValue) * %multi);
+			}
 
-			%ab = (getRandom() * (fetchData(%damagedClient, "DEF") / 10)) + 1;
-			%value = Cap(%value - %ab, 1, "inf");
 
-			%a = (%value * 0.15);
-			%r = round((getRandom() * (%a*2)) - %a);
-			%value += %r;
-			if(%value < 1)
-			%value = 1;
+			// Skip DEF reduction and variance for instant kill (Final Verdict)
+			if(!%instantKill)
+			{
+				%ab = (getRandom() * (fetchData(%damagedClient, "DEF") / 10)) + 1;
+				
+				// World Splitter: Even hits use MDEF instead of DEF
+				if(%useMDEF)
+				{
+					%ab = (getRandom() * (fetchData(%damagedClient, "MDEF") / 10)) + 1;
+				}
+				
+				%value = Cap(%value - %ab, 1, "inf");
+
+				%a = (%value * 0.15);
+				%r = round((getRandom() * (%a*2)) - %a);
+				%value += %r;
+				if(%value < 1)
+					%value = 1;
+			}
+
 
 			if(%Bash)	//i'm doing this condition here because %mom is dependant on %value
 			{
@@ -3585,7 +3833,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					if(!%isAI && %shooterDamageMode)
 					{
 						%msg = "<jl>You try to hit " @ Client::getName(%damagedClient) @ ", but miss!";
-						DisplayDamageMessage(%shooterClient, %msg, %msgcolor);
+						DisplayDamageMessage(%shooterClient, %msg, %msgcolor, "attacker");
 					}
 
 					// Always send miss message to damaged player
@@ -3596,7 +3844,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 						{
 							%damagedClient.lastMissMessage = %time;
 							%msg = "<jr>" @ %hitby @ " tries to hit you, but misses!";
-							DisplayDamageMessage(%damagedClient, %msg, %msgcolor);
+							DisplayDamageMessage(%damagedClient, %msg, %msgcolor, "defender");
 						}
 					}
 				}
@@ -3608,7 +3856,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 						if(%type == $SpellDamageType)
 						{
 							%msg = "<jl>" @ Client::getName(%damagedClient) @ " resists your spell!";
-							DisplayDamageMessage(%shooterClient, %msg, %msgcolor);
+							DisplayDamageMessage(%shooterClient, %msg, %msgcolor, "attacker");
 						}
 						else
 							Client::sendMessage(%shooterClient, %msgcolor, Client::getName(%damagedClient) @ " resists your spell!");
@@ -3618,7 +3866,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 						if(%type == $SpellDamageType)
 						{
 							%msg = "<jr>You resist " @ %hitby @ "'s spell!";
-							DisplayDamageMessage(%damagedClient, %msg, %msgcolor);
+							DisplayDamageMessage(%damagedClient, %msg, %msgcolor, "defender");
 						}
 						else
 							Client::sendMessage(%damagedClient, %msgcolor, "You resist " @ %hitby @ "'s spell!");
@@ -4014,31 +4262,32 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							{
 								// Use %Val1 which was already constructed with "You hit [enemy] for LCK!" message
 								%msg = "<jl>" @ %Val1;
-								DisplayDamageMessage(%shooterClient, %msg, %msgcolor);
+								DisplayDamageMessage(%shooterClient, %msg, %msgcolor, "attacker");
 							}
 							else if(%type == $SpellDamageType)
 							{
 								if(%criticalAttack)
 								{
 									%msg = "<jl>You critically " @ %saction @ " " @ Client::getName(%damagedClient) @ %spellName @ " for " @ %convValue @ " points of damage!";
-									DisplayDamageMessage(%shooterClient, %msg, %msgcolor);
+									DisplayDamageMessage(%shooterClient, %msg, %msgcolor, "attacker");
 								}
 								else
 								{
 									%msg = "<jl>You " @ %saction @ " " @ Client::getName(%damagedClient) @ %spellName @ " for " @ %convValue @ " points of damage!";
-									DisplayDamageMessage(%shooterClient, %msg, %msgcolor);
+									DisplayDamageMessage(%shooterClient, %msg, %msgcolor, "attacker");
 								}
 							}
 							else
 							{
 								// For weapon attacks, use %Val1 which already has the correct message
 								%msg = "<jl>" @ %Val1;
-								DisplayDamageMessage(%shooterClient, %msg, %msgcolor);
+								DisplayDamageMessage(%shooterClient, %msg, %msgcolor, "attacker");
 							}
 							
-							// Send ATKText to attacker (only if not AI controlled)
-							// Check if floating numbers are enabled (either explicitly or via damageDisplayType)
-							if(!Player::isAiControlled(%shooterClient) && %shooterClient != "" && %shooterClient != -1 && %shooterClient != 0)
+							// REMOVED: ATKText for attacker is now handled by DisplayDamageMessage above
+							// The following block was causing duplicate floating damage messages
+							// if(!Player::isAiControlled(%shooterClient) && %shooterClient != "" && %shooterClient != -1 && %shooterClient != 0)
+							if(false) // DISABLED
 							{
 								// Validate client is connected
 								%clientName = Client::getName(%shooterClient);
@@ -4075,31 +4324,32 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 						{
 							// Use %Val2 which was already constructed with "[attacker]'s attack hit you for LCK!" message
 							%msg = "<jr>" @ %Val2;
-							DisplayDamageMessage(%damagedClient, %msg, %msgcolor);
+							DisplayDamageMessage(%damagedClient, %msg, %msgcolor, "defender");
 						}
 						else if(%type == $SpellDamageType)
 						{
 							if(%criticalAttack)
 							{
 								%msg = "<jr>You were critically " @ %daction @ " by " @ %hitby @ " for " @ %convValue @ " points of damage!";
-								DisplayDamageMessage(%damagedClient, %msg, %msgcolor);
+								DisplayDamageMessage(%damagedClient, %msg, %msgcolor, "defender");
 							}
 							else
 							{
 								%msg = "<jr>You were " @ %daction @ " by " @ %hitby @ " for " @ %convValue @ " points of damage!";
-								DisplayDamageMessage(%damagedClient, %msg, %msgcolor);
+								DisplayDamageMessage(%damagedClient, %msg, %msgcolor, "defender");
 							}
 						}
 						else
 						{
 							// For weapon attacks, use %Val2 which already has the correct message
 							%msg = "<jr>" @ %Val2;
-							DisplayDamageMessage(%damagedClient, %msg, %msgcolor);
+							DisplayDamageMessage(%damagedClient, %msg, %msgcolor, "defender");
 						}
 						
-						// Send ATKText to defender (only if not AI controlled)
-						// Check if floating numbers are enabled (either explicitly or via damageDisplayType)
-						if(!Player::isAiControlled(%damagedClient) && %damagedClient != "" && %damagedClient != -1 && %damagedClient != 0)
+						// REMOVED: ATKText for defender is now handled by DisplayDamageMessage above
+						// The following block was causing duplicate floating damage messages
+						// if(!Player::isAiControlled(%damagedClient) && %damagedClient != "" && %damagedClient != -1 && %damagedClient != 0)
+						if(false) // DISABLED
 						{
 							// Validate client is connected
 							%clientName = Client::getName(%damagedClient);
@@ -4323,7 +4573,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					if(%shooterDamageMode)
 					{
 						%msg = "<jl>You try to hit " @ Client::getName(%damagedClient) @ ", but miss! (LCK)";
-						DisplayDamageMessage(%shooterClient, %msg, %msgcolor);
+						DisplayDamageMessage(%shooterClient, %msg, %msgcolor, "attacker");
 						
 						// Send ATKText for LCK miss to attacker (only if not AI controlled)
 						// Check if floating numbers are enabled (either explicitly or via damageDisplayType)
@@ -4355,7 +4605,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					if(%damagedDamageMode)
 					{
 						%msg = "<jr>" @ %hitby @ " tries to hit you, but misses! (LCK)";
-						DisplayDamageMessage(%damagedClient, %msg, %msgcolor);
+						DisplayDamageMessage(%damagedClient, %msg, %msgcolor, "defender");
 						
 						// Send ATKText for LCK miss to defender (only if not AI controlled)
 						// Check if floating numbers are enabled (either explicitly or via damageDisplayType)

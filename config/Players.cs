@@ -1,12 +1,3 @@
-$PCFG::CurrentPlayer = "0";
+$PCFG::CurrentPlayer = "-1";
 $PCFG::Gender = "MALE";
-$PCFG::Gender0 = "MALE";
-$PCFG::Info = "spear";
-$PCFG::Info0 = "spear";
-$PCFG::LastPlayer = "0";
-$PCFG::Name = "Jobo";
-$PCFG::Name0 = "Jobo";
-$PCFG::SkinBase = "base";
-$PCFG::SkinBase0 = "base";
-$PCFG::Voice = "male1";
-$PCFG::Voice0 = "male1";
+$PCFG::LastPlayer = "-1";

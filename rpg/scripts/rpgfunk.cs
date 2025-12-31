@@ -1,4 +1,26 @@
+$INVISIBILITY_DEBUG = 1; // Toggle [INVISIBILITY DEBUG] messages - set to 1 to diagnose invisible bots
 $LOOTBAG_DEBUG = 0; // Toggle [LOOTBAG DEBUG] messages in this file
+
+// Safe skin setter - validates skin before applying and logs potential invisibility issues
+function Safe_SetSkin(%clientId, %skin, %callerContext)
+{
+	if(%skin == "" || %skin == -1)
+	{
+		%clientName = Client::getName(%clientId);
+		if(%clientName == "" || %clientName == -1) %clientName = "Unknown";
+		echo("[INVISIBILITY BUG] Safe_SetSkin: EMPTY SKIN detected for " @ %clientName @ " (clientId=" @ %clientId @ "). Context: " @ %callerContext @ ". NOT setting skin to prevent invisibility!");
+		return;
+	}
+	
+	if($INVISIBILITY_DEBUG)
+	{
+		%clientName = Client::getName(%clientId);
+		if(%clientName == "" || %clientName == -1) %clientName = "Bot";
+		echo("[INVISIBILITY DEBUG] Safe_SetSkin: Setting skin '" @ %skin @ "' for " @ %clientName @ " (clientId=" @ %clientId @ "). Context: " @ %callerContext);
+	}
+	
+	Client::setSkin(%clientId, %skin);
+}
 function String::len(%string)
 {
 	//dbecho($dbechoMode, "String::len(" @ %string @ ")");
@@ -100,11 +122,193 @@ function String::ICompare(%string1, %string2)
 		return 1;
 }
 
+//====================================================================================================
+// BankStorage Multi-Field Split Functions
+// Splits large BankStorage strings (>256 chars) across multiple funkvar fields to prevent
+// engine buffer overflow during shutdown. Uses fields 16 (primary), 60, 61, 62, 63 (overflow).
+//====================================================================================================
+
+// SplitAndSaveBankStorage - Splits "item count item count..." into <=256 char chunks
+// Saves to fields 16 (primary), 60, 61, 62, 63 (overflow)
+// Sends warning to player if reaching field 63 (80% capacity)
+function SplitAndSaveBankStorage(%clientId, %name, %fullString)
+{
+	// Define field mapping (primary + 4 overflow = 5 fields x 256 chars = 1280 max)
+	$BankStorageFields[0] = 16;  // Primary field
+	$BankStorageFields[1] = 60;  // Overflow 1
+	$BankStorageFields[2] = 61;  // Overflow 2
+	$BankStorageFields[3] = 62;  // Overflow 3
+	$BankStorageFields[4] = 63;  // Overflow 4 (warning threshold)
+	$BankStorageMaxFields = 5;
+	$BankStorageMaxLen = 256;
+	
+	// Clear all fields first
+	for(%f = 0; %f < $BankStorageMaxFields; %f++)
+	{
+		%fieldNum = $BankStorageFields[%f];
+		$funk::var["[\"" @ %name @ "\", 0, " @ %fieldNum @ "]"] = "";
+	}
+	
+	// Handle empty/null case
+	if(%fullString == "" || %fullString == "0" || %fullString == -1)
+	{
+		$funk::var["[\"" @ %name @ "\", 0, 16]"] = "";
+		return;
+	}
+	
+	// Split at complete "item count" boundaries
+	%currentField = 0;
+	%currentString = "";
+	%warnedPlayer = false;
+	
+	for(%i = 0; GetWord(%fullString, %i) != -1; %i += 2)
+	{
+		%item = GetWord(%fullString, %i);
+		%count = GetWord(%fullString, %i + 1);
+		
+		// Skip invalid entries
+		if(%item == "" || %item == -1 || %count == "" || %count == -1)
+			continue;
+		
+		%pair = %item @ " " @ %count;
+		%pairLen = String::len(%pair);
+		
+		// Check if adding this pair would exceed limit
+		%currentLen = String::len(%currentString);
+		%wouldExceed = false;
+		if(%currentLen > 0)
+		{
+			// Need space + pair
+			if(%currentLen + 1 + %pairLen > $BankStorageMaxLen)
+				%wouldExceed = true;
+		}
+		else
+		{
+			// First item in field
+			if(%pairLen > $BankStorageMaxLen)
+			{
+				// Single item exceeds limit - this shouldn't happen but handle it
+				echo("WARNING: SplitAndSaveBankStorage - Single item '" @ %item @ "' exceeds max length!");
+			}
+		}
+		
+		if(%wouldExceed)
+		{
+			// Save current field and move to next
+			%fieldNum = $BankStorageFields[%currentField];
+			$funk::var["[\"" @ %name @ "\", 0, " @ %fieldNum @ "]"] = %currentString;
+			
+			%currentField++;
+			%currentString = %pair;
+			
+			// Check if we're at capacity warning threshold (field 63)
+			if(%currentField >= 4 && !%warnedPlayer)
+			{
+				%warnedPlayer = true;
+				Client::sendMessage(%clientId, $MsgRed, "WARNING: Your bank storage is almost full! Remove some items to avoid bank storage corruption.");
+				echo("[BANKSTORAGE] Warning sent to " @ Client::getName(%clientId) @ " - bank storage at 80% capacity");
+			}
+			
+			// Check if we've exceeded all available fields
+			if(%currentField >= $BankStorageMaxFields)
+			{
+				echo("ERROR: SplitAndSaveBankStorage - Exceeded all " @ $BankStorageMaxFields @ " fields for " @ %name @ "! Data may be truncated.");
+				Client::sendMessage(%clientId, $MsgRed, "ERROR: Bank storage overflow! Some items may be lost. Please reduce stored items immediately.");
+				return;
+			}
+		}
+		else
+		{
+			// Add to current string
+			if(%currentString != "")
+				%currentString = %currentString @ " " @ %pair;
+			else
+				%currentString = %pair;
+		}
+	}
+	
+	// Save the last field
+	if(%currentString != "")
+	{
+		%fieldNum = $BankStorageFields[%currentField];
+		$funk::var["[\"" @ %name @ "\", 0, " @ %fieldNum @ "]"] = %currentString;
+	}
+	
+	//echo("[BANKSTORAGE] Saved " @ %name @ " across " @ (%currentField + 1) @ " field(s)");
+}
+
+// JoinBankStorageFromLoad - Joins multiple fields back into single string
+// Reads from fields 16 (primary), 60, 61, 62, 63 (overflow)
+// Returns complete BankStorage string
+function JoinBankStorageFromLoad(%name)
+{
+	// Define field mapping (same as save)
+	$BankStorageFields[0] = 16;  // Primary field
+	$BankStorageFields[1] = 60;  // Overflow 1
+	$BankStorageFields[2] = 61;  // Overflow 2
+	$BankStorageFields[3] = 62;  // Overflow 3
+	$BankStorageFields[4] = 63;  // Overflow 4
+	$BankStorageMaxFields = 5;
+	
+	%result = "";
+	
+	for(%f = 0; %f < $BankStorageMaxFields; %f++)
+	{
+		%fieldNum = $BankStorageFields[%f];
+		%fieldData = $funk::var[%name, 0, %fieldNum];
+		
+		// Skip empty/null fields
+		if(%fieldData == "" || %fieldData == "0" || %fieldData == -1 || %fieldData == " ")
+			continue;
+		
+		// Concatenate with space separator
+		if(%result != "")
+			%result = %result @ " " @ %fieldData;
+		else
+			%result = %fieldData;
+	}
+	
+	//echo("[BANKSTORAGE] Loaded " @ %name @ " with combined length " @ String::len(%result));
+	return %result;
+}
+
 function viewGroupList(%clientId)
 {
 	dbecho($dbechoMode, "viewGroupList(" @ %clientId @ ")");
 
 	bottomprint(%clientId, fetchData(%clientId, "grouplist"), 8);
+}
+
+// Number formatting helper
+// Returns abbreviated format: 1.5k, 2.5m, 1.2b
+function numFormat(%num)
+{
+	if(%num < 1000) return %num;
+	
+	if(%num < 1000000)
+	{
+		%k = %num / 1000;
+		// Keep 1 decimal place
+		%disp = String::getSubStr(%k, 0, String::findSubStr(%k, ".") + 2);
+		if(String::getSubStr(%disp, String::len(%disp)-1, 1) == "0")
+			%disp = String::getSubStr(%disp, 0, String::len(%disp)-2); // Remove .0
+		return %disp @ "k";
+	}
+	
+	if(%num < 1000000000)
+	{
+		%m = %num / 1000000;
+		%disp = String::getSubStr(%m, 0, String::findSubStr(%m, ".") + 2);
+		if(String::getSubStr(%disp, String::len(%disp)-1, 1) == "0")
+			%disp = String::getSubStr(%disp, 0, String::len(%disp)-2);
+		return %disp @ "m";
+	}
+	
+	%b = %num / 1000000000;
+	%disp = String::getSubStr(%b, 0, String::findSubStr(%b, ".") + 2);
+	if(String::getSubStr(%disp, String::len(%disp)-1, 1) == "0")
+		%disp = String::getSubStr(%disp, 0, String::len(%disp)-2);
+	return %disp @ "b";
 }
 
 // Wrapper function for Player::getItemCount with debug logging
@@ -119,24 +323,25 @@ function SafeGetItemCount(%clientId, %item, %callerFunction)
 		return 0;
 	}
 	
+	// Check belt system first (migrated accessories, etc)
+	if(isBeltItem(%item))
+	{
+		return Belt::HasThisStuff(%clientId, %item);
+	}
+
 	// Validate player object exists before calling Player::getItemCount
 	%playerObj = Client::getOwnedObject(%clientId);
 	if(%playerObj == -1 || %playerObj == "")
 	{
-		%playerName = Client::getName(%clientId);
-		%isBot = isRPGAI(%clientId);
-		%botInfo = "";
-		if(%isBot)
-		{
-			%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
-			%spawnBotInfo = fetchData(%clientId, "SpawnBotInfo");
-			%botInfo = " (Bot - BotInfoAiName: '" @ %botInfoAiName @ "', SpawnBotInfo: '" @ %spawnBotInfo @ "')";
-		}
-		echo("[DEBUG getItemCount] ERROR - Player object not found for clientId: " @ %clientId @ ", playerName: '" @ %playerName @ "'" @ %botInfo @ ", item: '" @ %item @ "', called from: " @ %callerFunction);
+		// Silently return 0 if player object is missing (common during spawn/respawn)
 		return 0;
 	}
 	
-	// Player object exists - call the actual function
+	// NOTE: Removed isObject() check - it incorrectly rejects valid ItemData datablocks
+	// ItemData objects like "Tool", "Blaster" etc. are valid but isObject() returns false for them
+	// The engine's Player::getItemCount will handle invalid items gracefully
+
+	// Player object exists - call the actual engine function
 	%result = Player::getItemCount(%clientId, %item);
 	return %result;
 }
@@ -453,17 +658,15 @@ function SaveCharacter(%clientId)
 		if(%playerCheck == -1 || %playerCheck == "")
 			return False; // Player object became invalid - abort before modifying inventory
 		
-		// Atomic inventory sanity check - do NOT return early between inc and dec!
+		// Atomic inventory sanity check - use Player::getItemCount directly (not SafeGetItemCount)
+		// SafeGetItemCount has an isObject() check that fails for items retrieved by index
 		Player::incItemCount(%clientId, Tool);
-		%x = SafeGetItemCount(%clientId, Tool, "AddPoints");
+		%x = Player::getItemCount(%clientId, Tool);
 		Player::decItemCount(%clientId, Tool);
-		%y = SafeGetItemCount(%clientId, Tool, "AddPoints");
+		%y = Player::getItemCount(%clientId, Tool);
 		
 		if(%x == %y)
-		{
-			//echo("DEBUG SaveCharacter: ABORT - player inventory test failed (x=" @ %x @ ", y=" @ %y @ ")");
 			return False;
-		}
 	}
 
 	%name = Client::getName(%clientId);
@@ -506,7 +709,9 @@ function SaveCharacter(%clientId)
 	$funk::var["[\"" @ %name @ "\", 0, 13]"] = fetchData(%clientId, "PlayerInfo");
 	$funk::var["[\"" @ %name @ "\", 0, 14]"] = fetchData(%clientId, "deathmsg");
 	//15 is done lower
-	$funk::var["[\"" @ %name @ "\", 0, 16]"] = fetchData(%clientId, "BankStorage");
+	// CRITICAL: Split BankStorage across multiple fields (16, 60-63) with 256 char max each
+	// This prevents engine buffer overflow during shutdown
+	SplitAndSaveBankStorage(%clientId, %name, fetchData(%clientId, "BankStorage"));
 	$funk::var["[\"" @ %name @ "\", 0, 17]"] = fetchData(%clientId, "campRot");
 	//echo("DEBUG SaveCharacter: campRot = '" @ fetchData(%clientId, "campRot") @ "'");
 	
@@ -1530,9 +1735,9 @@ function LoadCharacter(%clientId)
 			}
 		}
 		storeData(%clientId, "spawnStuff", %spawnStuffCleaned);
-		// CRITICAL: Clean BankStorage on load - remove leading "0" items and invalid entries
-		// BankStorage format should be "item count item count..." but old saves may have leading "0"
-		%bankStorageRaw = $funk::var[%name, 0, 16];
+		// CRITICAL: Join BankStorage from multiple fields (16, 60-63) for backward compatibility
+		// Old saves only have field 16, new saves may use overflow fields 60-63
+		%bankStorageRaw = JoinBankStorageFromLoad(%name);
 		%bankStorageCleaned = "";
 		if(%bankStorageRaw != "" && %bankStorageRaw != "0")
 		{
@@ -2327,8 +2532,12 @@ function LoadCharacter(%clientId)
 		SetAllSkills(%clientId, 0);
 		//echo("DEBUG: Skills initialized");
 
-		storeData(%clientId, "spawnStuff", "PickAxe 1 BluePotion 1 CrystalBluePotion 3");
-		//echo("DEBUG: spawnStuff = 'PickAxe 1 BluePotion 1 CrystalBluePotion 3'");
+		storeData(%clientId, "spawnStuff", "PickAxe 1");
+		//echo("DEBUG: spawnStuff = 'PickAxe 1'");
+		
+		// CRITICAL: Potions go to Consumables (belt storage) not spawnStuff (inventory)
+		// This ensures new players have potions in their belt, not their bank
+		storeData(%clientId, "Consumables", "BluePotion 1 CrystalBluePotion 3 ");
 		
 		// CRITICAL: Initialize COINS for new characters (they get coins when they choose class, but need initial value)
 		// This ensures COINS is set to 0 initially (will be set properly when class is chosen)
@@ -2550,24 +2759,26 @@ function SaveWorldDeployables() {
     %maxAge = 86400; // 24 hours in seconds
     %expiredCount = 0;
     
-    %missionCleanup = -1;
-    if(isObject("LootbagGroup"))
-    {
-        %missionCleanup = nameToID("LootbagGroup");
-    }
+    // Unified Scan: Check BOTH LootbagGroup and MissionCleanup to ensure no newly dropped lootbags are missed.
+    // This resolves the bug where SaveWorld() missed items dropped between AggregateLootbags() runs.
+    %groupsToScan = "";
+    if(isObject("LootbagGroup")) %groupsToScan = %groupsToScan @ nameToID("LootbagGroup") @ " ";
+    if(isObject("MissionCleanup")) %groupsToScan = %groupsToScan @ nameToID("MissionCleanup") @ " ";
     
-    // FALLBACK: If LootbagGroup doesn't exist, use MissionCleanup
-    if(%missionCleanup == -1 && isObject("MissionCleanup"))
-    {
-        %missionCleanup = nameToID("MissionCleanup");
-    }
+    %processedLootbags = ""; // Track IDs to avoid duplicates if an object exists in both sets
     
-    if(%missionCleanup != -1)
+    for(%g = 0; (%groupId = GetWord(%groupsToScan, %g)) != -1; %g++)
     {
-        %objCount = Group::objectCount(%missionCleanup);
+        %objCount = Group::objectCount(%groupId);
         for(%j = 0; %j < %objCount; %j++)
         {
-            %objID = Group::getObject(%missionCleanup, %j);
+            %objID = Group::getObject(%groupId, %j);
+            
+            // Skip if already processed or invalid
+            if(String::findSubStr(%processedLootbags, "|" @ %objID @ "|") != -1 || %objID == -1)
+                continue;
+            %processedLootbags = %processedLootbags @ "|" @ %objID @ "| ";
+
             %obj = GameBase::getDataName(%objID);
             
             // Skip if object doesn't exist or is invalid
@@ -3503,7 +3714,6 @@ function clipTrailingNumbers(%str)
 function UpdateAppearance(%clientId)
 {
 	%clientName = Client::getName(%clientId);
-	echo("[ARMOR DEBUG] UpdateAppearance CALLED for clientId=" @ %clientId @ " name='" @ %clientName @ "'");
 	dbecho($dbechoMode, "UpdateAppearance(" @ %clientId @ ")");
 
 	// CRITICAL: Validate player object exists before proceeding
@@ -3620,7 +3830,11 @@ function UpdateAppearance(%clientId)
 
 	%ae = GameBase::getEnergy(%player);
 
-	if(%armor != -1 && Player::getArmor(%clientId) != %p && %p != "")
+	// CRITICAL FIX: Only set armor if AdminBoots are NOT equipped.
+	// AdminBoots uses a special AdminBootsArmor datablock for flight properties.
+	// If we set it here to normal body armor, RefreshAll will just set it back, 
+	// causing an "armor ping-pong" that triggers repeated attack animations.
+	if(%armor != -1 && Player::getArmor(%clientId) != %p && %p != "" && Player::getItemCount(%clientId, "AdminBoots0") <= 0)
 	{
 		Player::setArmor(%clientId, %p);
 		GameBase::setEnergy(%player, %ae);
@@ -3629,9 +3843,20 @@ function UpdateAppearance(%clientId)
 	//=================================
 	// Update skin (After Armor)
 	//=================================
+	// CRITICAL FIX: Validate skin before setting - empty skin causes invisibility!
+	if(%skinbase == "" || %skinbase == -1)
+	{
+		echo("[INVISIBILITY BUG] UpdateAppearance: EMPTY SKINBASE detected for " @ %clientName @ " (clientId=" @ %clientId @ "). Race=" @ %race @ ", Armor=" @ %armor @ ", ArmorSkin[armor]=" @ $ArmorSkin[%armor] @ ". Falling back to rpgbase.");
+		%skinbase = "rpgbase";
+	}
+	
 	// CRITICAL FIX: Set skin AFTER armor change to prevent reversion to default/enemy skin
 	if(Client::getSkinBase(%clientId) != %skinbase)
+	{
+		// Log skin changes for debugging invisibility issues
+		if($SKIN_DEBUG) echo("[SKIN DEBUG] UpdateAppearance: Setting skin for " @ %clientName @ " from '" @ Client::getSkinBase(%clientId) @ "' to '" @ %skinbase @ "'");
 		Client::setSkin(%clientId, %skinbase);
+	}
 
 	//=================================
 	// Update shields and Orb
@@ -3912,66 +4137,8 @@ function ChangeRace(%clientId, %race)
 
 	RefreshAll(%clientId);
 	
-	// PHASE 2: Migrate old ItemData accessories to Belt system (one-time migration)
-	// This runs after all character data is loaded and before the player spawns
-	if(!fetchData(%clientId, "AccessoryMigrationComplete"))
-	{
-		MigrateOldAccessoriesToBelt(%clientId);
-	}
 }
 
-//=============================================================================
-// PHASE 2: Old Accessory Migration Function
-//=============================================================================
-function MigrateOldAccessoriesToBelt(%clientId)
-{
-	dbecho($dbechoMode, "MigrateOldAccessoriesToBelt(" @ %clientId @ ")");
-	
-	// CRITICAL: Only run for real players, never bots
-	if(Player::isAiControlled(%clientId))
-		return;
-	
-	// List of accessories migrated to belt (rings, necklaces, belts only)
-	%migrateItems = "MinorPowerRing PowerRing MajorPowerRing ExtremePowerRing GodlyPowerRing HeavenlyPowerRing MinorRegenerationNecklace RegenerationNecklace MajorRegenerationNecklace ExtremeRegenerationNecklace GodlyRegenerationNecklace HeavenlyRegenerationNecklace AntiMagicBelt MajorAntiMagicBelt ExtremeAntiMagicBelt GodlyAntiMagicBelt HeavenlyAntiMagicBelt";
-	
-	%migrationCount = 0;
-	
-	for(%i = 0; (%item = GetWord(%migrateItems, %i)) != -1; %i++)
-	{
-		// Check unequipped ItemData inventory
-		%count = Player::getItemCount(%clientId, %item);
-		if(%count > 0)
-		{
-			Belt::GiveThisStuff(%clientId, %item, %count);
-			Player::setItemCount(%clientId, %item, 0);
-			echo("[ACCESSORY MIGRATE] " @ %item @ " x" @ %count @ " -> Belt for " @ Client::getName(%clientId));
-			%migrationCount += %count;
-		}
-		
-		// Check equipped version (item0) - these need to be equipped in Belt too
-		%equippedItemName = %item @ "0";
-		%count0 = Player::getItemCount(%clientId, %equippedItemName);
-		if(%count0 > 0)
-		{
-			// Give to Belt storage first
-			Belt::GiveThisStuff(%clientId, %item, %count0);
-			// Remove from ItemData inventory
-			Player::setItemCount(%clientId, %equippedItemName, 0);
-			// Equip in Belt system
-			Belt::EquipAccessory(%clientId, %item);
-			echo("[ACCESSORY MIGRATE] Equipped " @ %item @ " (" @ %count0 @ "x) -> Belt for " @ Client::getName(%clientId));
-			%migrationCount += %count0;
-		}
-	}
-	
-	if(%migrationCount > 0)
-	{
-		echo("[ACCESSORY MIGRATE] Total migrated for " @ Client::getName(%clientId) @ ": " @ %migrationCount @ " accessories");
-	}
-	
-	// Mark that migration has run for this character
-	storeData(%clientId, "AccessoryMigrationComplete", true);
-}
 
 // Clear temporary player state variables (for players only)
 // This clears temporary flags and state that should be reset on connect/load
@@ -4208,6 +4375,10 @@ function Down(%t)
 		schedule("dmsg(" @ %i @ ", \"seconds\");", %a);
 	}
 	
+	// CRITICAL: Set shutdown flag BEFORE scheduling saves
+	// This prevents GUI functions (bottomprint, etc.) from being called during shutdown
+	$ServerShuttingDown = true;
+	
 	// Save all characters and world 10 seconds before shutdown
 	if(%tinsec >= 10)
 	{
@@ -4221,16 +4392,45 @@ function Down(%t)
 		SaveWorld();
 	}
 	
-	// Set shutdown flag to prevent onClientDrop and other callbacks from running
-	// complex logic during shutdown (which can cause freezes)
-	$ServerShuttingDown = true;
-	
-	schedule("focusServer();quit();", %tinsec);
+	// CRITICAL: Skip focusServer() during shutdown - it tries to load GUI elements
+	// On dedicated servers or when GUI is torn down, this causes the MainWindow error
+	// Just call quit() directly instead
+	// CRITICAL: Clear large in-memory strings before quit to prevent engine buffer issues
+	schedule("ClearLargePlayerDataBeforeQuit(); quit();", %tinsec);
 }
 function d(%t)
 {
 	Down(%t);
 }
+
+// ClearLargePlayerDataBeforeQuit - Clears large in-memory strings before quit()
+// This prevents engine buffer issues during shutdown caused by very long strings
+// in player data that may be processed during engine cleanup
+function ClearLargePlayerDataBeforeQuit()
+{
+	echo("[SHUTDOWN] Clearing large player data before quit...");
+	
+	for(%clientId = Client::getFirst(); %clientId != -1; %clientId = Client::getNext(%clientId))
+	{
+		// Skip bots - only clear player data
+		if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+			continue;
+		
+		%name = Client::getName(%clientId);
+		if(%name == "" || %name == -1)
+			continue;
+		
+		// Clear large in-memory strings that could cause engine buffer issues
+		// Data is already saved to file at this point, so clearing is safe
+		storeData(%clientId, "BankStorage", "");
+		storeData(%clientId, "spawnStuff", "");
+		
+		echo("[SHUTDOWN] Cleared large data for " @ %name);
+	}
+	
+	echo("[SHUTDOWN] Large player data cleared, proceeding with quit...");
+}
+
 function dmsg(%i, %w)
 {
 	echo("========= SERVER RESTARTING IN " @ %i @ " " @ %w @ " =========");
@@ -4403,32 +4603,38 @@ function ChangeWeather()
 	if(OddsAre(1))
 	{
 		$isRaining = "";
-
-		%intensity = getRandom();
-
-		%x = -1 + (getRandom() * 1.5);
-		%y = -1 + (getRandom() * 1.5);
-		%z = -300 + (floor(getRandom() * 40));
-		%vec = %x @ " " @ %y @ " " @ %z;
-
-		%t = floor(getRandom() * 100);
-		if(%t >= 0 && %t < 20)
-		{
-			%type = 1;			//rain
-			$isRaining = True;
-			//setTerrainVisibility(8, 600, 0);
-		}
-		else
-		{
-			%type = -1;			//stop any weather
-			//setTerrainVisibility(8, 1000, 700);
-		}
+		$isSnowing = "";
 
 		if(isObject("weather"))
 			deleteObject("weather");
 
-		if(%type == 1)
-			%weather = newObject("weather", Snowfall, %intensity, %vec, 0, %type);
+		%t = floor(getRandom() * 100);
+		if(%t < 50)
+		{
+			// Clear weather - no precipitation
+			// (nothing to create, weather object already deleted)
+		}
+		else
+		{
+			// Snow
+			$isSnowing = True;
+			%weather = newObject("weather", Snowfall, 1, 0, 0, snow);
+			messageAll(2, "Weather Report: Snow");
+		}
+		
+		// TODO: Re-enable rain in spring
+		// if(%t < 33)
+		// {
+		// 	// Rain
+		// 	$isRaining = True;
+		// 	%intensity = getRandom();
+		// 	%x = -1 + (getRandom() * 1.5);
+		// 	%y = -1 + (getRandom() * 1.5);
+		// 	%z = -300 + (floor(getRandom() * 40));
+		// 	%vec = %x @ " " @ %y @ " " @ %z;
+		// 	%weather = newObject("weather", Snowfall, %intensity, %vec, 0, 1);
+		// 	messageAll(2, "Weather Report: Rain");
+		// }
 	}
 }
 
@@ -4826,6 +5032,10 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 	
 	addToSet("MissionCleanup", %lootbag);
 	
+	// Also add to LootbagGroup for optimized saving and aggregation if it exists
+	if(isObject("LootbagGroup"))
+		addToSet("LootbagGroup", %lootbag);
+	
 	// DEBUG: Log after addToSet (use echo so it always prints)
 	if($LOOTBAG_DEBUG) echo("[LOOTBAG DEBUG] TossLootbag - Successfully added lootbag " @ %lootbag @ " to MissionCleanup");
 	GameBase::setMapName(%lootbag, "Backpack");
@@ -5151,6 +5361,15 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	
 	// WATCHDOG: Clear tracking for this function
 	Watchdog_Exit();
+
+	// CRITICAL: Clear the skill upgrade refresh flag ONLY when the top-level 
+	// call from UseSkill completes (indicated by %fromSkillUpgrade).
+	// This prevents nested RefreshAll calls (like those in the AdminBoots sequence)
+	// from dropping the guard while the refresh process is still busy.
+	if(%fromSkillUpgrade == "true" || %fromSkillUpgrade == "1" || %fromSkillUpgrade == 1)
+	{
+		$SkillUpgradeRefreshScheduled[%clientId] = "";
+	}
 }
 
 // CRITICAL: New function specifically for enemy bots - does NOT touch team at all
@@ -7913,4 +8132,33 @@ function SafeDeleteLootbag(%obj)
 	}
 	
 	deleteObject(%obj);
+}
+
+function TownBot_PlayFarewell(%playerClientId, %botClientId)
+{
+	if(%playerClientId == "" || %botClientId == "")
+		return;
+
+	// Check if a session voice was already assigned during greeting
+	%voice = %botClientId.sessionVoice;
+	
+	// ROBUSTNESS CHECK: Verify voice is valid (must contain "male" or "female")
+	// This handles cases where sessionVoice might be empty, "0", or undefined
+	if(String::findSubStr(%voice, "male") == -1 && String::findSubStr(%voice, "female") == -1)
+	{
+		// Fallback: Randomize voice if no valid session voice exists
+		%botArmor = Player::getArmor(%botClientId);
+		%rand = floor(getRandom() * 5) + 1; // Random 1-5
+		
+		%voice = "male" @ %rand; // Default to male 1-5
+		if(String::findSubStr(%botArmor, "female") != -1)
+			%voice = "female" @ %rand; // Female 1-5
+	}
+	
+	// Randomly choose between "No Problem" (wnoprob) and "Bye" (wbye)
+	%suffix = "wbye";
+	if(floor(getRandom() * 2) == 1) // 50% chance
+		%suffix = "wnoprob";
+	
+	Client::sendMessage(%playerClientId, 0, "~w" @ %voice @ "." @ %suffix @ ".wav");
 }

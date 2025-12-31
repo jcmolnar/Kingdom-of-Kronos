@@ -16,7 +16,12 @@ function GetWeight(%clientId)
 	//== HELPS REDUCE LAG WHEN THERE ARE SIMULTANEOUS CALLS ======
 	%time = getIntegerTime(true);
 	if(%time - %clientId.lastGetWeight <= 1 && fetchData(%clientId, "tmpWeight") != "")
+	{
+		// CRITICAL FIX: Must also restore the global ArmorMod side-effect from cache
+		// Otherwise RefreshWeight uses stale/empty ArmorMod and skin doesn't update
+		$GetWeight::ArmorMod = fetchData(%clientId, "tmpArmorMod");
 		return fetchData(%clientId, "tmpWeight");
+	}
 	%clientId.lastGetWeight = %time;
 	//============================================================
 
@@ -50,6 +55,7 @@ function GetWeight(%clientId)
 	%total += fetchData(%clientId, "COINS") * $coinweight;
 
 	storeData(%clientId, "tmpWeight", %total);
+	storeData(%clientId, "tmpArmorMod", $GetWeight::ArmorMod); // Cache the side-effect too
 	return %total;
 }
 
@@ -72,7 +78,9 @@ function RefreshWeight(%clientId)
 		%changeweightstep = 5;
 
 		//determine the new armor to use
-		%newarmor = $ArmorForSpeed[fetchData(%clientId, "RACE"), 0];
+		%race = fetchData(%clientId, "RACE");
+		%newarmor = $ArmorForSpeed[%race, 0];
+		
 		%spill = %weight - fetchData(%clientId, "MaxWeight");
 
 		%num = floor(%spill / %changeweightstep);
@@ -82,8 +90,8 @@ function RefreshWeight(%clientId)
 			//overweight, select appropriate armor
 			for(%i = -1; %i >= -%num; %i--)
 			{
-				if($ArmorForSpeed[fetchData(%clientId, "RACE"), %i] != "")
-					%newarmor = $ArmorForSpeed[fetchData(%clientId, "RACE"), %i];
+				if($ArmorForSpeed[%race, %i] != "")
+					%newarmor = $ArmorForSpeed[%race, %i];
 				else
 					break;
 			}
@@ -93,23 +101,23 @@ function RefreshWeight(%clientId)
 			//when not overweight, the special armor-modifying items come in
 			%x = $GetWeight::ArmorMod;
 			if(%x > 0)
-				%newarmor = $ArmorForSpeed[fetchData(%clientId, "RACE"), %x];
+				%newarmor = $ArmorForSpeed[%race, %x];
 		}
 	}
 	else
 	{
-		%newarmor = $ArmorForSpeed[fetchData(%clientId, "RACE"), -5];
+		%race = fetchData(%clientId, "RACE");
+		%newarmor = $ArmorForSpeed[%race, -5];
 	}
 
 	%a = Player::getArmor(%clientId);
 	%ae = GameBase::getEnergy(%player);
 
-	if(%a != %newarmor && %newarmor != "")
+	if(%a != %newarmor && %newarmor != "" && Player::getItemCount(%clientId, "AdminBoots0") <= 0)
 	{
 		//set the new armor
 		Player::setArmor(%clientId, %newarmor);
 		GameBase::setEnergy(%player, %ae);
-		//UseSkill(%clientId, $SkillWeightCapacity, True, True, 25);
 	}
 
 	//save the %num in a global variable for use on stats (in order to give penalties to other stats for being overweight)

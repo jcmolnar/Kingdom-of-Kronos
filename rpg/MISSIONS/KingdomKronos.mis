@@ -5014,7 +5014,7 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "NAME Uncle Tony";
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 RedDiamondPlate 1 TerminusEst 1";
 			instant SimGroup "RACE MaleHuman";
-			instant SimGroup "SHOP 222 231 232 233 234 235";
+			instant SimGroup "SHOP 222 231 232 233 234 235 236 237 238";
 		};
 		instant SimGroup "tournyquest1" {
 			instant Marker "Yuliple colloseum" {

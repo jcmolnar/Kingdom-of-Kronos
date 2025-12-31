@@ -645,8 +645,6 @@ function processMenuSellBelt(%clientId, %opt)
 
 	if(%opt == "done")
 	{
-		// Clear the belt sell flag and stored order when menu is closed
-		%clientId.currentBeltSell = "";
 		// Clear stored orders for all belt types
 		for(%i = 1; $Belt::Categories[%i] != ""; %i++)
 		{
@@ -2750,7 +2748,7 @@ function Belt::DropItem(%clientId, %item, %amnt, %type)
 		TossLootbag(%clientId, %item @ " " @ %amnt, 8, "*", 0, 1);
 		SaveCharacter(%clientId);
 		// Save world after 3 second delay (allows character save to complete first)
-		schedule("SaveWorld();", 3, %clientId);
+		schedule("SaveWorld();", 3);
 	}
 }
 
@@ -3423,11 +3421,14 @@ function Belt::Store(%clientId, %bankerId)
 	
 	%clientId.currentBeltBank = %bankerId;
 	
+	%msg = "<jc><f2>To Deposit/Withdraw 'bulk' Backpack Items, please enter your desired 'bulk' number now!\n\n'Bulk' numbers must be greater than 0 and less than 500";
+	bottomprint(%clientId, %msg, 10);
+	
 	// Show menu with deposit and withdraw options
 	Client::buildMenu(%clientId, "Backpack Storage:", "BeltStorage", true);
 	Client::addMenuItem(%clientId, "1Deposit Backpack Items", "deposit");
 	Client::addMenuItem(%clientId, "2Withdraw Backpack Items", "withdraw");
-	Client::addMenuItem(%clientId, "xCancel", "cancel");
+	Client::addMenuItem(%clientId, "x BACK", "back");
 	
 	AI::sayLater(%clientId, %bankerId, "Would you like to DEPOSIT or WITHDRAW backpack items?", True);
 }
@@ -3442,13 +3443,27 @@ function processMenuBeltStorage(%clientId, %option)
 	{
 		Belt::ShowWithdrawCategoryMenu(%clientId);
 	}
-	else if(%option == "cancel")
+	else if(%option == "back" || %option == "cancel")
 	{
 		// Clear the belt bank flag and stored orders when cancelled
+		%bankerId = %clientId.currentBeltBank;
 		%clientId.currentBeltBank = "";
 		%clientId.beltDepositItemOrder = "";
 		%clientId.beltWithdrawItemOrder = "";
-		Client::cancelMenu(%clientId);
+		
+		// Reset state so bot can respond to "hi" again
+		// If going back, we call SetupBankDefault which handles building the new menu
+		if(%bankerId != "")
+		{
+			// Return to main banker menu
+			SetupBankDefault(%clientId, %bankerId);
+		}
+		else
+		{
+			// If fully cancelling/exiting, clear state to empty so "hi" works
+			$state[%bankerId, %clientId] = "";
+			Client::cancelMenu(%clientId);
+		}
 	}
 	// If cancel, do nothing
 }
@@ -4405,4 +4420,291 @@ function processMenuBeltWithdraw(%clientId, %option)
 	// Show the 5/10/All menu instead of directly withdrawing
 	echo("DEBUG processMenuBeltWithdraw: Showing withdraw menu for item '" @ %item @ "' category='" @ %category @ "'");
 	MenuSellBeltItemFinal(%clientId, %item, %category, "withdraw");
+}
+
+//============================================
+// BELT MERCHANT SHOP SYSTEM
+// Buy belt accessories from merchants
+//============================================
+
+function Belt::GetBuyCost(%clientId, %item)
+{
+	// Get base cost from HardcodedItemCost (same source as sell cost)
+	%baseCost = $HardcodedItemCost[%item];
+	if(%baseCost == "" || %baseCost == 0)
+		%baseCost = 100; // Default price if not defined
+	
+	%cost = %baseCost;
+	
+	// Apply haggling discount (reduces buy price)
+	%hagglingPercent = round($PlayerSkill[%clientId, $SkillHaggling] / 50) / 100;
+	%hagglingPercent = Cap(%hagglingPercent, 0.0, 0.5);
+	%cost = round(%cost * (1.0 - %hagglingPercent));
+	
+	// Apply TournyRank discount
+	%tournyRankPercent = 0.03 * fetchData(%clientId, "TournyRank");
+	%cost = round(%cost * (1.0 - %tournyRankPercent));
+	
+	// Ensure cost doesn't go below 1
+	if(%cost < 1)
+		%cost = 1;
+	
+	return %cost;
+}
+
+function Belt::Shop(%clientId, %npc, %shopIndices)
+{
+	// Set flag to track that player is in belt shop menu
+	%clientId.currentBeltShop = %npc;
+	%clientId.beltShopIndices = %shopIndices;
+	
+	AI::sayLater(%clientId, %npc, "Welcome! What can I help you with?", true);
+	
+	// Build top-level menu
+	Client::buildMenu(%clientId, ".:( Shop ):.", "BeltShop", true);
+	%cnt = 1;
+	Client::addMenuItem(%clientId, %cnt++ @ ". Standard Shop", "standard");
+	Client::addMenuItem(%clientId, %cnt++ @ ". Buy Accessories", "buy");
+	Client::addMenuItem(%clientId, %cnt++ @ ". Sell Backpack Items", "sell");
+	Client::addMenuItem(%clientId, "xFinished", "done");
+}
+
+function processMenuBeltShop(%clientId, %opt)
+{
+	if(%opt == "standard")
+	{
+		%npc = %clientId.currentBeltShop;
+		SetupShop(%clientId, %npc);
+	}
+	else if(%opt == "buy")
+	{
+		MenuBuyBeltAccessories(%clientId, 1);
+	}
+	else if(%opt == "sell")
+	{
+		// Use existing sell menu system
+		MenuSellBelt(%clientId);
+	}
+	else if(%opt == "done")
+	{
+		%clientId.currentBeltShop = "";
+		%clientId.beltShopIndices = "";
+		Client::cancelMenu(%clientId);
+	}
+}
+
+function MenuBuyBeltAccessories(%clientId, %page)
+{
+	%shopIndices = %clientId.beltShopIndices;
+	
+	Client::buildMenu(%clientId, ".:( Buy Accessories ):.", "BuyBeltAccessories", true);
+	
+	// Build list of purchasable items based on shop indices
+	// Shop indices are defined in $AccessoryVar[item, $ShopIndex]
+	%itemList = "";
+	%itemCount = 0;
+	
+	// Iterate through all belt items in Accessories category
+	%beltCount = $Belt::Count["Accessories"];
+	for(%i = 0; %i < %beltCount; %i++)
+	{
+		%item = $BeltItem[%i, "Num", "Accessories"];
+		if(%item == "" || %item == -1)
+			continue;
+		
+		%itemShopIndex = $AccessoryVar[%item, $ShopIndex];
+		if(%itemShopIndex == "" || %itemShopIndex == -1)
+			continue;
+		
+		// Check if this item's shop index is in the merchant's shop list
+		for(%j = 0; GetWord(%shopIndices, %j) != -1; %j++)
+		{
+			if(GetWord(%shopIndices, %j) == %itemShopIndex)
+			{
+				%itemList = %itemList @ %item @ " ";
+				%itemCount++;
+				break;
+			}
+		}
+	}
+	
+	// Pagination
+	%l = 6; // Items per page
+	%np = floor(%itemCount / %l);
+	%lb = (%page * %l) - (%l - 1);
+	%ub = %lb + (%l - 1);
+	if(%ub > %itemCount)
+		%ub = %itemCount;
+	
+	%cnt = 1;
+	for(%i = %lb; %i <= %ub; %i++)
+	{
+		%item = GetWord(%itemList, %i - 1);
+		if(%item == "" || %item == -1)
+			continue;
+		
+		%name = $BeltItem[%item, "Name"];
+		if(%name == "")
+			%name = %item;
+		
+		%cost = Belt::GetBuyCost(%clientId, %item);
+		Client::addMenuItem(%clientId, %cnt++ @ ": " @ %name @ " ($" @ %cost @ ")", %item @ " " @ %page);
+	}
+	
+	// If no items found, show message
+	if(%itemCount == 0)
+	{
+		Client::addMenuItem(%clientId, "1: (No accessories available)", "noitems");
+	}
+	
+	// Navigation
+	if(%page == 1)
+	{
+		if(%itemCount > 6)
+			Client::addMenuItem(%clientId, "nNext >>", "page " @ (%page + 1));
+		Client::addMenuItem(%clientId, "bBack", "back");
+		Client::addMenuItem(%clientId, "xDone", "done");
+	}
+	else if(%page >= %np + 1 || %np == 0)
+	{
+		if(%page > 1)
+			Client::addMenuItem(%clientId, "p<< Prev", "page " @ (%page - 1));
+		Client::addMenuItem(%clientId, "bBack", "back");
+		Client::addMenuItem(%clientId, "xDone", "done");
+	}
+	else
+	{
+		Client::addMenuItem(%clientId, "nNext >>", "page " @ (%page + 1));
+		Client::addMenuItem(%clientId, "p<< Prev", "page " @ (%page - 1));
+		Client::addMenuItem(%clientId, "bBack", "back");
+		Client::addMenuItem(%clientId, "xDone", "done");
+	}
+}
+
+function processMenuBuyBeltAccessories(%clientId, %opt)
+{
+	%o = GetWord(%opt, 0);
+	%p = GetWord(%opt, 1);
+	
+	if(%o == "back")
+	{
+		// Return to main shop menu
+		Belt::Shop(%clientId, %clientId.currentBeltShop, %clientId.beltShopIndices);
+		return;
+	}
+	
+	if(%o == "done")
+	{
+		%clientId.currentBeltShop = "";
+		%clientId.beltShopIndices = "";
+		Client::cancelMenu(%clientId);
+		return;
+	}
+	
+	if(%o == "page")
+	{
+		MenuBuyBeltAccessories(%clientId, %p);
+		return;
+	}
+	
+	// Player selected an item to buy - show buy confirmation menu
+	MenuBuyBeltItem(%clientId, %o, %p);
+}
+
+function MenuBuyBeltItem(%clientId, %item, %fromPage)
+{
+	%name = $BeltItem[%item, "Name"];
+	if(%name == "")
+		%name = %item;
+	
+	%cost = Belt::GetBuyCost(%clientId, %item);
+	%coins = fetchData(%clientId, "COINS");
+	
+	Client::buildMenu(%clientId, %name, "BuyBeltItem", true);
+	
+	if(%coins >= %cost)
+	{
+		Client::addMenuItem(%clientId, "1: Buy 1 ($" @ %cost @ ")", %item @ " buy 1 " @ %fromPage);
+	}
+	else
+	{
+		Client::addMenuItem(%clientId, "1: (Cannot afford - $" @ %cost @ ")", "cantafford");
+	}
+	
+	// Show bulk options if player can afford
+	if(%coins >= %cost * 5)
+		Client::addMenuItem(%clientId, "2: Buy 5 ($" @ (%cost * 5) @ ")", %item @ " buy 5 " @ %fromPage);
+	if(%coins >= %cost * 10)
+		Client::addMenuItem(%clientId, "3: Buy 10 ($" @ (%cost * 10) @ ")", %item @ " buy 10 " @ %fromPage);
+	
+	Client::addMenuItem(%clientId, "bBack", "back " @ %fromPage);
+	Client::addMenuItem(%clientId, "xDone", "done");
+}
+
+function processMenuBuyBeltItem(%clientId, %opt)
+{
+	%item = GetWord(%opt, 0);
+	%action = GetWord(%opt, 1);
+	%amount = GetWord(%opt, 2);
+	%fromPage = GetWord(%opt, 3);
+	
+	if(%item == "done" || %action == "")
+	{
+		%clientId.currentBeltShop = "";
+		%clientId.beltShopIndices = "";
+		Client::cancelMenu(%clientId);
+		return;
+	}
+	
+	if(%item == "back")
+	{
+		// %item is "back", %action is the page number
+		MenuBuyBeltAccessories(%clientId, %action);
+		return;
+	}
+	
+	if(%action == "back")
+	{
+		// Old format fallback
+		MenuBuyBeltAccessories(%clientId, %amount);
+		return;
+	}
+	
+	if(%action == "cantafford")
+	{
+		MenuBuyBeltItem(%clientId, %item, %fromPage);
+		return;
+	}
+	
+	if(%action == "buy")
+	{
+		%cost = Belt::GetBuyCost(%clientId, %item) * %amount;
+		%coins = fetchData(%clientId, "COINS");
+		
+		if(%coins < %cost)
+		{
+			Client::sendMessage(%clientId, $MsgRed, "You cannot afford this purchase.~wC_BuySell.wav");
+			MenuBuyBeltItem(%clientId, %item, %fromPage);
+			return;
+		}
+		
+		// Deduct coins
+		storeData(%clientId, "COINS", %cost, "dec");
+		
+		// Give item to belt storage
+		Belt::GiveThisStuff(%clientId, %item, %amount);
+		
+		// Play sound and notify
+		%name = $BeltItem[%item, "Name"];
+		if(%name == "")
+			%name = %item;
+		Client::sendMessage(%clientId, $MsgWhite, "You purchased " @ %amount @ " " @ %name @ ".~wbuysellsound.wav");
+		
+		// Use haggling skill
+		UseSkill(%clientId, $SkillHaggling, True, True);
+		
+		// Refresh and return to item menu
+		RefreshAll(%clientId);
+		MenuBuyBeltItem(%clientId, %item, %fromPage);
+	}
 }

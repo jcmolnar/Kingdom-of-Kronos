@@ -1,5 +1,5 @@
-$SPAWNLOOP_DEBUG = 1;         // Controls [SPAWN DEBUG] messages
-$SPAWN_TRANSACTION_DEBUG = 1; // Controls [SPAWN TRANSACTION] messages
+$SPAWNLOOP_DEBUG = 0;         // Controls [SPAWN DEBUG] and [SPAWNLOOP CHECKPOINT] messages
+$SPAWN_TRANSACTION_DEBUG = 0; // Controls [SPAWN TRANSACTION] messages
 // ============================================================================
 // CRITICAL FIX #2: Transaction-Based Spawn System
 // ============================================================================
@@ -233,18 +233,18 @@ function SpawnLoop(%this)
 	Watchdog_Enter("SpawnLoop");
 	
 	// GRANULAR DEBUG: Log each step to find freeze location
-	echo("[SPAWNLOOP CHECKPOINT] Step 1 - Entry for spawnpoint " @ %this @ " @ " @ floor(getSimTime()));
+	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 1 - Entry for spawnpoint " @ %this @ " @ " @ floor(getSimTime()));
 	
 	dbecho($dbechoMode, "SpawnLoop(" @ %this @ ")");
 
 	%info = Object::getName(%this);
 	
-	echo("[SPAWNLOOP CHECKPOINT] Step 2 - Got info: '" @ %info @ "'");
+	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 2 - Got info: '" @ %info @ "'");
 	
 	// SAFETY: If %info is empty, exit early to prevent infinite loops
 	if(%info == "" || %info == -1)
 	{
-		echo("[SPAWNLOOP CHECKPOINT] ABORT - Invalid spawn point info, scheduling next loop and returning");
+		if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] ABORT - Invalid spawn point info, scheduling next loop and returning");
 		schedule("SpawnLoop(" @ %this @ ");", 30);
 		return;
 	}
@@ -254,26 +254,26 @@ function SpawnLoop(%this)
 	%diff = %maxdelay - %mindelay;
 	%delay = floor(getRandom() * %diff) + %mindelay;
 	
-	echo("[SPAWNLOOP CHECKPOINT] Step 3 - Delay calculated: " @ %delay);
+	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 3 - Delay calculated: " @ %delay);
 
 	%indexes = "";
 	for(%i = 5; GetWord(%info, %i) != -1; %i++)
 		%indexes = %indexes @ GetWord(%info, %i) @ " ";
 		
-	echo("[SPAWNLOOP CHECKPOINT] Step 4 - Indexes extracted, count: " @ (%i - 5));
+	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 4 - Indexes extracted, count: " @ (%i - 5));
 
 	%r = floor(getRandom() * (%i-5));
 	%index = GetWord(%indexes, %r);
 	
-	echo("[SPAWNLOOP CHECKPOINT] Step 5 - Selected index: " @ %index);
+	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 5 - Selected index: " @ %index);
 
 	%flag = "";
 	if($SelectiveZoneBotSpawning)
 	{
 	%zoneId = $MarkerZone[%this];
-		echo("[SPAWNLOOP CHECKPOINT] Step 5a - Calling Zone::getNumPlayers(" @ %zoneId @ ")");
+		if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 5a - Calling Zone::getNumPlayers(" @ %zoneId @ ")");
 		%zonePlayerCount = Zone::getNumPlayers(%zoneId);
-		echo("[SPAWNLOOP CHECKPOINT] Step 5b - Zone::getNumPlayers returned: " @ %zonePlayerCount);
+		if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 5b - Zone::getNumPlayers returned: " @ %zonePlayerCount);
 		// Spawn zone rules:
 		// - Zone is unknown/empty → NO spawning (spawn point must have valid zone)
 		// - Zone is valid AND has players → Allow spawning
@@ -293,7 +293,7 @@ function SpawnLoop(%this)
 	else
 		%flag = True;
 	
-	echo("[SPAWNLOOP CHECKPOINT] Step 6 - Zone check complete, flag=" @ %flag);
+	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 6 - Zone check complete, flag=" @ %flag);
 
 	%currentCounter = $numAIperSpawnPoint[%this];
 	if(%currentCounter == "")
@@ -447,18 +447,18 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		$SpawnLoopSleeping[%this] = "true";
 		%zoneId = $MarkerZone[%this];
 		%zoneIndex = Zone::getIndex(%zoneId);
-		echo("[SPAWNLOOP CHECKPOINT] Step 7 - SLEEPING (zone " @ %zoneIndex @ " has no players)");
-		echo("[SPAWNLOOP CHECKPOINT] Step 8 - EXIT (no reschedule - waiting for WakeZoneSpawnLoops)");
+		if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 7 - SLEEPING (zone " @ %zoneIndex @ " has no players)");
+		if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 8 - EXIT (no reschedule - waiting for WakeZoneSpawnLoops)");
 		return;
 	}
 	
 	// Zone has players or SelectiveZoneBotSpawning is disabled - continue normal loop
-	echo("[SPAWNLOOP CHECKPOINT] Step 7 - Scheduling next loop, delay=" @ %delay @ ", inProgress=" @ %spawnInProgress);
+	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 7 - Scheduling next loop, delay=" @ %delay @ ", inProgress=" @ %spawnInProgress);
 	if(%spawnInProgress != "true")
 		schedule("SpawnLoop(" @ %this @ ");", %delay);
 	else
 		// If a spawn is already in progress, reschedule with a small backoff to avoid tight reentry
 		schedule("SpawnLoop(" @ %this @ ");", %delay + 1);
 	
-	echo("[SPAWNLOOP CHECKPOINT] Step 8 - EXIT (schedule called successfully)");
+	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 8 - EXIT (schedule called successfully)");
 }

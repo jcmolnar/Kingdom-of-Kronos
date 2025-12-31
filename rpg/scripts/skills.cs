@@ -977,7 +977,9 @@ function UseSkill(%clientId, %skilltype, %successful, %showmsg, %base, %refresha
 					{
 						$SkillUpgradeRefreshScheduled[%clientId] = "true";
 						// Schedule a single RefreshAll after a short delay
-						schedule("$SkillUpgradeRefreshScheduled[" @ %clientId @ "] = \"\"; RefreshAll(" @ %clientId @ ", \"true\");", 2);
+						// CRITICAL: The flag is now cleared INSIDE RefreshAll (at the end) to ensure
+						// attacks remain blocked during the entire refresh window.
+						schedule("RefreshAll(" @ %clientId @ ", \"true\");", 2);
 					}
 					// If already scheduled, the pending call will handle this update too
 				}

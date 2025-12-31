@@ -16,6 +16,7 @@ $LOSRadiusSelfType = 6;			//casts at LOS and around LOS and to self
 $SelfRadiusLOSRadiusType = 7;		//casts to self and around self and to LOS and around LOS
 
 //-- SPELL DEFINITIONS -------------------------------------------------------------------------------------------
+$SPELL_DEBUG = 1;
 
 $Spell::keyword[1] = "firebomb";
 $Spell::index[firebomb] = 1;
@@ -1212,9 +1213,9 @@ function BeginCastSpell(%clientId, %keyword)
 					{
 						if(floor(getRandom() * 100) < 15)
 						{
-							// Schedule echo cast slightly after original
+							// Schedule echo cast slightly after original - use SILENT version (no explosions)
 							%echoDelay = $Spell::delay[%i] + 0.5;
-							schedule("DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\", \"" @ %casterName @ "\");", %echoDelay);
+							schedule("DoCastSpell_Silent(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\", \"" @ %casterName @ "\");", %echoDelay);
 
 							// CRITICAL: Clear SpellCastStep after echo completes to prevent casting lock
 							%echoClearDelay = %echoDelay + 0.5;
@@ -1236,6 +1237,108 @@ function BeginCastSpell(%clientId, %keyword)
 	}
 	Client::sendMessage(%clientId, $MsgWhite, "This spell seems unfamiliar to you.");
 
+	return False;
+}
+
+//============================================================================
+// SILENT SPELL CAST - Used by Spell Echo to apply damage without visuals
+// This reduces visual clutter and improves performance for echoed spells
+//============================================================================
+function DoCastSpell_Silent(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expectedCasterName)
+{
+	dbecho($dbechoMode, "DoCastSpell_Silent(" @ %clientId @ ", " @ %index @ ")");
+	
+	// Caster identity validation (same as regular DoCastSpell)
+	if(%expectedCasterName != "" && %expectedCasterName != -1)
+	{
+		%currentCasterName = Client::getName(%clientId);
+		if(%currentCasterName != %expectedCasterName)
+		{
+			echo("[SPELL ECHO SAFETY] BLOCKED orphan echo - Original: " @ %expectedCasterName @ ", Current: " @ %currentCasterName);
+			return False;
+		}
+	}
+	
+	// Get spell info
+	%spellRadius = $Spell::radius[%index];
+	%spellDamage = $Spell::damageValue[%index];
+	%skilltype = $SkillType[$Spell::keyword[%index]];
+	
+	// Only apply damage for offensive spells with radius damage
+	if(%skilltype != $SkillOffensiveCasting)
+		return False;
+	
+	// For radius spells, apply damage silently (no explosions)
+	if(%spellRadius != "" && %spellRadius > 0 && %castPos != "")
+	{
+		// SPECIAL HANDLING: Multi-explosion "Intensive" spells
+		// Run the full batch sequence silently instead of just one hit
+		// Indices: 48 (Apocalypse), 50 (Ion Blast), 51 (Shredder), 66 (Terminate), 67 (Tornado)
+		if(%index == 48 || %index == 50 || %index == 66)
+		{
+			// These use ApocalypseBatchExplosions
+			// Assume data arrays are already populated by the original cast
+			ApocalypseBatchExplosions(%clientId, %index, 0, true);
+			return True;
+		}
+		else if(%index == 46)
+		{
+			// Tornado (Index 46) uses its own batch function
+			TornadoBatchExplosions(%clientId, %index, 0, true);
+			return True;
+		}
+		else if(%index == 51)
+		{
+			// Shredder uses its own batch function - but wait, it's not a batch function in spells.cs!
+			// Index 51 (Shredder) uses custom schedule loop in DoCastSpell.
+			// We need to replicate that loop here silently.
+			
+			// Cache position parsing
+			%castX = GetWord(%castPos, 0);
+			%castY = GetWord(%castPos, 1);
+			%castZ = GetWord(%castPos, 2);
+			%zPos = %castZ + 600; // Unused for silent, but matching structure
+			
+			%newPos = %castX @ " " @ %castY @ " " @ (%castZ + 1.4);
+			
+			// 1. Skip the 25 lasers (visual only?) - Wait, lasers might do damage on impact?
+			// The original code separates lasers (visuals) from bombs (damage).
+			// If we skip lasers, we skip that visual clutter.
+			// The bombs do the actual radius damage.
+			
+			// 2. Schedule the 4 explosions (damage only)
+			for(%i = 0; %i < 4; %i++)
+			{
+				// Call ApocalypseCreateExplosion with silent=true
+				// Original used: CreateAndDetBomb(%clientId, "Bomb23", %newPos, true, %index);
+				schedule("ApocalypseCreateExplosion(" @ %clientId @ ", \"Bomb23\", \"" @ %newPos @ "\", 1, " @ %index @ ", true);", %i / 5);
+			}
+			return True;
+		}
+
+		// Use cached damage if available (for other spells)
+		if($SpellTargetCache[%clientId, "count"] != "" && $SpellTargetCache[%clientId, "count"] > 0)
+		{
+			SpellRadiusDamage_Cached(%clientId, %castPos, %index);
+		}
+		else
+		{
+			// No cache - use standard radius damage (no visuals)
+			SpellRadiusDamage(%clientId, %castPos, %index);
+		}
+		return True;
+	}
+	
+	// For single-target spells (LOS spells), apply damage to target
+	if(%castObj != "" && %castObj != 0 && isObject(%castObj))
+	{
+		if(getObjectType(%castObj) == "Player")
+		{
+			SpellDamage(%clientId, %castObj, %spellDamage, %index);
+			return True;
+		}
+	}
+	
 	return False;
 }
 
@@ -2356,7 +2459,12 @@ if (%index == 21)
 			%xpos = GetWord(%castPos, 0);
 			%ypos = GetWord(%castPos, 1);
 			%zpos = GetWord(%castPos, 2);
-			%basePos = %xpos @ " " @ %ypos @ " ";
+			
+			// PERFORMANCE: Build target cache (Vertical column, radius 30 is enough)
+			SpellTargetCache_Build(%clientId, %castPos, 30);
+			$ApocalypseUseCachedDamage[%clientId] = true;
+			
+			%basePos = %xpos @ " " @ %ypos @ " " @ %zpos;
 			
 			%counter = 5;
 			schedule("playSound(LaunchET, \"" @ %castPos @ "\");", %counter);
@@ -2416,66 +2524,89 @@ if (%index == 21)
 		}
 	}
 	if(%index == 50)
-	{//Ion Blast
+	{//Ion Blast - OPTIMIZED BATCH VERSION
 		if(%castPos != "")
 		{
+			// Validate clientId
+			if(%clientId == 0 || %clientId == -1)
+			{
+				Client::sendMessage(%clientId, $MsgBeige, "Error: Invalid client ID.");
+				%returnFlag = False;
+				return;
+			}
+			
 			// Cache position parsing
 			%castX = GetWord(%castPos, 0);
 			%castY = GetWord(%castPos, 1);
 			%castZ = GetWord(%castPos, 2);
 			
+			// Initialize Batch Data
+			$ApocalypseBasePos[%clientId] = %castPos;
+			$ApocalypseUseCachedDamage[%clientId] = true;
+			
+			// Build target cache for the entire duration (50m spell rad + 40m offset)
+			SpellTargetCache_Build(%clientId, %castPos, 90);
+			$ApocalypseUseCachedDamage[%clientId] = true;
+			
 			%minrad = 0;
-			%maxrad = 50;
-			for(%i = 0; %i <= 30; %i++)
+			%maxrad = 40;
+			
+			%count = 0;
+			// 3. Interleaved Generation (Visuals + Damage together) to ensure Sorted Time
+			// This prevents batching issues and ensures the spell finishes in ~4 seconds
+			for(%t = 0; %t <= 40; %t++)
 			{
-				%tempPos = RandomPositionXY(%minrad, %maxrad);
-				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 4));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb20\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 5, %player);
+				%curTime = %t * 0.1;
+				
+				// Add 1-2 random visuals per tick (Total ~60 visuals)
+				%numVis = 1 + floor(getRandom() * 1.5);
+				for(%v = 0; %v < %numVis; %v++)
+				{
+					%rnd = floor(getRandom() * 6);
+					%bType = "Bomb20";
+					if(%rnd == 1) %bType = "Bomb21";
+					else if(%rnd == 2) %bType = "Bomb1";
+					else if(%rnd == 3) %bType = "Bomb6";
+					else if(%rnd == 4) %bType = "Bomb17";
+					else if(%rnd == 5) %bType = "Bomb14";
+					
+					%tempPos = RandomPositionXY(%minrad, %maxrad);
+					%xOff = GetWord(%tempPos, 0);
+					%yOff = GetWord(%tempPos, 1);
+					%zOff = (%t / 10);
+					
+					// Format: type, x, y, z, damage, delay
+					$ApocalypseData[%clientId, %count] = %bType @ " " @ %xOff @ " " @ %yOff @ " " @ %zOff @ " False " @ %curTime;
+					%count++;
+				}
+				
+				// Add Damage Bomb every 2nd tick (Total 21 damage bombs)
+				if(%t % 2 == 0)
+				{
+					%dType = "Bomb22";
+					if(%t % 4 == 0) %dType = "Bomb23";
+					
+					%tempPos = RandomPositionXY(%minrad, %maxrad);
+					%xOff = GetWord(%tempPos, 0);
+					%yOff = GetWord(%tempPos, 1);
+					%zOff = (%t / 10);
+					
+					$ApocalypseData[%clientId, %count] = %dType @ " " @ %xOff @ " " @ %yOff @ " " @ %zOff @ " True " @ %curTime;
+					%count++;
+				}
 			}
-			for(%i = 0; %i <= 30; %i++)
-			{
-				%tempPos = RandomPositionXY(%minrad, %maxrad);
-				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 4));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb21\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 5, %player);
-			}
-			for(%i = 0; %i <= 25; %i++)
-			{
-				%tempPos = RandomPositionXY(%minrad, %maxrad);
-				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 4));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb1\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 4, %player);
-			}
-			for(%i = 0; %i <= 25; %i++)
-			{
-				%tempPos = RandomPositionXY(%minrad, %maxrad);
-				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 4));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb6\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 4, %player);
-			}
-			for(%i = 0; %i <= 20; %i++)
-			{
-				%tempPos = RandomPositionXY(%minrad, %maxrad);
-				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 4));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb17\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 3, %player);
-			}
-			for(%i = 0; %i <= 20; %i++)
-			{
-				%tempPos = RandomPositionXY(%minrad, %maxrad);
-				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 4));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb14\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 3, %player);
-			}
-			for(%i = 0; %i <= 10; %i++)
-			{
-				%tempPos = RandomPositionXY(%minrad, %maxrad);
-				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 4));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb22\", \"" @ %newPos @ "\", True, " @ %index @ ");", %i / 2.5, %player);
-			}
-			for(%i = 0; %i <= 10; %i++)
-			{
-				%tempPos = RandomPositionXY(%minrad, %maxrad);
-				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 4));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb23\", \"" @ %newPos @ "\", True, " @ %index @ ");", %i / 2.5, %player);
-			}
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb22\", \"" @ %castPos @ "\", True, " @ %index @ ");", 0.5, %player);
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb23\", \"" @ %castPos @ "\", True, " @ %index @ ");", 0.5, %player);
+			
+			// Final center blasts at end (T=4.1s)
+			$ApocalypseData[%clientId, %count] = "Bomb22 0 0 0 True 4.1";
+			%count++;
+			$ApocalypseData[%clientId, %count] = "Bomb23 0 0 0 True 4.1";
+			%count++;
+			
+			$ApocalypseDataCount[%clientId] = %count;
+			
+			// Start batch processing
+			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", 0);", 0.1);
+			
 			%overrideEndSound = True;
 			%returnFlag = True;
 		}
@@ -2605,6 +2736,10 @@ function Turret::objectiveDestroyed() {}
 			%ypos=getword(%castpos,1);
 			%zpos=getword(%castpos,2);
 			
+			// PERFORMANCE: Build target cache (Max offset is ~30, spell radius is 100)
+			SpellTargetCache_Build(%clientId, %castPos, 130);
+			$ApocalypseUseCachedDamage[%clientId] = true;
+			
 			// Store explosion data in arrays for batch processing
 			// Format: bombType, xOffset, yOffset, zOffset, doDamage, delay
 			$ApocalypseData[%clientId, 0] = "Bomb5 0 0 85 False 0.0";
@@ -2683,6 +2818,13 @@ function Turret::objectiveDestroyed() {}
 			$ApocalypseDataCount[%clientId] = 10;
 			$ApocalypseBasePos[%clientId] = %xpos @ " " @ %ypos @ " " @ %zpos;
 			
+			// PERFORMANCE: Pre-cache all entities in the spell's maximum radius
+			// This avoids calling containerBoxFillSet for every explosion (10+ times)
+			// Max radius includes spell radius (200) + max offset (30) = 230
+			%maxSpellRadius = $Spell::radius[%index] + 150; // 150 is the max z-offset for index 66
+			SpellTargetCache_Build(%clientId, %castPos, %maxSpellRadius);
+			$ApocalypseUseCachedDamage[%clientId] = true;
+			
 			// Start the batch processing
 			schedule("playSound(LaunchET, \"" @ %castPos @ "\");", 5);
 			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", 0);", 5);
@@ -2739,30 +2881,8 @@ function CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index)
 	// Convert bomb type (e.g., "Bomb1") to projectile name (e.g., "SpellBomb1")
 	%projName = "Spell" @ %b;
 	
-	// Create visual explosion using mine (most reliable method)
-	// This ensures explosions are visible while we use projectiles for networking
-	%player = Client::getOwnedObject(%clientId);
-	if(%player == -1)
-	{
-		%list = GetEveryoneIdList();
-		if(%list != "")
-			%player = Client::getOwnedObject(GetWord(%list, 0));
-	}
-	
-	if(%player != -1)
-	{
-		%bomb = newObject("", "Mine", %b);
-		if(%bomb != -1)
-		{
-			addToSet("MissionCleanup", %bomb);
-			GameBase::setPosition(%bomb, %castPos);
-			// Delete quickly after explosion to reduce server load
-			schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.5);
-		}
-	}
-	
-	// Also spawn invisible projectile for network synchronization
-	// This provides network efficiency while mine handles visual explosion
+	// PERFORMANCE: Spawn a Mine for visual explosion. 
+	// Projects (SpellBombX) are used for networking, but the Mine triggers the actual explosionTag reliably.
 	%sourceObj = -1;
 	if(%clientId != 0 && %clientId != -1)
 	{
@@ -2782,19 +2902,81 @@ function CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index)
 	
 	if(%sourceObj != -1)
 	{
+		%bomb = newObject("", "Mine", %b);
+		if(%bomb != -1)
+		{
+			addToSet("MissionCleanup", %bomb);
+			GameBase::setPosition(%bomb, %castPos);
+			schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.4);
+		}
+		
 		%trans = %castPos @ " 0 0 0";
-		// Spawn invisible projectile for network sync only
 		Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0", 0.1);
 	}
 	
 	if(%doDamage && %clientId != 0 && %clientId != -1)
 		SpellRadiusDamage(%clientId, %castPos, %index);
+	
+	// PERFORMANCE: Throttle sounds to avoid network clatter for high-density spells
+	if(getSimTime() - $LastSpellExplosionSound > 0.1)
+	{
+		$LastSpellExplosionSound = getSimTime();
+		playSound($Spell::endSound[%index], %castPos);
+	}
+}
 
-	playSound($Spell::endSound[%index], %castPos);
+// Visual-only version of CreateAndDetBomb for use with cached damage system
+// Creates the explosion effects but skips the damage calculation
+function CreateAndDetBomb_VisualOnly(%clientId, %b, %castPos, %index)
+{
+	dbecho($dbechoMode, "CreateAndDetBomb_VisualOnly(" @ %clientId @ ", " @ %b @ ", " @ %castPos @ ", " @ %index @ ")");
+
+	%projName = "Spell" @ %b;
+	
+	// Restore Mine creation for visuals
+	
+	// Spawn invisible projectile for network synchronization
+	%sourceObj = -1;
+	if(%clientId != 0 && %clientId != -1)
+		%sourceObj = Client::getOwnedObject(%clientId);
+	
+	if(%sourceObj == -1)
+	{
+		%sourceObj = Client::getOwnedObject(2048);
+		if(%sourceObj == -1)
+		{
+			%list = GetEveryoneIdList();
+			if(%list != "")
+				%sourceObj = Client::getOwnedObject(GetWord(%list, 0));
+		}
+	}
+	
+	if(%sourceObj != -1)
+	{
+		%bomb = newObject("", "Mine", %b);
+		if(%bomb != -1)
+		{
+			addToSet("MissionCleanup", %bomb);
+			GameBase::setPosition(%bomb, %castPos);
+			schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.4);
+		}
+		
+		%trans = %castPos @ " 0 0 0";
+		Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0", 0.1);
+	}
+	
+	// NOTE: No damage calculation here - that's done via SpellRadiusDamage_Cached
+	
+	// PERFORMANCE: Throttle sounds
+	if(getSimTime() - $LastSpellExplosionSound > 0.1)
+	{
+		$LastSpellExplosionSound = getSimTime();
+		playSound($Spell::endSound[%index], %castPos);
+	}
 }
 
 // Optimized batch processing function for Apocalypse spell
-function ApocalypseBatchExplosions(%clientId, %index, %startIdx)
+function ApocalypseBatchExplosions(%clientId, %index, %startIdx, %silent)
 {
 	// Validate clientId - if it's 0 or invalid, try to get it from stored data
 	if(%clientId == 0 || %clientId == -1)
@@ -2814,19 +2996,26 @@ function ApocalypseBatchExplosions(%clientId, %index, %startIdx)
 	%ypos = getWord(%basePos, 1);
 	%zpos = getWord(%basePos, 2);
 	
-	%batchSize = 3; // Process 3 explosions per batch to reduce server load
-	%lastDelay = 0;
+	%batchSize = 10; // Process 10 explosions per batch
+	// PERFORMANCE: If silent (Echo), we can process even more damage-only hits per batch
+	if(%silent) %batchSize = 25;
 	
-	// Get the delay for the first explosion in this batch
-	if(%startIdx > 0)
-	{
-		%prevData = $ApocalypseData[%clientId, %startIdx - 1];
-		if(%prevData != "")
-			%lastDelay = getWord(%prevData, 5);
-	}
+	// Get the start delay for this batch to calculate relative scheduling
+	%firstData = $ApocalypseData[%clientId, %startIdx];
+	%startDelay = 0;
+	if(%firstData != "")
+		%startDelay = getWord(%firstData, 5);
+	
+	// Normalize silent value to 0 or 1 for safe use in schedule()
+	if(%silent == "" || %silent == "false" || %silent == "0") %silent = 0;
+	else %silent = 1;
 	
 	// Process explosions in batches
-	for(%i = %startIdx; %i < %count && %i < %startIdx + %batchSize; %i++)
+	if($SPELL_DEBUG) echo("[SPELL DEBUG] Batch Start: " @ %index @ " Client: " @ %clientId @ " StartIdx: " @ %startIdx @ " Silent: " @ %silent);
+	
+	%processedInBatch = 0;
+	%damageExplosionsThisBatch = 0;
+	for(%i = %startIdx; %i < %count && %processedInBatch < %batchSize; %i++)
 	{
 		%data = $ApocalypseData[%clientId, %i];
 		if(%data == "")
@@ -2839,6 +3028,12 @@ function ApocalypseBatchExplosions(%clientId, %index, %startIdx)
 		%doDamageStr = getWord(%data, 4);
 		%delay = getWord(%data, 5);
 		
+		// PERFORMANCE: If silent (Echo), skip visual-only entries entirely to save scheduling overhead
+		if(%silent && %doDamageStr == "False")
+			continue;
+		
+		%processedInBatch++;
+		
 		// Convert string to boolean (numeric 1 or 0 for schedule compatibility)
 		%doDamage = (%doDamageStr == "True");
 		if(%doDamage)
@@ -2848,46 +3043,58 @@ function ApocalypseBatchExplosions(%clientId, %index, %startIdx)
 		
 		%pos = (%xpos + %xOffset) @ " " @ (%ypos + %yOffset) @ " " @ (%zpos + %zOffset);
 		
-		// Calculate relative delay from batch start
-		%relativeDelay = %delay - %lastDelay;
-		if(%i == %startIdx)
-			%relativeDelay = 0; // First in batch happens immediately
+		// Calculate delay relative to the START of this batch
+		// This ensures explosions are spaced out correctly (e.g. 0.1s, 0.2s, 0.3s)
+		%relativeDelay = %delay - %startDelay;
+		if(%relativeDelay < 0) %relativeDelay = 0;
 		
 		// Schedule this explosion with proper timing
+		// Using explicit 0/1 for numeric values to avoid syntax errors in console
 		if(%relativeDelay > 0)
 		{
-			schedule("ApocalypseCreateExplosion(" @ %clientId @ ", \"" @ %bombType @ "\", \"" @ %pos @ "\", " @ %doDamageNum @ ", " @ %index @ ");", %relativeDelay);
+			schedule("ApocalypseCreateExplosion(" @ %clientId @ ", \"" @ %bombType @ "\", \"" @ %pos @ "\", " @ %doDamageNum @ ", " @ %index @ ", " @ %silent @ ");", %relativeDelay);
 		}
 		else
 		{
-			ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamage, %index);
+			ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamageNum, %index, %silent);
 		}
 		
 		%lastDelay = %delay;
 	}
 	
 	// Schedule next batch if there are more explosions
-	%nextIdx = %startIdx + %batchSize;
+	%nextIdx = %i;
 	if(%nextIdx < %count)
 	{
 		%nextData = $ApocalypseData[%clientId, %nextIdx];
 		if(%nextData != "")
 		{
-			%nextDelay = getWord(%nextData, 5) - %lastDelay;
-			if(%nextDelay < 0.1)
-				%nextDelay = 0.3; // Minimum delay between batches
-			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", " @ %nextIdx @ ");", %nextDelay);
+			// Wait for explosions in THIS batch to complete, then start next batch
+			// %lastDelay is the absolute time of the last explosion we scheduled
+			// %startDelay is the absolute time of the first explosion in this batch
+			// The difference is how long the explosions in this batch take to fire
+			%batchDuration = %lastDelay - %startDelay;
+			if(%batchDuration < 0.1) %batchDuration = 0.1;
+			
+			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", " @ %nextIdx @ ", " @ %silent @ ");", %batchDuration);
 		}
 	}
 	else
 	{
-		// Clean up data arrays after a short delay to ensure all explosions are processed
-		schedule("ApocalypseCleanup(" @ %clientId @ ", " @ %count @ ");", 12.0);
+		// Cleanup when all batches are done - BUT ONLY IF NOT SILENT
+		// Silent batches reuse the data from the main visual batch, so they shouldn't clean it up
+		if(!%silent)
+		{
+			// Clean up data arrays after a short delay to ensure all explosions are processed
+			schedule("ApocalypseCleanup(" @ %clientId @ ", " @ %count @ ");", 12.0);
+		}
 	}
+
+	if($SPELL_DEBUG) echo("[SPELL DEBUG] Batch Done: " @ %index @ " Processed: " @ %processedInBatch);
 }
 
 // Helper function to create a single explosion
-function ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamage, %index)
+function ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamage, %index, %silent)
 {
 	// Validate clientId before proceeding
 	if(%clientId == 0 || %clientId == -1)
@@ -2895,63 +3102,198 @@ function ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamage, %index
 	
 	if(%doDamage)
 	{
-		CreateAndDetBomb(%clientId, %bombType, %pos, True, %index);
+		// PERFORMANCE: Use cached entities if available, otherwise fall back to standard
+		if($ApocalypseUseCachedDamage[%clientId] == true)
+		{
+			// If silent (echo), only do damage - skip visuals
+			if(!%silent)
+			{
+				// Create visual explosion without damage (we do damage separately with cache)
+				CreateAndDetBomb_VisualOnly(%clientId, %bombType, %pos, %index);
+			}
+			
+			// Apply damage using cached entity list (silent/echo does this too)
+			SpellRadiusDamage_Cached(%clientId, %pos, %index);
+		}
+		else
+		{
+			if(%silent)
+			{
+				// Silent uncached path: Visuals skipped, just damage
+				SpellRadiusDamage(%clientId, %pos, %index);
+			}
+			else
+			{
+				// Standard path - queries containerBoxFillSet each time
+				CreateAndDetBomb(%clientId, %bombType, %pos, True, %index);
+			}
+		}
 	}
 	else
 	{
-		// For visual-only explosions, create mine for visual and projectile for networking
-		%projName = "Spell" @ %bombType;
-		
-		// Create visual explosion using mine
-		%player = Client::getOwnedObject(2048);
-		if(%player == -1)
-		{
-			%list = GetEveryoneIdList();
-			if(%list != "")
-				%player = Client::getOwnedObject(GetWord(%list, 0));
-		}
-		
-		if(%player != -1)
-		{
-			%bomb = newObject("", "Mine", %bombType);
-			if(%bomb != -1)
-			{
-				addToSet("MissionCleanup", %bomb);
-				GameBase::setPosition(%bomb, %pos);
-				// Delete quickly after explosion
-				schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.5);
-			}
-		}
-		
-		// Also spawn invisible projectile for network synchronization
-		%sourceObj = Client::getOwnedObject(2048);
-		if(%sourceObj == -1)
-		{
-			%list = GetEveryoneIdList();
-			if(%list != "")
-				%sourceObj = Client::getOwnedObject(GetWord(%list, 0));
-		}
-		
-		if(%sourceObj != -1)
-		{
-			%trans = %pos @ " 0 0 0";
-			// Spawn invisible projectile for network sync only
-			Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0", 0.1);
-		}
+		// NO DAMAGE case (visual only)
+		// If silent (echo), we do nothing at all to save performance
+		if(%silent) return;
+
+		// PERFORMANCE: Use the optimized visual-only helper instead of re-implementing
+		// This avoids the slow newObject("", "Mine", ...) calls and handles sound throttling.
+		CreateAndDetBomb_VisualOnly(%clientId, %bombType, %pos, %index);
 	}
 }
 
 // Cleanup function to remove data arrays
 function ApocalypseCleanup(%clientId, %count)
 {
+	if($SPELL_DEBUG) echo("[SPELL DEBUG] Apocalypse Finished. Total Damage Calls: " @ $SpellTotalDamageCalls[%clientId]);
+	$SpellTotalDamageCalls[%clientId] = 0;
+
 	for(%i = 0; %i < %count; %i++)
 		$ApocalypseData[%clientId, %i] = "";
 	$ApocalypseDataCount[%clientId] = "";
 	$ApocalypseBasePos[%clientId] = "";
+	$ApocalypseUseCachedDamage[%clientId] = "";
+	
+	// Also clear cached spell targets
+	SpellTargetCache_Clear(%clientId);
 }
 
+//============================================================================
+// SPELL TARGET CACHING SYSTEM
+// Performance optimization: Cache entities at spell start instead of querying
+// containerBoxFillSet for every explosion. Reduces O(N*E) to O(N+E) where
+// N = number of explosions and E = number of entities in range.
+//============================================================================
+
+// Cache all entities within max spell radius around a position
+// Call this ONCE when AOE spell starts, before any explosions
+function SpellTargetCache_Build(%clientId, %centerPos, %maxRadius)
+{
+	// Clear any existing cache
+	SpellTargetCache_Clear(%clientId);
+	
+	// Query all players within the maximum radius
+	%boxSize = %maxRadius * 2;
+	%set = newObject("set", SimSet);
+	%n = containerBoxFillSet(%set, $SimPlayerObjectType, %centerPos, %boxSize, %boxSize, %boxSize, 0);
+	
+	// Store cached entities in global arrays
+	$SpellTargetCache[%clientId, "count"] = %n;
+	$SpellTargetCache[%clientId, "centerPos"] = %centerPos;
+	$SpellTargetCache[%clientId, "maxRadius"] = %maxRadius;
+	
+	// Store each entity's object ID and position (position cached for distance calculations)
+	for(%i = 0; %i < %n; %i++)
+	{
+		%obj = Group::getObject(%set, %i);
+		$SpellTargetCache[%clientId, "obj", %i] = %obj;
+		$SpellTargetCache[%clientId, "pos", %i] = GameBase::getPosition(%obj);
+	}
+	
+	deleteObject(%set);
+	
+	return %n;
+}
+
+// Clear the cached entities for a client
+function SpellTargetCache_Clear(%clientId)
+{
+	%count = $SpellTargetCache[%clientId, "count"];
+	if(%count == "" || %count == 0)
+		return;
+	
+	for(%i = 0; %i < %count; %i++)
+	{
+		$SpellTargetCache[%clientId, "obj", %i] = "";
+		$SpellTargetCache[%clientId, "pos", %i] = "";
+	}
+	$SpellTargetCache[%clientId, "count"] = "";
+	$SpellTargetCache[%clientId, "centerPos"] = "";
+	$SpellTargetCache[%clientId, "maxRadius"] = "";
+}
+
+// Apply radius damage using CACHED entities instead of containerBoxFillSet
+// This is the optimized version of SpellRadiusDamage for batch explosions
+function SpellRadiusDamage_Cached(%clientId, %explosionPos, %index)
+{
+	dbecho($dbechoMode, "SpellRadiusDamage_Cached(" @ %clientId @ ", " @ %explosionPos @ ", " @ %index @ ")");
+	
+	%count = $SpellTargetCache[%clientId, "count"];
+	if(%count == "" || %count == 0)
+	{
+		// No cache - fall back to standard method (shouldn't happen but handle gracefully)
+		SpellRadiusDamage(%clientId, %explosionPos, %index);
+		return;
+	}
+	
+	%spellRadius = $Spell::radius[%index];
+	
+	// Iterate through cached entities and apply damage based on distance from THIS explosion
+	for(%i = 0; %i < %count; %i++)
+	{
+		%obj = $SpellTargetCache[%clientId, "obj", %i];
+		
+		// Validate object still exists (may have died/disconnected since cache was built)
+		if(!isObject(%obj))
+			continue;
+		
+		// Get CURRENT position (entity may have moved since cache was built)
+		%objPos = GameBase::getPosition(%obj);
+		
+		// Calculate distance from THIS explosion's position
+		%dist = Vector::getDistance(%explosionPos, %objPos);
+		
+		// Only damage if within this explosion's radius
+		if(%dist <= %spellRadius)
+		{
+			if($SPELL_DEBUG) %hitsThisExplosion++;
+			%newDamage = SpellCalcRadiusDamage(%dist, %spellRadius, $Spell::damageValue[%index], 5, 100);
+			SpellDamage_Buffered(%clientId, %obj, %newDamage, %index);
+		}
+	}
+	
+	if($SPELL_DEBUG && %hitsThisExplosion > 0)
+		echo("[SPELL DEBUG] Explosion Hit " @ %hitsThisExplosion @ " targets.");
+}
+
+//============================================================================
+// DAMAGE BUFFERING SYSTEM
+// Performance optimization: Accumulate damage for a target within a short
+// window and apply it in a single onDamage call. This reduces the overhead
+// of expensive stat calculations (DEF/MDEF/Skills) in Player::onDamage.
+//============================================================================
+
+function SpellDamage_Buffered(%clientId, %targetId, %damageValue, %index)
+{
+	// If buffer is empty for this target/caster, schedule a flush
+	if($SpellDamageBuffer[%targetId, %clientId] == "" || $SpellDamageBuffer[%targetId, %clientId] == 0)
+	{
+		// 0.2s flush interval balances performance and responsiveness:
+		// - Groups 2-3 explosions per flush for Ion Blast (fires every ~0.1s)
+		// - Reduces onDamage calls by ~50% for echoed spells
+		// - Still fast enough to feel responsive in combat
+		schedule("SpellDamageBuffer_Flush(" @ %clientId @ ", " @ (%targetId+0) @ ", " @ %index @ ");", 0.2);
+	}
+	
+	$SpellDamageBuffer[%targetId, %clientId] += %damageValue;
+}
+
+function SpellDamageBuffer_Flush(%clientId, %targetId, %index)
+{
+	%totalDamage = $SpellDamageBuffer[%targetId, %clientId];
+	if(%totalDamage == "" || %totalDamage == 0)
+		return;
+	
+	// Reset buffer BEFORE calling SpellDamage to avoid race conditions if 
+	// another explosion hits during the flush processing.
+	$SpellDamageBuffer[%targetId, %clientId] = 0;
+	
+	// Apply the accumulated damage
+	SpellDamage(%clientId, %targetId, %totalDamage, %index);
+}
+
+
 // Optimized batch processing function for Tornado spell
-function TornadoBatchExplosions(%clientId, %index, %startIdx)
+function TornadoBatchExplosions(%clientId, %index, %startIdx, %silent)
 {
 	if(%clientId == 0 || %clientId == -1)
 		return;
@@ -2962,17 +3304,25 @@ function TornadoBatchExplosions(%clientId, %index, %startIdx)
 	if(%basePos == "" || %count == "")
 		return;
 	
+	%xpos = getWord(%basePos, 0);
+	%ypos = getWord(%basePos, 1);
+	
+	// Normalize silent value to 0 or 1 for safe use in schedule() and boolean checks
+	if(%silent == "" || %silent == "false" || %silent == "0") %silent = 0;
+	else %silent = 1;
+	
 	%batchSize = 5; // Process 5 explosions per batch
-	%lastDelay = 0;
+	// PERFORMANCE: If silent (Echo), we can process more damage-only hits per batch
+	if(%silent) %batchSize = 20;
+
+	// Get the start delay for this batch
+	%firstData = $TornadoData[%clientId, %startIdx];
+	%startDelay = 0;
+	if(%firstData != "")
+		%startDelay = getWord(%firstData, 3);
 	
-	if(%startIdx > 0)
-	{
-		%prevData = $TornadoData[%clientId, %startIdx - 1];
-		if(%prevData != "")
-			%lastDelay = getWord(%prevData, 3);
-	}
-	
-	for(%i = %startIdx; %i < %count && %i < %startIdx + %batchSize; %i++)
+	%processedInBatch = 0;
+	for(%i = %startIdx; %i < %count && %processedInBatch < %batchSize; %i++)
 	{
 		%data = $TornadoData[%clientId, %i];
 		if(%data == "")
@@ -2983,53 +3333,65 @@ function TornadoBatchExplosions(%clientId, %index, %startIdx)
 		%doDamageStr = getWord(%data, 2);
 		%delay = getWord(%data, 3);
 		
+		// PERFORMANCE: If silent (Echo), skip visual-only entries entirely to save scheduling overhead
+		if(%silent && %doDamageStr == "False")
+			continue;
+		
+		%processedInBatch++;
+
 		%doDamage = (%doDamageStr == "True");
 		if(%doDamage)
 			%doDamageNum = 1;
 		else
 			%doDamageNum = 0;
 		
-		%pos = %basePos @ %zOffset;
-		%relativeDelay = %delay - %lastDelay;
-		if(%i == %startIdx)
-			%relativeDelay = 0;
+		%pos = %xpos @ " " @ %ypos @ " " @ %zOffset;
+		%relativeDelay = %delay - %startDelay;
+		if(%relativeDelay < 0) %relativeDelay = 0;
 		
 		if(%relativeDelay > 0)
 		{
-			schedule("ApocalypseCreateExplosion(" @ %clientId @ ", \"" @ %bombType @ "\", \"" @ %pos @ "\", " @ %doDamageNum @ ", " @ %index @ ");", %relativeDelay);
+			schedule("ApocalypseCreateExplosion(" @ %clientId @ ", \"" @ %bombType @ "\", \"" @ %pos @ "\", " @ %doDamageNum @ ", " @ %index @ ", " @ %silent @ ");", %relativeDelay);
 		}
 		else
 		{
-			ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamage, %index);
+			ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamageNum, %index, %silent);
 		}
 		
 		%lastDelay = %delay;
 	}
 	
-	%nextIdx = %startIdx + %batchSize;
+	// Schedule next batch if there are more explosions
+	%nextIdx = %i;
 	if(%nextIdx < %count)
 	{
 		%nextData = $TornadoData[%clientId, %nextIdx];
 		if(%nextData != "")
 		{
-			%nextDelay = getWord(%nextData, 3) - %lastDelay;
-			if(%nextDelay < 0.1)
-				%nextDelay = 0.2;
-			schedule("TornadoBatchExplosions(" @ %clientId @ ", " @ %index @ ", " @ %nextIdx @ ");", %nextDelay);
+			// Wait for explosions in THIS batch to complete, then start next batch
+			%batchDuration = %lastDelay - %startDelay;
+			if(%batchDuration < 0.1) %batchDuration = 0.1;
+			
+			schedule("TornadoBatchExplosions(" @ %clientId @ ", " @ %index @ ", " @ %nextIdx @ ", " @ %silent @ ");", %batchDuration);
 		}
 	}
 	else
 	{
-		// Cleanup
-		for(%i = 0; %i < %count; %i++)
+		// Cleanup - ONLY if not silent
+		if(!%silent)
+		{
+			// Cleanup
+			for(%i = 0; %i < %count; %i++)
 			$TornadoData[%clientId, %i] = "";
 		$TornadoDataCount[%clientId] = "";
 		$TornadoBasePos[%clientId] = "";
+	}
 	}
 }
 
 function SpellDamage(%clientId, %targetId, %damageValue, %index)
 {
+	$SpellTotalDamageCalls[%clientId]++;
 	dbecho($dbechoMode, "SpellDamage(" @ %clientId @ ", " @ %targetId @ ", " @ %damageValue @ ", " @ %index @ ")");
 
 	// SEAL BATTLE FIX: Prevent SealMage bots from damaging themselves with their own spells
@@ -3096,8 +3458,9 @@ function DoSpellDamage(%object, %clientId, %pos, %index)
 	if(%dist <= $Spell::radius[%index])
 	{
 		%newDamage = SpellCalcRadiusDamage(%dist, $Spell::radius[%index], $Spell::damageValue[%index], %percMin, %percMax);
-		// SpellDamage() expects the Player object (not client ID) for GameBase::virtual() to work
-		SpellDamage(%clientId, %object, %newDamage, %index);
+		// SpellDamage_Buffered() accumulates damage for targets within short windows 
+		// to reduce the frequency of expensive onDamage calls.
+		SpellDamage_Buffered(%clientId, %object, %newDamage, %index);
 	}
 }
 

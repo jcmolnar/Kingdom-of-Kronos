@@ -550,6 +550,22 @@ function NullItemList(%clientId, %type, %msgcolor, %msg)
 				if(%name == "") %name = $AccessoryVar[%item, $Name];
 				%newmsg = nsprintf(%msg, %name);
 				Client::sendMessage(%clientId, %msgcolor, %newmsg);
+				
+				// CRITICAL: Auto-unequip accessories/armor before removing
+				%itemCategory = $BeltItem[%item, "Type"];
+				if(%itemCategory == "Accessories")
+				{
+					for(%unequipCount = 0; %unequipCount < %amnt; %unequipCount++)
+					{
+						if(Belt::IsAccessoryEquipped(%clientId, %item))
+							Belt::UnequipAccessory(%clientId, %item);
+					}
+				}
+				else if(%itemCategory == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+				{
+					Belt::UnequipArmor(%clientId, %item);
+				}
+				
 				Belt::TakeThisStuff(%clientid,%item,%amnt);
 			}
 		}
@@ -3458,15 +3474,15 @@ AddAd("Welcome to Kingdom of Kronos - Hosted by Jobo",
 
 
 
-AddAd("Ascension Talents are here!",
+AddAd("-=Ascension Talents=-",
       "Players are now able to spend Remorts and SP to unlock PERMANENT Ascension Talents - Boosting your player as you regain them!",
       "Visit the Ascension Master in the Kingdom of Kronos to learn more.");
 
-AddAd("Auto Party now LIVE",
+AddAd("-=Auto Party=-",
       "Use #autoparty ON to enable, #autoparty OFF to disable",
       "This will automatically party you with other players in DUNGEONS if they also have it enabled.");
 
-AddAd("Auto Skill Upgrades now LIVE",
+AddAd("=-Auto Skill Upgrades=-",
       "Use #autoskill for a description of how it works",
       "This will automatically upgrade your skills as you level up!",
       "No more manually increasing skills as you level.");
@@ -3507,7 +3523,7 @@ AddAd("House Artifacts and Bases NOW SAVE",
       "They will restore if the server crashes or restarts.",
       "Let the battles begin!");
 
-AddAd("The server has been updated to v0.8.1",
+AddAd("The server has been updated to v0.8.5",
       "Please report any bugs to the TRPG Discord Server",
       "In the KoK mod channel",
       "Or use the #bugreport command");
@@ -3516,7 +3532,7 @@ AddAd("Want to suggest a feature or idea?",
       "Use #featurerequest or #requestfeature",
       "Your ideas could be added to the server!");
 
-AddAd("Vehicle Combat Skill Added",
+AddAd("-=Vehicle Combat Skill=-",
       "Every 100 points in the skill, Scout damage increases by 1.",
       "The skill is capped at 1000 points.");
 
@@ -4475,8 +4491,13 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	if(%clientId == "" || %clientId == -1)
 		return;
 	
-	// NOTE: $BotType is cleared at END of function (after all storeData calls)
-	// Otherwise GetClientDataType() warns 100+ times during cleanup
+	// CRITICAL SAFETY CHECK: Never clear data if this client is an active player
+	// who has already loaded and spawned. This is a "Defense in Depth" measure.
+	if(GetClientDataType(%clientId) == "player" && fetchData(%clientId, "HasLoadedAndSpawned") == "true")
+	{
+		echo("WARNING: ClearAllBotData - Attempted to clear data for ACTIVE PLAYER " @ Client::getName(%clientId) @ " (ID: " @ %clientId @ "). ABORTING.");
+		return;
+	}
 	
 	// -------------------------------------------------------------------------
 	// 2. Clear storeData fields (routes to appropriate array based on type)
@@ -4495,14 +4516,54 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	storeData(%clientId, "tmpzone", "");
 	storeData(%clientId, "botTeam", "");
 	
-	// Belt items
+	// Belt items & Inventory
 	storeData(%clientId, "QuestItems", "");
 	storeData(%clientId, "KeyItems", "");
 	storeData(%clientId, "Consumables", "");
 	storeData(%clientId, "Armor", "");
 	storeData(%clientId, "Accessories", "");
 	storeData(%clientId, "Other", "");
+	storeData(%clientId, "spawnStuff", "");
+	storeData(%clientId, "BankStorage", "");
+	storeData(%clientId, "StoredQuestItems", "");
+	storeData(%clientId, "StoredKeyItems", "");
+	storeData(%clientId, "StoredConsumables", "");
+	storeData(%clientId, "StoredArmor", "");
+	storeData(%clientId, "StoredAccessories", "");
+	storeData(%clientId, "StoredOther", "");
+	storeData(%clientId, "EquippedBeltArmor", "");
+	storeData(%clientId, "EquippedBeltAccessories", "");
+	storeData(%clientId, "DualWield_OffHandWeapon", "");
+	
+	// RPG Stats & Identity
 	storeData(%clientId, "RemortStep", "");
+	storeData(%clientId, "LVL", "");
+	storeData(%clientId, "EXP", "");
+	storeData(%clientId, "SPcredits", "");
+	storeData(%clientId, "MyHouse", "");
+	storeData(%clientId, "RankPoints", "");
+	storeData(%clientId, "TournyRank", "");
+	storeData(%clientId, "GROUP", "");
+	storeData(%clientId, "CLASS", "");
+	storeData(%clientId, "LCK", "");
+	storeData(%clientId, "bounty", "");
+	storeData(%clientId, "inArena", "");
+	
+	// Feature variables
+	storeData(%clientId, "AscensionTalents", "");
+	storeData(%clientId, "AutoSkill_Priority", "");
+	storeData(%clientId, "AutoParty_Enabled", "");
+	
+	// Legacy / System variables
+	storeData(%clientId, "defaultTalk", "");
+	storeData(%clientId, "password", "");
+	storeData(%clientId, "PlayerInfo", "");
+	storeData(%clientId, "deathmsg", "");
+	storeData(%clientId, "campRot", "");
+	storeData(%clientId, "tmphp", "");
+	storeData(%clientId, "tmpmana", "");
+	storeData(%clientId, "tmpLastSaveVer", "");
+	storeData(%clientId, "savedMountedWeapon", "");
 	
 	// Flags
 	storeData(%clientId, "noExperienceFlag", "");
@@ -4531,6 +4592,26 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	storeData(%clientId, "ShovedByPlayer", "");
 	storeData(%clientId, "OriginalLootString", "");
 	storeData(%clientId, "Stance", "");
+	
+	// CRITICAL: Player visibility flags (from #hide command) - can make bots invisible if inherited
+	storeData(%clientId, "invisible", "");
+	storeData(%clientId, "blockHide", "");
+	storeData(%clientId, "lastPos", "");
+	
+	// CRITICAL: Admin privileges - bots should NEVER have admin access
+	%clientId.adminLevel = "";
+	
+	// Additional player-only flags that could cause issues if inherited
+	storeData(%clientId, "ignoreGlobal", "");
+	storeData(%clientId, "campPos", "");
+	storeData(%clientId, "BANK", "");
+	storeData(%clientId, "isMimic", "");
+	storeData(%clientId, "grouplist", "");
+	storeData(%clientId, "partyOwned", "");
+	storeData(%clientId, "partylist", "");
+	storeData(%clientId, "BeltStorage", "");
+	storeData(%clientId, "COINS", "");
+	storeData(%clientId, "tmpname", "");
 	
 	// -------------------------------------------------------------------------
 	// 3. Clear $EnemyBotData arrays directly (belt items + flags)
@@ -4579,11 +4660,71 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	// -------------------------------------------------------------------------
 	if(!%preserveBotInfoAiName)
 		$ClientData[%clientId, "BotInfoAiName"] = "";
+	// 5. CRITICAL: Explicitly clear legacy $ClientData array entries
+	// -------------------------------------------------------------------------
+	// This prevents GetDataFromArray() from falling back to player data
+	// from a previous player who used this same clientId.
+	// -------------------------------------------------------------------------
+	$ClientData[%clientId, "BotInfoAiName"] = "";
 	$ClientData[%clientId, "SpawnBotInfo"] = "";
 	$ClientData[%clientId, "SpawnTime"] = "";
 	$ClientData[%clientId, "zone"] = "";
+	$ClientData[%clientId, "AscensionTalents"] = "";
+	$ClientData[%clientId, "AutoSkill_Priority"] = "";
+	$ClientData[%clientId, "AutoParty_Enabled"] = "";
+	$ClientData[%clientId, "MyHouse"] = "";
+	$ClientData[%clientId, "RemortStep"] = "";
+	$ClientData[%clientId, "LVL"] = "";
+	$ClientData[%clientId, "EXP"] = "";
+	$ClientData[%clientId, "SPcredits"] = "";
+	$ClientData[%clientId, "RankPoints"] = "";
+	$ClientData[%clientId, "TournyRank"] = "";
+	$ClientData[%clientId, "GROUP"] = "";
+	$ClientData[%clientId, "CLASS"] = "";
+	$ClientData[%clientId, "LCK"] = "";
+	$ClientData[%clientId, "bounty"] = "";
+	$ClientData[%clientId, "inArena"] = "";
+	$ClientData[%clientId, "QuestItems"] = "";
+	$ClientData[%clientId, "KeyItems"] = "";
+	$ClientData[%clientId, "Consumables"] = "";
+	$ClientData[%clientId, "Armor"] = "";
+	$ClientData[%clientId, "Accessories"] = "";
+	$ClientData[%clientId, "Other"] = "";
+	$ClientData[%clientId, "spawnStuff"] = "";
+	$ClientData[%clientId, "BankStorage"] = "";
+	$ClientData[%clientId, "StoredQuestItems"] = "";
+	$ClientData[%clientId, "StoredKeyItems"] = "";
+	$ClientData[%clientId, "StoredConsumables"] = "";
+	$ClientData[%clientId, "StoredArmor"] = "";
+	$ClientData[%clientId, "StoredAccessories"] = "";
+	$ClientData[%clientId, "StoredOther"] = "";
+	$ClientData[%clientId, "EquippedBeltArmor"] = "";
+	$ClientData[%clientId, "EquippedBeltAccessories"] = "";
+	$ClientData[%clientId, "DualWield_OffHandWeapon"] = "";
+	$ClientData[%clientId, "defaultTalk"] = "";
+	$ClientData[%clientId, "password"] = "";
+	$ClientData[%clientId, "PlayerInfo"] = "";
+	$ClientData[%clientId, "deathmsg"] = "";
+	$ClientData[%clientId, "campRot"] = "";
+	$ClientData[%clientId, "tmphp"] = "";
+	$ClientData[%clientId, "tmpmana"] = "";
+	$ClientData[%clientId, "tmpLastSaveVer"] = "";
+	$ClientData[%clientId, "savedMountedWeapon"] = "";
+	// CRITICAL: Player visibility and system flags - prevents inheritance issues
+	$ClientData[%clientId, "invisible"] = "";
+	$ClientData[%clientId, "blockHide"] = "";
+	$ClientData[%clientId, "lastPos"] = "";
+	$ClientData[%clientId, "ignoreGlobal"] = "";
+	$ClientData[%clientId, "campPos"] = "";
+	$ClientData[%clientId, "BANK"] = "";
+	$ClientData[%clientId, "isMimic"] = "";
+	$ClientData[%clientId, "grouplist"] = "";
+	$ClientData[%clientId, "partyOwned"] = "";
+	$ClientData[%clientId, "partylist"] = "";
+	$ClientData[%clientId, "BeltStorage"] = "";
+	$ClientData[%clientId, "COINS"] = "";
+	$ClientData[%clientId, "tmpname"] = "";
 	
-	// -------------------------------------------------------------------------
 	// 6. Clear fast lookup arrays
 	// -------------------------------------------------------------------------
 	if(!%preserveBotInfoAiName)
@@ -6339,6 +6480,39 @@ function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck
 				$PreSpawnPlayerName[%pCl] = %pName;
 				%preSpawnPlayerList = %preSpawnPlayerList @ %pCl @ " ";
 			}
+		}
+	}
+	
+	// =========================================================================================================
+	// CRITICAL PRE-SPAWN PROTECTION: Block spawn if predicted ID belongs to a real player
+	// This prevents the engine from assigning a zombie player's client ID to a bot, which causes black screens
+	// The post-spawn check was too late - by then the engine had already corrupted the player's session
+	// =========================================================================================================
+	%predictedSpawnId = PlayerManager::getFreeId();
+	if(%predictedSpawnId != -1)
+	{
+		// Check if this ID has a save file flag (real player, possibly zombie/disconnecting)
+		if($PlayerHasSaveFile[%predictedSpawnId] == true || $PlayerHasSaveFile[%predictedSpawnId] == "1")
+		{
+			// Track defer count to prevent infinite loops
+			$DeferredSpawnRetryCount[%aiName]++;
+			if($DeferredSpawnRetryCount[%aiName] > 5)
+			{
+				echo("[SPAWN ABORT] Max defer retries (5) exceeded for " @ %aiName @ " - predicted ID " @ %predictedSpawnId @ " still has PlayerHasSaveFile. Aborting spawn.");
+				// Clear the stale save file flag since it's clearly orphaned
+				$PlayerHasSaveFile[%predictedSpawnId] = "";
+				$DeferredSpawnRetryCount[%aiName] = "";
+				return "-1_MAX_RETRIES";
+			}
+			
+			echo("[PRE-SPAWN BLOCKED] Predicted ID " @ %predictedSpawnId @ " has PlayerHasSaveFile set (zombie player detected). Deferring spawn of " @ %aiName @ " (retry " @ $DeferredSpawnRetryCount[%aiName] @ "/5)");
+			schedule("createAI(\"" @ %aiName @ "\", \"" @ %spawnPos @ "\", \"" @ %name @ "\", " @ %skipPostSpawn @ ", " @ %bypassRaceCheck @ ");", 2.0);
+			return "deferred_player_zombie";
+		}
+		else
+		{
+			// Predicted ID is safe - clear any stale retry count
+			$DeferredSpawnRetryCount[%aiName] = "";
 		}
 	}
 	
@@ -9115,6 +9289,26 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 			if(%timeSinceConnect < 30)
 			{
 				echo("CRITICAL SAFEGUARD: SpawnAIGetClientId - Client ID " @ %aiIdFromGetId @ " has active player connection (" @ %timeSinceConnect @ "s ago). ABORTING spawn for bot " @ %newName @ " to prevent collision.");
+				
+				// CRITICAL: Delete the orphaned bot that was already created by AI::spawn()
+				// Without this, the bot exists as a "shell" with no proper registration
+				%escapedName = String::replace(%newName, "\"", "\\\"");
+				echo("[SHELL CLEANUP] Deleting orphaned bot " @ %newName @ " (clientId=" @ %aiIdFromGetId @ ") to prevent shell bot");
+				
+				// SAFETY: Only clear bot data if this client ID is still AI-controlled
+				// If the player has already taken over the ID, we must NOT clear their data
+				if(Player::isAiControlled(%aiIdFromGetId))
+				{
+					ClearAllBotData(%aiIdFromGetId, false);
+				}
+				else
+				{
+					echo("[SHELL CLEANUP] WARNING: Client ID " @ %aiIdFromGetId @ " is no longer AI-controlled, skipping ClearAllBotData to protect player");
+				}
+				
+				// AI::delete works by name, not client ID, so it's safe regardless
+				AI::delete(%escapedName);
+				
 				// Rollback spawn slot
 				if(%spawnPointId != "" && %spawnPointId != -1)
 					RollbackSpawnSlot(%spawnPointId);
@@ -18303,6 +18497,10 @@ $AscensionTalentList = "DualWielding ExpAffinity1 ExpAffinity2 ExpAffinity3 Gold
 
 function Ascension::HasTalent(%clientId, %talentName)
 {
+	// SAFEGUARD: Bots are never allowed to have Ascension talents
+	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+		return false;
+		
 	// Check if player has unlocked a specific talent
 	%talents = fetchData(%clientId, "AscensionTalents");
 	if(%talents == "" || %talents == -1 || %talents == "0")
@@ -18318,6 +18516,11 @@ function Ascension::HasTalent(%clientId, %talentName)
 function Ascension::UnlockTalent(%clientId, %talentName)
 {
 	// Unlock a talent for a player after payment
+	
+	// SAFEGUARD: Bots cannot unlock talents
+	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+		return;
+		
 	%talents = fetchData(%clientId, "AscensionTalents");
 	if(%talents == "" || %talents == -1 || %talents == "0")
 		%talents = "";
@@ -22793,20 +22996,55 @@ function MenuBeltDrop(%clientId, %item, %type)
 		}
 	}
 	
-	// Check if item is Accessory - show Equip option
+	// Check if item is Accessory - show Equip/Unequip based on slot availability
 	if(%type == "Accessories")
 	{
-		// Check the accessory type to determine slot behavior
+		// Get accessory type and slot limits
 		%accessoryType = $AccessoryVar[%item, $AccessoryType];
-		%isEquipped = Belt::IsAccessoryEquipped(%clientId, %item);
+		%maxSlots = $maxAccessory[%accessoryType];
+		if(%maxSlots == "" || %maxSlots == 0)
+			%maxSlots = 1;
 		
-		if(%isEquipped)
+		// Count how many of THIS SPECIFIC ITEM are already equipped (not just this type)
+		%equippedList = fetchData(%clientId, "EquippedBeltAccessories");
+		%thisItemEquippedCount = 0;
+		for(%i = 0; GetWord(%equippedList, %i) != -1; %i++)
 		{
+			if(GetWord(%equippedList, %i) == %item)
+				%thisItemEquippedCount++;
+		}
+		
+		// Get how many of this item the player has in inventory
+		%inventoryCount = Belt::HasThisStuff(%clientId, %item);
+		
+		// DEBUG: Log menu decision
+		echo("[BELT MENU DEBUG] Item: " @ %item @ ", AccessoryType: " @ %accessoryType @ ", ThisItemEquipped: " @ %thisItemEquippedCount @ ", InInventory: " @ %inventoryCount @ ", MaxSlots: " @ %maxSlots);
+		
+		// Show Unequip if at least 1 of this item is equipped
+		// Show Equip if: (items in inventory > items equipped) AND (total equipped of this type < max slots)
+		if(%thisItemEquippedCount > 0)
+		{
+			// At least one is equipped - show Unequip
+			echo("[BELT MENU DEBUG] Showing Unequip (" @ %thisItemEquippedCount @ " equipped)");
 			Client::addMenuItem(%clientId, %cnt++ @ "Unequip", %type @ " unequip " @ %item);
 		}
-		else
+		
+		// Check if we can equip more
+		%currentTypeCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
+		if(%inventoryCount > %thisItemEquippedCount && %currentTypeCount < %maxSlots)
 		{
+			// Have more in inventory and slots available - show Equip
+			echo("[BELT MENU DEBUG] Showing Equip (can equip more: inv=" @ %inventoryCount @ ", equipped=" @ %thisItemEquippedCount @ ", typeSlots=" @ %currentTypeCount @ "/" @ %maxSlots @ ")");
 			Client::addMenuItem(%clientId, %cnt++ @ "Equip", %type @ " equip " @ %item);
+		}
+		else if(%currentTypeCount >= %maxSlots && %thisItemEquippedCount == 0)
+		{
+			// No slots available and this item not equipped - show message
+			echo("[BELT MENU DEBUG] Showing 'At max' message");
+			%typeName = $LocationDesc[%accessoryType];
+			if(%typeName == "")
+				%typeName = "accessory";
+			Client::addMenuItem(%clientId, %cnt++ @ "(At max " @ %typeName @ "s)", "disabled");
 		}
 	}
 	
@@ -23020,962 +23258,8 @@ function processMenuSellBeltItem(%clientId, %opt)
 	}
 
 	if(%o != "done")
-	MenuSellBeltItem(%clientId, %t, %p);
+		MenuSellBeltItem(%clientId, %t, %p);
 
-	return;
-}
-
-function MenuSellBeltItemFinal(%clientId, %item, %type, %mode)
-{
-	// Validate item parameter
-	if(%item == "" || %item == -1 || %item == "0")
-	{
-		%clientName = Client::getName(%clientId);
-		echo("ERROR: MenuSellBeltItemFinal - Invalid item parameter: '" @ %item @ "' type: '" @ %type @ "' mode: '" @ %mode @ "' ClientId: " @ %clientId @ " (" @ %clientName @ ")");
-		return;
-	}
-	
-	%name = $BeltItem[%item, "Name"];
-	if(%name == "")
-	{
-		// Fallback to AccessoryVar for non-belt items or items without BeltItem registration
-		%name = $AccessoryVar[%item, $Name];
-	if(%name == "")
-		%name = %item;
-	}
-	
-	%cnt = 1; // Initialize menu counter
-	
-	// Get available count based on mode
-	if(%mode == "withdraw")
-	{
-		// Check if withdrawing from banker (BeltStorage) or from belt storage (StoredQuestItems/StoredKeyItems)
-		if(%clientId.currentBeltBank != "")
-			%cmnt = Belt::ItemCount(%item, fetchData(%clientId, "BeltStorage"));
-		else
-			%cmnt = Belt::ItemCount(%item, fetchData(%clientId, "Stored" @ %type));
-	}
-	else if(%mode == "store" || %mode == "sell")
-		%cmnt = Belt::ItemCount(%item, fetchData(%clientId, %type));
-	else
-		%cmnt = 0;
-
-	Client::buildMenu(%clientId, %name @ " (" @ %cmnt @ ")", "SellBeltItemFinal", true);
-
-	// Show Sell/Withdraw/Store 1 button if player has 1 or more (always show if count > 0)
-	if(%cmnt >= 1)
-	{
-		if(%mode == "sell")
-		{
-			%cost1 = Belt::GetSellCost(%clientId, %item) * 1;
-			Client::addMenuItem(%clientId, %cnt++ @ "Sell 1 ($" @ %cost1 @ ")", %type @ " sell " @ %item @ " 1");
-		}
-		else if(%mode == "withdraw")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Withdraw 1", %type @ " withdraw " @ %item @ " 1");
-		}
-		else if(%mode == "store")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Store 1", %type @ " store " @ %item @ " 1");
-		}
-	}
-
-	// Show Sell/Withdraw/Store 5 button if player has 5 or more
-	if(%cmnt >= 5)
-	{
-		if(%mode == "sell")
-		{
-			%cost5 = Belt::GetSellCost(%clientId, %item) * 5;
-			Client::addMenuItem(%clientId, %cnt++ @ "Sell 5 ($" @ %cost5 @ ")", %type @ " sell " @ %item @ " 5");
-		}
-		else if(%mode == "withdraw")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Withdraw 5", %type @ " withdraw " @ %item @ " 5");
-		}
-		else if(%mode == "store")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Store 5", %type @ " store " @ %item @ " 5");
-		}
-	}
-
-	// Show Sell/Withdraw/Store 10 button if player has 10 or more
-	if(%cmnt >= 10)
-	{
-		if(%mode == "sell")
-		{
-			%cost10 = Belt::GetSellCost(%clientId, %item) * 10;
-			Client::addMenuItem(%clientId, %cnt++ @ "Sell 10 ($" @ %cost10 @ ")", %type @ " sell " @ %item @ " 10");
-		}
-		else if(%mode == "withdraw")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Withdraw 10", %type @ " withdraw " @ %item @ " 10");
-		}
-		else if(%mode == "store")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Store 10", %type @ " store " @ %item @ " 10");
-		}
-	}
-
-	// Always show Sell/Withdraw/Store All button
-	if(%mode == "sell")
-	{
-		%costAll = Belt::GetSellCost(%clientId, %item) * %cmnt;
-		Client::addMenuItem(%clientId, %cnt++ @ "Sell All (" @ %cmnt @ ") ($" @ %costAll @ ")", %type @ " sell " @ %item @ " " @ %cmnt);
-	}
-	else if(%mode == "withdraw")
-	{
-		Client::addMenuItem(%clientId, %cnt++ @ "Withdraw All (" @ %cmnt @ ")", %type @ " withdraw " @ %item @ " " @ %cmnt);
-	}
-	else if(%mode == "store")
-	{
-		Client::addMenuItem(%clientId, %cnt++ @ "Store All (" @ %cmnt @ ")", %type @ " store " @ %item @ " " @ %cmnt);
-	}
-
-	Client::addMenuItem(%clientId, "bBack", %type @ " back " @ %item @ " " @ %mode);
-	Client::addMenuItem(%clientId, "xFinished", "ineedanextrawordsothisisithaha done");
-	return;
-}
-
-function processMenuSellBeltItemFinal(%clientId, %opt)
-{
-	%type = GetWord(%opt, 0);
-	%option = GetWord(%opt, 1);
-	
-	// Check for menu closure option first, before validating other parameters
-	if(%type == "ineedanextrawordsothisisithaha" || %option == "done")
-	{
-		// Clear the belt sell flag and stored order when menu is closed
-		%clientId.currentBeltSell = "";
-		// Clear stored orders for all belt types
-		for(%i = 1; $Belt::Categories[%i] != ""; %i++)
-		{
-			%clientId.beltItemOrder[$Belt::Categories[%i]] = "";
-			%clientId.beltStoredItemOrder[$Belt::Categories[%i]] = "";
-		}
-		Client::cancelMenu(%clientId);
-		return;
-	}
-	
-	%item = GetWord(%opt, 2);
-	%amnt = GetWord(%opt, 3);
-	
-	// Validate parameters
-	if(%item == "" || %item == -1)
-	{
-		%clientName = Client::getName(%clientId);
-		echo("ERROR: processMenuSellBeltItemFinal - Invalid item parameter: '" @ %item @ "' from option: '" @ %opt @ "' ClientId: " @ %clientId @ " (" @ %clientName @ ")");
-		return;
-	}
-	if(%amnt == "" || %amnt == -1)
-	{
-		%clientName = Client::getName(%clientId);
-		echo("ERROR: processMenuSellBeltItemFinal - Invalid amount parameter: '" @ %amnt @ "' from option: '" @ %opt @ "' ClientId: " @ %clientId @ " (" @ %clientName @ ")");
-		return;
-	}
-	%amnt = floor(%amnt); // Ensure %amnt is a number
-	
-	if(%option == "back")
-	{
-		%mode = GetWord(%opt, 3);
-		if(%mode == "sell")
-			MenuSellBeltItem(%clientId, %type, 1);
-		else if(%mode == "store")
-		{
-			// Check if storing to banker or belt storage
-			if(%clientId.currentBeltBank != "")
-				Belt::ShowDepositCategoryMenu(%clientId);
-			else
-				MenuBeltStoreThisItem(%clientId, %type, 1, %mode);
-		}
-		else if(%mode == "withdraw")
-		{
-			// Check if withdrawing from banker or belt storage
-			if(%clientId.currentBeltBank != "")
-				Belt::ShowWithdrawCategoryMenu(%clientId);
-			else
-				MenuBeltWithdrawThisItem(%clientId, %type, 1, %mode);
-		}
-		return;
-	}
-	else if(%option == "sell")
-	{
-		%cmnt = Belt::HasThisStuff(%clientId, %item);
-		if(%cmnt >= %amnt)
-		{
-			%cost = Belt::GetSellCost(%clientId, %item) * %amnt;
-			Client::sendMessage(%clientId, $MsgWhite, "You sold " @ %amnt @ " " @ %item @ " for " @ %cost @ " coins.");
-			UseSkill(%clientId, $SkillHaggling, true, true);
-			storeData(%clientId, "COINS", %cost, "inc");
-			Belt::TakeThisStuff(%clientId, %item, %amnt);
-			RefreshAll(%clientId);
-			%clientId.bulkNum = 1;
-			// Save character after selling to ensure coins and item changes are persisted
-			SaveCharacter(%clientId);
-			// Return to sell menu after selling
-			MenuSellBeltItem(%clientId, %type, 1);
-		}
-	}
-	else if(%option == "store")
-	{
-		// Get the registered item name (what's actually stored in the equipped category)
-		%registeredItem = $BeltItem[%item, "Item"];
-		if(%registeredItem == "")
-		{
-			%clientName = Client::getName(%clientId);
-			echo("ERROR: Belt deposit - Item '" @ %item @ "' not found in belt item registry! ClientId: " @ %clientId @ " (" @ %clientName @ ")");
-			return;
-		}
-		
-		%cmnt = Belt::HasThisStuff(%clientId, %item);
-		if(%cmnt >= %amnt)
-		{
-			// Check if storing to banker (BeltStorage) or to belt storage (old system)
-			if(%clientId.currentBeltBank != "")
-			{
-				// Storing to banker - work directly with BeltStorage as single source of truth
-				%beltStorage = fetchData(%clientId, "BeltStorage");
-				
-				// Normalize "0" to empty string
-				if(%beltStorage == "0" || %beltStorage == " ")
-					%beltStorage = "";
-				
-				// Clean BeltStorage before adding to remove any invalid entries
-				%cleanedStorage = "";
-				for(%i = 0; GetWord(%beltStorage, %i) != -1; %i += 2)
-				{
-					%itemName = GetWord(%beltStorage, %i);
-					%itemCount = GetWord(%beltStorage, %i + 1);
-					%countNum = %itemCount * 1;
-					if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-						%cleanedStorage = %cleanedStorage @ %itemName @ " " @ %itemCount @ " ";
-				}
-				%len = String::len(%cleanedStorage);
-				if(%len > 0 && String::getSubStr(%cleanedStorage, %len-1, 1) == " ")
-					%cleanedStorage = String::getSubStr(%cleanedStorage, 0, %len-1);
-				%beltStorage = %cleanedStorage;
-				
-				// Count unique items in BeltStorage
-				%currentStorageCount = 0;
-				for(%i = 0; GetWord(%beltStorage, %i) != -1; %i += 2)
-				{
-					%itemName = GetWord(%beltStorage, %i);
-					if(%itemName != "" && %itemName != -1 && %itemName != "0")
-						%currentStorageCount++;
-				}
-				
-				if(%currentStorageCount < 25)
-				{
-					// Add item directly to BeltStorage (single source of truth)
-					%newBeltStorage = SetStuffString(%beltStorage, %registeredItem, %amnt);
-					
-					// Clean result after SetStuffString to remove any "0" entries
-					%cleanedResult = "";
-					for(%i = 0; GetWord(%newBeltStorage, %i) != -1; %i += 2)
-					{
-						%itemName = GetWord(%newBeltStorage, %i);
-						%itemCount = GetWord(%newBeltStorage, %i + 1);
-						%countNum = %itemCount * 1;
-						if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-							%cleanedResult = %cleanedResult @ %itemName @ " " @ %itemCount @ " ";
-					}
-					%len = String::len(%cleanedResult);
-					if(%len > 0 && String::getSubStr(%cleanedResult, %len-1, 1) == " ")
-						%cleanedResult = String::getSubStr(%cleanedResult, 0, %len-1);
-					
-					// Save cleaned BeltStorage
-					storeData(%clientId, "BeltStorage", %cleanedResult);
-					
-					// CRITICAL: Also update the stored category to keep it in sync with BeltStorage
-					// This prevents SaveCharacter from rebuilding BeltStorage from stale stored categories
-					%storedCategory = "Stored" @ %type;
-					%currentStored = fetchData(%clientId, %storedCategory);
-					if(%currentStored == "0" || %currentStored == " ") %currentStored = "";
-					
-					// Add item to stored category to match BeltStorage
-					%newStored = SetStuffString(%currentStored, %registeredItem, %amnt);
-					
-					// Clean result after SetStuffString
-					%cleanedStored = "";
-					for(%i = 0; GetWord(%newStored, %i) != -1; %i += 2)
-					{
-						%itemName = GetWord(%newStored, %i);
-						%itemCount = GetWord(%newStored, %i + 1);
-						%countNum = %itemCount * 1;
-						if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-							%cleanedStored = %cleanedStored @ %itemName @ " " @ %itemCount @ " ";
-					}
-					%len = String::len(%cleanedStored);
-					if(%len > 0 && String::getSubStr(%cleanedStored, %len-1, 1) == " ")
-						%cleanedStored = String::getSubStr(%cleanedStored, 0, %len-1);
-					
-					// Save cleaned stored category
-					storeData(%clientId, %storedCategory, %cleanedStored);
-					
-					// Remove from equipped belt
-					Belt::TakeThisStuff(%clientId, %item, %amnt);
-					
-					%clientId.bulkNum = 1;
-					RefreshAll(%clientId);
-					SaveCharacter(%clientId);
-					
-					%itemName = $BeltItem[%registeredItem, "Name"];
-					if(%itemName == "")
-					{
-						// Fallback to AccessoryVar for non-belt items
-						%itemName = $AccessoryVar[%registeredItem, $Name];
-						if(%itemName == "")
-							%itemName = %registeredItem;
-					}
-					Client::sendMessage(%clientId, $MsgGreen, "Deposited " @ %amnt @ " " @ %itemName @ " into backpack storage.");
-					
-					// Clear stored order so menu rebuilds with current items
-					%clientId.beltDepositItemOrder = "";
-					
-					// Return to deposit category menu
-					Belt::ShowDepositCategoryMenu(%clientId);
-				}
-				else
-				{
-					Client::sendMessage(%clientId, $MsgRed, "You can only place 25 different items into backpack storage.~wC_BuySell.wav");
-				}
-			}
-			else
-			{
-				// Storing to belt storage (old system)
-				if(CountObjInList(fetchData(%clientId, "Stored" @ %type)) / 2 < 25)
-				{		
-					storeData(%clientId, "Stored" @ %type, SetStuffString(fetchData(%clientId, "Stored" @ %type), %registeredItem, %amnt));
-					Belt::TakeThisStuff(%clientId, %item, %amnt);
-					%clientId.bulkNum = 1;
-					RefreshAll(%clientId);
-					SaveCharacter(%clientId);
-					MenuBeltStoreThisItem(%clientId, %type, 1, "store");
-				}
-				else
-				{
-					Client::sendMessage(%clientId, $MsgRed, "You can only place 25 different items into the " @ Belt::Display(%type) @ " storage.~wC_BuySell.wav");
-				}
-			}
-		}
-	}
-	else if(%option == "withdraw")
-	{
-		// Get the registered item name (what's actually stored in BeltStorage)
-		%registeredItem = $BeltItem[%item, "Item"];
-		if(%registeredItem == "")
-		{
-			// Try using %item directly - it might already be the registered name from BeltStorage
-			%registeredItem = %item;
-		}
-		
-		// Check if withdrawing from banker (BeltStorage) or from belt storage (old system)
-		if(%clientId.currentBeltBank != "")
-		{
-			// Withdrawing from banker - work directly with BeltStorage as single source of truth
-			%beltStorage = fetchData(%clientId, "BeltStorage");
-			
-			// Normalize "0" to empty string
-			if(%beltStorage == "0" || %beltStorage == " ")
-				%beltStorage = "";
-			
-			// Clean BeltStorage before checking count
-			%cleanedStorage = "";
-			for(%i = 0; GetWord(%beltStorage, %i) != -1; %i += 2)
-			{
-				%itemName = GetWord(%beltStorage, %i);
-				%itemCount = GetWord(%beltStorage, %i + 1);
-				%countNum = %itemCount * 1;
-				if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-					%cleanedStorage = %cleanedStorage @ %itemName @ " " @ %itemCount @ " ";
-			}
-			%len = String::len(%cleanedStorage);
-			if(%len > 0 && String::getSubStr(%cleanedStorage, %len-1, 1) == " ")
-				%cleanedStorage = String::getSubStr(%cleanedStorage, 0, %len-1);
-			%beltStorage = %cleanedStorage;
-			
-			// Check count in BeltStorage
-			%cmnt = Belt::ItemCount(%registeredItem, %beltStorage);
-			
-			if(%cmnt >= %amnt)
-			{
-				// Remove item directly from BeltStorage
-				%newBeltStorage = SetStuffString(%beltStorage, %registeredItem, -%amnt);
-				
-				// Clean result after SetStuffString to remove any "0" entries
-				%cleanedResult = "";
-				for(%i = 0; GetWord(%newBeltStorage, %i) != -1; %i += 2)
-				{
-					%itemName = GetWord(%newBeltStorage, %i);
-					%itemCount = GetWord(%newBeltStorage, %i + 1);
-					%countNum = %itemCount * 1;
-					if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-						%cleanedResult = %cleanedResult @ %itemName @ " " @ %itemCount @ " ";
-				}
-				%len = String::len(%cleanedResult);
-				if(%len > 0 && String::getSubStr(%cleanedResult, %len-1, 1) == " ")
-					%cleanedResult = String::getSubStr(%cleanedResult, 0, %len-1);
-				
-				// Save cleaned BeltStorage
-				storeData(%clientId, "BeltStorage", %cleanedResult);
-				
-				// CRITICAL: Also update the stored category to keep it in sync with BeltStorage
-				// This prevents SaveCharacter from rebuilding BeltStorage from stale stored categories
-				%storedCategory = "Stored" @ %type;
-				%currentStored = fetchData(%clientId, %storedCategory);
-				if(%currentStored == "0" || %currentStored == " ") %currentStored = "";
-				
-				// Remove item from stored category to match BeltStorage
-				%newStored = SetStuffString(%currentStored, %registeredItem, -%amnt);
-				
-				// Clean result after SetStuffString
-				%cleanedStored = "";
-				for(%i = 0; GetWord(%newStored, %i) != -1; %i += 2)
-				{
-					%itemName = GetWord(%newStored, %i);
-					%itemCount = GetWord(%newStored, %i + 1);
-					%countNum = %itemCount * 1;
-					if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-						%cleanedStored = %cleanedStored @ %itemName @ " " @ %itemCount @ " ";
-				}
-				%len = String::len(%cleanedStored);
-				if(%len > 0 && String::getSubStr(%cleanedStored, %len-1, 1) == " ")
-					%cleanedStored = String::getSubStr(%cleanedStored, 0, %len-1);
-				
-				// Save cleaned stored category
-				storeData(%clientId, %storedCategory, %cleanedStored);
-				
-				// CRITICAL: If BeltStorage is now empty after withdrawal, clear ALL stored categories
-				// This prevents SaveCharacter from rebuilding BeltStorage from stale stored categories
-				if(%cleanedResult == "" || %cleanedResult == "0" || %cleanedResult == " ")
-				{
-					storeData(%clientId, "StoredQuestItems", "");
-					storeData(%clientId, "StoredKeyItems", "");
-					storeData(%clientId, "StoredConsumables", "");
-					storeData(%clientId, "StoredArmor", "");
-					storeData(%clientId, "StoredAccessories", "");
-					storeData(%clientId, "StoredOther", "");
-				}
-				
-				// Add to equipped belt
-				Belt::GiveThisStuff(%clientId, %item, %amnt, 1);
-				
-				%clientId.bulkNum = 1;
-				RefreshAll(%clientId);
-				SaveCharacter(%clientId);
-				
-				%itemName = $BeltItem[%registeredItem, "Name"];
-				if(%itemName == "")
-				{
-					// Fallback to AccessoryVar for non-belt items
-					%itemName = $AccessoryVar[%registeredItem, $Name];
-					if(%itemName == "")
-						%itemName = %registeredItem;
-				}
-				Client::sendMessage(%clientId, $MsgGreen, "Withdrew " @ %amnt @ " " @ %itemName @ " from backpack storage.");
-				
-				// Clear stored order so menu rebuilds with current items
-				%clientId.beltWithdrawItemOrder = "";
-				
-				// Return to withdraw category menu
-				Belt::ShowWithdrawCategoryMenu(%clientId);
-			}
-			else
-			{
-				Client::sendMessage(%clientId, $MsgRed, "You don't have enough " @ $BeltItem[%registeredItem, "Name"] @ " in storage.");
-			}
-		}
-		else
-		{
-			// Withdrawing from belt storage (old system)
-			%cmnt = Belt::GetStored(%clientId, %opt);
-			if(%cmnt >= %amnt)
-			{
-				Belt::GiveThisStuff(%clientId, %item, %amnt, 1);
-				storeData(%clientId, "Stored" @ %type, SetStuffString(fetchData(%clientId, "Stored" @ %type), %item, -%amnt));
-				%clientId.bulkNum = 1;
-				RefreshAll(%clientId);
-				SaveCharacter(%clientId);
-				MenuBeltWithdrawThisItem(%clientId, %opt, 1, "withdraw");
-			}
-		}
-	}
-	return;
-}
-
-function MenuSellBeltItemFinal(%clientId, %item, %type, %mode)
-{
-	// Validate item parameter
-	if(%item == "" || %item == -1 || %item == "0")
-	{
-		%clientName = Client::getName(%clientId);
-		echo("ERROR: MenuSellBeltItemFinal - Invalid item parameter: '" @ %item @ "' type: '" @ %type @ "' mode: '" @ %mode @ "' ClientId: " @ %clientId @ " (" @ %clientName @ ")");
-		return;
-	}
-	
-	%name = $BeltItem[%item, "Name"];
-	if(%name == "")
-	{
-		// Fallback to AccessoryVar for non-belt items or items without BeltItem registration
-		%name = $AccessoryVar[%item, $Name];
-		if(%name == "")
-			%name = %item;
-	}
-	
-	%cnt = 1; // Initialize menu counter
-	
-	// Get available count based on mode
-	if(%mode == "withdraw")
-	{
-		// Check if withdrawing from banker (BeltStorage) or from belt storage (StoredQuestItems/StoredKeyItems)
-		if(%clientId.currentBeltBank != "")
-			%cmnt = Belt::ItemCount(%item, fetchData(%clientId, "BeltStorage"));
-		else
-			%cmnt = Belt::ItemCount(%item, fetchData(%clientId, "Stored" @ %type));
-	}
-	else if(%mode == "store" || %mode == "sell")
-		%cmnt = Belt::ItemCount(%item, fetchData(%clientId, %type));
-	else
-		%cmnt = 0;
-
-	Client::buildMenu(%clientId, %name @ " (" @ %cmnt @ ")", "SellBeltItemFinal", true);
-
-	// Show Sell/Withdraw/Store 1 button if player has 1 or more (always show if count > 0)
-	if(%cmnt >= 1)
-	{
-		if(%mode == "sell")
-		{
-			%cost1 = Belt::GetSellCost(%clientId, %item) * 1;
-			Client::addMenuItem(%clientId, %cnt++ @ "Sell 1 ($" @ %cost1 @ ")", %type @ " sell " @ %item @ " 1");
-		}
-		else if(%mode == "withdraw")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Withdraw 1", %type @ " withdraw " @ %item @ " 1");
-		}
-		else if(%mode == "store")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Store 1", %type @ " store " @ %item @ " 1");
-		}
-	}
-
-	// Show Sell/Withdraw/Store 5 button if player has 5 or more
-	if(%cmnt >= 5)
-	{
-		if(%mode == "sell")
-		{
-			%cost5 = Belt::GetSellCost(%clientId, %item) * 5;
-			Client::addMenuItem(%clientId, %cnt++ @ "Sell 5 ($" @ %cost5 @ ")", %type @ " sell " @ %item @ " 5");
-		}
-		else if(%mode == "withdraw")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Withdraw 5", %type @ " withdraw " @ %item @ " 5");
-		}
-		else if(%mode == "store")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Store 5", %type @ " store " @ %item @ " 5");
-		}
-	}
-
-	// Show Sell/Withdraw/Store 10 button if player has 10 or more
-	if(%cmnt >= 10)
-	{
-		if(%mode == "sell")
-		{
-			%cost10 = Belt::GetSellCost(%clientId, %item) * 10;
-			Client::addMenuItem(%clientId, %cnt++ @ "Sell 10 ($" @ %cost10 @ ")", %type @ " sell " @ %item @ " 10");
-		}
-		else if(%mode == "withdraw")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Withdraw 10", %type @ " withdraw " @ %item @ " 10");
-		}
-		else if(%mode == "store")
-		{
-			Client::addMenuItem(%clientId, %cnt++ @ "Store 10", %type @ " store " @ %item @ " 10");
-		}
-	}
-
-	// Always show Sell/Withdraw/Store All button
-	if(%mode == "sell")
-	{
-		%costAll = Belt::GetSellCost(%clientId, %item) * %cmnt;
-		Client::addMenuItem(%clientId, %cnt++ @ "Sell All (" @ %cmnt @ ") ($" @ %costAll @ ")", %type @ " sell " @ %item @ " " @ %cmnt);
-	}
-	else if(%mode == "withdraw")
-	{
-		Client::addMenuItem(%clientId, %cnt++ @ "Withdraw All (" @ %cmnt @ ")", %type @ " withdraw " @ %item @ " " @ %cmnt);
-	}
-	else if(%mode == "store")
-	{
-		Client::addMenuItem(%clientId, %cnt++ @ "Store All (" @ %cmnt @ ")", %type @ " store " @ %item @ " " @ %cmnt);
-	}
-
-	Client::addMenuItem(%clientId, "bBack", %type @ " back " @ %item @ " " @ %mode);
-	Client::addMenuItem(%clientId, "xFinished", "ineedanextrawordsothisisithaha done");
-	return;
-}
-
-function processMenuSellBeltItemFinal(%clientId, %opt)
-{
-	%type = GetWord(%opt, 0);
-	%option = GetWord(%opt, 1);
-	
-	// Check for menu closure option first, before validating other parameters
-	if(%type == "ineedanextrawordsothisisithaha" || %option == "done")
-	{
-		// Clear the belt sell flag and stored order when menu is closed
-		%clientId.currentBeltSell = "";
-		// Clear stored orders for all belt types
-		for(%i = 1; $Belt::Categories[%i] != ""; %i++)
-		{
-			%clientId.beltItemOrder[$Belt::Categories[%i]] = "";
-			%clientId.beltStoredItemOrder[$Belt::Categories[%i]] = "";
-		}
-		Client::cancelMenu(%clientId);
-		return;
-	}
-	
-	%item = GetWord(%opt, 2);
-	%amnt = GetWord(%opt, 3);
-	
-	// Validate parameters
-	if(%item == "" || %item == -1)
-	{
-		%clientName = Client::getName(%clientId);
-		echo("ERROR: processMenuSellBeltItemFinal - Invalid item parameter: '" @ %item @ "' from option: '" @ %opt @ "' ClientId: " @ %clientId @ " (" @ %clientName @ ")");
-		return;
-	}
-	if(%amnt == "" || %amnt == -1)
-	{
-		%clientName = Client::getName(%clientId);
-		echo("ERROR: processMenuSellBeltItemFinal - Invalid amount parameter: '" @ %amnt @ "' from option: '" @ %opt @ "' ClientId: " @ %clientId @ " (" @ %clientName @ ")");
-		return;
-	}
-	%amnt = floor(%amnt); // Ensure %amnt is a number
-	
-	if(%option == "back")
-	{
-		%mode = GetWord(%opt, 3);
-		if(%mode == "sell")
-			MenuSellBeltItem(%clientId, %type, 1);
-		else if(%mode == "store")
-		{
-			// Check if storing to banker or belt storage
-			if(%clientId.currentBeltBank != "")
-				Belt::ShowDepositCategoryMenu(%clientId);
-			else
-				MenuBeltStoreThisItem(%clientId, %type, 1, %mode);
-		}
-		else if(%mode == "withdraw")
-		{
-			// Check if withdrawing from banker or belt storage
-			if(%clientId.currentBeltBank != "")
-				Belt::ShowWithdrawCategoryMenu(%clientId);
-			else
-				MenuBeltWithdrawThisItem(%clientId, %type, 1, %mode);
-		}
-		return;
-	}
-	else if(%option == "sell")
-	{
-		%cmnt = Belt::HasThisStuff(%clientId, %item);
-		if(%cmnt >= %amnt)
-		{
-			%cost = Belt::GetSellCost(%clientId, %item) * %amnt;
-			Client::sendMessage(%clientId, $MsgWhite, "You sold " @ %amnt @ " " @ %item @ " for " @ %cost @ " coins.");
-			UseSkill(%clientId, $SkillHaggling, true, true);
-			storeData(%clientId, "COINS", %cost, "inc");
-			Belt::TakeThisStuff(%clientId, %item, %amnt);
-			RefreshAll(%clientId);
-			%clientId.bulkNum = 1;
-			// Save character after selling to ensure coins and item changes are persisted
-			SaveCharacter(%clientId);
-			// Return to sell menu after selling
-			MenuSellBeltItem(%clientId, %type, 1);
-		}
-	}
-	else if(%option == "store")
-	{
-		// Get the registered item name (what's actually stored in the equipped category)
-		%registeredItem = $BeltItem[%item, "Item"];
-		if(%registeredItem == "")
-		{
-			%clientName = Client::getName(%clientId);
-			echo("ERROR: Belt deposit - Item '" @ %item @ "' not found in belt item registry! ClientId: " @ %clientId @ " (" @ %clientName @ ")");
-			return;
-		}
-		
-		%cmnt = Belt::HasThisStuff(%clientId, %item);
-		if(%cmnt >= %amnt)
-		{
-			// Check if storing to banker (BeltStorage) or to belt storage (old system)
-			if(%clientId.currentBeltBank != "")
-			{
-				// Storing to banker - work directly with BeltStorage as single source of truth
-				%beltStorage = fetchData(%clientId, "BeltStorage");
-				
-				// Normalize "0" to empty string
-				if(%beltStorage == "0" || %beltStorage == " ")
-					%beltStorage = "";
-				
-				// Clean BeltStorage before adding to remove any invalid entries
-				%cleanedStorage = "";
-				for(%i = 0; GetWord(%beltStorage, %i) != -1; %i += 2)
-				{
-					%itemName = GetWord(%beltStorage, %i);
-					%itemCount = GetWord(%beltStorage, %i + 1);
-					%countNum = %itemCount * 1;
-					if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-						%cleanedStorage = %cleanedStorage @ %itemName @ " " @ %itemCount @ " ";
-				}
-				%len = String::len(%cleanedStorage);
-				if(%len > 0 && String::getSubStr(%cleanedStorage, %len-1, 1) == " ")
-					%cleanedStorage = String::getSubStr(%cleanedStorage, 0, %len-1);
-				%beltStorage = %cleanedStorage;
-				
-				// Count unique items in BeltStorage
-				%currentStorageCount = 0;
-				for(%i = 0; GetWord(%beltStorage, %i) != -1; %i += 2)
-				{
-					%itemName = GetWord(%beltStorage, %i);
-					if(%itemName != "" && %itemName != -1 && %itemName != "0")
-						%currentStorageCount++;
-				}
-				
-				if(%currentStorageCount < 25)
-				{
-					// Add item directly to BeltStorage (single source of truth)
-					%newBeltStorage = SetStuffString(%beltStorage, %registeredItem, %amnt);
-					
-					// Clean result after SetStuffString to remove any "0" entries
-					%cleanedResult = "";
-					for(%i = 0; GetWord(%newBeltStorage, %i) != -1; %i += 2)
-					{
-						%itemName = GetWord(%newBeltStorage, %i);
-						%itemCount = GetWord(%newBeltStorage, %i + 1);
-						%countNum = %itemCount * 1;
-						if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-							%cleanedResult = %cleanedResult @ %itemName @ " " @ %itemCount @ " ";
-					}
-					%len = String::len(%cleanedResult);
-					if(%len > 0 && String::getSubStr(%cleanedResult, %len-1, 1) == " ")
-						%cleanedResult = String::getSubStr(%cleanedResult, 0, %len-1);
-					
-					// Save cleaned BeltStorage
-					storeData(%clientId, "BeltStorage", %cleanedResult);
-					
-					// CRITICAL: Also update the stored category to keep it in sync with BeltStorage
-					// This prevents SaveCharacter from rebuilding BeltStorage from stale stored categories
-					%storedCategory = "Stored" @ %type;
-					%currentStored = fetchData(%clientId, %storedCategory);
-					if(%currentStored == "0" || %currentStored == " ") %currentStored = "";
-					
-					// Add item to stored category to match BeltStorage
-					%newStored = SetStuffString(%currentStored, %registeredItem, %amnt);
-					
-					// Clean result after SetStuffString
-					%cleanedStored = "";
-					for(%i = 0; GetWord(%newStored, %i) != -1; %i += 2)
-					{
-						%itemName = GetWord(%newStored, %i);
-						%itemCount = GetWord(%newStored, %i + 1);
-						%countNum = %itemCount * 1;
-						if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-							%cleanedStored = %cleanedStored @ %itemName @ " " @ %itemCount @ " ";
-					}
-					%len = String::len(%cleanedStored);
-					if(%len > 0 && String::getSubStr(%cleanedStored, %len-1, 1) == " ")
-						%cleanedStored = String::getSubStr(%cleanedStored, 0, %len-1);
-					
-					// Save cleaned stored category
-					storeData(%clientId, %storedCategory, %cleanedStored);
-					
-					// Remove from equipped belt
-					Belt::TakeThisStuff(%clientId, %item, %amnt);
-					
-					%clientId.bulkNum = 1;
-					RefreshAll(%clientId);
-					SaveCharacter(%clientId);
-					
-					%itemName = $BeltItem[%registeredItem, "Name"];
-					if(%itemName == "")
-					{
-						// Fallback to AccessoryVar for non-belt items
-						%itemName = $AccessoryVar[%registeredItem, $Name];
-						if(%itemName == "")
-							%itemName = %registeredItem;
-					}
-					Client::sendMessage(%clientId, $MsgGreen, "Deposited " @ %amnt @ " " @ %itemName @ " into backpack storage.");
-					
-					// Clear stored order so menu rebuilds with current items
-					%clientId.beltDepositItemOrder = "";
-					
-					// Return to deposit category menu
-					Belt::ShowDepositCategoryMenu(%clientId);
-				}
-				else
-				{
-					Client::sendMessage(%clientId, $MsgRed, "You can only place 25 different items into backpack storage.~wC_BuySell.wav");
-				}
-			}
-			else
-			{
-				// Storing to belt storage (old system)
-				if(CountObjInList(fetchData(%clientId, "Stored" @ %type)) / 2 < 25)
-				{		
-					storeData(%clientId, "Stored" @ %type, SetStuffString(fetchData(%clientId, "Stored" @ %type), %registeredItem, %amnt));
-					Belt::TakeThisStuff(%clientId, %item, %amnt);
-					%clientId.bulkNum = 1;
-					RefreshAll(%clientId);
-					SaveCharacter(%clientId);
-					MenuBeltStoreThisItem(%clientId, %type, 1, "store");
-				}
-				else
-				{
-					Client::sendMessage(%clientId, $MsgRed, "You can only place 25 different items into the " @ Belt::Display(%type) @ " storage.~wC_BuySell.wav");
-				}
-			}
-		}
-	}
-	else if(%option == "withdraw")
-	{
-		// Get the registered item name (what's actually stored in BeltStorage)
-		%registeredItem = $BeltItem[%item, "Item"];
-		if(%registeredItem == "")
-		{
-			// Try using %item directly - it might already be the registered name from BeltStorage
-			%registeredItem = %item;
-		}
-		
-		// Check if withdrawing from banker (BeltStorage) or from belt storage (old system)
-		if(%clientId.currentBeltBank != "")
-		{
-			// Withdrawing from banker - work directly with BeltStorage as single source of truth
-			%beltStorage = fetchData(%clientId, "BeltStorage");
-			
-			// Normalize "0" to empty string
-			if(%beltStorage == "0" || %beltStorage == " ")
-				%beltStorage = "";
-			
-			// Clean BeltStorage before checking count
-			%cleanedStorage = "";
-			for(%i = 0; GetWord(%beltStorage, %i) != -1; %i += 2)
-			{
-				%itemName = GetWord(%beltStorage, %i);
-				%itemCount = GetWord(%beltStorage, %i + 1);
-				%countNum = %itemCount * 1;
-				if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-					%cleanedStorage = %cleanedStorage @ %itemName @ " " @ %itemCount @ " ";
-			}
-			%len = String::len(%cleanedStorage);
-			if(%len > 0 && String::getSubStr(%cleanedStorage, %len-1, 1) == " ")
-				%cleanedStorage = String::getSubStr(%cleanedStorage, 0, %len-1);
-			%beltStorage = %cleanedStorage;
-			
-			// Check count in BeltStorage
-			%cmnt = Belt::ItemCount(%registeredItem, %beltStorage);
-			
-			if(%cmnt >= %amnt)
-			{
-				// Remove item directly from BeltStorage
-				%newBeltStorage = SetStuffString(%beltStorage, %registeredItem, -%amnt);
-				
-				// Clean result after SetStuffString to remove any "0" entries
-				%cleanedResult = "";
-				for(%i = 0; GetWord(%newBeltStorage, %i) != -1; %i += 2)
-				{
-					%itemName = GetWord(%newBeltStorage, %i);
-					%itemCount = GetWord(%newBeltStorage, %i + 1);
-					%countNum = %itemCount * 1;
-					if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-						%cleanedResult = %cleanedResult @ %itemName @ " " @ %itemCount @ " ";
-				}
-				%len = String::len(%cleanedResult);
-				if(%len > 0 && String::getSubStr(%cleanedResult, %len-1, 1) == " ")
-					%cleanedResult = String::getSubStr(%cleanedResult, 0, %len-1);
-				
-				// Save cleaned BeltStorage
-				storeData(%clientId, "BeltStorage", %cleanedResult);
-				
-				// CRITICAL: Also update the stored category to keep it in sync with BeltStorage
-				// This prevents SaveCharacter from rebuilding BeltStorage from stale stored categories
-				%storedCategory = "Stored" @ %type;
-				%currentStored = fetchData(%clientId, %storedCategory);
-				if(%currentStored == "0" || %currentStored == " ") %currentStored = "";
-				
-				// Remove item from stored category to match BeltStorage
-				%newStored = SetStuffString(%currentStored, %registeredItem, -%amnt);
-				
-				// Clean result after SetStuffString
-				%cleanedStored = "";
-				for(%i = 0; GetWord(%newStored, %i) != -1; %i += 2)
-				{
-					%itemName = GetWord(%newStored, %i);
-					%itemCount = GetWord(%newStored, %i + 1);
-					%countNum = %itemCount * 1;
-					if(%itemName != "" && %itemName != -1 && %itemName != "0" && %itemCount != "" && %itemCount != -1 && %itemCount != "-1" && %itemCount != "0" && %countNum > 0)
-						%cleanedStored = %cleanedStored @ %itemName @ " " @ %itemCount @ " ";
-				}
-				%len = String::len(%cleanedStored);
-				if(%len > 0 && String::getSubStr(%cleanedStored, %len-1, 1) == " ")
-					%cleanedStored = String::getSubStr(%cleanedStored, 0, %len-1);
-				
-				// Save cleaned stored category
-				storeData(%clientId, %storedCategory, %cleanedStored);
-				
-				// CRITICAL: If BeltStorage is now empty after withdrawal, clear ALL stored categories
-				// This prevents SaveCharacter from rebuilding BeltStorage from stale stored categories
-				if(%cleanedResult == "" || %cleanedResult == "0" || %cleanedResult == " ")
-				{
-					storeData(%clientId, "StoredQuestItems", "");
-					storeData(%clientId, "StoredKeyItems", "");
-					storeData(%clientId, "StoredConsumables", "");
-					storeData(%clientId, "StoredArmor", "");
-					storeData(%clientId, "StoredAccessories", "");
-					storeData(%clientId, "StoredOther", "");
-				}
-				
-				// Add to equipped belt
-				Belt::GiveThisStuff(%clientId, %item, %amnt, 1);
-				
-				%clientId.bulkNum = 1;
-				RefreshAll(%clientId);
-				SaveCharacter(%clientId);
-				
-				%itemName = $BeltItem[%registeredItem, "Name"];
-				if(%itemName == "")
-				{
-					// Fallback to AccessoryVar for non-belt items
-					%itemName = $AccessoryVar[%registeredItem, $Name];
-					if(%itemName == "")
-						%itemName = %registeredItem;
-				}
-				Client::sendMessage(%clientId, $MsgGreen, "Withdrew " @ %amnt @ " " @ %itemName @ " from backpack storage.");
-				
-				// Clear stored order so menu rebuilds with current items
-				%clientId.beltWithdrawItemOrder = "";
-				
-				// Return to withdraw category menu
-				Belt::ShowWithdrawCategoryMenu(%clientId);
-			}
-			else
-			{
-				Client::sendMessage(%clientId, $MsgRed, "You don't have enough " @ $BeltItem[%registeredItem, "Name"] @ " in storage.");
-			}
-		}
-		else
-		{
-			// Withdrawing from belt storage (old system)
-			%cmnt = Belt::GetStored(%clientId, %opt);
-			if(%cmnt >= %amnt)
-			{
-				Belt::GiveThisStuff(%clientId, %item, %amnt, 1);
-				storeData(%clientId, "Stored" @ %type, SetStuffString(fetchData(%clientId, "Stored" @ %type), %item, -%amnt));
-				%clientId.bulkNum = 1;
-				RefreshAll(%clientId);
-				SaveCharacter(%clientId);
-				MenuBeltWithdrawThisItem(%clientId, %opt, 1, "withdraw");
-			}
-		}
-	}
 	return;
 }
 
@@ -24156,6 +23440,21 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 		%cmnt = Belt::HasThisStuff(%clientId, %item);
 		if(%cmnt >= %amnt)
 		{
+			// CRITICAL: Auto-unequip if selling equipped accessories
+			%category = $BeltItem[%item, "Type"];
+			if(%category == "Accessories")
+			{
+				for(%unequipCount = 0; %unequipCount < %amnt; %unequipCount++)
+				{
+					if(Belt::IsAccessoryEquipped(%clientId, %item))
+						Belt::UnequipAccessory(%clientId, %item);
+				}
+			}
+			else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+			{
+				Belt::UnequipArmor(%clientId, %item);
+			}
+			
 			%cost = Belt::GetSellCost(%clientId, %item) * %amnt;
 			Client::sendMessage(%clientId, $MsgWhite, "You sold " @ %amnt @ " " @ %item @ " for " @ %cost @ " coins.");
 			UseSkill(%clientId, $SkillHaggling, true, true);
@@ -24183,6 +23482,21 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 		%cmnt = Belt::HasThisStuff(%clientId, %item);
 		if(%cmnt >= %amnt)
 		{
+			// CRITICAL: Auto-unequip if storing equipped accessories
+			%category = $BeltItem[%item, "Type"];
+			if(%category == "Accessories")
+			{
+				for(%unequipCount = 0; %unequipCount < %amnt; %unequipCount++)
+				{
+					if(Belt::IsAccessoryEquipped(%clientId, %item))
+						Belt::UnequipAccessory(%clientId, %item);
+				}
+			}
+			else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+			{
+				Belt::UnequipArmor(%clientId, %item);
+			}
+			
 			// Check if storing to banker (BeltStorage) or to belt storage (old system)
 			if(%clientId.currentBeltBank != "")
 			{
@@ -25080,831 +24394,6 @@ function Belt::GiveThisStuff(%clientId, %item, %amnt, %echo)
 	}
 }
 
-//==========================//
-//======MUG BELT START======//
-//==========================//
-// TEMPORARILY DISABLED - Belt::Mug functions
-//function Belt::Mug(%clientId, %id)
-//{
-//	%clientId.MugID=%id;
-//	Belt::MugBeltMain(%clientId, %id);
-//	client::sendmessage(%clientId, "You are belt mugging");
-//}
-//function Belt::MugBeltMain(%clientId, %id)
-//{
-//	Client::buildMenu(%clientId, client::getname(%id) @ "'s Belt:", "MugBeltMain", true);
-//	for(%i = 1; %i < Belt::GetLastItem(); %i++)
-//	if(!Belt::isEmpty(%clientId, $Belt::Categories[%i]) > 0)
-//	Client::addMenuItem(%clientId, %cnt++ @ Belt::Display($Belt::Categories[%i]), $Belt::Categories[%i]);	
-//	Client::addMenuItem(%clientId, "xDone", "done");
-//	return;
-//}
-//function processMenuMugBeltMain(%clientId, %opt)
-//{
-//	%o = GetWord(%opt, 0);
-//	%p = GetWord(%opt, 1);
-//
-//	if($Belt::Count[%o] > 0)
-//	{
-//		MenuBelt::MugThisType(%clientId, %o, 1);
-//		return;
-//	}
-//	return;
-//}
-//function MenuBelt::MugThisType(%clientId, %type, %page)
-//{
-//	%id=%clientId.MugId;
-//	%disp = Belt::Display(%type);
-//
-//	Client::buildMenu(%clientId, %disp @ ":", "Belt::MugThisType", true);
-//	%clientId.bulkNum = "";
-//
-//	%l = 6;
-//	%nx = $Belt::Count[%type];
-//	%nf = Belt::GetNS(%id, %type);
-//	%ns = GetWord(%nf, 0);
-//	%np = floor(%ns / %l);
-//	%lb = (%page * %l) - (%l-1);
-//	%ub = %lb + (%l-1);
-//	if(%ub > %ns)
-//	%ub = %ns;
-//
-//	%x = %lb - 1;
-//	for(%i = %lb; %i <= %ub; %i++)
-//	{
-//		%x++;
-//		%item = getword(%nf, %x);
-//		%amnt = Belt::HasThisStuff(%id, %item);
-//		Client::addMenuItem(%clientId, %cnt++ @ %amnt @ " " @ $BeltItem[%item, "Name"], %item @ " " @ %page @ " " @ %type);
-//	}
-//
-//	if(%page == 1)
-//	{
-//		if(%ns > 6) Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "xDone", "done");
-//	}
-//	else if(%page == %np+1)
-//	{
-//		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "xDone", "done");
-//	}
-//	else
-//	{
-//		Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type);
-//	}
-//
-//	return;
-//}
-//function processMenuBelt::MugThisType(%clientId, %opt)
-//{
-//	%o = GetWord(%opt, 0);
-//	%p = GetWord(%opt, 1);
-//	%t = GetWord(%opt, 2);
-//
-//	if(%o != "page" && %o != "done")
-//	{
-//		%clientId.bulkNum = 1;
-//
-//		MenuBelt::MugChoose(%clientId, %o, %t);
-//		return;
-//	}
-//
-//	return;
-//}
-//function MenuBelt::MugChoose(%clientId, %item, %type)
-//{
-//	%id=%clientId.MugId;
-//	%name = $BeltItem[%item, "Name"];
-//	%amnt = %clientId.bulkNum;
-//	%cmnt = Belt::HasThisStuff(%id, %item);
-//
-//	if(%amnt > %cmnt)
-//	%amnt = %cmnt;
-//
-//	Client::buildMenu(%clientId, %name @ " (" @ %cmnt @ ")", "Belt::MugChoose", true);
-//
-//	Client::addMenuItem(%clientId, %cnt++ @ "Mug " @ %item, %type @ " MUG " @ %item @ " 1");
-//	Client::addMenuItem(%clientId, %cnt++ @ "Examine", %type @ " examine " @ %item);
-//	Client::addMenuItem(%clientId, %cnt++ @ "Back", %type @ " back " @ %item);
-//	Client::addMenuItem(%clientId, "xDone", "done");
-//	return;
-//}
-//
-//function processMenuBelt::MugChoose(%clientId, %opt)
-//{
-//	%type = GetWord(%opt, 0);
-//	%option = GetWord(%opt, 1);
-//	%item = GetWord(%opt, 2);
-//
-//	if(%option == "MUG")
-//	{
-//		Client::sendMessage(%clientId, $MsgBeige, "Attempting to Mug " @ client::getName(%clientId.MugId) @ "'s belt...");
-//		schedule("Belt::MugItem(" @ %clientId @ ", " @ %item @ ", " @ %type @ ");", 5);
-//	}
-//	else if(%option == "examine")
-//	{
-//		%msg = WhatIs(%item);
-//		bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
-//		MenuBelt::MugChoose(%clientId, %item, %type);
-//	}
-//	else if(%option == "back")
-//	{
-//		MenuBelt::MugThisType(%clientId, %option, 1);
-//	}
-//	return;
-//}
-//function Belt::MugItem(%clientId, %item, %type)
-//{
-//	%cl=%clientId.MugId;
-//	%list = fetchData(%cl, %type);
-//	%victimName = Client::getName(%cl);
-//	%stealerName = Client::getName(%clientId);
-//
-//	for(%i=0; getword(fetchData(%cl, %type), %i) != -1; %i+=2)
-//	{
-//		if(getword(fetchData(%cl, %type), %i) == %item)
-//		%icnt = getword(fetchData(%cl, %type), %i+1);
-//	}
-//	%clientId.TryingToSteal = "";
-//
-//	//weights
-//	%itemweight = GetAccessoryVar(%item, $Weight);
-//	%wweight = 10;
-//	if(Player::getMountedItem(%clientId, $WeaponSlot) == %item || %item.className == Equipped)
-//	%handweight = 5.0;
-//	else
-//	%handweight = 1.0;
-//	%FailWeight = (%itemweight * %wweight) * %handweight;
-//
-//	if(Vector::getDistance(GameBase::getPosition(%clientId), GameBase::getPosition(%cl)) > 2)
-//	Client::sendMessage(%clientId, $MsgWhite, "Your target has wandered off...");
-//	else
-//	{
-//		%r1 = GetRoll("1d" @ $PlayerSkill[%clientId, $SkillStealing]);
-//		%r2 = GetRoll("1d" @ ($PlayerSkill[%cl, $SkillStealing] + $PlayerSkill[%cl, $SkillDodging]));
-//		%b = %r1 - %r2;
-//		%a = %b - %FailWeight;
-//		if(%a > 0 && %icnt > 0)
-//		{
-//			%newcnt = %icnt-1;
-//			Client::sendMessage(%clientId, $MsgBeige, "You successfully stole a " @ %item @ " from " @ %victimName @ "!");
-//			Belt::TakeThisStuff(%cl, %item, 1);
-//			Belt::GiveThisStuff(%clientId, %item, 1);
-//			PerhapsPlayStealSound(%clientId, %clientId.stealType);
-//
-//			if(%newcnt > 0)
-//			MenuBelt::MugChoose(%clientId, %item, %type);
-//
-//			RefreshAll(%clientId);
-//			RefreshAll(%cl);
-//
-//			UseSkill(%clientId, $SkillStealing, true, true);
-//			PostSteal(%clientId, true, %clientId.stealType);
-//
-//			return true;
-//		}
-//		else
-//		{
-//			Client::cancelMenu(%clientId);
-//			Client::sendMessage(%clientId, $MsgRed, "You failed to mug " @ %victimName @ "'s belt!");
-//			Client::sendMessage(%cl, $MsgRed, %stealerName @ " just failed to mug your belt!");
-//
-//			UseSkill(%clientId, $SkillStealing, false, true);
-//			PostSteal(%clientId, false, %clientId.stealType);
-//		}
-//	}
-//
-//	//force kick from Inv Screen
-//	remotePlayMode(%clientId);
-//
-//	return false;
-//}
-//==========================//
-//====== MUG BELT END ======//
-//==========================//
-
-// ------------------- //
-// Non Menu Functions  //
-// ------------------- //
-
-//==========================//
-//======MUG BELT START======//
-//==========================//
-// TEMPORARILY DISABLED - Belt::Mug functions
-//function Belt::Mug(%clientId, %id)
-//{
-//	%clientId.MugID=%id;
-//	Belt::MugBeltMain(%clientId, %id);
-//	client::sendmessage(%clientId, "You are belt mugging");
-//}
-//function Belt::MugBeltMain(%clientId, %id)
-//{
-//	Client::buildMenu(%clientId, client::getname(%id) @ "'s Belt:", "MugBeltMain", true);
-//	for(%i = 1; %i < Belt::GetLastItem(); %i++)
-//	if(!Belt::isEmpty(%clientId, $Belt::Categories[%i]) > 0)
-//	Client::addMenuItem(%clientId, %cnt++ @ Belt::Display($Belt::Categories[%i]), $Belt::Categories[%i]);	
-//	Client::addMenuItem(%clientId, "xDone", "done");
-//	return;
-//}
-//function processMenuMugBeltMain(%clientId, %opt)
-//{
-//	%o = GetWord(%opt, 0);
-//	%p = GetWord(%opt, 1);
-//
-//	if($Belt::Count[%o] > 0)
-//	{
-//		MenuBelt::MugThisType(%clientId, %o, 1);
-//		return;
-//	}
-//	return;
-//}
-//function MenuBelt::MugThisType(%clientId, %type, %page)
-//{
-//	%id=%clientId.MugId;
-//	%disp = Belt::Display(%type);
-//
-//	Client::buildMenu(%clientId, %disp @ ":", "Belt::MugThisType", true);
-//	%clientId.bulkNum = "";
-//
-//	%l = 6;
-//	%nx = $Belt::Count[%type];
-//	%nf = Belt::GetNS(%id, %type);
-//	%ns = GetWord(%nf, 0);
-//	%np = floor(%ns / %l);
-//	%lb = (%page * %l) - (%l-1);
-//	%ub = %lb + (%l-1);
-//	if(%ub > %ns)
-//	%ub = %ns;
-//
-//	%x = %lb - 1;
-//	for(%i = %lb; %i <= %ub; %i++)
-//	{
-//		%x++;
-//		%item = getword(%nf, %x);
-//		%amnt = Belt::HasThisStuff(%id, %item);
-//		Client::addMenuItem(%clientId, %cnt++ @ %amnt @ " " @ $BeltItem[%item, "Name"], %item @ " " @ %page @ " " @ %type);
-//	}
-//
-//	if(%page == 1)
-//	{
-//		if(%ns > 6) Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "xDone", "done");
-//	}
-//	else if(%page == %np+1)
-//	{
-//		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "xDone", "done");
-//	}
-//	else
-//	{
-//		Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type);
-//	}
-//
-//	return;
-//}
-//function processMenuBelt::MugThisType(%clientId, %opt)
-//{
-//	%o = GetWord(%opt, 0);
-//	%p = GetWord(%opt, 1);
-//	%t = GetWord(%opt, 2);
-//
-//	if(%o != "page" && %o != "done")
-//	{
-//		%clientId.bulkNum = 1;
-//
-//		MenuBelt::MugChoose(%clientId, %o, %t);
-//		return;
-//	}
-//
-//	return;
-//}
-//function MenuBelt::MugChoose(%clientId, %item, %type)
-//{
-//	%id=%clientId.MugId;
-//	%name = $BeltItem[%item, "Name"];
-//	%amnt = %clientId.bulkNum;
-//	%cmnt = Belt::HasThisStuff(%id, %item);
-//
-//	if(%amnt > %cmnt)
-//	%amnt = %cmnt;
-//
-//	Client::buildMenu(%clientId, %name @ " (" @ %cmnt @ ")", "Belt::MugChoose", true);
-//
-//	Client::addMenuItem(%clientId, %cnt++ @ "Mug " @ %item, %type @ " MUG " @ %item @ " 1");
-//	Client::addMenuItem(%clientId, %cnt++ @ "Examine", %type @ " examine " @ %item);
-//	Client::addMenuItem(%clientId, %cnt++ @ "Back", %type @ " back " @ %item);
-//	Client::addMenuItem(%clientId, "xDone", "done");
-//	return;
-//}
-//
-//function processMenuBelt::MugChoose(%clientId, %opt)
-//{
-//	%type = GetWord(%opt, 0);
-//	%option = GetWord(%opt, 1);
-//	%item = GetWord(%opt, 2);
-//
-//	if(%option == "MUG")
-//	{
-//		Client::sendMessage(%clientId, $MsgBeige, "Attempting to Mug " @ client::getName(%clientId.MugId) @ "'s belt...");
-//		schedule("Belt::MugItem(" @ %clientId @ ", " @ %item @ ", " @ %type @ ");", 5);
-//	}
-//	else if(%option == "examine")
-//	{
-//		%msg = WhatIs(%item);
-//		bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
-//		MenuBelt::MugChoose(%clientId, %item, %type);
-//	}
-//	else if(%option == "back")
-//	{
-//		MenuBelt::MugThisType(%clientId, %option, 1);
-//	}
-//	return;
-//}
-//function Belt::MugItem(%clientId, %item, %type)
-//{
-//	%cl=%clientId.MugId;
-//	%list = fetchData(%cl, %type);
-//	%victimName = Client::getName(%cl);
-//	%stealerName = Client::getName(%clientId);
-//
-//	for(%i=0; getword(fetchData(%cl, %type), %i) != -1; %i+=2)
-//	{
-//		if(getword(fetchData(%cl, %type), %i) == %item)
-//		%icnt = getword(fetchData(%cl, %type), %i+1);
-//	}
-//	%clientId.TryingToSteal = "";
-//
-//	//weights
-//	%itemweight = GetAccessoryVar(%item, $Weight);
-//	%wweight = 10;
-//	if(Player::getMountedItem(%clientId, $WeaponSlot) == %item || %item.className == Equipped)
-//	%handweight = 5.0;
-//	else
-//	%handweight = 1.0;
-//	%FailWeight = (%itemweight * %wweight) * %handweight;
-//
-//	if(Vector::getDistance(GameBase::getPosition(%clientId), GameBase::getPosition(%cl)) > 2)
-//	Client::sendMessage(%clientId, $MsgWhite, "Your target has wandered off...");
-//	else
-//	{
-//		%r1 = GetRoll("1d" @ $PlayerSkill[%clientId, $SkillStealing]);
-//		%r2 = GetRoll("1d" @ ($PlayerSkill[%cl, $SkillStealing] + $PlayerSkill[%cl, $SkillDodging]));
-//		%b = %r1 - %r2;
-//		%a = %b - %FailWeight;
-//		if(%a > 0 && %icnt > 0)
-//		{
-//			%newcnt = %icnt-1;
-//			Client::sendMessage(%clientId, $MsgBeige, "You successfully stole a " @ %item @ " from " @ %victimName @ "!");
-//			Belt::TakeThisStuff(%cl, %item, 1);
-//			Belt::GiveThisStuff(%clientId, %item, 1);
-//			PerhapsPlayStealSound(%clientId, %clientId.stealType);
-//
-//			if(%newcnt > 0)
-//			MenuBelt::MugChoose(%clientId, %item, %type);
-//
-//			RefreshAll(%clientId);
-//			RefreshAll(%cl);
-//
-//			UseSkill(%clientId, $SkillStealing, true, true);
-//			PostSteal(%clientId, true, %clientId.stealType);
-//
-//			return true;
-//		}
-//		else
-//		{
-//			Client::cancelMenu(%clientId);
-//			Client::sendMessage(%clientId, $MsgRed, "You failed to mug " @ %victimName @ "'s belt!");
-//			Client::sendMessage(%cl, $MsgRed, %stealerName @ " just failed to mug your belt!");
-//
-//			UseSkill(%clientId, $SkillStealing, false, true);
-//			PostSteal(%clientId, false, %clientId.stealType);
-//		}
-//	}
-//
-//	//force kick from Inv Screen
-//	remotePlayMode(%clientId);
-//
-//	return false;
-//}
-//==========================//
-//====== MUG BELT END ======//
-//==========================//
-
-function MenuBeltWithdrawThisItem(%clientId, %type, %page, %mode)
-{
-	%type = getword(%type, 0);
-	%disp = Belt::Display(%type);
-	
-	// Store the original order when first opening the menu (page 1)
-	if(%page == 1 && %clientId.beltStoredItemOrder[%type] == "")
-	{
-		%storedStuff = fetchdata(%clientId, "Stored" @ %type);
-		%orderList = "";
-		for(%i = 0; (%item = getWord(%storedStuff, %i)) != -1; %i+=2)
-		{
-			%amnt = getWord(%storedStuff, %i + 1);
-			if(%amnt > 0)
-			{
-				%orderList = %orderList @ " " @ %item;
-			}
-		}
-		%clientId.beltStoredItemOrder[%type] = String::NEWgetSubStr(%orderList, 1, 99999);
-	}
-	
-	Client::buildMenu(%clientId, %disp @ ":", "BeltWithdrawThisItem", true);
-
-	%l = 6;
-	%nx = $Belt::Count[%type];
-	%nf = fetchdata(%clientId, "Stored" @ %type);
-	
-	// Use stored order if available
-	if(%clientId.beltStoredItemOrder[%type] != "")
-	{
-		%storedOrder = %clientId.beltStoredItemOrder[%type];
-		%orderedList = "";
-		%count = 0;
-		
-		// Build ordered list based on stored order
-		for(%i = 0; (%item = getWord(%storedOrder, %i)) != -1; %i++)
-		{
-			%amnt = Belt::ItemCount(%item, %nf);
-			if(%amnt > 0)
-			{
-				%orderedList = %orderedList @ " " @ %item @ " " @ %amnt;
-				%count++;
-			}
-		}
-		%nf = String::NEWgetSubStr(%orderedList, 1, 99999);
-		%ns = %count - 1;
-	}
-	else
-	{
-		%ns = (CountObjInList(%nf) / 2) - 1;
-	}
-	
-	%np = floor(%ns / %l);
-	%lb = (%page * %l) - (%l-1);
-	%ub = %lb + (%l-1);
-	if(%ub > %ns)
-		%ub = %ns;
-
-	%x = (%lb - 1) * 2 + 2;
-	for(%i = %lb; %i <= %ub; %i++)
-	{	
-		%item = getword(%nf, %x);
-		%amnt = getword(%nf, %x + 1);
-		Client::addMenuItem(%clientId, %cnt++ @ %amnt @ " " @ %item, %item @ " " @ %page @ " " @ %type @ " " @ %mode);
-		%x+=2;
-	}
-
-	if(%page == 1)
-	{
-		if(%ns > 6) Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "xDone", "done");
-	}
-	else if(%page == %np+1)
-	{
-		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "xDone", "done");
-	}
-	else
-	{
-		Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-	}
-
-	return;
-}
-function processMenuBeltWithdrawThisItem(%clientId, %opt)
-{
-	%o = GetWord(%opt, 0);
-	%p = GetWord(%opt, 1);
-	%t = GetWord(%opt, 2);
-	%mode = getword(%opt, 3);
-
-	if(%o == "back")
-	{
-		MenuStoreBelt(%clientId, %mode);
-		return;
-	}
-
-	if(%o != "page" && %o != "done")
-	{
-		MenuSellBeltItemFinal(%clientId, %o, %t, %mode);
-		return;
-	}
-
-	if(%o != "done")
-	MenuBeltWithdrawThisItem(%clientId, %t, %p, %mode);
-
-	return;
-}
-
-function MenuBeltStoreThisItem(%clientId, %type, %page, %mode)
-{
-	%type = getword(%type, 0);
-	%disp = Belt::Display(%type);
-	
-	%msg = "<jc><f2>To store 'bulk' " @ %disp @ ", please enter your desired 'bulk' number now!\n\n'Bulk' numbers must be greater than 0 and less than 500";
-	bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
-	
-	// Store the original order when first opening the menu (page 1)
-	if(%page == 1 && %clientId.beltItemOrder[%type] == "")
-	{
-		%stuff = fetchData(%clientId, %type);
-		%orderList = "";
-		for(%i = 0; (%item = getWord(%stuff, %i)) != -1; %i+=2)
-		{
-			%amnt = getWord(%stuff, %i + 1);
-			if(%amnt > 0)
-			{
-				%orderList = %orderList @ " " @ %item;
-			}
-		}
-		%clientId.beltItemOrder[%type] = String::NEWgetSubStr(%orderList, 1, 99999);
-	}
-	
-	Client::buildMenu(%clientId, %disp @ ":", "BeltStoreThisItem", true);
-	%clientId.bulkNum = "";
-
-	%l = 6;
-	%nx = $Belt::Count[%type];
-	%nf = Belt::GetNS(%clientId, %type);
-	%ns = GetWord(%nf, 0);
-	%np = floor(%ns / %l);
-	%lb = (%page * %l) - (%l-1);
-	%ub = %lb + (%l-1);
-	if(%ub > %ns)
-	%ub = %ns;
-
-	%x = %lb;
-	for(%i = %lb; %i <= %ub; %i++)
-	{
-		%item = getword(%nf, %x);
-		%amnt = Belt::HasThisStuff(%clientId, %item);
-		Client::addMenuItem(%clientId, %cnt++ @ %amnt @ " " @ $BeltItem[%item, "Name"], %item @ " " @ %page @ " " @ %type @ " " @ %mode);
-		%x++;
-	}
-
-	if(%page == 1)
-	{
-		if(%ns > 6) Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "xDone", "done");
-	}
-	else if(%page == %np+1)
-	{
-		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "xDone", "done");
-	}
-	else
-	{
-		Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-	}
-
-	return;
-}
-function processMenuBeltStoreThisItem(%clientId, %opt)
-{
-	%o = GetWord(%opt, 0);
-	%p = GetWord(%opt, 1);
-	%t = GetWord(%opt, 2);
-	%mode = getword(%opt, 3);
-
-	if(%o == "back")
-	{
-		MenuStoreBelt(%clientId, %mode);
-		return;
-	}
-
-	if(%o != "page" && %o != "done")
-	{
-		MenuSellBeltItemFinal(%clientId, %o, %t, %mode);
-		return;
-	}
-
-	if(%o != "done")
-	MenuBeltStoreThisItem(%clientId, %t, %p, %mode);
-
-	return;
-}
-
-// ------------------- //
-// Non Menu Functions  //
-// ------------------- //
-
-//==========================//
-//======MUG BELT START======//
-//==========================//
-// TEMPORARILY DISABLED - Belt::Mug functions
-//function Belt::Mug(%clientId, %id)
-//{
-//	%clientId.MugID=%id;
-//	Belt::MugBeltMain(%clientId, %id);
-//	client::sendmessage(%clientId, "You are belt mugging");
-//}
-//function Belt::MugBeltMain(%clientId, %id)
-//{
-//	Client::buildMenu(%clientId, client::getname(%id) @ "'s Belt:", "MugBeltMain", true);
-//	for(%i = 1; %i < Belt::GetLastItem(); %i++)
-//	if(!Belt::isEmpty(%clientId, $Belt::Categories[%i]) > 0)
-//	Client::addMenuItem(%clientId, %cnt++ @ Belt::Display($Belt::Categories[%i]), $Belt::Categories[%i]);	
-//	Client::addMenuItem(%clientId, "xDone", "done");
-//	return;
-//}
-//function processMenuMugBeltMain(%clientId, %opt)
-//{
-//	%o = GetWord(%opt, 0);
-//	%p = GetWord(%opt, 1);
-//
-//	if($Belt::Count[%o] > 0)
-//	{
-//		MenuBelt::MugThisType(%clientId, %o, 1);
-//		return;
-//	}
-//	return;
-//}
-//function MenuBelt::MugThisType(%clientId, %type, %page)
-//{
-//	%id=%clientId.MugId;
-//	%disp = Belt::Display(%type);
-//
-//	Client::buildMenu(%clientId, %disp @ ":", "Belt::MugThisType", true);
-//	%clientId.bulkNum = "";
-//
-//	%l = 6;
-//	%nx = $Belt::Count[%type];
-//	%nf = Belt::GetNS(%id, %type);
-//	%ns = GetWord(%nf, 0);
-//	%np = floor(%ns / %l);
-//	%lb = (%page * %l) - (%l-1);
-//	%ub = %lb + (%l-1);
-//	if(%ub > %ns)
-//	%ub = %ns;
-//
-//	%x = %lb - 1;
-//	for(%i = %lb; %i <= %ub; %i++)
-//	{
-//		%x++;
-//		%item = getword(%nf, %x);
-//		%amnt = Belt::HasThisStuff(%id, %item);
-//		Client::addMenuItem(%clientId, %cnt++ @ %amnt @ " " @ $BeltItem[%item, "Name"], %item @ " " @ %page @ " " @ %type);
-//	}
-//
-//	if(%page == 1)
-//	{
-//		if(%ns > 6) Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "xDone", "done");
-//	}
-//	else if(%page == %np+1)
-//	{
-//		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "xDone", "done");
-//	}
-//	else
-//	{
-//		Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type);
-//		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type);
-//	}
-//
-//	return;
-//}
-//function processMenuBelt::MugThisType(%clientId, %opt)
-//{
-//	%o = GetWord(%opt, 0);
-//	%p = GetWord(%opt, 1);
-//	%t = GetWord(%opt, 2);
-//
-//	if(%o != "page" && %o != "done")
-//	{
-//		%clientId.bulkNum = 1;
-//
-//		MenuBelt::MugChoose(%clientId, %o, %t);
-//		return;
-//	}
-//
-//	return;
-//}
-//function MenuBelt::MugChoose(%clientId, %item, %type)
-//{
-//	%id=%clientId.MugId;
-//	%name = $BeltItem[%item, "Name"];
-//	%amnt = %clientId.bulkNum;
-//	%cmnt = Belt::HasThisStuff(%id, %item);
-//
-//	if(%amnt > %cmnt)
-//	%amnt = %cmnt;
-//
-//	Client::buildMenu(%clientId, %name @ " (" @ %cmnt @ ")", "Belt::MugChoose", true);
-//
-//	Client::addMenuItem(%clientId, %cnt++ @ "Mug " @ %item, %type @ " MUG " @ %item @ " 1");
-//	Client::addMenuItem(%clientId, %cnt++ @ "Examine", %type @ " examine " @ %item);
-//	Client::addMenuItem(%clientId, %cnt++ @ "Back", %type @ " back " @ %item);
-//	Client::addMenuItem(%clientId, "xDone", "done");
-//	return;
-//}
-//
-//function processMenuBelt::MugChoose(%clientId, %opt)
-//{
-//	%type = GetWord(%opt, 0);
-//	%option = GetWord(%opt, 1);
-//	%item = GetWord(%opt, 2);
-//
-//	if(%option == "MUG")
-//	{
-//		Client::sendMessage(%clientId, $MsgBeige, "Attempting to Mug " @ client::getName(%clientId.MugId) @ "'s belt...");
-//		schedule("Belt::MugItem(" @ %clientId @ ", " @ %item @ ", " @ %type @ ");", 5);
-//	}
-//	else if(%option == "examine")
-//	{
-//		%msg = WhatIs(%item);
-//		bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
-//		MenuBelt::MugChoose(%clientId, %item, %type);
-//	}
-//	else if(%option == "back")
-//	{
-//		MenuBelt::MugThisType(%clientId, %option, 1);
-//	}
-//	return;
-//}
-//function Belt::MugItem(%clientId, %item, %type)
-//{
-//	%cl=%clientId.MugId;
-//	%list = fetchData(%cl, %type);
-//	%victimName = Client::getName(%cl);
-//	%stealerName = Client::getName(%clientId);
-//
-//	for(%i=0; getword(fetchData(%cl, %type), %i) != -1; %i+=2)
-//	{
-//		if(getword(fetchData(%cl, %type), %i) == %item)
-//		%icnt = getword(fetchData(%cl, %type), %i+1);
-//	}
-//	%clientId.TryingToSteal = "";
-//
-//	//weights
-//	%itemweight = GetAccessoryVar(%item, $Weight);
-//	%wweight = 10;
-//	if(Player::getMountedItem(%clientId, $WeaponSlot) == %item || %item.className == Equipped)
-//	%handweight = 5.0;
-//	else
-//	%handweight = 1.0;
-//	%FailWeight = (%itemweight * %wweight) * %handweight;
-//
-//	if(Vector::getDistance(GameBase::getPosition(%clientId), GameBase::getPosition(%cl)) > 2)
-//	Client::sendMessage(%clientId, $MsgWhite, "Your target has wandered off...");
-//	else
-//	{
-//		%r1 = GetRoll("1d" @ $PlayerSkill[%clientId, $SkillStealing]);
-//		%r2 = GetRoll("1d" @ ($PlayerSkill[%cl, $SkillStealing] + $PlayerSkill[%cl, $SkillDodging]));
-//		%b = %r1 - %r2;
-//		%a = %b - %FailWeight;
-//		if(%a > 0 && %icnt > 0)
-//		{
-//			%newcnt = %icnt-1;
-//			Client::sendMessage(%clientId, $MsgBeige, "You successfully stole a " @ %item @ " from " @ %victimName @ "!");
-//			Belt::TakeThisStuff(%cl, %item, 1);
-//			Belt::GiveThisStuff(%clientId, %item, 1);
-//			PerhapsPlayStealSound(%clientId, %clientId.stealType);
-//
-//			if(%newcnt > 0)
-//			MenuBelt::MugChoose(%clientId, %item, %type);
-//
-//			RefreshAll(%clientId);
-//			RefreshAll(%cl);
-//
-//			UseSkill(%clientId, $SkillStealing, true, true);
-//			PostSteal(%clientId, true, %clientId.stealType);
-//
-//			return true;
-//		}
-//		else
-//		{
-//			Client::cancelMenu(%clientId);
-//			Client::sendMessage(%clientId, $MsgRed, "You failed to mug " @ %victimName @ "'s belt!");
-//			Client::sendMessage(%cl, $MsgRed, %stealerName @ " just failed to mug your belt!");
-//
-//			UseSkill(%clientId, $SkillStealing, false, true);
-//			PostSteal(%clientId, false, %clientId.stealType);
-//		}
-//	}
-//
-//	//force kick from Inv Screen
-//	remotePlayMode(%clientId);
-//
-//	return false;
-//}
-//==========================//
-//====== MUG BELT END ======//
-//==========================//
-
 function Belt::TakeThisStuff(%clientId, %item, %amnt)
 {
 	if(%amnt > 0)
@@ -26170,213 +24659,6 @@ function Belt::isEmpty(%clientId, %type)
 		return False;
 	else
 		return True;
-}
-
-function MenuBeltStoreThisItem(%clientId, %type, %page, %mode)
-{
-	%type = getword(%type, 0);
-	%disp = Belt::Display(%type);
-	
-	%msg = "<jc><f2>To store 'bulk' " @ %disp @ ", please enter your desired 'bulk' number now!\n\n'Bulk' numbers must be greater than 0 and less than 500";
-	bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
-	
-	// Store the original order when first opening the menu (page 1)
-	if(%page == 1 && %clientId.beltItemOrder[%type] == "")
-	{
-		%stuff = fetchData(%clientId, %type);
-		%orderList = "";
-		for(%i = 0; (%item = getWord(%stuff, %i)) != -1; %i+=2)
-		{
-			%amnt = getWord(%stuff, %i + 1);
-			if(%amnt > 0)
-			{
-				%orderList = %orderList @ " " @ %item;
-			}
-		}
-		%clientId.beltItemOrder[%type] = String::NEWgetSubStr(%orderList, 1, 99999);
-	}
-	
-	Client::buildMenu(%clientId, %disp @ ":", "BeltStoreThisItem", true);
-	%clientId.bulkNum = "";
-
-	%l = 6;
-	%nx = $Belt::Count[%type];
-	%nf = Belt::GetNS(%clientId, %type);
-	%ns = GetWord(%nf, 0);
-	%np = floor(%ns / %l);
-	%lb = (%page * %l) - (%l-1);
-	%ub = %lb + (%l-1);
-	if(%ub > %ns)
-	%ub = %ns;
-
-	%x = %lb;
-	for(%i = %lb; %i <= %ub; %i++)
-	{
-		%item = getword(%nf, %x);
-		%amnt = Belt::HasThisStuff(%clientId, %item);
-		Client::addMenuItem(%clientId, %cnt++ @ %amnt @ " " @ $BeltItem[%item, "Name"], %item @ " " @ %page @ " " @ %type @ " " @ %mode);
-		%x++;
-	}
-
-	if(%page == 1)
-	{
-		if(%ns > 6) Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "xDone", "done");
-	}
-	else if(%page == %np+1)
-	{
-		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "xDone", "done");
-	}
-	else
-	{
-		Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-	}
-
-	return;
-}
-
-function processMenuBeltStoreThisItem(%clientId, %opt)
-{
-	%o = GetWord(%opt, 0);
-	%p = GetWord(%opt, 1);
-	%t = GetWord(%opt, 2);
-	%mode = getword(%opt, 3);
-
-	if(%o == "back")
-	{
-		MenuStoreBelt(%clientId, %mode);
-		return;
-	}
-
-	if(%o != "page" && %o != "done")
-	{
-		MenuSellBeltItemFinal(%clientId, %o, %t, %mode);
-		return;
-	}
-
-	if(%o != "done")
-	MenuBeltStoreThisItem(%clientId, %t, %p, %mode);
-
-			return;
-		}
-		
-function MenuBeltWithdrawThisItem(%clientId, %type, %page, %mode)
-{
-	%type = getword(%type, 0);
-	%disp = Belt::Display(%type);
-	
-	// Store the original order when first opening the menu (page 1)
-	if(%page == 1 && %clientId.beltStoredItemOrder[%type] == "")
-	{
-		%storedStuff = fetchdata(%clientId, "Stored" @ %type);
-		%orderList = "";
-		for(%i = 0; (%item = getWord(%storedStuff, %i)) != -1; %i+=2)
-		{
-			%amnt = getWord(%storedStuff, %i + 1);
-			if(%amnt > 0)
-			{
-				%orderList = %orderList @ " " @ %item;
-			}
-		}
-		%clientId.beltStoredItemOrder[%type] = String::NEWgetSubStr(%orderList, 1, 99999);
-	}
-	
-	Client::buildMenu(%clientId, %disp @ ":", "BeltWithdrawThisItem", true);
-
-	%l = 6;
-	%nx = $Belt::Count[%type];
-	%nf = fetchdata(%clientId, "Stored" @ %type);
-	
-	// Use stored order if available
-	if(%clientId.beltStoredItemOrder[%type] != "")
-	{
-		%storedOrder = %clientId.beltStoredItemOrder[%type];
-		%orderedList = "";
-		%count = 0;
-		
-		// Build ordered list based on stored order
-		for(%i = 0; (%item = getWord(%storedOrder, %i)) != -1; %i++)
-		{
-			%amnt = Belt::ItemCount(%item, %nf);
-			if(%amnt > 0)
-			{
-				%orderedList = %orderedList @ " " @ %item @ " " @ %amnt;
-				%count++;
-			}
-		}
-		%nf = String::NEWgetSubStr(%orderedList, 1, 99999);
-		%ns = %count - 1;
-	}
-	else
-	{
-		%ns = (CountObjInList(%nf) / 2) - 1;
-	}
-	
-	%np = floor(%ns / %l);
-	%lb = (%page * %l) - (%l-1);
-	%ub = %lb + (%l-1);
-	if(%ub > %ns)
-		%ub = %ns;
-
-	%x = (%lb - 1) * 2 + 2;
-	for(%i = %lb; %i <= %ub; %i++)
-	{	
-		%item = getword(%nf, %x);
-		%amnt = getword(%nf, %x + 1);
-		Client::addMenuItem(%clientId, %cnt++ @ %amnt @ " " @ %item, %item @ " " @ %page @ " " @ %type @ " " @ %mode);
-		%x+=2;
-	}
-
-	if(%page == 1)
-	{
-		if(%ns > 6) Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "xDone", "done");
-	}
-	else if(%page == %np+1)
-	{
-		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "xDone", "done");
-	}
-	else
-	{
-		Client::addMenuItem(%clientId, "nNext >>", "page " @ %page+1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "p<< Prev", "page " @ %page-1 @ " " @ %type @ " " @ %mode);
-		Client::addMenuItem(%clientId, "bBack", "back " @ %type @ " " @ %mode);
-	}
-
-	return;
-}
-
-function processMenuBeltWithdrawThisItem(%clientId, %opt)
-{
-	%o = GetWord(%opt, 0);
-	%p = GetWord(%opt, 1);
-	%t = GetWord(%opt, 2);
-	%mode = getword(%opt, 3);
-
-	if(%o == "back")
-	{
-		MenuStoreBelt(%clientId, %mode);
-		return;
-	}
-
-	if(%o != "page" && %o != "done")
-	{
-		MenuSellBeltItemFinal(%clientId, %o, %t, %mode);
-		return;
-	}
-
-	if(%o != "done")
-	MenuBeltWithdrawThisItem(%clientId, %t, %p, %mode);
-
-	return;
 }
 
 // ------------------- //
@@ -26968,6 +25250,18 @@ function Belt::DropItem(%clientId, %item, %amnt, %type)
 	%chk = Belt::HasThisStuff(%clientId, %item);
 	if(%chk >= %amnt)
 	{
+		// CRITICAL: Auto-unequip if item is equipped before dropping
+		if(%type == "Accessories" && Belt::IsAccessoryEquipped(%clientId, %item))
+		{
+			echo("[BELT DROP] Auto-unequipping accessory before drop: " @ %item);
+			Belt::UnequipAccessory(%clientId, %item);
+		}
+		else if(%type == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+		{
+			echo("[BELT DROP] Auto-unequipping armor before drop: " @ %item);
+			Belt::UnequipArmor(%clientId, %item);
+		}
+		
 		Belt::TakeThisStuff(%clientId, %item, %amnt);
 		TossLootbag(%clientId, %item @ " " @ %amnt, 8, "*", 0, 1);
 		SaveCharacter(%clientId);
@@ -27278,59 +25572,35 @@ $AccessoryVar[TestSteelArmor, $AccessoryType] = $BodyAccessoryType;
 // These are test accessory items to verify the belt system works correctly
 // Accessories include rings, necklaces, and belts
 
-// Test Rings (max 2 equipped at once)
-BeltItem::Add("Test Copper Ring", "TestCopperRing", "Accessories", 1.0, 100);
-BeltItem::Add("Test Silver Ring", "TestSilverRing", "Accessories", 2.0, 500);
-BeltItem::Add("Test Gold Ring", "TestGoldRing", "Accessories", 3.0, 2000);
+//===================
+//  Accessories - Rings, Necklaces, Belts (Migrated from ItemData)
+//===================
 
-$AccessoryVar[TestCopperRing, $MiscInfo] = "A simple copper ring. HP +5";
-$AccessoryVar[TestSilverRing, $MiscInfo] = "A shiny silver ring. HP +15, DEF +5";
-$AccessoryVar[TestGoldRing, $MiscInfo] = "A valuable gold ring. HP +30, DEF +10";
+// Power Rings (max 2 equipped) - $RingAccessoryType
+BeltItem::Add("Minor Power Ring", "MinorPowerRing", "Accessories", 2, 800);
+BeltItem::Add("Power Ring", "PowerRing", "Accessories", 5, 2500);
+BeltItem::Add("Major Power Ring", "MajorPowerRing", "Accessories", 15, 20000);
+BeltItem::Add("Extreme Power Ring", "ExtremePowerRing", "Accessories", 25, 300000);
+BeltItem::Add("Godly Power Ring", "GodlyPowerRing", "Accessories", 60, 2000000);
+BeltItem::Add("Heavenly Power Ring", "HeavenlyPowerRing", "Accessories", 90, 10000000);
 
-// Ring stat bonuses (4 = HP, 7 = DEF)
-$AccessoryVar[TestCopperRing, $SpecialVar] = "4 5";
-$AccessoryVar[TestSilverRing, $SpecialVar] = "4 15 7 5";
-$AccessoryVar[TestGoldRing, $SpecialVar] = "4 30 7 10";
+// Regeneration Necklaces (max 1 equipped) - $TalismanAccessoryType
+BeltItem::Add("Minor Regeneration Necklace", "MinorRegenerationNecklace", "Accessories", 20, 3000);
+BeltItem::Add("Regeneration Necklace", "RegenerationNecklace", "Accessories", 50, 40000);
+BeltItem::Add("Major Regeneration Necklace", "MajorRegenerationNecklace", "Accessories", 100, 10000000);
+BeltItem::Add("Extreme Regeneration Necklace", "ExtremeRegenerationNecklace", "Accessories", 250, 50000000);
+BeltItem::Add("Godly Regeneration Necklace", "GodlyRegenerationNecklace", "Accessories", 750, 120000000);
+BeltItem::Add("Heavenly Regeneration Necklace", "HeavenlyRegenerationNecklace", "Accessories", 1125, 300000000);
 
-$AccessoryVar[TestCopperRing, $AccessoryType] = $RingAccessoryType;
-$AccessoryVar[TestSilverRing, $AccessoryType] = $RingAccessoryType;
-$AccessoryVar[TestGoldRing, $AccessoryType] = $RingAccessoryType;
+// AntiMagic Belts (max 1 equipped) - $BeltAccessoryType
+BeltItem::Add("Antimagic Belt", "AntiMagicBelt", "Accessories", 20, 200000);
+BeltItem::Add("Major Antimagic Belt", "MajorAntiMagicBelt", "Accessories", 40, 1500000);
+BeltItem::Add("Extreme AntiMagic Belt", "ExtremeAntiMagicBelt", "Accessories", 70, 12000000);
+BeltItem::Add("Godly AntiMagic Belt", "GodlyAntiMagicBelt", "Accessories", 200, 75000000);
+BeltItem::Add("Heavenly AntiMagic Belt", "HeavenlyAntiMagicBelt", "Accessories", 300, 200000000);
 
-// Test Necklaces (max 1 equipped)
-BeltItem::Add("Test Leather Necklace", "TestLeatherNecklace", "Accessories", 2.0, 200);
-BeltItem::Add("Test Pearl Necklace", "TestPearlNecklace", "Accessories", 4.0, 1000);
-BeltItem::Add("Test Diamond Necklace", "TestDiamondNecklace", "Accessories", 6.0, 5000);
-
-$AccessoryVar[TestLeatherNecklace, $MiscInfo] = "A simple leather necklace. HP Regen +0.5";
-$AccessoryVar[TestPearlNecklace, $MiscInfo] = "An elegant pearl necklace. HP Regen +1, Mana Regen +1";
-$AccessoryVar[TestDiamondNecklace, $MiscInfo] = "A dazzling diamond necklace. HP Regen +2, Mana Regen +2";
-
-// Necklace stat bonuses (10 = HP regen, 11 = Mana regen)
-$AccessoryVar[TestLeatherNecklace, $SpecialVar] = "10 0.5";
-$AccessoryVar[TestPearlNecklace, $SpecialVar] = "10 1 11 1";
-$AccessoryVar[TestDiamondNecklace, $SpecialVar] = "10 2 11 2";
-
-$AccessoryVar[TestLeatherNecklace, $AccessoryType] = $TalismanAccessoryType;
-$AccessoryVar[TestPearlNecklace, $AccessoryType] = $TalismanAccessoryType;
-$AccessoryVar[TestDiamondNecklace, $AccessoryType] = $TalismanAccessoryType;
-
-// Test Belts (max 1 equipped)
-BeltItem::Add("Test Cloth Belt", "TestClothBelt", "Accessories", 1.0, 150);
-BeltItem::Add("Test Leather Belt", "TestLeatherBeltItem", "Accessories", 3.0, 750);
-BeltItem::Add("Test Chain Belt", "TestChainBelt", "Accessories", 5.0, 3000);
-
-$AccessoryVar[TestClothBelt, $MiscInfo] = "A simple cloth belt. MDEF +3";
-$AccessoryVar[TestLeatherBeltItem, $MiscInfo] = "A sturdy leather belt. MDEF +8";
-$AccessoryVar[TestChainBelt, $MiscInfo] = "A strong chain belt. MDEF +15";
-
-// Belt stat bonuses (3 = MDEF)
-$AccessoryVar[TestClothBelt, $SpecialVar] = "3 3";
-$AccessoryVar[TestLeatherBeltItem, $SpecialVar] = "3 8";
-$AccessoryVar[TestChainBelt, $SpecialVar] = "3 15";
-
-$AccessoryVar[TestClothBelt, $AccessoryType] = $BeltAccessoryType;
-$AccessoryVar[TestLeatherBeltItem, $AccessoryType] = $BeltAccessoryType;
-$AccessoryVar[TestChainBelt, $AccessoryType] = $BeltAccessoryType;
+// NOTE: $AccessoryVar definitions (type, stats, weight) remain in Accessory.cs
+// They are already properly defined and shared by both Belt.cs and the old ItemData system
 
 //===================
 //  Other (Miscellaneous belt items)
@@ -27369,13 +25639,18 @@ function Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType)
 	if(%equippedList == "" || %equippedList == "0")
 		return 0;
 	
+	echo("[COUNT DEBUG] Looking for type " @ %accessoryType @ " in equipped list: " @ %equippedList);
+	
 	%count = 0;
 	for(%i = 0; GetWord(%equippedList, %i) != -1; %i++)
 	{
 		%equippedItem = GetWord(%equippedList, %i);
-		if($AccessoryVar[%equippedItem, $AccessoryType] == %accessoryType)
+		%itemType = $AccessoryVar[%equippedItem, $AccessoryType];
+		echo("[COUNT DEBUG] Item: " @ %equippedItem @ ", Type: " @ %itemType @ ", Target: " @ %accessoryType @ ", Match: " @ (%itemType == %accessoryType));
+		if(%itemType == %accessoryType)
 			%count++;
 	}
+	echo("[COUNT DEBUG] Final count for type " @ %accessoryType @ ": " @ %count);
 	return %count;
 }
 
@@ -27456,6 +25731,7 @@ function Belt::UnequipArmor(%clientId, %item)
 	SaveCharacter(%clientId);
 }
 
+
 // Equip accessory from belt inventory
 function Belt::EquipAccessory(%clientId, %item)
 {
@@ -27464,14 +25740,7 @@ function Belt::EquipAccessory(%clientId, %item)
 	// Validate player has the item
 	if(!Belt::HasThisStuff(%clientId, %item))
 	{
-		Client::sendMessage(%clientId, $MsgRed, "You don't have that accessory in your backpack.");
-		return;
-	}
-	
-	// Check if already equipped
-	if(Belt::IsAccessoryEquipped(%clientId, %item))
-	{
-		Client::sendMessage(%clientId, $MsgRed, "That accessory is already equipped.");
+		Client::sendMessage(%clientId, $MsgRed, "You don't have that accessory.");
 		return;
 	}
 	
@@ -27481,9 +25750,10 @@ function Belt::EquipAccessory(%clientId, %item)
 	if(%maxSlots == "" || %maxSlots == 0)
 		%maxSlots = 1; // Default to 1 slot if not defined
 	
-	%currentCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
+	// Count total equipped of this TYPE (not just this item)
+	%currentTypeCount = Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType);
 	
-	if(%currentCount >= %maxSlots)
+	if(%currentTypeCount >= %maxSlots)
 	{
 		%typeName = $LocationDesc[%accessoryType];
 		if(%typeName == "")
@@ -27492,7 +25762,7 @@ function Belt::EquipAccessory(%clientId, %item)
 		return;
 	}
 	
-	// Add to equipped list
+	// Add to equipped list (allow duplicates for items like rings)
 	%equippedList = fetchData(%clientId, "EquippedBeltAccessories");
 	if(%equippedList == "" || %equippedList == "0")
 		%equippedList = %item;
@@ -27527,23 +25797,30 @@ function Belt::UnequipAccessory(%clientId, %item)
 		return;
 	}
 	
-	// Remove from equipped list
+	// Remove ONE instance of the item from equipped list (important for items like rings where you can have 2 of the same)
 	%equippedList = fetchData(%clientId, "EquippedBeltAccessories");
 	%newList = "";
+	%removed = false;
+	
 	for(%i = 0; GetWord(%equippedList, %i) != -1; %i++)
 	{
 		%equippedItem = GetWord(%equippedList, %i);
-		if(%equippedItem != %item)
+		// Skip the first instance of the item we're unequipping
+		if(%equippedItem == %item && !%removed)
 		{
-			if(%newList == "")
-				%newList = %equippedItem;
-			else
-				%newList = %newList @ " " @ %equippedItem;
+			%removed = true;
+			continue; // Skip this one
 		}
+		// Keep all other items
+		if(%newList == "")
+			%newList = %equippedItem;
+		else
+			%newList = %newList @ " " @ %equippedItem;
 	}
+	
 	storeData(%clientId, "EquippedBeltAccessories", %newList);
 	
-	// Remove accessory stat bonuses
+	// Remove accessory stat bonuses (only once, for the one we unequipped)
 	Belt::ApplyAccessoryStats(%clientId, %item, false);
 	
 	// Get the item's display name
@@ -29489,6 +27766,10 @@ function onClientMessage(%clientId, %msg)
 {
 	if(%clientId)
 		$lastClientMessage = %clientId;
+
+	// Feed message to custom chat HUD if available
+	if($ChatHUD::Enabled)
+		ChatHUD::AddLine(%msg);
 
 	// filter messages here
 	return true;
@@ -31677,6 +29958,13 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	      }
 		if(%w1 == "#hide")
 		{
+			// CRITICAL: Bots should never be able to use #hide (player-only ability)
+			if(Player::isAiControlled(%TrueClientId))
+			{
+				Client::sendMessage(%TrueClientId, $MsgRed, "Bots cannot use Hide In Shadows.");
+				return;
+			}
+			
 			if(SkillCanUse(%TrueClientId, "#hide"))
 			{
 				if(!fetchData(%TrueClientId, "invisible") && !fetchData(%TrueClientId, "blockHide"))
@@ -45425,7 +43713,12 @@ function buyItem(%clientId, %item)
 			{
 				if(checkResources(%player,%item,%cost,%clientId.bulkNum) && !IsDead(%clientId))
 				{
-					Player::incItemCount(%clientId, %item, %clientId.bulkNum);
+					// Route belt items to Belt system, others to player inventory
+					if(isBeltItem(%item))
+						Belt::GiveThisStuff(%clientId, %item, %clientId.bulkNum);
+					else
+						Player::incItemCount(%clientId, %item, %clientId.bulkNum);
+					
 					BuySell(%player, %item, %clientId.bulkNum, BUY);
 		
 					RefreshAll(%clientId);
@@ -45685,7 +43978,12 @@ function sellItem(%clientId, %item)
 			}
 			else
 			{
-				%itemCnt = Player::getItemCount(%clientId, %item);
+				// Check belt items first, then player inventory
+				if(isBeltItem(%item))
+					%itemCnt = Belt::HasThisStuff(%clientId, %item);
+				else
+					%itemCnt = Player::getItemCount(%clientId, %item);
+					
 				if(%item.className == Equipped)
 				{
 					Client::sendMessage(%clientId, $MsgRed, "You cannot sell an equipped item.~wC_BuySell.wav");
@@ -45698,11 +43996,41 @@ function sellItem(%clientId, %item)
 					if($LoreItem[%item])
 						Client::sendMessage(%clientId, $MsgRed, "(You have sold a lore item)");
 	
-					%count = Player::getItemCount(%clientId, %item);
+					// Get count from appropriate system
+					if(isBeltItem(%item))
+						%count = Belt::HasThisStuff(%clientId, %item);
+					else
+						%count = Player::getItemCount(%clientId, %item);
+						
 					%numsell = %clientId.bulkNum;
 	
 					BuySell(%player, %item, %clientId.bulkNum, SELL);
-					Player::setItemCount(%player, %item, (%count-%numsell));
+					
+					// CRITICAL: Auto-unequip if selling equipped items
+					if(isBeltItem(%item))
+					{
+						// Check item category to determine equip type
+						%category = $BeltItem[%item, "Type"];
+						if(%category == "Accessories")
+						{
+							// Unequip as many instances as we're selling
+							for(%unequipCount = 0; %unequipCount < %numsell; %unequipCount++)
+							{
+								if(Belt::IsAccessoryEquipped(%clientId, %item))
+									Belt::UnequipAccessory(%clientId, %item);
+							}
+						}
+						else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+						{
+							Belt::UnequipArmor(%clientId, %item);
+						}
+					}
+					
+					// Remove from appropriate system
+					if(isBeltItem(%item))
+						Belt::TakeThisStuff(%clientId, %item, %numsell);
+					else
+						Player::setItemCount(%player, %item, (%count-%numsell));
 					Client::SendMessage(%clientId, $MsgWhite, "~wbuysellsound.wav");
 	
 					RefreshAll(%clientId);
@@ -52544,7 +50872,7 @@ function RecursiveWorld(%seconds)
 
 		$ticker[2] = 0;
 	}
-	if($ticker[3] >= 60 && $nightDayCycle)  // Every 5 minutes (60 ticks × 5s = 300s)
+	if($ticker[3] >= 60 && $nightDayCycle)  // Every 5 minutes (60 ticks ? 5s = 300s)
 	{
 		// Multiply by 60 since we now update every 60 ticks instead of every 1 tick
 		%a = (($initHaze * 2) / $fullCycleTime) * %seconds * 60;
@@ -82568,9 +80896,13 @@ function DisplayDamageMessage(%clientId, %message, %msgColor)
 	if(%displayType == "")
 		%displayType = "bottomprint"; // Default to bottomprint
 	
-	// If set to floating, don't show detailed messages (floating numbers handle it)
+	// If set to floating, send to ATKText system
 	if(%displayType == "floating")
+	{
+		// Send to floating damage display - use "defender" view type for miss/resist messages
+		remoteEval(%clientId, ATKText, %message, "", "defender");
 		return;
+	}
 	
 	if(%displayType == "chat")
 	{
@@ -83832,6 +82164,22 @@ function Player::onKilled(%this)
 						// This prevents items from being lost when only a portion should drop (e.g., bot has 2, drops 1, should keep 1)
 						// Use Belt::TakeThisStuff to remove only the dropped amount
 						// This properly consolidates items and preserves any remaining count
+						
+						// CRITICAL: Auto-unequip accessories/armor before removing on death
+						%itemCategory = $BeltItem[%beltItemName, "Type"];
+						if(%itemCategory == "Accessories")
+						{
+							for(%unequipCount = 0; %unequipCount < %dropCount; %unequipCount++)
+							{
+								if(Belt::IsAccessoryEquipped(%clientId, %beltItemName))
+									Belt::UnequipAccessory(%clientId, %beltItemName);
+							}
+						}
+						else if(%itemCategory == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %beltItemName)
+						{
+							Belt::UnequipArmor(%clientId, %beltItemName);
+						}
+						
 						Belt::TakeThisStuff(%clientId, %beltItemName, %dropCount);
 						
 						// DEBUG: Log when enemy bots have items removed after drop
@@ -83850,6 +82198,22 @@ function Player::onKilled(%this)
 						{
 							// Bot had items but drop rate failed - remove them (they weren't added to lootbag)
 							// Use Belt::TakeThisStuff to remove all items (dropCount would be 0, so remove the full count)
+							
+							// CRITICAL: Auto-unequip accessories/armor before removing on death
+							%itemCategory = $BeltItem[%beltItemName, "Type"];
+							if(%itemCategory == "Accessories")
+							{
+								for(%unequipCount = 0; %unequipCount < %beltItemCount; %unequipCount++)
+								{
+									if(Belt::IsAccessoryEquipped(%clientId, %beltItemName))
+										Belt::UnequipAccessory(%clientId, %beltItemName);
+								}
+							}
+							else if(%itemCategory == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %beltItemName)
+							{
+								Belt::UnequipArmor(%clientId, %beltItemName);
+							}
+							
 							Belt::TakeThisStuff(%clientId, %beltItemName, %beltItemCount);
 							
 							// DEBUG: Log when enemy bots have items removed due to failed drop rate
@@ -85088,7 +83452,7 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				%ab = (getRandom() * (fetchData(%damagedClient, "DEF") / 10)) + 1;
 				%value = Cap(%value - %ab, 1, "inf");
 				
-				// Add random variation (±15%)
+				// Add random variation (?15%)
 				%a = (%value * 0.15);
 				%r = round((getRandom() * (%a*2)) - %a);
 				%value += %r;
@@ -97038,6 +95402,156 @@ function String::ICompare(%string1, %string2)
 		return 1;
 }
 
+//====================================================================================================
+// BankStorage Multi-Field Split Functions
+// Splits large BankStorage strings (>256 chars) across multiple funkvar fields to prevent
+// engine buffer overflow during shutdown. Uses fields 16 (primary), 60, 61, 62, 63 (overflow).
+//====================================================================================================
+
+// SplitAndSaveBankStorage - Splits "item count item count..." into <=256 char chunks
+// Saves to fields 16 (primary), 60, 61, 62, 63 (overflow)
+// Sends warning to player if reaching field 63 (80% capacity)
+function SplitAndSaveBankStorage(%clientId, %name, %fullString)
+{
+	// Define field mapping (primary + 4 overflow = 5 fields x 256 chars = 1280 max)
+	$BankStorageFields[0] = 16;  // Primary field
+	$BankStorageFields[1] = 60;  // Overflow 1
+	$BankStorageFields[2] = 61;  // Overflow 2
+	$BankStorageFields[3] = 62;  // Overflow 3
+	$BankStorageFields[4] = 63;  // Overflow 4 (warning threshold)
+	$BankStorageMaxFields = 5;
+	$BankStorageMaxLen = 256;
+	
+	// Clear all fields first
+	for(%f = 0; %f < $BankStorageMaxFields; %f++)
+	{
+		%fieldNum = $BankStorageFields[%f];
+		$funk::var["[\"" @ %name @ "\", 0, " @ %fieldNum @ "]"] = "";
+	}
+	
+	// Handle empty/null case
+	if(%fullString == "" || %fullString == "0" || %fullString == -1)
+	{
+		$funk::var["[\"" @ %name @ "\", 0, 16]"] = "";
+		return;
+	}
+	
+	// Split at complete "item count" boundaries
+	%currentField = 0;
+	%currentString = "";
+	%warnedPlayer = false;
+	
+	for(%i = 0; GetWord(%fullString, %i) != -1; %i += 2)
+	{
+		%item = GetWord(%fullString, %i);
+		%count = GetWord(%fullString, %i + 1);
+		
+		// Skip invalid entries
+		if(%item == "" || %item == -1 || %count == "" || %count == -1)
+			continue;
+		
+		%pair = %item @ " " @ %count;
+		%pairLen = String::len(%pair);
+		
+		// Check if adding this pair would exceed limit
+		%currentLen = String::len(%currentString);
+		%wouldExceed = false;
+		if(%currentLen > 0)
+		{
+			// Need space + pair
+			if(%currentLen + 1 + %pairLen > $BankStorageMaxLen)
+				%wouldExceed = true;
+		}
+		else
+		{
+			// First item in field
+			if(%pairLen > $BankStorageMaxLen)
+			{
+				// Single item exceeds limit - this shouldn't happen but handle it
+				echo("WARNING: SplitAndSaveBankStorage - Single item '" @ %item @ "' exceeds max length!");
+			}
+		}
+		
+		if(%wouldExceed)
+		{
+			// Save current field and move to next
+			%fieldNum = $BankStorageFields[%currentField];
+			$funk::var["[\"" @ %name @ "\", 0, " @ %fieldNum @ "]"] = %currentString;
+			
+			%currentField++;
+			%currentString = %pair;
+			
+			// Check if we're at capacity warning threshold (field 63)
+			if(%currentField >= 4 && !%warnedPlayer)
+			{
+				%warnedPlayer = true;
+				Client::sendMessage(%clientId, $MsgRed, "WARNING: Your bank storage is almost full! Remove some items to avoid bank storage corruption.");
+				echo("[BANKSTORAGE] Warning sent to " @ Client::getName(%clientId) @ " - bank storage at 80% capacity");
+			}
+			
+			// Check if we've exceeded all available fields
+			if(%currentField >= $BankStorageMaxFields)
+			{
+				echo("ERROR: SplitAndSaveBankStorage - Exceeded all " @ $BankStorageMaxFields @ " fields for " @ %name @ "! Data may be truncated.");
+				Client::sendMessage(%clientId, $MsgRed, "ERROR: Bank storage overflow! Some items may be lost. Please reduce stored items immediately.");
+				return;
+			}
+		}
+		else
+		{
+			// Add to current string
+			if(%currentString != "")
+				%currentString = %currentString @ " " @ %pair;
+			else
+				%currentString = %pair;
+		}
+	}
+	
+	// Save the last field
+	if(%currentString != "")
+	{
+		%fieldNum = $BankStorageFields[%currentField];
+		$funk::var["[\"" @ %name @ "\", 0, " @ %fieldNum @ "]"] = %currentString;
+	}
+	
+	//echo("[BANKSTORAGE] Saved " @ %name @ " across " @ (%currentField + 1) @ " field(s)");
+}
+
+// JoinBankStorageFromLoad - Joins multiple fields back into single string
+// Reads from fields 16 (primary), 60, 61, 62, 63 (overflow)
+// Returns complete BankStorage string
+function JoinBankStorageFromLoad(%name)
+{
+	// Define field mapping (same as save)
+	$BankStorageFields[0] = 16;  // Primary field
+	$BankStorageFields[1] = 60;  // Overflow 1
+	$BankStorageFields[2] = 61;  // Overflow 2
+	$BankStorageFields[3] = 62;  // Overflow 3
+	$BankStorageFields[4] = 63;  // Overflow 4
+	$BankStorageMaxFields = 5;
+	
+	%result = "";
+	
+	for(%f = 0; %f < $BankStorageMaxFields; %f++)
+	{
+		%fieldNum = $BankStorageFields[%f];
+		%fieldData = $funk::var[%name, 0, %fieldNum];
+		
+		// Skip empty/null fields
+		if(%fieldData == "" || %fieldData == "0" || %fieldData == -1 || %fieldData == " ")
+			continue;
+		
+		// Concatenate with space separator
+		if(%result != "")
+			%result = %result @ " " @ %fieldData;
+		else
+			%result = %fieldData;
+	}
+	
+	//echo("[BANKSTORAGE] Loaded " @ %name @ " with combined length " @ String::len(%result));
+	return %result;
+}
+
 function viewGroupList(%clientId)
 {
 	dbecho($dbechoMode, "viewGroupList(" @ %clientId @ ")");
@@ -97444,7 +95958,9 @@ function SaveCharacter(%clientId)
 	$funk::var["[\"" @ %name @ "\", 0, 13]"] = fetchData(%clientId, "PlayerInfo");
 	$funk::var["[\"" @ %name @ "\", 0, 14]"] = fetchData(%clientId, "deathmsg");
 	//15 is done lower
-	$funk::var["[\"" @ %name @ "\", 0, 16]"] = fetchData(%clientId, "BankStorage");
+	// CRITICAL: Split BankStorage across multiple fields (16, 60-63) with 256 char max each
+	// This prevents engine buffer overflow during shutdown
+	SplitAndSaveBankStorage(%clientId, %name, fetchData(%clientId, "BankStorage"));
 	$funk::var["[\"" @ %name @ "\", 0, 17]"] = fetchData(%clientId, "campRot");
 	//echo("DEBUG SaveCharacter: campRot = '" @ fetchData(%clientId, "campRot") @ "'");
 	
@@ -98468,9 +96984,9 @@ function LoadCharacter(%clientId)
 			}
 		}
 		storeData(%clientId, "spawnStuff", %spawnStuffCleaned);
-		// CRITICAL: Clean BankStorage on load - remove leading "0" items and invalid entries
-		// BankStorage format should be "item count item count..." but old saves may have leading "0"
-		%bankStorageRaw = $funk::var[%name, 0, 16];
+		// CRITICAL: Join BankStorage from multiple fields (16, 60-63) for backward compatibility
+		// Old saves only have field 16, new saves may use overflow fields 60-63
+		%bankStorageRaw = JoinBankStorageFromLoad(%name);
 		%bankStorageCleaned = "";
 		if(%bankStorageRaw != "" && %bankStorageRaw != "0")
 		{
@@ -99823,7 +98339,7 @@ function AggregateLootbags()
 	dbecho($dbechoMode, "AggregateLootbags()");
 	
 	// Safety limit to prevent freeze from processing too many lootbags in one pass
-	// With O(n²) distance checks, 50 bags = 2500 iterations, 100 bags = 10000 iterations
+	// With O(n?) distance checks, 50 bags = 2500 iterations, 100 bags = 10000 iterations
 	%maxLootbagsPerPass = 30;
 	
 	%totalMerged = 0;
@@ -99989,7 +98505,7 @@ function AggregateLootbags()
 		return;
 	}
 	
-	// Safety limit: If too many lootbags, only process N at a time to avoid O(n²) freeze
+	// Safety limit: If too many lootbags, only process N at a time to avoid O(n?) freeze
 	// Use a rotating offset so different lootbags get processed each pass
 	if(%lootbagCount > %maxLootbagsPerPass)
 	{
@@ -100849,6 +99365,66 @@ function ChangeRace(%clientId, %race)
 	}
 
 	RefreshAll(%clientId);
+	
+	// PHASE 2: Migrate old ItemData accessories to Belt system (one-time migration)
+	// This runs after all character data is loaded and before the player spawns
+	if(!fetchData(%clientId, "AccessoryMigrationComplete"))
+	{
+		MigrateOldAccessoriesToBelt(%clientId);
+	}
+}
+
+//=============================================================================
+// PHASE 2: Old Accessory Migration Function
+//=============================================================================
+function MigrateOldAccessoriesToBelt(%clientId)
+{
+	dbecho($dbechoMode, "MigrateOldAccessoriesToBelt(" @ %clientId @ ")");
+	
+	// CRITICAL: Only run for real players, never bots
+	if(Player::isAiControlled(%clientId))
+		return;
+	
+	// List of accessories migrated to belt (rings, necklaces, belts only)
+	%migrateItems = "MinorPowerRing PowerRing MajorPowerRing ExtremePowerRing GodlyPowerRing HeavenlyPowerRing MinorRegenerationNecklace RegenerationNecklace MajorRegenerationNecklace ExtremeRegenerationNecklace GodlyRegenerationNecklace HeavenlyRegenerationNecklace AntiMagicBelt MajorAntiMagicBelt ExtremeAntiMagicBelt GodlyAntiMagicBelt HeavenlyAntiMagicBelt";
+	
+	%migrationCount = 0;
+	
+	for(%i = 0; (%item = GetWord(%migrateItems, %i)) != -1; %i++)
+	{
+		// Check unequipped ItemData inventory
+		%count = Player::getItemCount(%clientId, %item);
+		if(%count > 0)
+		{
+			Belt::GiveThisStuff(%clientId, %item, %count);
+			Player::setItemCount(%clientId, %item, 0);
+			echo("[ACCESSORY MIGRATE] " @ %item @ " x" @ %count @ " -> Belt for " @ Client::getName(%clientId));
+			%migrationCount += %count;
+		}
+		
+		// Check equipped version (item0) - these need to be equipped in Belt too
+		%equippedItemName = %item @ "0";
+		%count0 = Player::getItemCount(%clientId, %equippedItemName);
+		if(%count0 > 0)
+		{
+			// Give to Belt storage first
+			Belt::GiveThisStuff(%clientId, %item, %count0);
+			// Remove from ItemData inventory
+			Player::setItemCount(%clientId, %equippedItemName, 0);
+			// Equip in Belt system
+			Belt::EquipAccessory(%clientId, %item);
+			echo("[ACCESSORY MIGRATE] Equipped " @ %item @ " (" @ %count0 @ "x) -> Belt for " @ Client::getName(%clientId));
+			%migrationCount += %count0;
+		}
+	}
+	
+	if(%migrationCount > 0)
+	{
+		echo("[ACCESSORY MIGRATE] Total migrated for " @ Client::getName(%clientId) @ ": " @ %migrationCount @ " accessories");
+	}
+	
+	// Mark that migration has run for this character
+	storeData(%clientId, "AccessoryMigrationComplete", true);
 }
 
 // Clear temporary player state variables (for players only)
@@ -101086,6 +99662,10 @@ function Down(%t)
 		schedule("dmsg(" @ %i @ ", \"seconds\");", %a);
 	}
 	
+	// CRITICAL: Set shutdown flag BEFORE scheduling saves
+	// This prevents GUI functions (bottomprint, etc.) from being called during shutdown
+	$ServerShuttingDown = true;
+	
 	// Save all characters and world 10 seconds before shutdown
 	if(%tinsec >= 10)
 	{
@@ -101099,16 +99679,45 @@ function Down(%t)
 		SaveWorld();
 	}
 	
-	// Set shutdown flag to prevent onClientDrop and other callbacks from running
-	// complex logic during shutdown (which can cause freezes)
-	$ServerShuttingDown = true;
-	
-	schedule("focusServer();quit();", %tinsec);
+	// CRITICAL: Skip focusServer() during shutdown - it tries to load GUI elements
+	// On dedicated servers or when GUI is torn down, this causes the MainWindow error
+	// Just call quit() directly instead
+	// CRITICAL: Clear large in-memory strings before quit to prevent engine buffer issues
+	schedule("ClearLargePlayerDataBeforeQuit(); quit();", %tinsec);
 }
 function d(%t)
 {
 	Down(%t);
 }
+
+// ClearLargePlayerDataBeforeQuit - Clears large in-memory strings before quit()
+// This prevents engine buffer issues during shutdown caused by very long strings
+// in player data that may be processed during engine cleanup
+function ClearLargePlayerDataBeforeQuit()
+{
+	echo("[SHUTDOWN] Clearing large player data before quit...");
+	
+	for(%clientId = Client::getFirst(); %clientId != -1; %clientId = Client::getNext(%clientId))
+	{
+		// Skip bots - only clear player data
+		if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+			continue;
+		
+		%name = Client::getName(%clientId);
+		if(%name == "" || %name == -1)
+			continue;
+		
+		// Clear large in-memory strings that could cause engine buffer issues
+		// Data is already saved to file at this point, so clearing is safe
+		storeData(%clientId, "BankStorage", "");
+		storeData(%clientId, "spawnStuff", "");
+		
+		echo("[SHUTDOWN] Cleared large data for " @ %name);
+	}
+	
+	echo("[SHUTDOWN] Large player data cleared, proceeding with quit...");
+}
+
 function dmsg(%i, %w)
 {
 	echo("========= SERVER RESTARTING IN " @ %i @ " " @ %w @ " =========");
@@ -103352,9 +101961,9 @@ function DisplayGetInfo(%clientId, %id, %obj)
 	// Build display message
 	%msg = "<jc><f1>" @ Client::getName(%id) @ ", LEVEL " @ fetchData(%id, "LVL") @ " " @ getFinalCLASS(%id) @ " REMORT " @ fetchData(%id, "RemortStep") @ "<f0> " @ " " @ %showid @ %teamInfo @ "\n" @ %house @ "\nWorld Rank: " @ $WorldRank[fetchData(%id, "TournyRank")] @ "\nBounty: " @ fetchData(%id, "bounty");
 	
-	// Add Ascension talents if the player has any
+	// Add Ascension talents if the player has any (players only)
 	%talents = fetchData(%id, "AscensionTalents");
-	if(%talents != "" && %talents != "0")
+	if(%talents != "" && %talents != "0" && !Player::isAiControlled(%id) && !isRPGAI(%id))
 	{
 		%talentDisplay = "";
 		for(%t = 0; (%talentId = GetWord(%talents, %t)) != -1; %t++)
@@ -105019,37 +103628,16 @@ function GetDataFromArray(%clientId, %type)
 	}
 	else if(%clientType == "townbot")
 	{
-		// Check new array first
-		%data = $TownBotData[%clientId, %type];
-		// If data exists in new array (even if empty string), use it
-		// Check if key exists by comparing with a sentinel value
-		// Since TorqueScript returns "" for non-existent keys, we check old array as fallback
-		// If old array has data and new doesn't, it means migration hasn't happened yet
-		%oldData = $ClientData[%clientId, %type];
-		if(%oldData != "" && %data == "" && %oldData != -1)
-		{
-			// Data exists in old array but not in new - return old (migration not complete)
-			return %oldData;
-		}
-		// Return new array data (even if empty - empty is a valid value)
-		return %data;
+		// Town bots only use $TownBotData
+		return $TownBotData[%clientId, %type];
 	}
 	else if(%clientType == "enemybot")
 	{
-		// Check new array first
-		%data = $EnemyBotData[%clientId, %type];
-		// If data exists in old array but not new, return old (migration not complete)
-		%oldData = $ClientData[%clientId, %type];
-		if(%oldData != "" && %data == "" && %oldData != -1)
-		{
-			// Data exists in old array but not in new - return old (migration not complete)
-			return %oldData;
-		}
-		// Return new array data (even if empty - empty is a valid value)
-		return %data;
+		// Enemy bots only use $EnemyBotData
+		return $EnemyBotData[%clientId, %type];
 	}
 	
-	// Default fallback to old array
+	// Default fallback to old array (only for non-player/non-bot types if any exist)
 	return $ClientData[%clientId, %type];
 }
 
@@ -105067,16 +103655,18 @@ function SetDataInArray(%clientId, %type, %value)
 	else if(%clientType == "townbot")
 	{
 		$TownBotData[%clientId, %type] = %value;
-		// REMOVED: Dual-write to $ClientData (caused stale data pollution)
+		// CRITICAL: Ensure we also clear the legacy entry to prevent fallback/haunting
+		$ClientData[%clientId, %type] = "";
 	}
 	else if(%clientType == "enemybot")
 	{
 		$EnemyBotData[%clientId, %type] = %value;
-		// REMOVED: Dual-write to $ClientData (caused stale data pollution)
+		// CRITICAL: Ensure we also clear the legacy entry to prevent fallback/haunting
+		$ClientData[%clientId, %type] = "";
 	}
 	else
 	{
-		// Default fallback (should be player if GetClientDataType returns unknown)
+		// Default fallback
 		$ClientData[%clientId, %type] = %value;
 	}
 }
@@ -105965,6 +104555,20 @@ function DoRemort(%clientId)
 	// Unequip dual-wielded weapon before remort (returns to inventory)
 	// (Toggle mode is preserved - Ascension talent persists through remort)
 	DualWield::UnequipOffHand(%clientId);
+	
+	// Unequip all belt accessories and armor before remort
+	// This prevents stat bonuses from carrying over to level 1
+	%equippedAccessories = fetchData(%clientId, "EquippedBeltAccessories");
+	for(%i = 0; GetWord(%equippedAccessories, %i) != -1; %i++)
+	{
+		%accessory = GetWord(%equippedAccessories, %i);
+		if(Belt::IsAccessoryEquipped(%clientId, %accessory))
+			Belt::UnequipAccessory(%clientId, %accessory);
+	}
+	
+	%equippedArmor = fetchData(%clientId, "EquippedBeltArmor");
+	if(%equippedArmor != "" && %equippedArmor != "0")
+		Belt::UnequipArmor(%clientId, %equippedArmor);
 	
 	UnequipMountedStuff(%clientId);
 	
@@ -107090,6 +105694,10 @@ function clearPersistentCenterprint(%clientId)
 
 function bottomprint(%clientId, %msg, %timeout)
 {
+	// CRITICAL: Skip GUI operations during server shutdown
+	if($ServerShuttingDown)
+		return;
+	
 	dbecho($dbechoMode, "bottomprint(" @ %clientId @ ", " @ %msg @ ", " @ %timeout @ ")");
 
    if(%timeout == "")
@@ -107141,6 +105749,10 @@ function centerprintall(%msg, %timeout)
 
 function bottomprintall(%msg, %timeout)
 {
+	// CRITICAL: Skip GUI operations during server shutdown
+	if($ServerShuttingDown)
+		return;
+	
 	dbecho($dbechoMode, "bottomprintall(" @ %msg @ ", " @ %timeout @ ")");
 
    if(%timeout == "")
@@ -107468,8 +106080,8 @@ function SetupShop(%clientId, %id)
 		
 		// Then, check all belt items (items without ItemData but registered in $BeltItem)
 		// Skip Deployables category since those still use ItemData (like DepBasePack)
-		// Iterate through belt categories: QuestItems, KeyItems, Consumables
-		for(%catIndex = 1; %catIndex <= 4; %catIndex++)
+		// Iterate through belt categories: QuestItems, KeyItems, Consumables, Accessories
+		for(%catIndex = 1; %catIndex <= 7; %catIndex++)
 		{
 			%category = $Belt::Categories[%catIndex];
 			// Skip Deployables (category index 3) since those still use ItemData
@@ -109416,9 +108028,9 @@ function SpawnLoop(%this)
 		%zonePlayerCount = Zone::getNumPlayers(%zoneId);
 		echo("[SPAWNLOOP CHECKPOINT] Step 5b - Zone::getNumPlayers returned: " @ %zonePlayerCount);
 		// Spawn zone rules:
-		// - Zone is unknown/empty → NO spawning (spawn point must have valid zone)
-		// - Zone is valid AND has players → Allow spawning
-		// - Zone is valid but no players → Block spawning
+		// - Zone is unknown/empty ? NO spawning (spawn point must have valid zone)
+		// - Zone is valid AND has players ? Allow spawning
+		// - Zone is valid but no players ? Block spawning
 		if(%zoneId != "" && %zoneId != -1 && %zonePlayerCount > 0)
 		{
 			%flag = True;
@@ -122684,7 +121296,7 @@ function PostAttack(%clientId, %weapon)
 		%d = %t / %chunks;
 
 		for(%i = 0; %i <= %chunks; %i++)
-			schedule("bottomprint(" @ %clientId @ ", \" \" @ String::create(\"�\", " @ %ticks @ " - (" @ %chunklen @ " * " @ %i @ ")) @ \"\", " @ %d @ " + 0.25);", %d * %i);
+			schedule("bottomprint(" @ %clientId @ ", \" \" @ String::create(\"?\", " @ %ticks @ " - (" @ %chunklen @ " * " @ %i @ ")) @ \"\", " @ %d @ " + 0.25);", %d * %i);
 	}
 
 	if(%weapon == CastingBlade)

@@ -109,6 +109,9 @@ function SetupBank(%clientId, %id)
 
 	ClearCurrentShopVars(%clientId);
 	%clientId.currentBank = %id;
+	
+	%msg = "<jc><f2>To Deposit/Withdraw 'bulk' Items, please enter your desired 'bulk' number now!\n\n'Bulk' numbers must be greater than 0 and less than 500";
+	bottomprint(%clientId, %msg, 10);
 
 	%clientId.bulkNum = "";
 
@@ -217,6 +220,11 @@ function ClearCurrentShopVars(%clientId)
 
 	// Stop the coin display when closing shop
 	StopCoinsDisplay(%clientId);
+
+	// Play Farewell when closing Shop/Bank/Smith GUIs
+	if(%clientId.currentShop != "") TownBot_PlayFarewell(%clientId, %clientId.currentShop);
+	if(%clientId.currentBank != "") TownBot_PlayFarewell(%clientId, %clientId.currentBank);
+	if(%clientId.currentSmith != "") TownBot_PlayFarewell(%clientId, %clientId.currentSmith);
 
       %clientId.currentShop = "";
       %clientId.currentBank = "";
@@ -350,6 +358,10 @@ $AccessoryVar[MorningStar, $ShopIndex] = 232;
 $AccessoryVar[WhiteDiamondVoidCutter, $ShopIndex] = 233;
 $AccessoryVar[WhiteDiamondVoidCrusher, $ShopIndex] = 234;
 $AccessoryVar[WhiteDiamondVoidImpaler, $ShopIndex] = 235;
+$AccessoryVar[FinalVerdict, $ShopIndex] = 236;
+$AccessoryVar[StormCaller, $ShopIndex] = 237;
+$AccessoryVar[WorldSplitter, $ShopIndex] = 238;
+
 
 // ============================================
 // Merchant Definitions

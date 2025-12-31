@@ -224,6 +224,9 @@ $WeaponShape[MorningStar] = "mace";
 $WeaponShape[WhiteDiamondVoidCutter] = "elfinblade";
 $WeaponShape[WhiteDiamondVoidCrusher] = "hammer";
 $WeaponShape[WhiteDiamondVoidImpaler] = "trident";
+$WeaponShape[FinalVerdict] = "BattleAxe";
+$WeaponShape[StormCaller] = "trident";
+$WeaponShape[WorldSplitter] = "katana";
 
 //============================================================================
 // OFF-HAND WEAPON DEFINITIONS (Generic per shape)
@@ -500,7 +503,7 @@ function DualWield::IsEnabled(%clientId)
         return false;
     
     %offHandWeapon = DualWield::GetOffHandWeapon(%clientId);
-    return (%offHandWeapon != "" && %offHandWeapon != -1);
+    return (%offHandWeapon != "" && %offHandWeapon != -1 && %offHandWeapon != "0");
 }
 
 
@@ -837,8 +840,8 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
         return false;
     }
     
-    // Unequip current off-hand if any
-    DualWield::UnequipOffHand(%clientId);
+    
+    // NOTE: Previous off-hand was already unequipped above (lines 795-800)
     
     // NOTE (Option C): Weapon stays in inventory while equipped as off-hand.
     // We just track it via DualWield_OffHandWeapon. This prevents item loss on reconnect
@@ -899,7 +902,7 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
     if(%weaponName == "" || %weaponName == "Tool" || %weaponName == "Weapon")
         %weaponName = %weaponItem;
     
-    Client::sendMessage(%clientId, $MsgBeige, "Off-hand equipped: " @ %weaponName @ " (" @ %weaponItem @ ")");
+    Client::sendMessage(%clientId, $MsgBeige, "Off-hand equipped: " @ %weaponName);
     echo("[DUAL WIELD] " @ Client::getName(%clientId) @ " equipped off-hand weapon: " @ %weaponItem);
     
     return true;
@@ -983,8 +986,12 @@ function DualWield::OnPrimaryFire(%clientId, %primaryWeapon)
     if(!DualWield::IsEnabled(%clientId))
         return;
     
+    // CRITICAL: Block off-hand attacks during skill upgrade RefreshAll to prevent attack spam exploit
+    if($SkillUpgradeRefreshScheduled[%clientId] == "true")
+        return;
+    
     %offHandWeapon = DualWield::GetOffHandWeapon(%clientId);
-    if(%offHandWeapon == "" || %offHandWeapon == -1)
+    if(%offHandWeapon == "" || %offHandWeapon == -1 || %offHandWeapon == "0")
         return;
     
     // Schedule off-hand fire with slight delay for visual effect
@@ -1001,12 +1008,21 @@ function DualWield::OnPrimaryFire(%clientId, %primaryWeapon)
 // Fire the off-hand weapon (called after primary fire)
 function DualWield::FireOffHand(%clientId, %offHandWeapon)
 {
+    // Safety check: Verify dual wielding is still enabled (could have been disabled between schedule and fire)
+    if(!DualWield::IsEnabled(%clientId))
+        return;
+    
+    // CRITICAL: Block off-hand attacks during skill upgrade RefreshAll to prevent attack spam exploit
+    if($SkillUpgradeRefreshScheduled[%clientId] == "true")
+        return;
+    
     %playerObj = Client::getOwnedObject(%clientId);
     if(%playerObj == "" || %playerObj == -1)
         return;
     
-    // Verify off-hand is still equipped
-    if(DualWield::GetOffHandWeapon(%clientId) != %offHandWeapon)
+    // Verify off-hand is still equipped (same weapon)
+    %currentOffHand = DualWield::GetOffHandWeapon(%clientId);
+    if(%currentOffHand != %offHandWeapon || %currentOffHand == "" || %currentOffHand == -1 || %currentOffHand == "0")
         return;
     
     // Trigger the off-hand weapon on slot 6 (where it's visually mounted)
@@ -1065,9 +1081,11 @@ function DualWield::Command(%clientId, %args)
         return;
     }
     
-    if(%arg1 == "off" || %arg1 == "none" || %arg1 == "unequip")
+    if(%arg1 == "off" || %arg1 == "none" || %arg1 == "unequip" || %arg1 == "disable")
     {
         DualWield::UnequipOffHand(%clientId);
+        DualWield::SetToggleMode(%clientId, false);
+        Client::sendMessage(%clientId, $MsgYellow, "Dual wield mode: OFF");
         return;
     }
     
@@ -1088,7 +1106,7 @@ function DualWield::Command(%clientId, %args)
         return;
     }
     
-    if(%arg1 == "mode" || %arg1 == "toggle")
+    if(%arg1 == "mode" || %arg1 == "toggle" || %arg1 == "on")
     {
         DualWield::ToggleMode(%clientId);
         return;
@@ -1137,6 +1155,11 @@ echo("[DUAL WIELD] Skill requirement: " @ $DualWield::RequiredSkillLevel @ " Sla
 function DualWield::FireOffHandMelee(%clientId, %player, %weaponType)
 {
     if(!DualWield::IsEnabled(%clientId))
+        return;
+    
+    // CRITICAL: Block off-hand attacks during skill upgrade RefreshAll to prevent attack spam exploit
+    // This function bypasses MeleeAttack's anti-spam timer, so we need our own check here
+    if($SkillUpgradeRefreshScheduled[%clientId] == "true")
         return;
     
     // Get fresh player object from clientId (the passed %player may be stale from schedule string)

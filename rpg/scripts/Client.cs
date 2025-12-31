@@ -164,6 +164,10 @@ function onClientMessage(%clientId, %msg)
 	if(%clientId)
 		$lastClientMessage = %clientId;
 
+	// Feed message to custom chat HUD if available
+	if($ChatHUD::Enabled)
+		ChatHUD::AddLine(%msg);
+
 	// filter messages here
 	return true;
 }

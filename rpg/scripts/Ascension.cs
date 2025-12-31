@@ -54,7 +54,7 @@ $AscensionTalent[Telekinesis, Name] = "Telekinesis";
 $AscensionTalent[Telekinesis, Cost] = 30;
 $AscensionTalent[Telekinesis, CostType] = "remort";
 $AscensionTalent[Telekinesis, MinRemort] = 0;
-$AscensionTalent[Telekinesis, Desc] = "Auto-pickup loot within 50m radius";
+$AscensionTalent[Telekinesis, Desc] = "Auto-pickup loot within 5 unit radius";
 
 // SP-cost talents
 $AscensionTalent[IronSkin, Name] = "Iron Skin";
@@ -209,8 +209,8 @@ function Ascension::Purchase(%clientId, %talentName)
 	// Unlock talent
 	Ascension::UnlockTalent(%clientId, %talentName);
 	
-	%talentDisplayName = $AscensionTalent[%talentName, Name];
-	Client::sendMessage(%clientId, 0, "You have unlocked: " @ %talentDisplayName @ "!");
+	// NOTE: Caller (processMenuConfirmAscension) shows the success message
+
 	
 	// Special instructions for specific talents
 	if(%talentName == "DualWield")
@@ -419,6 +419,295 @@ function Ascension::TelekinesisPickup(%clientId, %bag)
 	
 	// Clear processing flag
 	$TelekinesisProcessing[%bag] = "";
+}
+
+//=============================================================================
+// ASCENSION SHOP MENU SYSTEM
+//=============================================================================
+
+// Items per page (leave room for Next/Back options)
+$AscensionShopPerPage = 6;
+
+function SetupAscensionShop(%clientId, %botId, %page)
+{
+	// Open the Ascension talent shop menu
+	dbecho($dbechoMode, "SetupAscensionShop(" @ %clientId @ ", " @ %botId @ ", " @ %page @ ")");
+	
+	// SAFEGUARD: Bots cannot use Ascension shop
+	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+		return;
+	
+	// Default to page 0
+	if(%page == "" || %page == -1)
+		%page = 0;
+	
+	// Store state for pagination and selection
+	%clientId.currentAscensionTrainer = %botId;
+	%clientId.ascensionShopPage = %page;
+	
+	// Get player resources
+	%currentRemort = fetchData(%clientId, "RemortStep");
+	if(%currentRemort == "" || %currentRemort == -1)
+		%currentRemort = 0;
+	%currentSP = fetchData(%clientId, "SPcredits");
+	if(%currentSP == "" || %currentSP == -1)
+		%currentSP = 0;
+	
+	// First pass: build list of unowned talents
+	%talentCount = GetWordCount($AscensionTalentList);
+	%unownedList = "";
+	%unownedCount = 0;
+	
+	for(%i = 0; %i < %talentCount; %i++)
+	{
+		%talent = GetWord($AscensionTalentList, %i);
+		
+		// Skip if already owned
+		if(Ascension::HasTalent(%clientId, %talent))
+			continue;
+		
+		%unownedList = %unownedList @ %talent @ " ";
+		%unownedCount++;
+	}
+	
+	// Calculate pagination
+	%totalPages = floor((%unownedCount - 1) / $AscensionShopPerPage) + 1;
+	if(%unownedCount == 0)
+		%totalPages = 1;
+	if(%page >= %totalPages)
+		%page = %totalPages - 1;
+	if(%page < 0)
+		%page = 0;
+	
+	%startIndex = %page * $AscensionShopPerPage;
+	%endIndex = %startIndex + $AscensionShopPerPage;
+	
+	// Build the menu header
+	%header = "Talents P" @ (%page + 1) @ "/" @ %totalPages @ " (R:" @ %currentRemort @ " SP:" @ %currentSP @ ")";
+	Client::buildMenu(%clientId, %header, "SelectAscension", true);
+	
+	// Add talents for this page
+	%displayNum = 1;
+	for(%i = %startIndex; %i < %endIndex && %i < %unownedCount; %i++)
+	{
+		%talent = GetWord(%unownedList, %i);
+		%name = $AscensionTalent[%talent, Name];
+		%cost = $AscensionTalent[%talent, Cost];
+		%costType = $AscensionTalent[%talent, CostType];
+		%requires = $AscensionTalent[%talent, Requires];
+		
+		// Check prerequisites
+		%hasPrereq = true;
+		if(%requires != "" && %requires != -1)
+		{
+			if(!Ascension::HasTalent(%clientId, %requires))
+				%hasPrereq = false;
+		}
+		
+		// Build cost string
+		if(%costType == "remort")
+			%costStr = %cost @ "R";
+		else
+			%costStr = %cost @ "SP";
+		
+		// Check affordability
+		%canAfford = Ascension::CanAfford(%clientId, %talent);
+		
+		// Build menu item text with number prefix for clarity
+		if(!%hasPrereq)
+			%menuText = %displayNum @ ". [LOCK] " @ %name @ " (" @ %costStr @ ")";
+		else if(!%canAfford)
+			%menuText = %displayNum @ ". [---] " @ %name @ " (" @ %costStr @ ")";
+		else
+			%menuText = %displayNum @ ". " @ %name @ " (" @ %costStr @ ")";
+		
+		// Store talent mapping for this slot (use numeric code)
+		$AscensionMenuSlot[%clientId, %displayNum] = %talent;
+		
+		Client::addMenuItem(%clientId, %menuText, %displayNum);
+		%displayNum++;
+	}
+	
+	if(%unownedCount == 0)
+	{
+		Client::addMenuItem(%clientId, "All talents owned!", "0");
+	}
+	
+	// Add navigation options
+	if(%page > 0)
+		Client::addMenuItem(%clientId, "<< Back", "prev");
+	if(%page < %totalPages - 1)
+		Client::addMenuItem(%clientId, "Next >>", "next");
+}
+
+function processMenuSelectAscension(%clientId, %code)
+{
+	// Handle talent selection from the Ascension shop menu
+	dbecho($dbechoMode, "processMenuSelectAscension(" @ %clientId @ ", " @ %code @ ")");
+	
+	// Handle pagination navigation
+	if(%code == "next")
+	{
+		%page = %clientId.ascensionShopPage;
+		if(%page == "" || %page == -1)
+			%page = 0;
+		SetupAscensionShop(%clientId, %clientId.currentAscensionTrainer, %page + 1);
+		return;
+	}
+	else if(%code == "prev")
+	{
+		%page = %clientId.ascensionShopPage;
+		if(%page == "" || %page == -1)
+			%page = 0;
+		SetupAscensionShop(%clientId, %clientId.currentAscensionTrainer, %page - 1);
+		return;
+	}
+	
+	// Handle "all owned" or cancel
+	if(%code == "0" || %code == "none" || %code == "" || %code == -1)
+	{
+		// Clear trainer reference
+		%clientId.currentAscensionTrainer = "";
+		%clientId.ascensionShopPage = "";
+		return;
+	}
+	
+	// Numeric code - look up talent from mapping
+	%talent = $AscensionMenuSlot[%clientId, %code];
+	if(%talent == "" || %talent == -1)
+	{
+		Client::sendMessage(%clientId, $MsgRed, "Invalid selection.");
+		%clientId.currentAscensionTrainer = "";
+		return;
+	}
+	
+	%name = $AscensionTalent[%talent, Name];
+	if(%name == "" || %name == -1)
+	{
+		Client::sendMessage(%clientId, $MsgRed, "Invalid talent.");
+		%clientId.currentAscensionTrainer = "";
+		return;
+	}
+	
+	// Store selected talent for confirmation
+	%clientId.selectedAscensionTalent = %talent;
+
+	
+	// Show talent info
+	%cost = $AscensionTalent[%talent, Cost];
+	%costType = $AscensionTalent[%talent, CostType];
+	%desc = $AscensionTalent[%talent, Desc];
+	%requires = $AscensionTalent[%talent, Requires];
+	%minRemort = $AscensionTalent[%talent, MinRemort];
+	
+	// Build cost string
+	if(%costType == "remort")
+		%costStr = %cost @ " Remorts";
+	else
+		%costStr = %cost @ " SP";
+	
+	// Check prerequisites
+	%hasPrereq = true;
+	%prereqName = "";
+	if(%requires != "" && %requires != -1)
+	{
+		if(!Ascension::HasTalent(%clientId, %requires))
+		{
+			%hasPrereq = false;
+			%prereqName = $AscensionTalent[%requires, Name];
+		}
+	}
+	
+	// Check affordability
+	%canAfford = Ascension::CanAfford(%clientId, %talent);
+	
+	// Already owned?
+	if(Ascension::HasTalent(%clientId, %talent))
+	{
+		Client::sendMessage(%clientId, $MsgYellow, "You already have " @ %name @ "!");
+		%clientId.currentAscensionTrainer = "";
+		return;
+	}
+	
+	// Store selected talent for confirmation
+	%clientId.selectedAscensionTalent = %talent;
+	
+	// Always show talent info
+	Client::sendMessage(%clientId, $MsgYellow, "=== " @ %name @ " ===");
+	Client::sendMessage(%clientId, $MsgWhite, "Cost: " @ %costStr);
+	Client::sendMessage(%clientId, $MsgBeige, %desc);
+	if(%minRemort > 0)
+		Client::sendMessage(%clientId, $MsgWhite, "Requires Remort " @ %minRemort @ "+");
+	
+	// Build menu based on whether can purchase
+	if(!%hasPrereq)
+	{
+		// Missing prerequisite - show info only
+		Client::sendMessage(%clientId, $MsgRed, "LOCKED - Requires: " @ %prereqName);
+		Client::buildMenu(%clientId, %name @ " [LOCKED]", "ConfirmAscension", true);
+		Client::addMenuItem(%clientId, "<< Back to list", "back");
+	}
+	else if(!%canAfford)
+	{
+		// Can't afford - show info only
+		Client::sendMessage(%clientId, $MsgRed, "Not enough " @ %costType @ "!");
+		Client::buildMenu(%clientId, %name @ " [Cannot Afford]", "ConfirmAscension", true);
+		Client::addMenuItem(%clientId, "<< Back to list", "back");
+	}
+	else
+	{
+		// Can purchase - show confirmation
+		Client::buildMenu(%clientId, "Purchase " @ %name @ "?", "ConfirmAscension", true);
+		Client::addMenuItem(%clientId, "YES - Spend " @ %costStr, "confirm");
+		Client::addMenuItem(%clientId, "NO - Cancel", "cancel");
+		Client::addMenuItem(%clientId, "<< Back to list", "back");
+	}
+}
+
+function processMenuConfirmAscension(%clientId, %code)
+{
+	// Handle confirmation of talent purchase
+	dbecho($dbechoMode, "processMenuConfirmAscension(" @ %clientId @ ", " @ %code @ ")");
+	
+	%talent = %clientId.selectedAscensionTalent;
+	
+	// Handle Back - return to talent list
+	if(%code == "back")
+	{
+		%clientId.selectedAscensionTalent = "";
+		%page = %clientId.ascensionShopPage;
+		if(%page == "" || %page == -1)
+			%page = 0;
+		SetupAscensionShop(%clientId, %clientId.currentAscensionTrainer, %page);
+		return;
+	}
+	
+	if(%code == "confirm" && %talent != "" && %talent != -1)
+	{
+		// Attempt purchase
+		%success = Ascension::Purchase(%clientId, %talent);
+		
+		if(%success)
+		{
+			%name = $AscensionTalent[%talent, Name];
+			Client::sendMessage(%clientId, $MsgGreen, "You have unlocked " @ %name @ "!");
+			playSound(SoundSpawn2, GameBase::getPosition(Client::getOwnedObject(%clientId)));
+		}
+	}
+	else
+	{
+		Client::sendMessage(%clientId, $MsgWhite, "Purchase cancelled.");
+	}
+	
+	// Clear stored data
+	%clientId.selectedAscensionTalent = "";
+	%clientId.currentAscensionTrainer = "";
+}
+
+// Short alias for #ascend shop command
+function Ascension::ShowShop(%clientId)
+{
+	SetupAscensionShop(%clientId, "", 0);
 }
 
 echo("[ASCENSION] Ascension system loaded - " @ GetWordCount($AscensionTalentList) @ " talents available");

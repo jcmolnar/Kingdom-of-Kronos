@@ -5,6 +5,31 @@ function Client::cancelMenu(%clientId)
       %clientId.selClient = "";
       %clientId.menuMode = "";
       %clientId.menuLock = "";
+      
+      %farewellPlayed = false;
+      
+      // Fix for Banker Interaction:
+      // If menu is cancelled (e.g. Tab/Esc), ensure banker bot state is reset AND play farewell
+      if(%clientId.currentBankBot != "")
+      {
+         if(!%farewellPlayed) { TownBot_PlayFarewell(%clientId, %clientId.currentBankBot); %farewellPlayed = true; }
+         $state[%clientId.currentBankBot, %clientId] = ""; // Reset to empty state so bot responds to "hi"
+         %clientId.currentBankBot = "";
+      }
+      if(%clientId.currentBeltBank != "")
+      {
+         $state[%clientId.currentBeltBank, %clientId] = "";
+         %clientId.currentBeltBank = "";
+      }
+      
+      
+      // Ascension Trainer
+      if(%clientId.currentAscensionTrainer != "")
+      {
+         if(!%farewellPlayed) { TownBot_PlayFarewell(%clientId, %clientId.currentAscensionTrainer); %farewellPlayed = true; }
+         %clientId.currentAscensionTrainer = "";
+      }
+
       // Removed remoteEval(%clientId, "CancelMenu") - this was causing "CANCEL: Unknown command" errors
       // Menu state is already cleared server-side above, client will handle menu closure automatically
       Client::setMenuScoreVis(%clientId, false);

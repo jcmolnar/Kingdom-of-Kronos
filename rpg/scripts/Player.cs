@@ -70,9 +70,10 @@ function Player::onCollision(%this,%object)
 		
 		if(%botClientId != -1 && %botClientId != "")
 		{
-			// Check if the collided object is a town bot
+			// Check if the collided object is a town bot (not an enemy bot)
+			// CRITICAL: Use isTownBot() to properly distinguish town bots from enemy bots
 			%botAiName = fetchData(%botClientId, "BotInfoAiName");
-			if(%botAiName != "" && %botAiName != -1 && %botAiName != "0")
+			if(%botAiName != "" && %botAiName != -1 && %botAiName != "0" && isTownBot(%botClientId))
 			{
 				// Check if %this is a real player (not AI controlled)
 				%playerClientId = GetClientIdFromPlayerObject(%this);
@@ -85,6 +86,57 @@ function Player::onCollision(%this,%object)
 					schedule("MountTownBotWeapon(" @ %botClientId @ ");", 0.1);
 					// Make town bot face the player on collision
 					schedule("AI::lookAtPlayer(" @ %playerClientId @ ", " @ %botClientId @ ");", 0.1);
+
+					// Determine Bot Type and Trigger Menus if applicable
+					%botType = %botAiName;
+					// Remove trailing digits / "TownBot_" prefix logic is complex, simpler to just check substring
+					// The %botAiName here is raw from BotInfoAiName e.g. "TownBot_Banker1"
+					
+					// Strip "TownBot_" if present
+					// Universal Greeting for ALL Town Bots
+					// Check cooldown to prevent spam (5 seconds)
+					%simTime = getSimTime();
+					if(%botClientId.lastGreetingTime == "" || (%simTime - %botClientId.lastGreetingTime) > 5.0)
+					{
+						// Update cooldown
+						%botClientId.lastGreetingTime = %simTime;
+						
+						// Determine voice gender
+						// ALERT: We always randomize the voice (1-5) based on armor to ensure variety in town
+						// This ignores specific bot voice settings in favor of ambient crowd variety
+						%botArmor = Player::getArmor(%botClientId);
+						%rand = floor(getRandom() * 5) + 1; // Random 1-5
+						
+						%voice = "male" @ %rand; // Default to male 1-5
+						if(String::findSubStr(%botArmor, "female") != -1)
+							%voice = "female" @ %rand; // Female 1-5
+						
+						// Store consistent voice for this session (so Farewell matches Greeting)
+						%botClientId.sessionVoice = %voice;
+						
+						Client::sendMessage(%playerClientId, 0, "~w" @ %voice @ ".whello.wav");
+					}
+					
+					// Specific Interaction Menus
+					if(String::findSubStr(%botType, "Banker") != -1 || String::findSubStr(%botType, "banker") != -1)
+					{
+						SetupBankDefault(%playerClientId, %botClientId);
+					}
+					else if(String::findSubStr(%botType, "Merchant") != -1 || String::findSubStr(%botType, "merchant") != -1)
+					{
+						// Get shop indices from bot info
+						%shopBotName = %botAiName;
+						if(String::findSubStr(%shopBotName, "TownBot_") == 0)
+							%shopBotName = String::getSubStr(%shopBotName, 8, 999);
+						%shopIndices = $BotInfo[%shopBotName, SHOP];
+						
+						// Use Belt::Shop for unified menu (Standard Shop, Buy Accessories, Sell)
+						Belt::Shop(%playerClientId, %botClientId, %shopIndices);
+					}
+					else if(String::findSubStr(%botType, "Ascension") != -1 || String::findSubStr(%botType, "ascension") != -1)
+					{
+						SetupAscensionShop(%playerClientId, %botClientId, 0);
+					}
 				}
 			}
 		}

@@ -36,28 +36,28 @@ $AIattackMode = 1;
 
 // Debug output control flags
 // Set to 1 to enable debug output, 0 to disable (reduces server load and log spam)
-$AI_DEBUG_ENABLED = 1;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
-$AI_SPAWN_DEBUG = 1;          // Controls [SPAWN FLOW] messages specifically
-$AI_PERIODIC_DEBUG = 1;       // Controls [INERT DEBUG] AI::Periodic messages
-$LOOTBAG_DEBUG = 1;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
-$Debug::SafeGuards = 1;       // Controls [SAFEGUARD] player protection logging
+$AI_DEBUG_ENABLED = 0;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG] messages
+$AI_SPAWN_DEBUG = 0;          // Controls [SPAWN FLOW] messages specifically
+$AI_PERIODIC_DEBUG = 0;       // Controls [INERT DEBUG] AI::Periodic messages
+$LOOTBAG_DEBUG = 0;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
+$Debug::SafeGuards = 0;       // Controls [SAFEGUARD] player protection logging
 
 // Granular Debug Flags (Turn off to reduce spam)
 $TOWNBOT_RACE_DEBUG = 0;      // Controls [TOWNBOT RACE DEBUG] messages
 $TOWNBOT_SKIN_DEBUG = 0;      // Controls [FINAL FIX] messages
-$MISSION_CLEANUP_DEBUG = 1;   // Controls [DEBUG] addToSetMissionCleanup messages
-$GETBOTID_DEBUG = 1;          // Controls [GETBOTIDLIST DEBUG] messages
-$SPAWNLOOP_DEBUG = 1;         // Controls [SPAWN DEBUG] messages
-$BOT_TEAM_DEBUG = 1;          // Controls [BOT TEAM DEBUG] messages
-$TEAM_ENFORCE_DEBUG = 1;      // Controls [TEAM ENFORCE] messages
-$BOT_TRACK_DEBUG = 1;         // Controls [BOT TRACK] messages
-$BOT_REGISTRY_DEBUG = 1;      // Controls [BOT REGISTRY] messages
-$SPAWN_TRANSACTION_DEBUG = 1; // Controls [SPAWN TRANSACTION] messages
-$BOT_SHELL_DEBUG = 1;         // Controls [BOT SHELL DEBUG] messages
-$SPAWN_COUNTER_DEBUG = 1;     // Controls [SPAWN COUNTER] messages
-$BOT_CLEANUP_DEBUG = 1;       // Controls [BOT CLEANUP] messages
-$TOWNBOT_ARMOR_DEBUG = 1;     // Controls [TOWNBOT ARMOR DEBUG] messages
-$RECONCILE_DEBUG = 1;         // Controls [RECONCILE] messages
+$MISSION_CLEANUP_DEBUG = 0;   // Controls [DEBUG] addToSetMissionCleanup messages
+$GETBOTID_DEBUG = 0;          // Controls [GETBOTIDLIST DEBUG] messages
+$SPAWNLOOP_DEBUG = 0;         // Controls [SPAWN DEBUG] messages
+$BOT_TEAM_DEBUG = 0;          // Controls [BOT TEAM DEBUG] messages
+$TEAM_ENFORCE_DEBUG = 0;      // Controls [TEAM ENFORCE] messages
+$BOT_TRACK_DEBUG = 0;         // Controls [BOT TRACK] messages
+$BOT_REGISTRY_DEBUG = 0;      // Controls [BOT REGISTRY] messages
+$SPAWN_TRANSACTION_DEBUG = 0; // Controls [SPAWN TRANSACTION] messages
+$BOT_SHELL_DEBUG = 0;         // Controls [BOT SHELL DEBUG] messages
+$SPAWN_COUNTER_DEBUG = 0;     // Controls [SPAWN COUNTER] messages
+$BOT_CLEANUP_DEBUG = 0;       // Controls [BOT CLEANUP] messages
+$TOWNBOT_ARMOR_DEBUG = 0;     // Controls [TOWNBOT ARMOR DEBUG] messages
+$RECONCILE_DEBUG = 0;         // Controls [RECONCILE] messages
 
 
 // Bot tracking counters
@@ -124,7 +124,7 @@ function Telemetry_Reset()
 // WATCHDOG SYSTEM - Detects infinite loops and server freezes
 // Logs current function to file every 5 seconds. On freeze, check config/watchdog.log
 // ============================================================================
-$Watchdog_Enabled = true;           // Master switch for watchdog
+$Watchdog_Enabled = false;           // Master switch for watchdog
 $Watchdog_CurrentFunction = "";     // Currently executing function
 $Watchdog_LoopCounter = 0;          // Current loop iteration
 $Watchdog_MaxIterations = 500;      // Max iterations before breaking (safety limit)
@@ -3275,6 +3275,10 @@ function createAIPostSpawn(%aiName, %armor, %group)
 	GameBase::startFadeIn(%AiId);
 	%spawnPos = GameBase::getPosition(%AiId);
 	PlaySound(SoundSpawn2, %spawnPos);
+	
+	// DEFENSIVE FIX: Schedule a second startFadeIn to ensure visibility
+	// Fixes intermittent invisibility that can occur during spawn
+	schedule("if(isObject(" @ %AiId @ ")) GameBase::startFadeIn(" @ %AiId @ ");", 0.5);
 }
 
 //----------------------------------
@@ -3506,7 +3510,7 @@ function AI::setWeapons(%aiName, %loadout)
 				// CRITICAL FIX: Ensure skin is set before GiveThisStuff for TOWN BOTS only
 				// Enemy bots typically have empty %currentArmor or use different skin logic
 				if(%currentArmor != "" && %currentArmor != -1 && String::findSubStr(%aiName, "TownBot_") == 0)
-					Client::setSkin(%aiId, $Server::teamSkin[0]);
+					Safe_SetSkin(%aiId, $Server::teamSkin[0], "AI::setWeapons town bot guardtype");
 					
 				//echo("[SPAWN DEBUG] AI::setWeapons(): Calling GiveThisStuff with equipString=" @ %equipString);
 				GiveThisStuff(%aiId, %equipString, False);
@@ -3535,7 +3539,7 @@ function AI::setWeapons(%aiName, %loadout)
 			
 			// CRITICAL FIX: Ensure skin is set before GiveThisStuff for TOWN BOTS only
 			if(%currentArmor != "" && %currentArmor != -1 && String::findSubStr(%aiName, "TownBot_") == 0)
-				Client::setSkin(%aiId, $Server::teamSkin[0]);
+				Safe_SetSkin(%aiId, $Server::teamSkin[0], "AI::setWeapons town bot items");
 				
 			GiveThisStuff(%aiId, %items, False);
 		}
@@ -3563,7 +3567,7 @@ function AI::setWeapons(%aiName, %loadout)
 		
 		// CRITICAL FIX: Ensure skin is set before GiveThisStuff for TOWN BOTS only
 		if(%currentArmor != "" && %currentArmor != -1 && String::findSubStr(%aiName, "TownBot_") == 0)
-			Client::setSkin(%aiId, $Server::teamSkin[0]);
+			Safe_SetSkin(%aiId, $Server::teamSkin[0], "AI::setWeapons town bot loadout");
 			
 		GiveThisStuff(%aiId, %loadoutString, False);
 		}
@@ -9059,6 +9063,14 @@ function HardcodeAIskills(%aiId)
 		{
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[BOT SHELL DEBUG] HardcodeAIskills(): Bot " @ %botName @ " (clientId=" @ %aiId @ ") has NO player object before RefreshAll call. Skipping RefreshAll to prevent errors.");
 		}
+	
+	// DEFENSIVE FIX: Final startFadeIn call to ensure enemy bot visibility
+	// Fixes intermittent invisibility that can occur during spawn
+	%finalPlayerObj = Client::getOwnedObject(%aiId);
+	if(%finalPlayerObj != "" && %finalPlayerObj != -1 && isObject(%finalPlayerObj))
+	{
+		GameBase::startFadeIn(%finalPlayerObj);
+	}
 }
 
 // Helper function to verify team was set after HardcodeAIskills restoration
@@ -11592,7 +11604,7 @@ function SpawnZoneBots(%zoneIndex)
 					{
 						if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: Refreshing armor visual for " @ %botName @ " after team set (armor='" @ %armor @ "')");
 						Player::setArmor(%playerObj, %armor);
-						Client::setSkin(%immediateClientId, $Server::teamSkin[0]);
+						Safe_SetSkin(%immediateClientId, $Server::teamSkin[0], "AI_Spawn_Timer_Helper immediate");
 						
 						// FINAL WORD: Schedule one more skin enforcement at T+2.0s
 						// This runs after ALL other scheduled scripts (especially any ~1.0s culprits)
@@ -11618,10 +11630,8 @@ function DespawnZoneBots(%zoneIndex)
 	if(%zoneIndex == 0 || %zoneIndex == "" || %zoneIndex == -1)
 		return;
 	
-	// EXEMPTION: Zone 23 (Colosseum) is managed by the Seal Battle system in remortseal.cs
-	// Do not despawn bots here - the seal battle handles its own bot lifecycle
-	if(%zoneIndex == 23)
-		return;
+	// NOTE: Zone 25 (Colloseum) seal bots are now properly despawned via TempSpawn handling
+	// No exemption needed - seal bots have SpawnBotInfo="TempSpawn ..." and will be killed when zone empties
 	
 	// CRITICAL: Verify zone is actually empty before despawning (double-check against $ZonePlayerCount)
 	// This prevents despawning bots when players are still in the zone (if $ZonePlayerCount got out of sync)
@@ -12047,8 +12057,9 @@ function DespawnZoneBots(%zoneIndex)
 			continue;
 		}
 		
-		// Check if this bot came from a spawn point
-		if(GetWord(%spawnBotInfo, 0) == "SpawnPoint")
+		// Check if this bot came from a spawn point OR a temp spawn (seal battle bots use TempSpawn)
+		%spawnType = GetWord(%spawnBotInfo, 0);
+		if(%spawnType == "SpawnPoint" || %spawnType == "TempSpawn")
 		{
 			%spawnPointId = GetWord(%spawnBotInfo, 1);
 			
@@ -12107,7 +12118,7 @@ function DespawnZoneBots(%zoneIndex)
 			// when those enemies despawn due to the zone becoming empty
 			storeData(%botId, "noExperienceFlag", True);
 			Player::Kill(%botId);
-			echo("Despawned enemy bot from spawn point " @ %spawnPointId @ " (zone " @ %zoneIndex @ ", zoneDesc=" @ %zoneDesc @ ")");
+			echo("Despawned enemy bot from " @ %spawnType @ " " @ %spawnPointId @ " (zone " @ %zoneIndex @ ", zoneDesc=" @ %zoneDesc @ ")");
 		}
 	}
 }
@@ -12388,7 +12399,7 @@ function InitTownBotPostSpawn(%aiName, %name)
 		{
 			Player::setArmor(%playerObj, %expectedArmor);
 			// Also set skin to ensure visual appearance matches
-			Client::setSkin(%clientId, %expectedArmor);
+			Safe_SetSkin(%clientId, %expectedArmor, "InitTownBotPostSpawn armor fix");
 			echo("DEBUG: InitTownBotPostSpawn - Applied armor fix for " @ %name @ ": Player::setArmor(" @ %playerObj @ ", " @ %expectedArmor @ ")");
 		}
 		else
@@ -12667,7 +12678,7 @@ function InitTownBotItemsForBot(%clientId, %botName)
 					if(%currentSkin != %armorSkin)
 					{
 						echo("DEBUG: Armor " @ %equippedArmor @ " already mounted on " @ %botName @ ", but skin is wrong (current: " @ %currentSkin @ ", expected: " @ %armorSkin @ ") - fixing skin");
-						Client::setSkin(%clientId, %armorSkin);
+						Safe_SetSkin(%clientId, %armorSkin, "InitTownBotItemsForBot armor remount");
 					}
 				}
 				echo("DEBUG: Armor " @ %equippedArmor @ " already mounted on " @ %botName @ ", skipping remount");
@@ -12683,7 +12694,7 @@ function InitTownBotItemsForBot(%clientId, %botName)
 				
 				%armorSkin = $ArmorSkin[%armorName];
 				if(%armorSkin != "")
-					Client::setSkin(%clientId, %armorSkin);
+					Safe_SetSkin(%clientId, %armorSkin, "InitTownBotItemsForBot armor mount");
 				Player::mountItem(%playerObj, %equippedArmor, 1, 0);
 			}
 		}
@@ -12954,7 +12965,7 @@ function InitTownBotItems()
 										if(%currentSkin != %armorSkin)
 										{
 											echo("DEBUG: Armor " @ %equippedArmor @ " already mounted on " @ %botName @ ", but skin is wrong (current: " @ %currentSkin @ ", expected: " @ %armorSkin @ ") - fixing skin");
-											Client::setSkin(%clientId, %armorSkin);
+											Safe_SetSkin(%clientId, %armorSkin, "InitTownBotItems equipped armor skin fix");
 										}
 									}
 									%mountedCount++;
@@ -12966,7 +12977,7 @@ function InitTownBotItems()
 								if(%armorSkin != "")
 								{
 									echo("DEBUG: Setting skin to " @ %armorSkin @ " for armor " @ %itemName);
-									Client::setSkin(%clientId, %armorSkin);
+									Safe_SetSkin(%clientId, %armorSkin, "InitTownBotItems equipped armor mount");
 								}
 								
 								// Unmount existing armor if different armor is mounted
@@ -13003,7 +13014,7 @@ function InitTownBotItems()
 										if(%currentSkin != %armorSkin)
 										{
 											echo("DEBUG: Armor " @ %itemName @ " already mounted on " @ %botName @ ", but skin is wrong (current: " @ %currentSkin @ ", expected: " @ %armorSkin @ ") - fixing skin");
-											Client::setSkin(%clientId, %armorSkin);
+											Safe_SetSkin(%clientId, %armorSkin, "InitTownBotItems base armor skin fix");
 										}
 									}
 									%mountedCount++;
@@ -13015,7 +13026,7 @@ function InitTownBotItems()
 								if(%armorSkin != "")
 								{
 									echo("DEBUG: Setting skin to " @ %armorSkin @ " for armor " @ %itemName);
-									Client::setSkin(%clientId, %armorSkin);
+									Safe_SetSkin(%clientId, %armorSkin, "InitTownBotItems base armor mount");
 								}
 								
 								// Unmount existing armor if different armor is mounted
@@ -13656,7 +13667,7 @@ function VerifyTownBotTeam(%clientId, %botName, %expectedTeam)
 			{
 				// Refresh armor to fix visual appearance after team correction
 				Player::setArmor(%playerObj, %expectedArmor);
-				Client::setSkin(%clientId, $Server::teamSkin[0]);
+				Safe_SetSkin(%clientId, $Server::teamSkin[0], "SetupBot town bot");
 				echo("DEBUG: VerifyTownBotTeam - Refreshed armor for " @ %botName @ " after team correction (team " @ %currentTeam @ " -> " @ %expectedTeam @ ", armor='" @ %expectedArmor @ "')");
 			}
 		}
@@ -13723,7 +13734,7 @@ function ForceTownBotSkin(%clientId, %botName)
 	Player::setArmor(%playerObj, %expectedArmor);
 	
 	// FORCE skin with HARDCODED "rpgbase" - exactly like the manual command that worked
-	Client::setSkin(%clientId, "rpgbase");
+	Safe_SetSkin(%clientId, "rpgbase", "SetupBot default");
 	
 	// DIAGNOSTIC: Log all values after applying
 	%newTeam = GameBase::getTeam(%clientId);

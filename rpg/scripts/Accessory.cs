@@ -248,12 +248,13 @@ function GetAccessoryList(%clientId, %type, %filter)
 		if(%playerObj == "" || %playerObj == -1)
 			break; // Exit loop if player object no longer exists
 		
-		%count = SafeGetItemCount(%clientId, %i, "GetAccessoryList");
+		// CRITICAL FIX: Get ItemData FIRST, then check count
+		// Previously passed numeric index %i to SafeGetItemCount (wrong!)
+		%item = getItemData(%i);
+		%count = SafeGetItemCount(%clientId, %item, "GetAccessoryList");
 
 		if(%count)
 		{
-			%item = getItemData(%i);
-
 			%flag = False;
 			if(%type == 1)
 			{
@@ -465,16 +466,7 @@ function AddPoints(%clientId, %char)
 		}
 		else
 		{
-			// For accessories, use item count directly (string name works for getItemCount)
-			// CRITICAL: Re-validate player object before calling Player::getItemCount
-			%playerCheck2 = Client::getOwnedObject(%clientId);
-			if(%playerCheck2 == -1 || %playerCheck2 == "")
-			{
-				// Player object was deleted
-				break;
-			}
-			// Use the item name string for getItemCount (it accepts both object and name)
-			%count = Player::getItemCount(%clientId, %w);
+			%count = SafeGetItemCount(%clientId, %w, "AddPoints");
 		}
 
 		%tmp = GetAccessoryVar(%w, $SpecialVar);
@@ -597,6 +589,8 @@ function GetCurrentlyWearingArmor(%clientId)
 		if(%playerObj == "" || %playerObj == -1)
 			break; // Exit loop if player object no longer exists
 		
+		// CONVENTION: Equipped items use "0" suffix (e.g., "IronArmor0" = worn, "IronArmor" = in inventory)
+		// See torquescript-rules.md section 19 for details
 		if(SafeGetItemCount(%clientId, $ArmorList[%i] @ "0", "GetCurrentlyWearingArmor"))
 			return $ArmorList[%i];
 	}
@@ -752,138 +746,138 @@ $AccessoryVar[MinorPowerRing, $SpecialVar] = "4 7 7 30";
 $AccessoryVar[MinorPowerRing, $Weight] = 2;
 $AccessoryVar[MinorPowerRing, $MiscInfo] = "This ring slightly increases hp and defense";
 
-ItemData MinorPowerRing
-{
-	description = "Minor Power Ring";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData MinorPowerRing0
-{
-	description = "Minor Power Ring";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData MinorPowerRing - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Minor Power Ring";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData MinorPowerRing0
+//{
+//	description = "Minor Power Ring";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[PowerRing, $AccessoryType] = $RingAccessoryType;
 $AccessoryVar[PowerRing, $SpecialVar] = "4 17 7 55";
 $AccessoryVar[PowerRing, $Weight] = 5;
 $AccessoryVar[PowerRing, $MiscInfo] = "This ring increases hp and defense";
 
-ItemData PowerRing
-{
-	description = "Power Ring";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData PowerRing0
-{
-	description = "Power Ring";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData PowerRing - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Power Ring";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData PowerRing0
+//{
+//	description = "Power Ring";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[MajorPowerRing, $AccessoryType] = $RingAccessoryType;
 $AccessoryVar[MajorPowerRing, $SpecialVar] = "4 40 7 95";
 $AccessoryVar[MajorPowerRing, $Weight] = 15;
 $AccessoryVar[MajorPowerRing, $MiscInfo] = "This ring majorly increases hp and defense";
 
-ItemData MajorPowerRing
-{
-	description = "Major Power Ring";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData MajorPowerRing0
-{
-	description = "Major Power Ring";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData MajorPowerRing - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Major Power Ring";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData MajorPowerRing0
+//{
+//	description = "Major Power Ring";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[ExtremePowerRing, $AccessoryType] = $RingAccessoryType;
 $AccessoryVar[ExtremePowerRing, $SpecialVar] = "4 70 7 150";
 $AccessoryVar[ExtremePowerRing, $Weight] = 25;
 $AccessoryVar[ExtremePowerRing, $MiscInfo] = "This ring extremely increases hp and defense";
 
-ItemData ExtremePowerRing
-{
-	description = "Extreme Power Ring";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData ExtremePowerRing0
-{
-	description = "Extreme Power Ring";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData ExtremePowerRing - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Extreme Power Ring";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData ExtremePowerRing0
+//{
+//	description = "Extreme Power Ring";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[GodlyPowerRing, $AccessoryType] = $RingAccessoryType;
 $AccessoryVar[GodlyPowerRing, $SpecialVar] = "4 140 7 250";
 $AccessoryVar[GodlyPowerRing, $Weight] = 60;
 $AccessoryVar[GodlyPowerRing, $MiscInfo] = "This ring extremely increases hp and defense";
 
-ItemData GodlyPowerRing
-{
-	description = "Godly Power Ring";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData GodlyPowerRing0
-{
-	description = "Godly Power Ring";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData GodlyPowerRing - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Godly Power Ring";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData GodlyPowerRing0
+//{
+//	description = "Godly Power Ring";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[HeavenlyPowerRing, $AccessoryType] = $RingAccessoryType;
 $AccessoryVar[HeavenlyPowerRing, $SpecialVar] = "4 210 7 375";
 $AccessoryVar[HeavenlyPowerRing, $Weight] = 90;
 $AccessoryVar[HeavenlyPowerRing, $MiscInfo] = "This ring provides heavenly increases to hp and defense";
 
-ItemData HeavenlyPowerRing
-{
-	description = "Heavenly Power Ring";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData HeavenlyPowerRing0
-{
-	description = "Heavenly Power Ring";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData HeavenlyPowerRing - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Heavenly Power Ring";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData HeavenlyPowerRing0
+//{
+//	description = "Heavenly Power Ring";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 //   Regen Necklaces
@@ -894,138 +888,138 @@ $AccessoryVar[MinorRegenerationNecklace, $SpecialVar] = "10 0.7 11 1";
 $AccessoryVar[MinorRegenerationNecklace, $Weight] = 20;
 $AccessoryVar[MinorRegenerationNecklace, $MiscInfo] = "This necklace increases hp and mana regeneration";
 
-ItemData MinorRegenerationNecklace
-{
-	description = "Minor Regeneration Necklace";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData MinorRegenerationNecklace0
-{
-	description = "Minor Regeneration Necklace";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData MinorRegenerationNecklace - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Minor Regeneration Necklace";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData MinorRegenerationNecklace0
+//{
+//	description = "Minor Regeneration Necklace";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[RegenerationNecklace, $AccessoryType] = $TalismanAccessoryType;
 $AccessoryVar[RegenerationNecklace, $SpecialVar] = "10 2 11 2.5";
 $AccessoryVar[RegenerationNecklace, $Weight] = 50;
 $AccessoryVar[RegenerationNecklace, $MiscInfo] = "This necklace increases hp and mana regeneration";
 
-ItemData RegenerationNecklace
-{
-	description = "Regeneration Necklace";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData RegenerationNecklace0
-{
-	description = "Regeneration Necklace";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData RegenerationNecklace - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Regeneration Necklace";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData RegenerationNecklace0
+//{
+//	description = "Regeneration Necklace";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[MajorRegenerationNecklace, $AccessoryType] = $TalismanAccessoryType;
 $AccessoryVar[MajorRegenerationNecklace, $SpecialVar] = "10 5 11 6";
 $AccessoryVar[MajorRegenerationNecklace, $Weight] = 100;
 $AccessoryVar[MajorRegenerationNecklace, $MiscInfo] = "This necklace greatly increases hp and mana regeneration";
 
-ItemData MajorRegenerationNecklace
-{
-	description = "Major Regeneration Necklace";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData MajorRegenerationNecklace0
-{
-	description = "Major Regeneration Necklace";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData MajorRegenerationNecklace - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Major Regeneration Necklace";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData MajorRegenerationNecklace0
+//{
+//	description = "Major Regeneration Necklace";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[ExtremeRegenerationNecklace, $AccessoryType] = $TalismanAccessoryType;
 $AccessoryVar[ExtremeRegenerationNecklace, $SpecialVar] = "10 10 11 12";
 $AccessoryVar[ExtremeRegenerationNecklace, $Weight] = 250;
 $AccessoryVar[ExtremeRegenerationNecklace, $MiscInfo] = "This necklace extremely increases your hp and mana regeneration";
 
-ItemData ExtremeRegenerationNecklace
-{
-	description = "Extreme Regeneration Necklace";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData ExtremeRegenerationNecklace0
-{
-	description = "Extreme Regeneration Necklace";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData ExtremeRegenerationNecklace - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Extreme Regeneration Necklace";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData ExtremeRegenerationNecklace0
+//{
+//	description = "Extreme Regeneration Necklace";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[GodlyRegenerationNecklace, $AccessoryType] = $TalismanAccessoryType;
 $AccessoryVar[GodlyRegenerationNecklace, $SpecialVar] = "10 24 11 31";
 $AccessoryVar[GodlyRegenerationNecklace, $Weight] = 750;
 $AccessoryVar[GodlyRegenerationNecklace, $MiscInfo] = "This necklace gives you godly hp and mana regeneration";
 
-ItemData GodlyRegenerationNecklace
-{
-	description = "Godly Regeneration Necklace";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData GodlyRegenerationNecklace0
-{
-	description = "Godly Regeneration Necklace";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData GodlyRegenerationNecklace - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Godly Regeneration Necklace";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData GodlyRegenerationNecklace0
+//{
+//	description = "Godly Regeneration Necklace";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[HeavenlyRegenerationNecklace, $AccessoryType] = $TalismanAccessoryType;
 $AccessoryVar[HeavenlyRegenerationNecklace, $SpecialVar] = "10 36 11 47";
 $AccessoryVar[HeavenlyRegenerationNecklace, $Weight] = 1125;
 $AccessoryVar[HeavenlyRegenerationNecklace, $MiscInfo] = "This necklace provides heavenly hp and mana regeneration";
 
-ItemData HeavenlyRegenerationNecklace
-{
-	description = "Heavenly Regeneration Necklace";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData HeavenlyRegenerationNecklace0
-{
-	description = "Heavenly Regeneration Necklace";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData HeavenlyRegenerationNecklace - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Heavenly Regeneration Necklace";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData HeavenlyRegenerationNecklace0
+//{
+//	description = "Heavenly Regeneration Necklace";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 
 //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -1204,115 +1198,115 @@ $AccessoryVar[AntiMagicBelt, $SpecialVar] = "3 250";
 $AccessoryVar[AntiMagicBelt, $Weight] = 20;
 $AccessoryVar[AntiMagicBelt, $MiscInfo] = "A magical belt with the power to shield you from magic!";
 
-ItemData AntiMagicBelt
-{
-	description = "Antimagic Belt";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData AntiMagicBelt0
-{
-	description = "Antimagic Belt";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData AntiMagicBelt - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Antimagic Belt";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData AntiMagicBelt0
+//{
+//	description = "Antimagic Belt";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[MajorAntiMagicBelt, $AccessoryType] = $BeltAccessoryType;
 $AccessoryVar[MajorAntiMagicBelt, $SpecialVar] = "3 550";
 $AccessoryVar[MajorAntiMagicBelt, $Weight] = 40;
 $AccessoryVar[MajorAntiMagicBelt, $MiscInfo] = "A strong magical belt with the power to shield you from magic!";
 
-ItemData MajorAntiMagicBelt
-{
-	description = "Major Antimagic Belt";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData MajorAntiMagicBelt0
-{
-	description = "Major Antimagic Belt";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData MajorAntiMagicBelt - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Major Antimagic Belt";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData MajorAntiMagicBelt0
+//{
+//	description = "Major Antimagic Belt";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[ExtremeAntiMagicBelt, $AccessoryType] = $BeltAccessoryType;
 $AccessoryVar[ExtremeAntiMagicBelt, $SpecialVar] = "3 900";
 $AccessoryVar[ExtremeAntiMagicBelt, $Weight] = 70;
 $AccessoryVar[ExtremeAntiMagicBelt, $MiscInfo] = "A strong magical belt with the power to shield you from magic!";
 
-ItemData ExtremeAntiMagicBelt
-{
-	description = "Extreme AntiMagic Belt";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData ExtremeAntiMagicBelt0
-{
-	description = "Extreme AntiMagic Belt";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData ExtremeAntiMagicBelt - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Extreme AntiMagic Belt";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData ExtremeAntiMagicBelt0
+//{
+//	description = "Extreme AntiMagic Belt";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[GodlyAntiMagicBelt, $AccessoryType] = $BeltAccessoryType;
 $AccessoryVar[GodlyAntiMagicBelt, $SpecialVar] = "3 2500";
 $AccessoryVar[GodlyAntiMagicBelt, $Weight] = 200;
 $AccessoryVar[GodlyAntiMagicBelt, $MiscInfo] = "A strong magical belt which gives you godly protection from magic.";
 
-ItemData GodlyAntiMagicBelt
-{
-	description = "Godly AntiMagic Belt";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData GodlyAntiMagicBelt0
-{
-	description = "Godly AntiMagic Belt";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData GodlyAntiMagicBelt - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Godly AntiMagic Belt";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData GodlyAntiMagicBelt0
+//{
+//	description = "Godly AntiMagic Belt";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 $AccessoryVar[HeavenlyAntiMagicBelt, $AccessoryType] = $BeltAccessoryType;
 $AccessoryVar[HeavenlyAntiMagicBelt, $SpecialVar] = "3 3750";
 $AccessoryVar[HeavenlyAntiMagicBelt, $Weight] = 300;
 $AccessoryVar[HeavenlyAntiMagicBelt, $MiscInfo] = "A heavenly magical belt which provides divine protection from magic.";
 
-ItemData HeavenlyAntiMagicBelt
-{
-	description = "Heavenly AntiMagic Belt";
-	className = "Accessory";
-	shapeFile = "discammo";
-
-	heading = "eMiscellany";
-	price = 0;
-};
-ItemData HeavenlyAntiMagicBelt0
-{
-	description = "Heavenly AntiMagic Belt";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// ItemData HeavenlyAntiMagicBelt - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
+//{
+//	description = "Heavenly AntiMagic Belt";
+//	className = "Accessory";
+//	shapeFile = "discammo";
+//
+//	heading = "eMiscellany";
+//	price = 0;
+//};
+//ItemData HeavenlyAntiMagicBelt0
+//{
+//	description = "Heavenly AntiMagic Belt";
+//	className = "Equipped";
+//	shapeFile = "discammo";
+//
+//	heading = "aArmor";
+//};
 
 //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 //   ARMOR MODIFYING ACCESSORIES
@@ -1464,6 +1458,10 @@ function AdminBoots::startRaceChangeSequence(%clientId)
 	if(%clientId == -1 || %clientId == "")
 		return;
 	
+	// CRITICAL: Block attacks during the entire AdminBoots sequence to prevent spam
+	// Each datablock change (armor or race) can trigger an engine-level fire event if holding the button.
+	$SkillUpgradeRefreshScheduled[%clientId] = "true";
+	
 	// CRITICAL: Preserve current mana before race change (ChangeRace sets mana to full)
 	%currentMana = fetchData(%clientId, "MANA");
 	
@@ -1508,6 +1506,9 @@ function AdminBoots::startRaceChangeSequence(%clientId)
 	
 	// Clear the preserve mana flag
 	storeData(%clientId, "AdminBootsPreserveMana", "");
+
+	// CRITICAL: Clear the attack guard flag only once the sequence is fully complete
+	$SkillUpgradeRefreshScheduled[%clientId] = "";
 }
 
 function AdminBoots::onUnmount(%player, %item, %slot)

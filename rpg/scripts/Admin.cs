@@ -1255,3 +1255,527 @@ function FormatLargeNumber(%number)
 	
 	return %mantissaInt @ "." @ %decStr @ "e+" @ %expStr;
 }
+
+//============================================================================
+// DEBUG: Admin::DebugPlayerFlags - Show all state flags on a player
+// Usage: #debugflags or #debugflags <playername>
+//============================================================================
+
+// Helper to display a value (shows "(empty)" if empty)
+function Admin::FlagValue(%val)
+{
+	if(%val == "" || %val == -1)
+		return "(empty)";
+	return %val;
+}
+
+// Helper to send message to client AND echo to console
+function Admin::DebugMsg(%adminId, %color, %msg)
+{
+	Client::sendMessage(%adminId, %color, %msg);
+	echo("[DEBUGFLAGS] " @ %msg);
+}
+
+function Admin::DebugPlayerFlags(%adminId, %targetName)
+{
+	// If no target name, use admin as target
+	if(%targetName == "" || %targetName == -1)
+		%targetId = %adminId;
+	else
+	{
+		// Check if input is a numeric clientId (all digits)
+		%isNumeric = true;
+		for(%i = 0; %i < String::len(%targetName); %i++)
+		{
+			%char = String::getSubStr(%targetName, %i, 1);
+			if(%char < "0" || %char > "9")
+			{
+				%isNumeric = false;
+				break;
+			}
+		}
+		
+		if(%isNumeric)
+			%targetId = %targetName;  // Use directly as clientId
+		else
+			%targetId = NEWgetClientByName(%targetName);  // Look up by name
+	}
+	
+	if(%targetId == -1 || %targetId == "")
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "Player '" @ %targetName @ "' not found.");
+		return;
+	}
+	
+	%name = Client::getName(%targetId);
+	
+	Admin::DebugMsg(%adminId, $MsgYellow, "=== DEBUG FLAGS FOR " @ %name @ " (ID: " @ %targetId @ ") ===");
+	
+	// PLAYER OBJECT INFO (most important for visual issues)
+	Admin::DebugMsg(%adminId, $MsgBeige, "[PLAYER OBJECT]");
+	%playerObj = Client::getOwnedObject(%targetId);
+	Admin::DebugMsg(%adminId, 0, "  OwnedObject: " @ Admin::FlagValue(%playerObj));
+	if(%playerObj != "" && %playerObj != -1)
+	{
+		%pos = GameBase::getPosition(%playerObj);
+		%team = GameBase::getTeam(%playerObj);
+		Admin::DebugMsg(%adminId, 0, "  Position: " @ Admin::FlagValue(%pos));
+		Admin::DebugMsg(%adminId, 0, "  Team: " @ Admin::FlagValue(%team));
+	}
+	else
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "  ** NO PLAYER OBJECT - Client has no owned object! **");
+	}
+	
+	// ARMOR/SKIN INFO - Scan inventory for equipped items
+	Admin::DebugMsg(%adminId, $MsgBeige, "[EQUIPPED ITEMS]");
+	if(%playerObj != "" && %playerObj != -1)
+	{
+		// Get armor datablock (what Tribes engine uses for model)
+		%armorDatablock = Player::getArmor(%playerObj);
+		Admin::DebugMsg(%adminId, 0, "  ArmorDatablock: " @ Admin::FlagValue(%armorDatablock));
+		
+		// Get skin base
+		%skinBase = Client::getSkinBase(%targetId);
+		Admin::DebugMsg(%adminId, 0, "  SkinBase: " @ Admin::FlagValue(%skinBase));
+		
+		// Scan inventory for equipped body armor
+		// type 3 = Accessory OR Equipped className items
+		%equippedList = GetAccessoryList(%targetId, 3, "");
+		Admin::DebugMsg(%adminId, 0, "  RawEquippedList: " @ Admin::FlagValue(%equippedList));  // DEBUG
+		%foundBodyArmor = "";
+		%foundShield = "";
+		%foundHelmet = "";
+		%foundBoots = "";
+		%foundRing = "";
+		%foundNecklace = "";
+		%foundBelt = "";
+		
+		for(%i = 0; (%w = getCroppedItem(GetWord(%equippedList, %i))) != -1; %i++)
+		{
+			%accType = $AccessoryVar[%w, $AccessoryType];
+			if(%accType == $BodyAccessoryType)
+				%foundBodyArmor = %w;
+			else if(%accType == $ShieldAccessoryType)
+				%foundShield = %w;
+			else if(%accType == $HeadAccessoryType)
+				%foundHelmet = %w;
+			else if(%accType == $BootsAccessoryType)
+				%foundBoots = %w;
+			else if(%accType == $RingAccessoryType)
+				%foundRing = %w;
+			else if(%accType == $TalismanAccessoryType)
+				%foundNecklace = %w;
+			else if(%accType == $BeltAccessoryType)
+				%foundBelt = %w;
+		}
+		
+		Admin::DebugMsg(%adminId, 0, "  BodyArmor: " @ Admin::FlagValue(%foundBodyArmor));
+		Admin::DebugMsg(%adminId, 0, "  Shield: " @ Admin::FlagValue(%foundShield));
+		Admin::DebugMsg(%adminId, 0, "  Helmet: " @ Admin::FlagValue(%foundHelmet));
+		Admin::DebugMsg(%adminId, 0, "  Boots: " @ Admin::FlagValue(%foundBoots));
+		Admin::DebugMsg(%adminId, 0, "  Ring: " @ Admin::FlagValue(%foundRing));
+		Admin::DebugMsg(%adminId, 0, "  Necklace: " @ Admin::FlagValue(%foundNecklace));
+		Admin::DebugMsg(%adminId, 0, "  Belt: " @ Admin::FlagValue(%foundBelt));
+		
+		// Mounted weapon
+		%mountedWeapon = Player::getMountedItem(%playerObj, $WeaponSlot);
+		Admin::DebugMsg(%adminId, 0, "  MountedWeapon: " @ Admin::FlagValue(%mountedWeapon));
+	}
+	
+	// VISIBILITY FLAGS
+	Admin::DebugMsg(%adminId, $MsgBeige, "[VISIBILITY]");
+	%invisible = fetchData(%targetId, "invisible");
+	%blockHide = fetchData(%targetId, "blockHide");
+	Admin::DebugMsg(%adminId, 0, "  invisible: " @ Admin::FlagValue(%invisible));
+	Admin::DebugMsg(%adminId, 0, "  blockHide: " @ Admin::FlagValue(%blockHide));
+	
+	// COMBAT FLAGS
+	Admin::DebugMsg(%adminId, $MsgBeige, "[COMBAT]");
+	%targetLock = fetchData(%targetId, "targetLock");
+	%stunned = fetchData(%targetId, "stunned");
+	%sleeping = fetchData(%targetId, "sleeping");
+	%frozen = fetchData(%targetId, "frozen");
+	%paralyzed = fetchData(%targetId, "paralyzed");
+	%noDropLootbagFlag = fetchData(%targetId, "noDropLootbagFlag");
+	%noExperienceFlag = fetchData(%targetId, "noExperienceFlag");
+	Admin::DebugMsg(%adminId, 0, "  targetLock: " @ Admin::FlagValue(%targetLock));
+	Admin::DebugMsg(%adminId, 0, "  stunned: " @ Admin::FlagValue(%stunned));
+	Admin::DebugMsg(%adminId, 0, "  sleeping: " @ Admin::FlagValue(%sleeping));
+	Admin::DebugMsg(%adminId, 0, "  frozen: " @ Admin::FlagValue(%frozen));
+	Admin::DebugMsg(%adminId, 0, "  paralyzed: " @ Admin::FlagValue(%paralyzed));
+	Admin::DebugMsg(%adminId, 0, "  noDropLootbagFlag: " @ Admin::FlagValue(%noDropLootbagFlag));
+	Admin::DebugMsg(%adminId, 0, "  noExperienceFlag: " @ Admin::FlagValue(%noExperienceFlag));
+	
+	// ZONE/LOCATION FLAGS
+	Admin::DebugMsg(%adminId, $MsgBeige, "[ZONE/LOCATION]");
+	%zone = fetchData(%targetId, "zone");
+	%tmpzone = fetchData(%targetId, "tmpzone");
+	%lastPos = fetchData(%targetId, "lastPos");
+	if(%zone != "" && %zone != -1)
+		Admin::DebugMsg(%adminId, 0, "  zone: " @ %zone @ " (" @ Zone::getDesc(%zone) @ ")");
+	else
+		Admin::DebugMsg(%adminId, 0, "  zone: (empty)");
+	Admin::DebugMsg(%adminId, 0, "  tmpzone: " @ Admin::FlagValue(%tmpzone));
+	Admin::DebugMsg(%adminId, 0, "  lastPos: " @ Admin::FlagValue(%lastPos));
+	
+	// STATE FLAGS
+	Admin::DebugMsg(%adminId, $MsgBeige, "[STATE]");
+	%dead = IsDead(%targetId);
+	%inCombat = fetchData(%targetId, "inCombat");
+	%isBonused = fetchData(%targetId, "isBonused");
+	%isPolymorphed = fetchData(%targetId, "isPolymorphed");
+	%HasLoadedAndSpawned = fetchData(%targetId, "HasLoadedAndSpawned");
+	Admin::DebugMsg(%adminId, 0, "  IsDead(): " @ %dead);
+	Admin::DebugMsg(%adminId, 0, "  inCombat: " @ Admin::FlagValue(%inCombat));
+	Admin::DebugMsg(%adminId, 0, "  isBonused: " @ Admin::FlagValue(%isBonused));
+	Admin::DebugMsg(%adminId, 0, "  isPolymorphed: " @ Admin::FlagValue(%isPolymorphed));
+	Admin::DebugMsg(%adminId, 0, "  HasLoadedAndSpawned: " @ Admin::FlagValue(%HasLoadedAndSpawned));
+	
+	// BOT FLAGS (for distinguishing bots from players)
+	Admin::DebugMsg(%adminId, $MsgBeige, "[BOT DETECTION]");
+	%spawnBotInfo = fetchData(%targetId, "SpawnBotInfo");
+	%botInfoAiName = fetchData(%targetId, "BotInfoAiName");
+	%isAI = Player::isAiControlled(%targetId);
+	%isRPGAI = isRPGAI(%targetId);
+	%isTownBot = IsTownBot(%targetId);
+	%isEnemyBot = IsEnemyBot(%targetId);
+	Admin::DebugMsg(%adminId, 0, "  Player::isAiControlled(): " @ %isAI);
+	Admin::DebugMsg(%adminId, 0, "  isRPGAI(): " @ %isRPGAI);
+	Admin::DebugMsg(%adminId, 0, "  IsTownBot(): " @ %isTownBot);
+	Admin::DebugMsg(%adminId, 0, "  IsEnemyBot(): " @ %isEnemyBot);
+	Admin::DebugMsg(%adminId, 0, "  SpawnBotInfo: " @ Admin::FlagValue(%spawnBotInfo));
+	Admin::DebugMsg(%adminId, 0, "  BotInfoAiName: " @ Admin::FlagValue(%botInfoAiName));
+	
+	// BONUS STATES
+	Admin::DebugMsg(%adminId, $MsgBeige, "[BONUS STATES]");
+	%hasBonusStates = false;
+	for(%i = 1; %i <= $maxBonusStates; %i++)
+	{
+		%state = $BonusState[%targetId, %i];
+		%cnt = $BonusStateCnt[%targetId, %i];
+		if(%state != "" && %cnt != "" && %cnt > 0)
+		{
+			Admin::DebugMsg(%adminId, 0, "  [" @ %i @ "] " @ %state @ " (ticks: " @ %cnt @ ")");
+			%hasBonusStates = true;
+		}
+	}
+	if(!%hasBonusStates)
+		Admin::DebugMsg(%adminId, 0, "  (none active)");
+	
+	// ASCENSION TALENTS
+	Admin::DebugMsg(%adminId, $MsgBeige, "[ASCENSION]");
+	%talents = fetchData(%targetId, "AscensionTalents");
+	if(%talents != "" && %talents != -1)
+		Admin::DebugMsg(%adminId, 0, "  Talents: " @ %talents);
+	else
+		Admin::DebugMsg(%adminId, 0, "  Talents: (none)");
+	
+	// DUAL WIELDING
+	Admin::DebugMsg(%adminId, $MsgBeige, "[DUAL WIELD]");
+	%dualWieldToggle = fetchData(%targetId, "DualWield::ToggleMode");
+	%offHand = fetchData(%targetId, "DualWield::OffHandWeapon");
+	Admin::DebugMsg(%adminId, 0, "  ToggleMode: " @ Admin::FlagValue(%dualWieldToggle));
+	if(%offHand != "" && %offHand != -1 && %offHand != "0")
+		Admin::DebugMsg(%adminId, 0, "  OffHandWeapon: " @ %offHand);
+	else
+		Admin::DebugMsg(%adminId, 0, "  OffHandWeapon: (none)");
+	
+	Admin::DebugMsg(%adminId, $MsgYellow, "=== END DEBUG FLAGS ===");
+}
+
+//============================================================================
+// DEBUG: Admin::FixPlayerVisibility - Force a visual refresh of a player
+// Usage: #fixvisible <playername or clientId>
+//============================================================================
+function Admin::FixPlayerVisibility(%adminId, %targetName)
+{
+	if(%targetName == "" || %targetName == -1)
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "Usage: #fixvisible <playername or clientId>");
+		return;
+	}
+	
+	// Check if input is a numeric clientId (all digits)
+	%isNumeric = true;
+	for(%i = 0; %i < String::len(%targetName); %i++)
+	{
+		%char = String::getSubStr(%targetName, %i, 1);
+		if(%char < "0" || %char > "9")
+		{
+			%isNumeric = false;
+			break;
+		}
+	}
+	
+	if(%isNumeric)
+		%targetId = %targetName;  // Use directly as clientId
+	else
+		%targetId = NEWgetClientByName(%targetName);  // Look up by name
+	
+	if(%targetId == -1 || %targetId == "")
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "Player '" @ %targetName @ "' not found.");
+		return;
+	}
+
+	
+	%name = Client::getName(%targetId);
+	%playerObj = Client::getOwnedObject(%targetId);
+	
+	if(%playerObj == "" || %playerObj == -1)
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "Player '" @ %name @ "' has no Player object!");
+		return;
+	}
+	
+	Admin::DebugMsg(%adminId, $MsgYellow, "Attempting to fix visibility for " @ %name @ "...");
+	
+	// Step 1: Clear invisible flag and related state
+	storeData(%targetId, "invisible", "");
+	storeData(%targetId, "blockHide", "");
+	Admin::DebugMsg(%adminId, 0, "  [1] Cleared invisible/blockHide flags");
+	
+	// Step 2: Force fade in
+	GameBase::startFadeIn(%playerObj);
+	Admin::DebugMsg(%adminId, 0, "  [2] Forced GameBase::startFadeIn()");
+	
+	// Step 3: Find equipped body armor from player's inventory
+	// Use same logic as RefreshAll in rpgfunk.cs
+	%foundArmor = "";
+	%list = GetAccessoryList(%targetId, 2, "3 7");  // Get equipped accessories
+	for(%i = 0; (%w = getCroppedItem(GetWord(%list, %i))) != -1; %i++)
+	{
+		if($AccessoryVar[%w, $AccessoryType] == $BodyAccessoryType)
+		{
+			%foundArmor = %w;
+			break;
+		}
+	}
+	
+	if(%foundArmor != "" && %foundArmor != -1)
+	{
+		Admin::DebugMsg(%adminId, 0, "  [3] Found equipped armor in inventory: " @ %foundArmor);
+		
+		// Store it back to fix the corrupted stored data
+		storeData(%targetId, "ArmorEquipped", %foundArmor);
+	}
+	else
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "  [3] No body armor found in inventory! Using default.");
+		%foundArmor = "RatSkinShirt";  // Default starter armor
+	}
+	
+	// Step 4: Determine race and build proper armor datablock name
+	%race = fetchData(%targetId, "RACE");
+	if(%race == "" || %race == -1)
+		%race = "MaleHuman";
+	
+	// Try to find correct armor suffix from current armor or default to Armor7
+	%currentArmorDb = Player::getArmor(%playerObj);
+	%armorSuffix = "Armor7";  // Default
+	if(%currentArmorDb != "" && %currentArmorDb != -1)
+	{
+		%suffixPos = String::findSubStr(%currentArmorDb, "Armor");
+		if(%suffixPos >= 0)
+		{
+			%armorSuffix = String::getSubStr(%currentArmorDb, %suffixPos, 99999);
+		}
+	}
+	
+	// Check for player model override
+	%apm = "";
+	if($ArmorPlayerModel[%foundArmor] != "")
+		%apm = $ArmorPlayerModel[%foundArmor];
+	
+	%newArmorDb = %race @ %apm @ %armorSuffix;
+	Player::setArmor(%playerObj, %newArmorDb);
+	Admin::DebugMsg(%adminId, 0, "  [4] Set armor datablock: " @ %newArmorDb);
+	
+	// Step 5: Force skin refresh
+	%skin = $ArmorSkin[%foundArmor];
+	if(%skin != "" && %skin != -1)
+	{
+		Client::setSkin(%targetId, %race @ %skin);
+		Admin::DebugMsg(%adminId, 0, "  [5] Applied skin: " @ %race @ %skin);
+	}
+	else
+	{
+		Client::setSkin(%targetId, %race @ "base");
+		Admin::DebugMsg(%adminId, 0, "  [5] Applied default skin: " @ %race @ "base");
+	}
+	
+	// Step 6: Call RefreshAll to fully sync stats
+	RefreshAll(%targetId);
+	Admin::DebugMsg(%adminId, 0, "  [6] Called RefreshAll()");
+	
+	Admin::DebugMsg(%adminId, $MsgGreen, "Visibility fix applied to " @ %name @ ". If still invisible, player may need to respawn (#killme).");
+	Client::sendMessage(%targetId, $MsgGreen, "An admin attempted to fix your visibility. If you're still invisible, try #killme to respawn.");
+}
+
+//============================================================================
+// DEBUG: Admin::DiagnoseInvisible - Diagnose invisibility bug
+// Usage: #debuginvis <playername or clientId>
+//============================================================================
+function Admin::DiagnoseInvisible(%adminId, %targetName)
+{
+	if(%targetName == "" || %targetName == -1)
+		%targetId = %adminId;
+	else
+	{
+		// Check if input is numeric clientId
+		%isNumeric = true;
+		for(%i = 0; %i < String::len(%targetName); %i++)
+		{
+			%char = String::getSubStr(%targetName, %i, 1);
+			if(%char < "0" || %char > "9")
+			{
+				%isNumeric = false;
+				break;
+			}
+		}
+		
+		if(%isNumeric)
+			%targetId = %targetName;
+		else
+			%targetId = NEWgetClientByName(%targetName);
+	}
+	
+	if(%targetId == -1 || %targetId == "")
+	{
+		Client::sendMessage(%adminId, $MsgRed, "Player '" @ %targetName @ "' not found.");
+		echo("[INVIS DEBUG] Player '" @ %targetName @ "' not found.");
+		return;
+	}
+	
+	%name = Client::getName(%targetId);
+	%playerObj = Client::getOwnedObject(%targetId);
+	
+	Client::sendMessage(%adminId, $MsgYellow, "=== INVISIBILITY DIAGNOSIS FOR " @ %name @ " (clientId=" @ %targetId @ ") ===");
+	echo("=== INVISIBILITY DIAGNOSIS FOR " @ %name @ " (clientId=" @ %targetId @ ") ===");
+	
+	// PLAYER OBJECT STATUS
+	Client::sendMessage(%adminId, $MsgBeige, "[INVIS DEBUG] --- PLAYER OBJECT ---");
+	Client::sendMessage(%adminId, 0, "Client::getOwnedObject(): " @ %playerObj);
+	echo("[INVIS DEBUG] --- PLAYER OBJECT ---");
+	echo("[INVIS DEBUG] Client::getOwnedObject(): " @ %playerObj);
+	
+	if(%playerObj != "" && %playerObj != -1)
+	{
+		Client::sendMessage(%adminId, 0, "isObject(playerObj): " @ isObject(%playerObj));
+		Client::sendMessage(%adminId, 0, "GameBase::getPosition(): " @ GameBase::getPosition(%playerObj));
+		Client::sendMessage(%adminId, 0, "Player::getArmor(): " @ Player::getArmor(%playerObj));
+		Client::sendMessage(%adminId, 0, "Player::getClient(playerObj): " @ Player::getClient(%playerObj));
+		
+		echo("[INVIS DEBUG] isObject(playerObj): " @ isObject(%playerObj));
+		echo("[INVIS DEBUG] GameBase::getPosition(): " @ GameBase::getPosition(%playerObj));
+		echo("[INVIS DEBUG] Player::getArmor(): " @ Player::getArmor(%playerObj));
+		echo("[INVIS DEBUG] Player::getClient(playerObj): " @ Player::getClient(%playerObj));
+		
+		// Reverse verification
+		%reverseClientId = GetClientIdFromPlayerObject(%playerObj);
+		Client::sendMessage(%adminId, 0, "GetClientIdFromPlayerObject(): " @ %reverseClientId);
+		echo("[INVIS DEBUG] GetClientIdFromPlayerObject(): " @ %reverseClientId);
+		if(%reverseClientId != %targetId)
+		{
+			Client::sendMessage(%adminId, $MsgRed, "*** MISMATCH! GetClientIdFromPlayerObject returned different clientId! ***");
+			echo("[INVIS DEBUG] *** MISMATCH! GetClientIdFromPlayerObject returned different clientId! ***");
+		}
+	}
+	else
+	{
+		Client::sendMessage(%adminId, $MsgRed, "*** NO PLAYER OBJECT - THIS IS BAD! ***");
+		echo("[INVIS DEBUG] *** NO PLAYER OBJECT - THIS IS BAD! ***");
+	}
+	
+	// ZONE STATUS
+	Client::sendMessage(%adminId, $MsgBeige, "[INVIS DEBUG] --- ZONE STATUS ---");
+	%zone = fetchData(%targetId, "zone");
+	%tmpzone = fetchData(%targetId, "tmpzone");
+	%lastPos = fetchData(%targetId, "lastPos");
+	%zoneLastPos = %targetId.zoneLastPos;
+	
+	Client::sendMessage(%adminId, 0, "zone: " @ %zone @ " (" @ Zone::getDesc(%zone) @ ")");
+	Client::sendMessage(%adminId, 0, "tmpzone: " @ %tmpzone);
+	Client::sendMessage(%adminId, 0, "lastPos: " @ %lastPos);
+	Client::sendMessage(%adminId, 0, "zoneLastPos: " @ %zoneLastPos);
+	
+	echo("[INVIS DEBUG] --- ZONE STATUS ---");
+	echo("[INVIS DEBUG] zone: " @ %zone @ " (" @ Zone::getDesc(%zone) @ ")");
+	echo("[INVIS DEBUG] tmpzone: " @ %tmpzone);
+	echo("[INVIS DEBUG] lastPos: " @ %lastPos);
+	echo("[INVIS DEBUG] zoneLastPos: " @ %zoneLastPos);
+	
+	if(%tmpzone == "" || %tmpzone == 0 || %tmpzone == -1)
+	{
+		Client::sendMessage(%adminId, $MsgRed, "*** tmpzone IS EMPTY - setzoneflags() not running for this player! ***");
+		echo("[INVIS DEBUG] *** tmpzone IS EMPTY - setzoneflags() not running for this player! ***");
+	}
+	
+	// CONTAINERBOXFILLSET TEST - See if engine can find the player
+	Client::sendMessage(%adminId, $MsgBeige, "[INVIS DEBUG] --- CONTAINER BOX TEST ---");
+	echo("[INVIS DEBUG] --- CONTAINER BOX TEST ---");
+	if(%playerObj != "" && %playerObj != -1)
+	{
+		%pos = GameBase::getPosition(%playerObj);
+		%testSet = newObject("testSet", SimSet);
+		%numFound = containerBoxFillSet(%testSet, $SimPlayerObjectType, %pos, 50, 50, 50, 0);
+		
+		Client::sendMessage(%adminId, 0, "containerBoxFillSet found " @ %numFound @ " objects near player position");
+		echo("[INVIS DEBUG] containerBoxFillSet found " @ %numFound @ " objects near player position");
+		
+		// Check if this player is in the set
+		%foundSelf = false;
+		for(%i = 0; %i < %numFound; %i++)
+		{
+			%obj = Group::getObject(%testSet, %i);
+			if(%obj == %playerObj)
+			{
+				%foundSelf = true;
+				break;
+			}
+		}
+		deleteObject(%testSet);
+		
+		if(%foundSelf)
+		{
+			Client::sendMessage(%adminId, $MsgGreen, "Player IS found by containerBoxFillSet - zone detection should work");
+			echo("[INVIS DEBUG] Player IS found by containerBoxFillSet - zone detection should work");
+		}
+		else
+		{
+			Client::sendMessage(%adminId, $MsgRed, "*** PLAYER NOT FOUND by containerBoxFillSet - ENGINE CANNOT SEE THEM! ***");
+			echo("[INVIS DEBUG] *** PLAYER NOT FOUND by containerBoxFillSet - ENGINE CANNOT SEE THEM! ***");
+		}
+	}
+	
+	// VISIBILITY FLAGS
+	Client::sendMessage(%adminId, $MsgBeige, "[INVIS DEBUG] --- VISIBILITY FLAGS ---");
+	Client::sendMessage(%adminId, 0, "invisible: " @ fetchData(%targetId, "invisible"));
+	Client::sendMessage(%adminId, 0, "blockHide: " @ fetchData(%targetId, "blockHide"));
+	Client::sendMessage(%adminId, 0, "HasLoadedAndSpawned: " @ fetchData(%targetId, "HasLoadedAndSpawned"));
+	Client::sendMessage(%adminId, 0, "Client::getSkinBase(): " @ Client::getSkinBase(%targetId));
+	
+	echo("[INVIS DEBUG] --- VISIBILITY FLAGS ---");
+	echo("[INVIS DEBUG] invisible: " @ fetchData(%targetId, "invisible"));
+	echo("[INVIS DEBUG] blockHide: " @ fetchData(%targetId, "blockHide"));
+	echo("[INVIS DEBUG] HasLoadedAndSpawned: " @ fetchData(%targetId, "HasLoadedAndSpawned"));
+	echo("[INVIS DEBUG] Client::getSkinBase(): " @ Client::getSkinBase(%targetId));
+	
+	// RECENT ARMOR CHANGES
+	Client::sendMessage(%adminId, $MsgBeige, "[INVIS DEBUG] --- ARMOR/APPEARANCE ---");
+	echo("[INVIS DEBUG] --- ARMOR/APPEARANCE ---");
+	if(%playerObj != "" && %playerObj != -1)
+	{
+		%armor = Player::getArmor(%playerObj);
+		Client::sendMessage(%adminId, 0, "Current armor datablock: " @ %armor);
+		echo("[INVIS DEBUG] Current armor datablock: " @ %armor);
+	}
+	%equippedList = GetAccessoryList(%targetId, 2, "3 7");
+	Client::sendMessage(%adminId, 0, "GetAccessoryList(equipped): " @ %equippedList);
+	echo("[INVIS DEBUG] GetAccessoryList(equipped): " @ %equippedList);
+	
+	Client::sendMessage(%adminId, $MsgYellow, "=== END INVISIBILITY DIAGNOSIS ===");
+	echo("=== END INVISIBILITY DIAGNOSIS ===");
+}
+

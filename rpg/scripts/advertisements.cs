@@ -32,17 +32,29 @@ function AddAd(%line0, %line1, %line2, %line3, %line4)
 AddAd("Welcome to Kingdom of Kronos - Hosted by Jobo",
       "       Active development by Jobo");
 
+AddAd("-=Accessories Migrated to BACKPACK system=-",
+      "Belts, Rings and Necklaces are now found in your Backpack",
+      "You can equip, unequip, inspect, drop, sell and bank them through the tab menu.",
+      "If any issues occur, please let me know!");
 
+AddAd("-=New TownBot Features=-",
+      "Run into a Banker or Merchant Townbot to automatically open their menu!",
+      "The banker menu now uses the Tab GUI for easier and cleaner access. No more #say commands!");
 
-AddAd("Ascension Talents are here!",
+AddAd("-=Ascension Talents=-",
       "Players are now able to spend Remorts and SP to unlock PERMANENT Ascension Talents - Boosting your player as you regain them!",
       "Visit the Ascension Master in the Kingdom of Kronos to learn more.");
 
-AddAd("Auto Party now LIVE",
+AddAd("-=Dual Wield Ascension Talent=-",
+      "For 100 remorts players can purchase the Dual Wield talent!",
+	"Use '#dualwield help' for information on how to use it when purchased.",
+      "Visit the Ascension Master in the Kingdom of Kronos to purchase it.");
+
+AddAd("-=Auto Party=-",
       "Use #autoparty ON to enable, #autoparty OFF to disable",
       "This will automatically party you with other players in DUNGEONS if they also have it enabled.");
 
-AddAd("Auto Skill Upgrades now LIVE",
+AddAd("=-Auto Skill Upgrades=-",
       "Use #autoskill for a description of how it works",
       "This will automatically upgrade your skills as you level up!",
       "No more manually increasing skills as you level.");
@@ -83,16 +95,15 @@ AddAd("House Artifacts and Bases NOW SAVE",
       "They will restore if the server crashes or restarts.",
       "Let the battles begin!");
 
-AddAd("The server has been updated to v0.8.1",
-      "Please report any bugs to the TRPG Discord Server",
-      "In the KoK mod channel",
-      "Or use the #bugreport command");
+AddAd("The server has been updated to v0.8.5",
+      "Please report any bugs to the TRPG Discord Server in the KoK mod channel, or use the #bugreport command",
+	 "Thank you to everyone who has contributed to bug finding!");
 
 AddAd("Want to suggest a feature or idea?",
       "Use #featurerequest or #requestfeature",
       "Your ideas could be added to the server!");
 
-AddAd("Vehicle Combat Skill Added",
+AddAd("-=Vehicle Combat Skill=-",
       "Every 100 points in the skill, Scout damage increases by 1.",
       "The skill is capped at 1000 points.");
 

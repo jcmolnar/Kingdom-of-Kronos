@@ -383,4 +383,157 @@ function WhiteDiamondVoidImpaler::onMount(%player,%item,$WeaponSlot)
 {   %client = Player::getclient(%player); 
    bottomprint(%client, "<f1>White Diamond Void Impaler: <f0>Attack: <f2>750    <f0>Skill Piercing Req @ <f2>2500 Remort 75    <f0>Speed: <f2>0.45 Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
 }
+
+//****************************************************************************************************
+//   SPECIAL WEAPONS (Remort 100 Tier)
+//****************************************************************************************************
+
+// Final Verdict (Bludgeoning - BattleAxe) - 1% instant kill on non-boss targets
+$AccessoryVar[FinalVerdict, $AccessoryType] = $BludgeonAccessoryType;
+$AccessoryVar[FinalVerdict, $SpecialVar] = "6 900";
+$AccessoryVar[FinalVerdict, $Weight] = 3.0;
+$AccessoryVar[FinalVerdict, $MiscInfo] = "An executioner's axe that delivers final judgement - 1% chance to instantly kill non-boss targets. Note: Does not work on Quest, Seal or Colloseum Bots.";
+$SkillType[FinalVerdict] = $SkillBludgeoning;
+$ItemCost[FinalVerdict] = 10000000000;
+$SkillRestriction[FinalVerdict] = $SkillBludgeoning @ " 2800 " @ $MinRemort @ " 100";
+$WeaponDelay[FinalVerdict] = 0.5;
+$WeaponEffect[FinalVerdict] = "INSTANT_KILL";
+$WeaponEffectChance[FinalVerdict] = 1;
+
+ItemImageData FinalVerdictImage
+{
+	shapeFile  = "BattleAxe";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing5;
+	sfxActivate = AxeSlash2;
+};
+ItemData FinalVerdict
+{
+	heading = "bWeapons";
+	description = "Final Verdict";
+	className = "Weapon";
+	shapeFile  = "BattleAxe";
+	hudIcon = "sclub";
+	shadowDetailMask = 4;
+	imageType = FinalVerdictImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function FinalVerdictImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(FinalVerdict), FinalVerdict);
+}
+
+function FinalVerdict::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>Final Verdict: <f0>Attack: <f2>900    <f0>Skill Bludgeoning Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>3.0 Lbs    <f3>SPECIAL: 1% Instant Kill (Not Quest/Seal/Colloseum Bots)");
+}
+
+// Storm Caller (Piercing - Trident) - Lightning strike every 5 hits
+$AccessoryVar[StormCaller, $AccessoryType] = $PolearmAccessoryType;
+$AccessoryVar[StormCaller, $SpecialVar] = "6 900";
+$AccessoryVar[StormCaller, $Weight] = 2.0;
+$AccessoryVar[StormCaller, $MiscInfo] = "A trident that calls down lightning every 5th strike";
+$SkillType[StormCaller] = $SkillPiercing;
+$ItemCost[StormCaller] = 10000000000;
+$SkillRestriction[StormCaller] = $SkillPiercing @ " 2800 " @ $MinRemort @ " 100";
+$WeaponDelay[StormCaller] = 0.5;
+$WeaponEffect[StormCaller] = "LIGHTNING_STRIKE";
+$WeaponEffectFrequency[StormCaller] = 5;
+
+ItemImageData StormCallerImage
+{
+	shapeFile  = "trident";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing3;
+	sfxActivate = AxeSlash2;
+};
+ItemData StormCaller
+{
+	heading = "bWeapons";
+	description = "Storm Caller";
+	className = "Weapon";
+	shapeFile  = "trident";
+	hudIcon = "trident";
+	shadowDetailMask = 4;
+	imageType = StormCallerImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function StormCallerImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(StormCaller), StormCaller);
+}
+
+function StormCaller::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>Storm Caller: <f0>Attack: <f2>900    <f0>Skill Piercing Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>2.0 Lbs    <f3>SPECIAL: Lightning Strike every 5 hits");
+}
+
+// World Splitter (Slashing - Claymore) - Odd hits physical, even hits magic
+$AccessoryVar[WorldSplitter, $AccessoryType] = $SwordAccessoryType;
+$AccessoryVar[WorldSplitter, $SpecialVar] = "6 900";
+$AccessoryVar[WorldSplitter, $Weight] = 3.5;
+$AccessoryVar[WorldSplitter, $MiscInfo] = "A claymore that splits between physical and magical damage, bypassing alternating defenses";
+$SkillType[WorldSplitter] = $SkillSlashing;
+$ItemCost[WorldSplitter] = 10000000000;
+$SkillRestriction[WorldSplitter] = $SkillSlashing @ " 2800 " @ $MinRemort @ " 100";
+$WeaponDelay[WorldSplitter] = 0.5;
+$WeaponEffect[WorldSplitter] = "ALTERNATING_DAMAGE";
+
+ItemImageData WorldSplitterImage
+{
+	shapeFile  = "katana";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing2;
+	sfxActivate = ActivateAS;
+};
+ItemData WorldSplitter
+{
+	heading = "bWeapons";
+	description = "World Splitter";
+	className = "Weapon";
+	shapeFile  = "katana";
+	hudIcon = "blaster";
+	shadowDetailMask = 4;
+	imageType = WorldSplitterImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function WorldSplitterImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(WorldSplitter), WorldSplitter);
+}
+
+function WorldSplitter::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>World Splitter: <f0>Attack: <f2>900    <f0>Skill Slashing Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>3.5 Lbs    <f3>SPECIAL: Alternating Phys/Magic Damage");
+}
 //============================================================================

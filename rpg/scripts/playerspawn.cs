@@ -161,7 +161,8 @@ function Game::playerSpawn(%clientId, %respawn)
 
 		%pl = spawnPlayer(%armor, %spawnPos, %spawnRot);
 		PlaySound(SoundSpawn2, %spawnPos);
-		GameBase::startFadeIn(Client::getOwnedObject(%clientId));
+		// NOTE: GameBase::startFadeIn moved to AFTER Client::setOwnedObject (see below)
+		// Previously this was calling startFadeIn on the OLD player object before the new one was assigned
 
 		echo("SPAWN: cl:" @ %clientId @ " pl:" @ %pl @ " marker:" @ %spawnMarker @ " position: " @ %spawnPos @ " armor:" @ %armor);
 
@@ -208,6 +209,11 @@ function Game::playerSpawn(%clientId, %respawn)
 			}
 			Client::setOwnedObject(%clientId, %pl);
 			Client::setControlObject(%clientId, %pl);
+			
+			// CRITICAL FIX: Call startFadeIn on the NEW player object AFTER setting ownership
+			// This was previously called on line 164 BEFORE setOwnedObject, fading in the wrong object
+			GameBase::startFadeIn(%pl);
+			
 			Game::playerSpawned(%pl, %clientId, %armor, %respawn);
 
 			if(%respawn)	      
@@ -296,6 +302,21 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 	// CRITICAL: Clear player connecting flag - player has fully spawned
 	// Bot spawn code checks this flag to avoid collision with connecting players
 	$ClientIdPlayerConnecting[%clientId] = "";
+	
+	// SPAWN PROTECTION: Give human players 5 seconds of invincibility after spawning
+	// This prevents damage from bots that were attacking the previous clientId occupant
+	if(!%isBot)
+	{
+		storeData(%clientId, "SpawnInvuln", "true");
+		$ClientData[%clientId, "SpawnInvuln"] = "true";
+		%playerName = Client::getName(%clientId);
+		if(%playerName != "" && %playerName != -1)
+		{
+			$SpawnInvulnByName[%playerName] = getSimTime();
+		}
+		// Clear spawn protection after 5 seconds
+		schedule("Game::ClearSpawnProtection(" @ %clientId @ ");", 5);
+	}
 
 	if(%clientId.RespawnMeInArena)
 	{
@@ -438,6 +459,16 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 	schedule("if(Client::getName(" @ %clientId @ ") != \"\") remoteEval(" @ %clientId @ ", \"setCommandStatus\", 0);", 0.5);
 	schedule("if(Client::getName(" @ %clientId @ ") != \"\") remoteEval(" @ %clientId @ ", \"setCommandStatus\", 0);", 1.0);
 	schedule("if(Client::getName(" @ %clientId @ ") != \"\") remoteEval(" @ %clientId @ ", \"setCommandStatus\", 0);", 2.0);
+	
+	// DEFENSIVE FIX: Final startFadeIn call at end of spawn to ensure visibility
+	// This is a "belt and suspenders" approach - even if something caused the player/bot
+	// to be faded out during spawn setup, this final call will bring them back visible
+	// Fixes intermittent invisibility bug that can occur on connection or respawn
+	%finalPlayerObj = Client::getOwnedObject(%clientId);
+	if(%finalPlayerObj != "" && %finalPlayerObj != -1 && isObject(%finalPlayerObj))
+	{
+		GameBase::startFadeIn(%finalPlayerObj);
+	}
 } 
 
 function Game::autoRespawn(%clientId)
@@ -447,3 +478,73 @@ function Game::autoRespawn(%clientId)
 	if(%clientId.dead == 1)
 		Game::playerSpawn(%clientId, True);
 }
+
+//============================================================================
+// SPAWN PROTECTION - Clear invincibility after timeout
+//============================================================================
+function Game::ClearSpawnProtection(%clientId)
+{
+	// Validate client still exists
+	if(Client::getName(%clientId) == "" || Client::getName(%clientId) == -1)
+		return;
+	
+	// Clear spawn protection flags
+	storeData(%clientId, "SpawnInvuln", "");
+	$ClientData[%clientId, "SpawnInvuln"] = "";
+	
+	%playerName = Client::getName(%clientId);
+	if(%playerName != "" && %playerName != -1)
+	{
+		$SpawnInvulnByName[%playerName] = "";
+	}
+}
+
+//============================================================================
+// VISIBILITY SAFETY NET - Periodic loop to fix random invisibility
+//============================================================================
+$VisibilitySafetyInterval = 30;  // Seconds between visibility checks
+
+function Game::StartVisibilitySafetyLoop()
+{
+	echo("[VISIBILITY] Starting periodic visibility safety net (every " @ $VisibilitySafetyInterval @ "s)");
+	schedule("Game::VisibilitySafetyCheck();", $VisibilitySafetyInterval);
+}
+
+function Game::VisibilitySafetyCheck()
+{
+	// Loop through all connected players and ensure they're visible
+	// This catches random invisibility issues that can occur during gameplay
+	
+	for(%clientId = Client::getFirst(); %clientId != -1; %clientId = Client::getNext(%clientId))
+	{
+		// Skip if client has no name (not fully connected)
+		%name = Client::getName(%clientId);
+		if(%name == "" || %name == -1)
+			continue;
+		
+		// Skip bots - they have defensive fixes in their spawn paths
+		if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+			continue;
+		
+		// Skip if intentionally invisible (Hide in Shadows skill)
+		if(fetchData(%clientId, "invisible"))
+			continue;
+		
+		// Skip dead players
+		if(IsDead(%clientId))
+			continue;
+		
+		// Get player object and ensure visibility
+		%playerObj = Client::getOwnedObject(%clientId);
+		if(%playerObj != "" && %playerObj != -1 && isObject(%playerObj))
+		{
+			GameBase::startFadeIn(%playerObj);
+		}
+	}
+	
+	// Schedule next check
+	schedule("Game::VisibilitySafetyCheck();", $VisibilitySafetyInterval);
+}
+
+// Start the visibility safety loop after server initialization (60 second delay)
+schedule("Game::StartVisibilitySafetyLoop();", 60);

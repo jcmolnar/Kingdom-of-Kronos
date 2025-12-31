@@ -203,6 +203,8 @@ function buyItem(%clientId, %item)
 			if($LastClickItemB[%clientId, %item] != %item)
 			{
 				Client::sendMessage(%clientId, $MsgWhite, "The " @ %item.description @ " will cost you " @ %cost @ " coins.");
+				%msg = WhatIs(%item);
+				bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
 
 				$LastClickItemB[%clientId, %item] = %item;
 				schedule("$LastClickItemB[" @ %clientId @ ", " @ %item @ "] = \"\";", 5);
@@ -470,6 +472,8 @@ function sellItem(%clientId, %item)
 			{
 				%cost = getSellCost(%clientId, %item);
 				Client::sendMessage(%clientId, $MsgWhite, "This merchant will give you " @ %cost @ " coins for the " @ %nitem.description @ ".");
+				%msg = WhatIs(%item);
+				bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
 
 				$LastClickItemS[%clientId, %nitem] = %nitem;
 				schedule("$LastClickItemS[" @ %clientId @ ", " @ %nitem @ "] = \"\";", 5);
@@ -558,9 +562,15 @@ function sellItem(%clientId, %item)
 		{
 			storeData(%clientId, "TempPack", SetStuffString(fetchData(%clientId, "TempPack"), %item, 1));
 			SetupCreatePack(%clientId);
+			%msg = WhatIs(%item);
+			bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
 		}
 		else
+		{
 			Client::sendMessage(%clientId, $MsgRed, "You can't select this item.~wC_BuySell.wav");
+			%msg = WhatIs(%item);
+			bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
+		}
 	}
 
 	return 0;

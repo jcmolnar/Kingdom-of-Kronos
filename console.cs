@@ -215,6 +215,8 @@ exec("gui.cs");
 exec("sae.cs");
 if(!$dedicated && isFile("RPG\\rpghud.cs"))
    exec("RPG\\rpghud.cs");
+if(!$dedicated && isFile("RPG\\CustomChatHUD.cs"))
+   exec("RPG\\CustomChatHUD.cs");
 exec("client.cs");
 exec("server.cs");
 exec("tsDefaultMatProps.cs");
@@ -237,13 +239,15 @@ exec("commander.cs");
 ExecModScripts();
 
 //
-// Default keys
+// Default keys (only for client, not dedicated server)
 //
-bind(keyboard, make, control, o, to, "messageCanvasDevice(MainWindow, outline);");
-bind(keyboard, make, sysreq, to, "screenShot(MainWindow);");
-bind(keyboard, make, control, "-", to, "prevRes(MainWindow);");
-bind(keyboard, make, control, "+",  to, "nextRes(MainWindow);");
-
+if(!$dedicated)
+{
+   bind(keyboard, make, control, o, to, "messageCanvasDevice(MainWindow, outline);");
+   bind(keyboard, make, sysreq, to, "screenShot(MainWindow);");
+   bind(keyboard, make, control, "-", to, "prevRes(MainWindow);");
+   bind(keyboard, make, control, "+",  to, "nextRes(MainWindow);");
+}
 
 
 

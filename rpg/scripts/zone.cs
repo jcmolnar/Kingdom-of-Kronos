@@ -220,6 +220,100 @@ function DoZoneCheck(%w, %d)
 	else if(%tempQueen == 0)
 		$QuestReload[Queen] = "";
 }
+
+//============================================================================
+// ZONE HELPER FUNCTIONS (extracted from UpdateZone to eliminate duplicates)
+//============================================================================
+
+// Helper: Decrement player count for a zone and handle despawn scheduling
+// Used in multiple places when players leave zones
+function Zone::DecrementPlayerCount(%zoneIndex)
+{
+	// CRITICAL: Only process if zone index is valid (> 0)
+	if(%zoneIndex == "" || %zoneIndex == -1 || %zoneIndex <= 0)
+		return;
+	
+	%oldCount = $ZonePlayerCount[%zoneIndex];
+	if(%oldCount > 0)
+		$ZonePlayerCount[%zoneIndex] = %oldCount - 1;
+	
+	// If no players left in zone, schedule bot despawn after 30 seconds
+	if($ZonePlayerCount[%zoneIndex] <= 0)
+	{
+		// Cancel any pending spawn (player left before 10s delay expired)
+		CancelPendingZoneSpawn(%zoneIndex);
+		schedule("DespawnZoneBots(" @ %zoneIndex @ ");", 30);
+	}
+}
+
+// Helper: Check if all seal battle participants have left the Colloseum
+// Returns true if all participants have left (battle should end), false otherwise
+// Also handles ending the battle if all have left
+function SealBattle::CheckAllParticipantsLeftColloseum(%triggeringClientId)
+{
+	// Only check if seal battle is active
+	if($SealBattleActive != true)
+		return false;
+	
+	// Check if triggering player is a participant
+	if($SealBattleParticipants == "" || String::findSubStr($SealBattleParticipants, %triggeringClientId) < 0)
+		return false;
+	
+	// Check if ALL participants have left the Colloseum
+	%allParticipantsLeft = true;
+	%list = $SealBattleParticipants;
+	
+	// Parse comma-separated list of participants
+	while(String::len(%list) > 0)
+	{
+		%commaPos = String::findSubStr(%list, ",");
+		if(%commaPos > 0)
+		{
+			%participantId = String::getSubStr(%list, 0, %commaPos);
+			%list = String::getSubStr(%list, %commaPos + 1, 99999);
+		}
+		else
+		{
+			%participantId = %list;
+			%list = "";
+		}
+		
+		if(%participantId == "" || %participantId == -1)
+			continue;
+		
+		// Check if participant still exists and is in Colloseum
+		%participantName = Client::getName(%participantId);
+		if(%participantName != "")
+		{
+			%participantZoneId = fetchData(%participantId, "zone");
+			%participantZoneDesc = Zone::getDesc(%participantZoneId);
+			if(%participantZoneDesc == "Colloseum")
+			{
+				// At least one participant is still in Colloseum
+				%allParticipantsLeft = false;
+				break;
+			}
+		}
+	}
+	
+	// If all participants have left, end the battle
+	if(%allParticipantsLeft)
+	{
+		%participantNames = SealBattle::GetParticipantNames();
+		messageAll(2, "" @ %participantNames @ " have fled the battle to break the seal! All hope is lost...");
+		
+		// Find the initiator (first participant) to conclude the battle
+		%initiatorId = GetWord($SealBattleParticipants, 0);
+		if(%initiatorId == "" || %initiatorId == -1)
+			%initiatorId = %triggeringClientId;  // Fallback to the triggering player
+		
+		SealBattle::Conclude(%initiatorId, false);  // false = failure
+		return true;  // Battle was concluded
+	}
+	
+	return false;  // Not all participants left
+}
+
 function setzoneflags(%object, %z)
 {
 	dbecho($dbechoMode, "setzoneflags(" @ %object @ ", " @ %z @ ")");
@@ -230,6 +324,15 @@ function setzoneflags(%object, %z)
 	// If helper function returns -1, try using %object directly as client ID
 	if(%clientId == -1 || %clientId == "")
 		%clientId = %object;
+	
+	// DEBUG: Log zone flag setting for real players (non-bots) to diagnose invisibility bug
+	if(!Player::isAiControlled(%clientId))
+	{
+		%name = Client::getName(%clientId);
+		%pos = GameBase::getPosition(%object);
+		%oldTmpZone = fetchData(%clientId, "tmpzone");
+		if($ZONE_DEBUG) echo("[ZONE DEBUG] setzoneflags: object=" @ %object @ " clientId=" @ %clientId @ " name='" @ %name @ "' zone=" @ %z @ " oldTmpZone=" @ %oldTmpZone @ " pos=" @ %pos);
+	}
 	
 	storeData(%clientId, "tmpzone", %z);
 }
@@ -308,6 +411,16 @@ function UpdateZone(%object)
 			$TownBotData[%clientId, "zone"] = "";
 			return; // Reject zone update
 		}
+	}
+	
+	// DEBUG: Log zone update for real players before AI check
+	if(!Player::isAiControlled(%clientId) && !isRPGAI(%clientId))
+	{
+		%name = Client::getName(%clientId);
+		%tmpzone = fetchData(%clientId, "tmpzone");
+		%currentZone = fetchData(%clientId, "zone");
+		%pos = GameBase::getPosition(%object);
+		if($ZONE_DEBUG) echo("[ZONE DEBUG] UpdateZone: object=" @ %object @ " clientId=" @ %clientId @ " name='" @ %name @ "' tmpzone=" @ %tmpzone @ " currentZone=" @ %currentZone @ " pos=" @ %pos);
 	}
 	
 	// Skip AI-controlled clients to prevent [TOWNBOT DEBUG] spam
@@ -417,98 +530,35 @@ function UpdateZone(%object)
 	%zoneflag = fetchData(%clientId, "tmpzone");
 
 	// Handle case where player left a zone (was in a zone, but now not detected in any zone)
+	// CRITICAL FIX: Check for BOTH empty string AND numeric 0 - tmpzone may be set to 0 (not "")
 	%currentZone = fetchData(%clientId, "zone");
-	if(%currentZone != "" && %zoneflag == "")
+	if(%currentZone != "" && (%zoneflag == "" || %zoneflag == 0 || %zoneflag == -1))
 	{
 		// Player was in a zone but is no longer detected in any zone - they left
 		if(!Player::isAiControlled(%clientId))
 		{
 			%oldZoneDesc = Zone::getDesc(%currentZone);
 			
-			// CRITICAL: Check if player left Colloseum during an active seal battle
-			// Only end the battle if ALL participants have left the Colloseum
-			if($SealBattleActive == true && %oldZoneDesc == "Colloseum")
+			// Check if player left Colloseum during an active seal battle
+			if(%oldZoneDesc == "Colloseum")
 			{
-				// Check if this player is a participant in the seal battle
-				if($SealBattleParticipants != "" && String::findSubStr($SealBattleParticipants, %clientId) >= 0)
-				{
-					// Check if ALL participants have left the Colloseum
-					%allParticipantsLeft = true;
-					%list = $SealBattleParticipants;
-					
-					// Parse comma-separated list of participants
-					while(String::len(%list) > 0)
-					{
-						%commaPos = String::findSubStr(%list, ",");
-						if(%commaPos > 0)
-						{
-							%participantId = String::getSubStr(%list, 0, %commaPos);
-							%list = String::getSubStr(%list, %commaPos + 1, 99999);
-						}
-						else
-						{
-							%participantId = %list;
-							%list = "";
-						}
-						
-						if(%participantId == "" || %participantId == -1)
-							continue;
-						
-						// Check if participant still exists and is in Colloseum
-						%participantName = Client::getName(%participantId);
-						if(%participantName != "")
-						{
-							%participantZoneId = fetchData(%participantId, "zone");
-							%participantZoneDesc = Zone::getDesc(%participantZoneId);
-							if(%participantZoneDesc == "Colloseum")
-							{
-								// At least one participant is still in Colloseum
-								%allParticipantsLeft = false;
-								break;
-							}
-						}
-					}
-					
-					// Only end the battle if ALL participants have left
-					if(%allParticipantsLeft)
-					{
-						%participantNames = SealBattle::GetParticipantNames();
-						messageAll(2, "" @ %participantNames @ " have fled the battle to break the seal! All hope is lost...");
-						
-						// Find the initiator (first participant) to conclude the battle
-						%initiatorId = GetWord($SealBattleParticipants, 0);
-						if(%initiatorId == "" || %initiatorId == -1)
-							%initiatorId = %clientId;  // Fallback to the player who left
-						
-						SealBattle::Conclude(%initiatorId, false);  // false = failure
-						return;  // Exit early - battle has been concluded
-					}
-				}
+				if(SealBattle::CheckAllParticipantsLeftColloseum(%clientId))
+					return;  // Battle was concluded - exit early
 			}
 			
 			%oldZoneIndex = Zone::getIndex(%currentZone);
 			if(%oldZoneIndex > 0)
 			{
 				Zone::DoExit(%oldZoneIndex, %clientId);
-				
-				%oldCount = $ZonePlayerCount[%oldZoneIndex];
-				if(%oldCount > 0)
-					$ZonePlayerCount[%oldZoneIndex] = %oldCount - 1;
-				
-				// If no players left in old zone, despawn bots after 30 seconds
-				if($ZonePlayerCount[%oldZoneIndex] <= 0)
-				{
-					// Cancel any pending spawn (player left before 10s delay expired)
-					CancelPendingZoneSpawn(%oldZoneIndex);
-					schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
-				}
+				Zone::DecrementPlayerCount(%oldZoneIndex);
 			}
 		}
 		return;  // Exit early since player is not in any zone
 	}
 	
 	//check if the player was found inside a zone
-	if(%zoneflag != "")
+	// CRITICAL FIX: Also exclude 0 and -1 as valid zone flags (same as above)
+	if(%zoneflag != "" && %zoneflag != 0 && %zoneflag != -1)
 	{
 		//the player is inside a zone!
 		// OPTIMIZATION: Cache fetchData result to avoid redundant calls below
@@ -538,10 +588,9 @@ function UpdateZone(%object)
 				}
 			}
 			
-			// CRITICAL: Check if player left Colloseum during an active seal battle
+			// Check if player left Colloseum during an active seal battle
 			// This handles zone changes (not just leaving zones completely)
-			// Only end the battle if ALL participants have left the Colloseum
-			if(!Player::isAiControlled(%clientId) && $SealBattleActive == true)
+			if(!Player::isAiControlled(%clientId))
 			{
 				%oldZoneId = fetchData(%clientId, "zone");
 				%oldZoneDesc = Zone::getDesc(%oldZoneId);
@@ -551,61 +600,8 @@ function UpdateZone(%object)
 				// If player was in Colloseum and is now in a different zone, check if all participants have left
 				if(%oldZoneDesc == "Colloseum" && %newZoneDesc != "Colloseum" && %newZoneDesc != "" && %newZoneDesc != -1)
 				{
-					// Check if this player is a participant in the seal battle
-					if($SealBattleParticipants != "" && String::findSubStr($SealBattleParticipants, %clientId) >= 0)
-					{
-						// Check if ALL participants have left the Colloseum
-						%allParticipantsLeft = true;
-						%list = $SealBattleParticipants;
-						
-						// Parse comma-separated list of participants
-						while(String::len(%list) > 0)
-						{
-							%commaPos = String::findSubStr(%list, ",");
-							if(%commaPos > 0)
-							{
-								%participantId = String::getSubStr(%list, 0, %commaPos);
-								%list = String::getSubStr(%list, %commaPos + 1, 99999);
-							}
-							else
-							{
-								%participantId = %list;
-								%list = "";
-							}
-							
-							if(%participantId == "" || %participantId == -1)
-								continue;
-							
-							// Check if participant still exists and is in Colloseum
-							%participantName = Client::getName(%participantId);
-							if(%participantName != "")
-							{
-								%participantZoneId = fetchData(%participantId, "zone");
-								%participantZoneDesc = Zone::getDesc(%participantZoneId);
-								if(%participantZoneDesc == "Colloseum")
-								{
-									// At least one participant is still in Colloseum
-									%allParticipantsLeft = false;
-									break;
-								}
-							}
-						}
-						
-						// Only end the battle if ALL participants have left
-						if(%allParticipantsLeft)
-						{
-							%participantNames = SealBattle::GetParticipantNames();
-							messageAll(2, "" @ %participantNames @ " have fled the battle to break the seal! All hope is lost...");
-							
-							// Find the initiator (first participant) to conclude the battle
-							%initiatorId = GetWord($SealBattleParticipants, 0);
-							if(%initiatorId == "" || %initiatorId == -1)
-								%initiatorId = %clientId;  // Fallback to the player who left
-							
-							SealBattle::Conclude(%initiatorId, false);  // false = failure
-							return;  // Exit early - battle has been concluded
-						}
-					}
+					if(SealBattle::CheckAllParticipantsLeftColloseum(%clientId))
+						return;  // Battle was concluded - exit early
 				}
 			}
 			
@@ -660,24 +656,7 @@ function UpdateZone(%object)
 				
 				// Decrement player count for old zone (skip AI bots)
 				if(!Player::isAiControlled(%clientId))
-				{
-					%oldCount = $ZonePlayerCount[%oldZoneIndex];
-					if(%oldCount > 0)
-						$ZonePlayerCount[%oldZoneIndex] = %oldCount - 1;
-					
-					// DEBUG: Commented out to reduce server lag
-					//echo("[ZONE DEBUG] Zone " @ %oldZoneIndex @ " (" @ %oldZoneDesc @ ") now has " @ ($ZonePlayerCount[%oldZoneIndex]) @ " player(s)");
-					
-					// If no players left in old zone, despawn bots after 30 seconds (prevents crash from too many operations at once)
-					// CRITICAL: Only process if zone index is valid (> 0)
-					// Zone::getIndex() returns -1 for invalid zones (like "Unknown" zone)
-					if($ZonePlayerCount[%oldZoneIndex] <= 0 && %oldZoneIndex > 0)
-					{
-						// Cancel any pending spawn (player left before 10s delay expired)
-						CancelPendingZoneSpawn(%oldZoneIndex);
-						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
-					}
-				}
+					Zone::DecrementPlayerCount(%oldZoneIndex);
 			}
 	
 		//throw the player inside this new zone
@@ -859,24 +838,12 @@ function UpdateZone(%object)
 			// CRITICAL: Only process if zone index is valid (> 0)
 			// Zone::getIndex() returns -1 for invalid zones (like "Unknown" zone)
 			if(%oldZoneIndex > 0)
-			{
+		{
 				Zone::DoExit(%oldZoneIndex, %clientId);
 				
 				// Decrement player count for old zone (skip AI bots)
 				if(!Player::isAiControlled(%clientId))
-				{
-					%oldCount = $ZonePlayerCount[%oldZoneIndex];
-					if(%oldCount > 0)
-						$ZonePlayerCount[%oldZoneIndex] = %oldCount - 1;
-					
-					// If no players left in old zone, despawn bots after 30 seconds
-					if($ZonePlayerCount[%oldZoneIndex] <= 0)
-					{
-						// Cancel any pending spawn (player left before 10s delay expired)
-						CancelPendingZoneSpawn(%oldZoneIndex);
-						schedule("DespawnZoneBots(" @ %oldZoneIndex @ ");", 30);
-					}
-				}
+					Zone::DecrementPlayerCount(%oldZoneIndex);
 			}
 		}
 	
@@ -1110,7 +1077,9 @@ function Zone::DoEnter(%z, %clientId)
 		AutoParty_OnZoneEnter(%clientId, %oldZone, %newZone);
 
 	Zone::onEnter(%clientId, %oldZone, %newZone);
-
+	
+	// Force music update on next tick
+	%clientId.MusicTicksLeft = 0;
 }
 
 function Zone::DoExit(%z, %clientId)

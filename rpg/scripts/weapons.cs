@@ -426,6 +426,11 @@ function MeleeAttack(%player, %length, %weapon)
 		return;
 	%clientId.lastFireTime = %time;
 	//=======================================================
+	
+	// CRITICAL: Block attacks during skill upgrade RefreshAll to prevent attack spam exploit
+	// When upgrading skills while swinging, RefreshAll re-triggers onFire causing repeated attacks
+	if($SkillUpgradeRefreshScheduled[%clientId] == "true")
+		return;
 		
 	$los::object = "";
 	if(GameBase::getLOSinfo(%player, %length))
@@ -472,6 +477,10 @@ function VoidWeaponAttack(%player, %length, %weapon)
 		return;
 	%clientId.lastFireTime = %time;
 	//=======================================================
+	
+	// CRITICAL: Block attacks during skill upgrade RefreshAll to prevent attack spam exploit
+	if($SkillUpgradeRefreshScheduled[%clientId] == "true")
+		return;
 		
 	// Perform damage check
 	$los::object = "";
@@ -647,6 +656,10 @@ function PickAxeSwing(%player, %length, %weapon)
 		return;
 	%clientId.lastFireTime = %time;
 	//=======================================================
+	
+	// CRITICAL: Block attacks during skill upgrade RefreshAll to prevent attack spam exploit
+	if($SkillUpgradeRefreshScheduled[%clientId] == "true")
+		return;
 
 	$los::object = "";
 	if(GameBase::getLOSinfo(%player, %length))

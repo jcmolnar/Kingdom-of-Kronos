@@ -156,20 +156,20 @@ To add a new script file:
 **REQUIRED: HOOKS/INTEGRATIONS HEADER**
 Every new `.cs` file MUST include a header documenting which files it hooks into:
 ```cs
-//====================================================================================================
+//==============================================
 // MyFeature.cs - Description of the feature
-//====================================================================================================
+//==============================================
 // Brief description of what this script does.
 //
-//----------------------------------------------------------------------------------------------------
+//----------------------------------------------
 // HOOKS / INTEGRATIONS:
-//----------------------------------------------------------------------------------------------------
+//----------------------------------------------
 // Server.cs        - exec(MyFeature); added to load this script
 // rpgfunk.cs       - SaveCharacter() saves MyData to funkvar slot XX
 // rpgfunk.cs       - LoadCharacter() loads MyData from funkvar slot XX
 // comchat_clean.cs - #mycommand handler added
 // otherfile.cs     - Description of integration
-//====================================================================================================
+//=================================================
 ```
 This makes it easy to find all touch points when debugging or modifying the feature.
 
@@ -214,49 +214,34 @@ Character data is saved to `$funk::var["[\"playername\", TYPE, SLOT]"]` in `rpgf
 - TYPE 1-6 = other data (skills, quest counters, bonus states, etc.)
 
 **Currently Used Slots (TYPE 0):**
-| Slot | Data |
-|------|------|
-| 1 | RACE |
-| 2 | EXP |
-| 3 | campPos |
-| 4 | COINS |
-| 5 | isMimic |
-| 6 | BANK |
-| 7 | PlayerName |
-| 8 | grouplist |
-| 9 | defaultTalk |
-| 10 | password |
-| 11 | bounty |
-| 12 | inArena |
-| 13 | PlayerInfo |
-| 14 | deathmsg |
-| 15 | Inventory (spawnStuff) |
-| 16 | BankStorage |
-| 17 | campRot |
-| 18 | HP |
-| 19 | MANA |
-| 20 | LCKconsequence |
-| 21 | RemortStep |
-| 22 | LCK |
-| 23 | RPG Version |
-| 26 | GROUP |
-| 27 | CLASS |
-| 28 | SPcredits |
-| 30 | MyHouse |
-| 31 | RankPoints |
-| 32 | TournyRank |
-| 35 | QuestItems |
-| 36 | KeyItems |
-| 38 | StoredQuestItems |
-| 39 | StoredKeyItems |
-| 44 | Stance |
-| 50 | Other belt items |
-| 51 | Equipped Belt Armor |
-| 52 | Equipped Belt Accessories |
-| 53 | Off-Hand Weapon |
-| 54 | Ascension Talents |
-| 55 | AutoSkill Priority |
-| 56 | AutoParty Enabled (NEW) |
+| Slot | Data | Syst | Slot | Data | Syst |
+|--|--|--|--|--|--|
+| 1 | RACE | Core | 2 | EXP | Core |
+| 3 | campPos | Core | 4 | COINS | Core |
+| 5 | isMimic | Core | 6 | BANK | Core |
+| 7 | PlayerName | Core | 8 | grouplist | Social |
+| 9 | defaultTalk | Social | 10 | password | Core |
+| 11 | bounty | Social | 12 | inArena | Social |
+| 13 | PlayerInfo | Social | 14 | deathmsg | Social |
+| 15 | Inventory | Core | 16 | **Reg Bank** | **Bank** |
+| 17 | campRot | Core | 18 | HP (tmphp) | Core |
+| 19 | MANA (tmpmana)| Core | 20 | LCKcons | Core |
+| 21 | RemortStep | Core | 22 | LCK | Core |
+| 23 | RPG Ver | Core | 26 | GROUP | Social |
+| 27 | CLASS | Core | 28 | SPcredits | Core |
+| 29 | mountWep | Core | 30 | MyHouse | Social |
+| 31 | RankPoints | Social | 32 | TournyRank | Social |
+| 35 | QuestItems | **Belt** | 36 | KeyItems | **Belt** |
+| 37 | Consumables | **Belt** | 38 | StoredQuest | **Banker**|
+| 39 | StoredKey | **Banker**| 42 | StoredConsum | **Banker**|
+| 43 | StoredArmor | **Banker**| 44 | Stance | Core |
+| 45 | StoredAccess | **Banker**| 46 | StoredOther | **Banker**|
+| 47 | DamagePrefs | Client | 48 | Armor | **Belt** |
+| 49 | Accessories | **Belt** | 50 | Other | **Belt** |
+| 51 | Belt Armor | **Belt** | 52 | Belt Access | **Belt** |
+| 53 | Offhand | Core | 54 | Ascension | Core |
+| 55 | AutoSkill | Core | 56 | AutoParty | Social |
+| 60-63| **Bank Overflow**| **Bank** | 666 | IP Address | Core |
 
 **Before adding a new slot:** `grep -r ", 0, XX]" rpgfunk.cs` to verify it's not in use.
 ### 18. BOT VS PLAYER PROTECTION
@@ -272,3 +257,33 @@ Client IDs are reused by the game engine. When a player disconnects, a bot might
     if(Player::isAiControlled(%clientId) || isRPGAI(%clientId)) return false;
     ```
 5.  **Display Filtering**: Functions like `DisplayGetInfo` must explicitly hide player-only headers (like "Ascension") when targeting a bot.
+
+### 19. ITEMDATA NAMING CONVENTIONS
+**Equipment items use a "0" suffix to distinguish unequipped vs equipped versions.**
+
+The game uses two ItemData datablocks for each equippable item:
+- `ItemName` - The unequipped/accessory version (className = "Accessory")
+- `ItemName0` - The equipped/worn version (className = "Equipped")
+
+**Examples:**
+| Unequipped | Equipped | Description |
+|------------|----------|-------------|
+| `IronArmor` | `IronArmor0` | Body armor |
+| `RedDiamondPlate` | `RedDiamondPlate0` | High-tier armor |
+| `SolarOrb` | `SolarOrb0` | Orb accessory |
+
+**Usage in Code:**
+```cs
+// Check if player has EQUIPPED armor (use "0" suffix)
+if(SafeGetItemCount(%clientId, $ArmorList[%i] @ "0", "GetCurrentlyWearingArmor"))
+    return $ArmorList[%i];
+
+// Check if player has UNEQUIPPED armor (no suffix)
+if(SafeGetItemCount(%clientId, $ArmorList[%i], "HasArmorInInventory"))
+    return $ArmorList[%i];
+```
+
+**Used In:**
+- `UpdateAppearance()` - Checks for equipped orbs
+- `GetCurrentlyWearingArmor()` - Finds currently worn armor
+- Various accessory/equipment functions

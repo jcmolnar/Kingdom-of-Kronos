@@ -255,6 +255,11 @@ function Server::onClientConnect(%clientId)
 			deleteObject(%occupyingObj);
 			// Clear any stale bot data
 			ClearAllBotData(%clientId, false);
+			
+			// CRITICAL FIX: Re-initialize ghosting for this client after bot cleanup
+			// This ensures the ghost manager state is properly reset for the new player
+			// Schedule slightly later to allow engine to process the deleteObject
+			schedule("if($ghosting && Client::getName(" @ %clientId @ ") != \"\") startGhosting(" @ %clientId @ ");", 0.5);
 		}
 		// If not AI-controlled, it's the connecting player's object - that's normal
 	}
@@ -364,6 +369,9 @@ function Server::onClientConnect(%clientId)
 				// CRITICAL: Clear $BotType to prevent player from being identified as bot
 				// This fixes the "missing rpgmalehuman" error caused by armor type confusion
 				$BotType[%clientId] = "";
+				
+				// CRITICAL FIX: Re-initialize ghosting after bot cleanup
+				schedule("if($ghosting && Client::getName(" @ %clientId @ ") != \"\") startGhosting(" @ %clientId @ ");", 0.5);
 			}
 		}
 	}

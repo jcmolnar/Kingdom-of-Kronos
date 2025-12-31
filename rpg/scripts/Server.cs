@@ -294,6 +294,7 @@ function createServer(%mission, %dedicated)
 	exec(playerspawn);
 	exec(itemevents);
 	exec(Belt);
+	exec(Banking);
 	exec(economy);
 	exec(remote);
 	exec(weaponHandling);
@@ -780,6 +781,10 @@ function clearPersistentCenterprint(%clientId)
 
 function bottomprint(%clientId, %msg, %timeout)
 {
+	// CRITICAL: Skip GUI operations during server shutdown
+	if($ServerShuttingDown)
+		return;
+	
 	dbecho($dbechoMode, "bottomprint(" @ %clientId @ ", " @ %msg @ ", " @ %timeout @ ")");
 
    if(%timeout == "")
@@ -831,6 +836,10 @@ function centerprintall(%msg, %timeout)
 
 function bottomprintall(%msg, %timeout)
 {
+	// CRITICAL: Skip GUI operations during server shutdown
+	if($ServerShuttingDown)
+		return;
+	
 	dbecho($dbechoMode, "bottomprintall(" @ %msg @ ", " @ %timeout @ ")");
 
    if(%timeout == "")

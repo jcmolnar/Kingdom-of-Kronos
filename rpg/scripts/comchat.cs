@@ -989,7 +989,7 @@ function remoteSay(%clientId, %team, %message, %senderName)
 					RefreshAll(%TrueClientId);
 					SaveCharacter(%TrueClientId);
 					// Save world after 3 second delay (allows character save to complete first)
-					schedule("SaveWorld();", 3, %TrueClientId);
+					schedule("SaveWorld();", 3);
 	
 	                        Client::sendMessage(%TrueClientId, 0, "You dropped " @ %cropped @ " coins.");
 	                        playSound(SoundMoney1, GameBase::getPosition(%TrueClientId));
@@ -1890,7 +1890,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 					RefreshAll(%TrueClientId);
 					SaveCharacter(%TrueClientId);
 					// Save world after 3 second delay (allows character save to complete first)
-					schedule("SaveWorld();", 3, %TrueClientId);
+					schedule("SaveWorld();", 3);
 	
 					remotePlayMode(%TrueClientId);
 				}
@@ -6845,6 +6845,48 @@ if(%w1 == "#deletebot")
 	}
 	return;
 }
+	// DEBUG: Show all state flags on a player
+	if(%w1 == "#debugflags")
+	{
+		if(%clientToServerAdminLevel >= 1)
+		{
+			%targetName = GetWord(%message, 1);  // Extract player name from command
+			Admin::DebugPlayerFlags(%TrueClientId, %targetName);
+		}
+		else
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "Admin only.");
+		}
+		return;
+	}
+	// DEBUG: Diagnose invisibility bug
+	if(%w1 == "#debuginvis")
+	{
+		if(%clientToServerAdminLevel >= 1)
+		{
+			%targetName = GetWord(%message, 1);
+			Admin::DiagnoseInvisible(%TrueClientId, %targetName);
+		}
+		else
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "Admin only.");
+		}
+		return;
+	}
+	// DEBUG: Fix player visibility issues
+	if(%w1 == "#fixvisible")
+	{
+		if(%clientToServerAdminLevel >= 1)
+		{
+			%targetName = GetWord(%message, 1);
+			Admin::FixPlayerVisibility(%TrueClientId, %targetName);
+		}
+		else
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "Admin only.");
+		}
+		return;
+	}
 	if(%w1 == "#killallbots")
 	{
 		if(%clientToServerAdminLevel >= 1)
@@ -10213,10 +10255,14 @@ if(%w1 == "#spawntelemetry")
 				{
 					if(String::findSubStr(%message, %trigger[2]) != -1)
 					{
-						SetupShop(%TrueClientId, %closestId);
-
-						AI::sayLater(%TrueClientId, %closestId, "Take a look at what I have.", True);
-						Belt::Sell(%TrueClientId,%closestId);
+						// Get shop indices from bot info
+						%shopBotName = fetchData(%closestId, "BotInfoAiName");
+						if(String::findSubStr(%shopBotName, "TownBot_") == 0)
+							%shopBotName = String::getSubStr(%shopBotName, 8, 999);
+						%shopIndices = $BotInfo[%shopBotName, SHOP];
+						
+						// Use Belt::Shop for unified menu (Standard Shop, Buy Accessories, Sell)
+						Belt::Shop(%TrueClientId, %closestId, %shopIndices);
 						$state[%closestId, %TrueClientId] = "";
 					}
 				}
@@ -10250,7 +10296,9 @@ if(%w1 == "#spawntelemetry")
 						// Skip initial greeting if idle message was just shown
 						if(%initTalk && !%idleMessageShown)
 						{
-							AI::sayLater(%TrueClientId, %closestId, "I can keep your money from being stolen by thieves.  DEPOSIT, WITHDRAW or look at your STORAGE?  I can also store items from your BACKPACK or BELT.  You are carrying " @ fetchData(%TrueClientId, "COINS") @ " coins and I have " @ fetchData(%TrueClientId, "BANK") @ " of yours.", True);
+							SetupBankDefault(%TrueClientId, %closestId);
+							AI::sayLater(%TrueClientId, %closestId, "Welcome to the bank. How can I help you today?", True);
+							AI::sayLater(%TrueClientId, %closestId, "You may also #say: DEPOSIT, WITHDRAW, STORAGE, BELT or BACKPACK", True);
 						}
 						// If idle message was shown, still set state to 1 so bot can respond to commands
 						$state[%closestId, %TrueClientId] = 1;
@@ -10717,8 +10765,9 @@ if(%w1 == "#spawntelemetry")
 					{
 						if($BotInfo[%aiName, SHOP] != "")
 						{
-							SetupShop(%TrueClientId, %closestId);
-							AI::sayLater(%TrueClientId, %closestId, "Take a look at what I have.", True);
+							// Use Belt::Shop for unified menu (Standard Shop, Buy Accessories, Sell)
+							%shopIndices = $BotInfo[%aiName, SHOP];
+							Belt::Shop(%TrueClientId, %closestId, %shopIndices);
 						}
 						else
 							AI::sayLater(%TrueClientId, %closestId, "I have nothing to sell.", True);
@@ -10841,8 +10890,9 @@ if(%w1 == "#spawntelemetry")
 					{
 						if($BotInfo[%aiName, SHOP] != "")
 						{
-							SetupShop(%TrueClientId, %closestId);
-							AI::sayLater(%TrueClientId, %closestId, "Take a look at what I have.", True);
+							// Use Belt::Shop for unified menu (Standard Shop, Buy Accessories, Sell)
+							%shopIndices = $BotInfo[%aiName, SHOP];
+							Belt::Shop(%TrueClientId, %closestId, %shopIndices);
 						}
 						else
 							AI::sayLater(%TrueClientId, %closestId, "I have nothing to sell.", True);
@@ -10975,112 +11025,11 @@ if(%w1 == "#spawntelemetry")
 			}
 			else if(%botType == "ascensionnpc")
 			{
-				// Ascension NPC - talent purchasing with confirmation
-				if(%initTalk || $state[%closestId, %TrueClientId] != "")
+				// Ascension NPC - opens menu-based talent shop
+				if(%initTalk)
 				{
-					if($state[%closestId, %TrueClientId] == "")
-					{
-						if(%initTalk)
-						{
-							%remort = fetchData(%TrueClientId, "RemortStep");
-							%sp = fetchData(%TrueClientId, "SPcredits");
-							AI::sayLater(%TrueClientId, %closestId, "Greetings, seeker of power. I am the Ascension Master. Here you can sacrifice remorts or SP for permanent talents. You have " @ %remort @ " remorts and " @ %sp @ " SP. Say [list] to see talents, or [buy] followed by a talent number.", True);
-							$state[%closestId, %TrueClientId] = 1;
-						}
-					}
-					else if($state[%closestId, %TrueClientId] == 1)
-					{
-						if(String::findSubStr(%message, "list") != -1)
-						{
-							// List all talents with numbers
-							Client::sendMessage(%TrueClientId, 0, "=== ASCENSION TALENTS ===");
-							%talentNum = 1;
-							for(%t = 0; (%talentId = GetWord($AscensionTalentList, %t)) != -1; %t++)
-							{
-								%name = $AscensionTalent[%talentId, Name];
-								%cost = $AscensionTalent[%talentId, Cost];
-								%costType = $AscensionTalent[%talentId, CostType];
-								%desc = $AscensionTalent[%talentId, Desc];
-								%owned = "";
-								if(Ascension::HasTalent(%TrueClientId, %talentId))
-									%owned = " [OWNED]";
-								
-								if(%costType == "remort")
-									Client::sendMessage(%TrueClientId, 0, "[" @ %talentNum @ "] " @ %name @ " - " @ %cost @ " remorts" @ %owned);
-								else
-									Client::sendMessage(%TrueClientId, 0, "[" @ %talentNum @ "] " @ %name @ " - " @ %cost @ " SP (min " @ $AscensionTalent[%talentId, MinRemort] @ " remorts)" @ %owned);
-								
-								Client::sendMessage(%TrueClientId, 0, "    " @ %desc);
-								%talentNum++;
-							}
-							Client::sendMessage(%TrueClientId, 0, "Say [buy #] to purchase a talent.");
-							$state[%closestId, %TrueClientId] = 1;
-						}
-						else if(String::findSubStr(%message, "buy") != -1)
-						{
-							// Parse talent number
-							%buyPos = String::findSubStr(%message, "buy");
-							%afterBuy = String::getSubStr(%message, %buyPos + 4, 99);
-							%talentNum = GetWord(%afterBuy, 0);
-							
-							if(%talentNum != "" && %talentNum != -1 && %talentNum >= 1 && %talentNum <= 10)
-							{
-								%talentId = GetWord($AscensionTalentList, %talentNum - 1);
-								if(%talentId != "" && %talentId != -1)
-								{
-									// Store selection and ask for confirmation
-									$AscensionPending[%TrueClientId] = %talentId;
-									%name = $AscensionTalent[%talentId, Name];
-									%cost = $AscensionTalent[%talentId, Cost];
-									%costType = $AscensionTalent[%talentId, CostType];
-									
-									if(%costType == "remort")
-										AI::sayLater(%TrueClientId, %closestId, "You want to unlock " @ %name @ " for " @ %cost @ " remorts. Say [confirm] to proceed or [back] to cancel.", True);
-									else
-										AI::sayLater(%TrueClientId, %closestId, "You want to unlock " @ %name @ " for " @ %cost @ " SP. Say [confirm] to proceed or [back] to cancel.", True);
-									
-									$state[%closestId, %TrueClientId] = 2;
-								}
-								else
-								{
-									AI::sayLater(%TrueClientId, %closestId, "Invalid talent number. Say [list] to see available talents.", True);
-									$state[%closestId, %TrueClientId] = 1;
-								}
-							}
-							else
-							{
-								AI::sayLater(%TrueClientId, %closestId, "Say [buy #] with a number from 1-10. Example: buy 1", True);
-								$state[%closestId, %TrueClientId] = 1;
-							}
-						}
-					}
-					else if($state[%closestId, %TrueClientId] == 2)
-					{
-						// Confirmation state
-						if(String::findSubStr(%message, "confirm") != -1)
-						{
-							%talentId = $AscensionPending[%TrueClientId];
-							if(%talentId != "" && %talentId != -1)
-							{
-								%result = Ascension::Purchase(%TrueClientId, %talentId);
-								if(%result)
-								{
-									AI::sayLater(%TrueClientId, %closestId, "The power flows through you! Your " @ $AscensionTalent[%talentId, Name] @ " has been unlocked.", True);
-								}
-								// Note: Ascension::Purchase already sends specific error messages
-							}
-							$AscensionPending[%TrueClientId] = "";
-							$state[%closestId, %TrueClientId] = "";
-						}
-						else if(String::findSubStr(%message, "back") != -1)
-						{
-							$AscensionPending[%TrueClientId] = "";
-							%remort = fetchData(%TrueClientId, "RemortStep");
-							%sp = fetchData(%TrueClientId, "SPcredits");
-							AI::sayLater(%TrueClientId, %closestId, "Very well. You have " @ %remort @ " remorts and " @ %sp @ " SP. Say [list] to see talents, or [buy] followed by a talent number.", True);
-							$state[%closestId, %TrueClientId] = 1;
-						}
-					}
+					AI::sayLater(%TrueClientId, %closestId, "Greetings, seeker of power. Choose the talent you wish to unlock.", True);
+					SetupAscensionShop(%TrueClientId, %closestId, 0);
 				}
 			}
 			else if(%botType == "manager")
@@ -11322,8 +11271,9 @@ if(%w1 == "#spawntelemetry")
 					{
 						if($BotInfo[%aiName, SHOP] != "")
 						{
-							SetupShop(%TrueClientId, %closestId);
-							AI::sayLater(%TrueClientId, %closestId, "Take a look at what I have.", True);
+							// Use Belt::Shop for unified menu (Standard Shop, Buy Accessories, Sell)
+							%shopIndices = $BotInfo[%aiName, SHOP];
+							Belt::Shop(%TrueClientId, %closestId, %shopIndices);
 						}
 						else
 							AI::sayLater(%TrueClientId, %closestId, "I have nothing to sell.", True);
