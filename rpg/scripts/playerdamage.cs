@@ -665,6 +665,21 @@ function Player::onKilled(%this)
 		%playerNameFromClientId = Client::getName(%clientId);
 		if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Real player - clientId=" @ %clientId @ ", Display name from %this: '" @ %playerNameFromThis @ "', Display name from %clientId: '" @ %playerNameFromClientId @ "'");
 	}
+
+	// Cache bot-state early; cleanup later in this function can clear bot markers.
+	// This prevents bot deaths from being misclassified as players for SaveWorld scheduling.
+	%wasBotAtDeath = %isBot || %isAiControlled;
+	if(!%wasBotAtDeath)
+	{
+		%botInfoAtDeath = fetchData(%clientId, "BotInfoAiName");
+		%spawnInfoAtDeath = fetchData(%clientId, "SpawnBotInfo");
+		if(Player::isAiControlled(%clientId) ||
+		   (%botInfoAtDeath != "" && %botInfoAtDeath != -1 && %botInfoAtDeath != "0") ||
+		   (%spawnInfoAtDeath != "" && %spawnInfoAtDeath != -1 && %spawnInfoAtDeath != "0"))
+		{
+			%wasBotAtDeath = true;
+		}
+	}
 	
 	%killerId = fetchData(%clientId, "tmpkillerid");
 	storeData(%clientId, "tmpkillerid", "");
@@ -2746,13 +2761,13 @@ function Player::onKilled(%this)
 		// NOTE: SaveCharacter is already called immediately after clearing equipped items (see above)
 		// This is just a backup save in case the first one didn't complete
 		// Only save for players, not AI bots
-		if(!isRPGAI(%clientId))
+		if(!%wasBotAtDeath && !isRPGAI(%clientId))
 		{
 			// Backup character save after 2 second delay (in case first save didn't complete)
 			schedule("SaveCharacter(" @ %clientId @ ");", 2, %clientId);
 			
-			// Save world after 3 second delay (allows character saves to complete first)
-			schedule("SaveWorld();", 3);
+			// Queue deployable-only world save after 3 seconds (preserves lootbag crash safety, avoids full-save storms)
+			RequestWorldSave("player_death", 3, "deployables");
 		}
 	}
 }
@@ -2927,7 +2942,9 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 		%damagedClientPos = GameBase::getPosition(%damagedClient);
 		%shooterClientPos = GameBase::getPosition(%shooterClient);
 
-		%damagedCurrentArmor = GetCurrentlyWearingArmor(%damagedClient);
+		// Get currently equipped armor from player data (this is set by UpdateAppearance in rpgfunk.cs)
+		// Uses fetchData instead of GetCurrentlyWearingArmor because armor is stored as a data field
+		%damagedCurrentArmor = fetchData(%damagedClient, "Armor");
 
 		//==============
 		//PROCESS STATS
@@ -3219,11 +3236,18 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 						if(!%isProtected)
 						{
 							// Check if target is in Colloseum zone
-							%targetPos = GameBase::getPosition(Client::getOwnedObject(%damagedClient));
-							if(%targetPos != "" && %targetPos != -1)
+							%targetZoneId = fetchData(%damagedClient, "zone");
+							if(%targetZoneId == "" || %targetZoneId == -1 || %targetZoneId == "0")
 							{
-								%targetZone = Zone::fetchZone(getWord(%targetPos, 0), getWord(%targetPos, 1), getWord(%targetPos, 2), "DESC");
-								if(%targetZone == "Colloseum")
+								%targetObj = Client::getOwnedObject(%damagedClient);
+								if(%targetObj != -1 && %targetObj != "")
+									%targetZoneId = ObjectInWhichZone(%targetObj);
+							}
+
+							if(%targetZoneId != "" && %targetZoneId != -1 && %targetZoneId != "0")
+							{
+								%targetZoneDesc = Zone::getDesc(%targetZoneId);
+								if(String::ICompare(%targetZoneDesc, "Colloseum") == 0)
 								{
 									%isProtected = true;
 								}
@@ -4029,8 +4053,33 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				}
 			}
 			
+		// =================================================================
+			
 			// =================================================================
-				
+			// ARMOR SPECIAL EFFECTS (Pre-Damage)
+			// =================================================================
+			
+			// Check for armor special effects on the damaged player
+			%armorEffect = $ArmorEffect[%damagedCurrentArmor];
+			%armorEffectChance = $ArmorEffectChance[%damagedCurrentArmor];
+			
+			// PHASE_SHIFT (Void Robe): 5% chance to completely dodge an attack
+			if(%armorEffect == "PHASE_SHIFT" && %value > 0 && !%isMiss && %shooterClient != %damagedClient)
+			{
+				%phaseRoll = floor(getRandom() * 100);
+				if(%phaseRoll < %armorEffectChance)
+				{
+					// Phase shift triggered - complete dodge
+					%value = 0;
+					%isMiss = true;
+					Client::sendMessage(%damagedClient, $MsgBeige, "PHASE SHIFT! You phase through the attack!");
+					Client::sendMessage(%shooterClient, $MsgBeige, Client::getName(%damagedClient) @ " phases through your attack!");
+				}
+			}
+			
+			// Store pre-damage value for RETRIBUTION calculation
+			%preDamageValue = %value;
+			
 			// Ensure value doesn't become 0 or negative after stance modifiers
 			if(%value < 0)
 				%value = 0;
@@ -4083,6 +4132,56 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				}
 
 				PlaySound(RandomRaceSound(fetchData(%damagedClient, "RACE"), Hit), %damagedClientPos);
+
+				// =================================================================
+				// ARMOR SPECIAL EFFECTS (Post-Damage Retaliation)
+				// =================================================================
+				
+				// Only apply retaliation effects if damage was actually dealt and shooter is valid
+				if(%preDamageValue > 0 && %shooterClient != %damagedClient && !isTownBot(%shooterClient))
+				{
+					// RETRIBUTION (Judgement Robe): 25% chance to reflect 10% of damage back to attacker
+					if(%armorEffect == "RETRIBUTION")
+					{
+						%retribRoll = floor(getRandom() * 100);
+						if(%retribRoll < %armorEffectChance)
+						{
+							// Calculate reflection based on displayed damage (not internal units)
+							// First convert to displayed damage, then take 10%, then convert back to internal
+							%displayedDamage = %preDamageValue * $TribesDamageToNumericDamage;
+							%reflectDmgDisplay = floor(%displayedDamage * 0.10);
+							%reflectAmount = %reflectDmgDisplay / $TribesDamageToNumericDamage;
+							
+							if(%reflectAmount > 0)
+							{
+								// Apply reflected damage to attacker
+								refreshHP(%shooterClient, %reflectAmount);
+								Client::sendMessage(%damagedClient, $MsgBeige, "RETRIBUTION! Reflected " @ %reflectDmgDisplay @ " damage!");
+								Client::sendMessage(%shooterClient, $MsgRed, "You take " @ %reflectDmgDisplay @ " reflected damage!");
+								playSound(SoundShieldHit, %shooterClientPos);
+							}
+						}
+					}
+					
+					// STATIC_DISCHARGE (Storm Robe): 25% chance to zap attacker for 500 damage
+					if(%armorEffect == "STATIC_DISCHARGE")
+					{
+						%staticRoll = floor(getRandom() * 100);
+						if(%staticRoll < %armorEffectChance)
+						{
+							// Static discharge triggered - zap the attacker
+							%zapDamage = 500 / $TribesDamageToNumericDamage; // Convert to internal damage units
+							refreshHP(%shooterClient, %zapDamage);
+							Client::sendMessage(%damagedClient, $MsgBeige, "STATIC DISCHARGE! Zapped attacker for 500 damage!");
+							Client::sendMessage(%shooterClient, $MsgRed, "STATIC SHOCK! You take 500 lightning damage!");
+								playSound(shockExplosion, %shooterClientPos);
+							
+							// Create lightning visual effect at attacker position
+							// Use Bomb20 ("blue explosion" type visual often used for lightning/shock in RPGs)
+							CreateAndDetBomb_VisualOnly(%damagedClient, "Bomb20", %shooterClientPos, -1);
+						}
+					}
+				}
 
 			//display amount of damage caused
 			// Check for LCK miss first before converting -1 to 0

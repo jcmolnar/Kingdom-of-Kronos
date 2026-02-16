@@ -1,4 +1,4 @@
-$INVISIBILITY_DEBUG = 1; // Toggle [INVISIBILITY DEBUG] messages - set to 1 to diagnose invisible bots
+$INVISIBILITY_DEBUG = 0; // Toggle [INVISIBILITY DEBUG] messages - set to 1 to diagnose invisible bots
 $LOOTBAG_DEBUG = 0; // Toggle [LOOTBAG DEBUG] messages in this file
 
 // Safe skin setter - validates skin before applying and logs potential invisibility issues
@@ -19,7 +19,11 @@ function Safe_SetSkin(%clientId, %skin, %callerContext)
 		echo("[INVISIBILITY DEBUG] Safe_SetSkin: Setting skin '" @ %skin @ "' for " @ %clientName @ " (clientId=" @ %clientId @ "). Context: " @ %callerContext);
 	}
 	
-	Client::setSkin(%clientId, %skin);
+	// OPTIMIZATION: Only set skin if it's actually different to prevent engine/network spam
+	if(Client::getSkinBase(%clientId) != %skin)
+	{
+		Client::setSkin(%clientId, %skin);
+	}
 }
 function String::len(%string)
 {
@@ -166,8 +170,8 @@ function SplitAndSaveBankStorage(%clientId, %name, %fullString)
 		%item = GetWord(%fullString, %i);
 		%count = GetWord(%fullString, %i + 1);
 		
-		// Skip invalid entries
-		if(%item == "" || %item == -1 || %count == "" || %count == -1)
+		// Skip invalid entries (including "0" which can appear from uninitialized BankStorage)
+		if(%item == "" || %item == -1 || %item == "0" || %count == "" || %count == -1)
 			continue;
 		
 		%pair = %item @ " " @ %count;
@@ -2723,6 +2727,130 @@ function LoadServerTime() {
     $ServerTimeStart = getSimTime();
 }
 
+// Queue world saves so frequent gameplay events coalesce into minimal disk writes.
+// Modes:
+//   "deployables" => SaveWorldDeployables() only (lootbags/deployables crash safety)
+//   "full"        => SaveWorld() (includes deployables + seal value + house objectives)
+function RequestWorldSave(%reason, %delay, %mode)
+{
+	if(%reason == "")
+		%reason = "unspecified";
+	
+	if(%delay == "" || %delay < 0)
+		%delay = 0;
+	
+	%isFullSave = true;
+	if(%mode == "deployables")
+		%isFullSave = false;
+	
+	if(%isFullSave)
+	{
+		$WorldSavePendingFull = true;
+		$WorldSavePendingDeployables = "";
+	}
+	else if(!$WorldSavePendingFull)
+	{
+		$WorldSavePendingDeployables = true;
+	}
+	
+	$WorldSaveLastReason = %reason;
+	%runAt = getSimTime() + %delay;
+	
+	%shouldSchedule = false;
+	%existingRunAt = $WorldSaveNextRunAt;
+	if($WorldSaveScheduled == "")
+	{
+		%shouldSchedule = true;
+	}
+	else if(%existingRunAt == "" || %runAt < %existingRunAt)
+	{
+		%shouldSchedule = true;
+	}
+	
+	if(%shouldSchedule)
+	{
+		$WorldSaveScheduled = true;
+		$WorldSaveNextRunAt = %runAt;
+		$WorldSaveScheduleToken++;
+		%token = $WorldSaveScheduleToken;
+		schedule("ProcessWorldSaveQueue(" @ %token @ ");", %delay);
+	}
+}
+
+function ProcessWorldSaveQueue(%token)
+{
+	// Token guard: ignore stale scheduled callbacks.
+	if(%token != "" && %token != $WorldSaveScheduleToken)
+		return;
+	
+	%now = getSimTime();
+	%runAt = $WorldSaveNextRunAt;
+	if(%runAt != "" && %now < %runAt)
+	{
+		%remaining = %runAt - %now;
+		if(%remaining < 0)
+			%remaining = 0;
+		
+		$WorldSaveScheduleToken++;
+		%nextToken = $WorldSaveScheduleToken;
+		schedule("ProcessWorldSaveQueue(" @ %nextToken @ ");", %remaining);
+		return;
+	}
+	
+	$WorldSaveScheduled = "";
+	$WorldSaveNextRunAt = "";
+	
+	if(!$WorldSavePendingFull && !$WorldSavePendingDeployables)
+		return;
+	
+	if($WorldSaveInProgress)
+	{
+		$WorldSaveScheduleToken++;
+		%busyToken = $WorldSaveScheduleToken;
+		$WorldSaveScheduled = true;
+		$WorldSaveNextRunAt = getSimTime() + 0.1;
+		schedule("ProcessWorldSaveQueue(" @ %busyToken @ ");", 0.1);
+		return;
+	}
+	
+	$WorldSaveInProgress = true;
+	
+	if($WorldSavePendingFull)
+	{
+		$WorldSavePendingFull = "";
+		$WorldSavePendingDeployables = "";
+		SaveWorld();
+	}
+	else
+	{
+		$WorldSavePendingDeployables = "";
+		SaveWorldDeployables();
+	}
+	
+	$WorldSaveInProgress = "";
+	
+	// If requests arrived while saving, run one more pass soon.
+	if($WorldSavePendingFull || $WorldSavePendingDeployables)
+	{
+		// Respect any run time already requested while the save was in progress.
+		if($WorldSaveScheduled == "")
+		{
+			%followDelay = 0.1;
+			%followRunAt = $WorldSaveNextRunAt;
+			if(%followRunAt != "" && %followRunAt > getSimTime())
+				%followDelay = %followRunAt - getSimTime();
+			else
+				%followRunAt = getSimTime() + %followDelay;
+			
+			$WorldSaveScheduleToken++;
+			%followToken = $WorldSaveScheduleToken;
+			$WorldSaveScheduled = true;
+			$WorldSaveNextRunAt = %followRunAt;
+			schedule("ProcessWorldSaveQueue(" @ %followToken @ ");", %followDelay);
+		}
+	}
+}
+
 function SaveWorldDeployables() {
     dbecho($dbechoMode, "SaveWorldDeployables()");
     
@@ -3382,7 +3510,7 @@ function AggregateLootbags()
 	if($LootbagAggregateSaveScheduled == "")
 	{
 		$LootbagAggregateSaveScheduled = true;
-		schedule("SaveWorldDeployables(); $LootbagAggregateSaveScheduled = \"\";", 5);
+		schedule("RequestWorldSave(\"lootbag_aggregate\", 0, \"deployables\"); $LootbagAggregateSaveScheduled = \"\";", 5);
 		if($LOOTBAG_DEBUG) echo("[LOOTBAG AGGREGATE] Scheduled SaveWorldDeployables in 5s after aggregation");
 	}
 	
@@ -3713,14 +3841,23 @@ function clipTrailingNumbers(%str)
 
 function UpdateAppearance(%clientId)
 {
+	// Recursion Guard: Prevent infinite loops
+	if($InUpdateAppearance[%clientId]) return;
+	$InUpdateAppearance[%clientId] = true;
+	
+	%clientName = Client::getName(%clientId);
+	dbecho($dbechoMode, "UpdateAppearance(" @ %clientId @ ")");
+	
 	%clientName = Client::getName(%clientId);
 	dbecho($dbechoMode, "UpdateAppearance(" @ %clientId @ ")");
 
 	// CRITICAL: Validate player object exists before proceeding
 	%player = Client::getOwnedObject(%clientId);
 	if(%player == -1 || %player == "")
+	if(%player == -1 || %player == "")
 	{
 		// Player object doesn't exist (player/bot was deleted)
+		$InUpdateAppearance[%clientId] = false;
 		return;
 	}
 	
@@ -3729,6 +3866,7 @@ function UpdateAppearance(%clientId)
 	{
 		// This is definitely a town bot - skip
 		dbecho($dbechoMode, "UpdateAppearance skipped for bot " @ %clientId @ " (isTownBot flag set)");
+		$InUpdateAppearance[%clientId] = false;
 		return;
 	}
 
@@ -3743,16 +3881,20 @@ function UpdateAppearance(%clientId)
 		
 		// If it's a town bot (BotInfoAiName but no SpawnBotInfo) - skip
 		if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0" && (%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1))
+		if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0" && (%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1))
 		{
 			// This is a town bot - skip UpdateAppearance to prevent skin reset
+			$InUpdateAppearance[%clientId] = false;
 			return;
 		}
 		
 		// If it's an enemy bot (has SpawnBotInfo) - skip
 		// Enemy bots have their armor/skin set from $BotInfo[botName, RACE] and equipment string in SpawnAI()
 		if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
+		if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
 		{
 			// Enemy bot - don't change their appearance (already set from $BotInfo and equipment string)
+			$InUpdateAppearance[%clientId] = false;
 			return;
 		}
 	}
@@ -3764,8 +3906,10 @@ function UpdateAppearance(%clientId)
 	// CRITICAL: Re-validate player object before calling GetAccessoryList (which calls Player::getItemCount)
 	%playerCheck = Client::getOwnedObject(%clientId);
 	if(%playerCheck == -1 || %playerCheck == "")
+	if(%playerCheck == -1 || %playerCheck == "")
 	{
 		// Player object was deleted between validation and this call
+		$InUpdateAppearance[%clientId] = false;
 		return;
 	}
 	
@@ -3778,16 +3922,30 @@ function UpdateAppearance(%clientId)
 			%shield = %w;
 	}
 	
+	// Store armor name to player data so armor effects can be looked up (used by playerdamage.cs)
+	// This allows armor special effects (RETRIBUTION, STATIC_DISCHARGE, PHASE_SHIFT) to work
+	if(%armor != -1 && %armor != "")
+		storeData(%clientId, "Armor", %armor);
+	else
+		storeData(%clientId, "Armor", "");
+	
 	// CRITICAL: Re-validate player object before using it
 	%player = Client::getOwnedObject(%clientId);
 	if(%player == -1 || %player == "")
+	if(%player == -1 || %player == "")
 	{
 		// Player object was deleted during GetAccessoryList
+		$InUpdateAppearance[%clientId] = false;
 		return;
 	}
 	%race = fetchData(%clientId, "RACE");
 	%model = Player::getArmor(%clientId);
 	%cw = String::getSubStr(%model, String::findSubStr(%model, "Armor"), 99999);
+	// HARDEN EXTRACTION: If %cw is just "Armor" (extracted from a monster like OrcArmor), 
+	// it leads to "MaleHumanArmor" (invalid/slow) when switching back to human via Transmog.
+	// Humans MUST have a numeric suffix (0-11). Default to Armor7 (balanced) if missing.
+	%lastChar = String::getSubStr(%cw, String::len(%cw)-1, 1);
+	if(%lastChar < "0" || %lastChar > "9") %cw = "Armor7";
 	%skinbase = Client::getSkinBase(%clientId);
 	
 	// Initialize %apm, only access $ArmorPlayerModel if %armor is valid
@@ -3799,14 +3957,71 @@ function UpdateAppearance(%clientId)
 	}
 
 	//=================================
-	// Update skin
+	// Update skin & Race (Transmog Overrides)
+	//=================================
+	%personalSkin = fetchData(%clientId, "PersonalSkin");
+	%tmRace = fetchData(%clientId, "TransmogRace");
+	
+	if(%personalSkin != "" && %personalSkin != "0")
+	{
+		%skinbase = %personalSkin;
+		
+		// 1. Race Override (TransmogRace)
+		if(%tmRace != "" && %tmRace != "0")
+		{
+		    %race = %tmRace;
+		}
+		else
+		{
+		    // Legacy fallback for skins without TransmogRace flag
+		    if(%personalSkin == "rpgorc") %race = "Orc";
+		    else if(%personalSkin == "rpggnoll") %race = "Pigman";
+		    else if(%personalSkin == "min") %race = "Minotaur";
+		    else if(%personalSkin == "undead") %race = "Undead";
+		    else if(%personalSkin == "zombie") %race = "Zombie";
+		    else if(%personalSkin == "chewbacca") %race = "Ogre"; 
+		    else if(%personalSkin == "storm_daemon") %race = "Demon";
+		    else if(%personalSkin == "redgodeye") %race = "Ogre";
+		}
+
+		// 2. Human-only Gender Overrides
+		if(%race == "MaleHuman" || %race == "FemaleHuman")
+		{
+			if(String::findSubStr(%personalSkin, "female") != -1) %race = "FemaleHuman";
+			else if(String::findSubStr(%personalSkin, "male") != -1) %race = "MaleHuman";
+		}
+		
+		// 3. Universal Suffix Stripping
+		%suffixPos = String::findSubStr(%skinbase, ".male");
+		if(%suffixPos != -1) %skinbase = String::getSubStr(%skinbase, 0, %suffixPos);
+		%suffixPos = String::findSubStr(%skinbase, ".female");
+		if(%suffixPos != -1) %skinbase = String::getSubStr(%skinbase, 0, %suffixPos);
+	}
+	else if(%race == "MaleHuman" || %race == "FemaleHuman")
+	{
+		%skinbase = "rpgbase";
+	}
+
+	//=================================
+	// Update Visuals (Armor/Model)
 	//=================================
 	if(%race == "MaleHuman" || %race == "FemaleHuman")
 	{
-		%skinbase = "rpgbase";
-
 		if(%armor != -1)
+		{
+			// Regular gear visual
 			%skinbase = $ArmorSkin[%armor];
+			
+			// Transmog visual override
+			if(%personalSkin != "" && %personalSkin != "0")
+			{
+				%skinbase = %personalSkin;
+				%suffixPos = String::findSubStr(%skinbase, ".male");
+				if(%suffixPos != -1) %skinbase = String::getSubStr(%skinbase, 0, %suffixPos);
+				%suffixPos = String::findSubStr(%skinbase, ".female");
+				if(%suffixPos != -1) %skinbase = String::getSubStr(%skinbase, 0, %suffixPos);
+			}
+		}
 	}
 	else if(%race == "DeathKnight")
 	{
@@ -3824,17 +4039,50 @@ function UpdateAppearance(%clientId)
 	//=================================
 	// Update player model (Armor)
 	//=================================
-	// CRITICAL: Set Armor FIRST because it might reset the skin
-	if(%armor != -1)
+	%adminBoots = (Player::getItemCount(%clientId, "AdminBoots0") > 0);
+	if(%adminBoots)
+	{
+		// ADMIN BOOTS OVERRIDE: Select specialized variant for flying
+		if(%race == "Orc" || %race == "Pigman") %p = "AdminBootsMediumArmor";
+		else if(%race == "Ogre") %p = "AdminBootsHeavyArmor";
+		else if(%race == "Zombie") %p = "AdminBootsZombieArmor";
+		else if(%race == "Undead") %p = "AdminBootsSkelArmor";
+		else if(%race == "Minotaur") %p = "AdminBootsMinotaurArmor";
+		else if(%race == "Angel") %p = "AdminBootsFemaleRobedArmor";
+		else if(%race == "Admin") %p = "AdminBootsRobedArmor";
+		else if(%race == "Demon" || %race == "Alien" || %race == "Seals" || %race == "God" || %race == "Uber") %p = "AdminBootsMonsterArmor";
+		// Check for: actual robe equipped (apm=="Robed"), Transmog robe skin, or robed race
+		else if(%apm == "Robed" && %race == "MaleHuman") %p = "AdminBootsRobedArmor";
+		else if(%apm == "Robed" && %race == "FemaleHuman") %p = "AdminBootsFemaleRobedArmor";
+		else if(%race == "MaleHumanRobed" || (String::findSubStr(%personalSkin, "robe") != -1 && %race == "MaleHuman")) %p = "AdminBootsRobedArmor";
+		else if(%race == "FemaleHumanRobed" || (String::findSubStr(%personalSkin, "robe") != -1 && %race == "FemaleHuman")) %p = "AdminBootsFemaleRobedArmor";
+		else %p = "AdminBootsArmor";
+	}
+	else if(%armor != -1)
+	{
 		%p = %race @ %apm @ %cw;
+	}
+	else
+	{
+		// Default Armor handling (Naked/No Body Accessory)
+		// For humans: Use %race @ %cw to preserve the current speed tier (set by RefreshWeight)
+		// %cw was already extracted from current armor at line 3819 and defaults to "Armor7" if invalid
+		// This avoids both: the invisibility bug (Armor0 -> Armor7 double-switch) AND
+		// breaking speed boots (which set Armor8-11 via RefreshWeight)
+		if(%race == "MaleHuman" || %race == "FemaleHuman")
+			%p = %race @ %cw; 
+		else
+			%p = $RaceToArmorType[%race];
+	}
 
 	%ae = GameBase::getEnergy(%player);
 
-	// CRITICAL FIX: Only set armor if AdminBoots are NOT equipped.
-	// AdminBoots uses a special AdminBootsArmor datablock for flight properties.
-	// If we set it here to normal body armor, RefreshAll will just set it back, 
-	// causing an "armor ping-pong" that triggers repeated attack animations.
-	if(%armor != -1 && Player::getArmor(%clientId) != %p && %p != "" && Player::getItemCount(%clientId, "AdminBoots0") <= 0)
+	//=================================
+	// Set Armor (Check logic)
+	//=================================
+	// We only set armor if it's different. This prevents the "armor ping-pong"
+	// that triggers repeated attack animations even when no change is needed.
+	if(Player::getArmor(%clientId) != %p && %p != "")
 	{
 		Player::setArmor(%clientId, %p);
 		GameBase::setEnergy(%player, %ae);
@@ -3889,6 +4137,9 @@ function UpdateAppearance(%clientId)
 			}
 		}
 	}
+	
+	// Release Recursion Guard
+	$InUpdateAppearance[%clientId] = false;
 }
 
 function UpdateTeam(%clientId)
@@ -5109,7 +5360,7 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 
 	// DEBUG: Log when RefreshAll is called from a skill upgrade to track frequency and identify spam
 	// CRITICAL: Validate player object exists before logging debug info to prevent errors
-	if(%fromSkillUpgrade == "true" || %fromSkillUpgrade == "1" || %fromSkillUpgrade == 1)
+	if(($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) && (%fromSkillUpgrade == "true" || %fromSkillUpgrade == "1" || %fromSkillUpgrade == 1))
 	{
 		%playerObjCheck = Client::getOwnedObject(%clientId);
 		if(%playerObjCheck != -1 && %playerObjCheck != "")
@@ -5286,6 +5537,11 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	// town bots to have their armor changed to AdminArmor immediately after spawn
 	%isBot = isRPGAI(%clientId);
 	%clientName = Client::getName(%clientId);
+	
+	// Recursion Guard: Prevent infinite loops if callbacks trigger RefreshAll again
+	if($InRefreshAll[%clientId]) return;
+	$InRefreshAll[%clientId] = true;
+
 	if($TOWNBOT_ARMOR_DEBUG) echo("[TOWNBOT ARMOR DEBUG] RefreshAll: clientId=" @ %clientId @ " name='" @ %clientName @ "' isRPGAI=" @ %isBot);
 	if(!%isBot)
 	{
@@ -5320,16 +5576,20 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 		// Re-check player object exists (it might have been deleted during RefreshAll)
 		%playerObj = Client::getOwnedObject(%clientId);
 		if(%playerObj == -1 || %playerObj == "")
+		if(%playerObj == -1 || %playerObj == "")
 		{
 			// Player object was deleted during RefreshAll - silently return
+			$InRefreshAll[%clientId] = false;
 			return;
 		}
 		
 		// CRITICAL: Re-validate player object before calling Player::getItemCount
 		%playerCheck2 = Client::getOwnedObject(%clientId);
 		if(%playerCheck2 == -1 || %playerCheck2 == "")
+		if(%playerCheck2 == -1 || %playerCheck2 == "")
 		{
 			// Player object was deleted between check and this call
+			$InRefreshAll[%clientId] = false;
 			return;
 		}
 		
@@ -5347,9 +5607,32 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 		if(%adminBootsCount > 0)
 		{
 			// Make sure AdminBootsArmor is set (in case UpdateAppearance changed it)
-			if(Player::getArmor(%clientId) != "AdminBootsArmor")
+			// BUG FIX: Recognize all specialized AdminBoots variants to prevent redundant overrides
+			if(String::findSubStr(Player::getArmor(%clientId), "AdminBoots") == -1)
 			{
-				Player::setArmor(%clientId, "AdminBootsArmor");
+				// Check if player is wearing a Robe
+				%isRobed = false;
+				
+				// CRITICAL FIX: Use GetAccessoryList to find the armor, just like UpdateAppearance does.
+				// Player::getMountedItem does NOT work for RPG accessories/armors.
+				%list = GetAccessoryList(%clientId, 2, "3 7");
+				for(%i = 0; (%w = getCroppedItem(GetWord(%list, %i))) != -1; %i++)
+				{
+					if($AccessoryVar[%w, $AccessoryType] == $BodyAccessoryType)
+					{
+						// Found body armor, check if it's a robe
+						if($ArmorPlayerModel[%w] == "Robed")
+						{
+							%isRobed = true;
+							break;
+						}
+					}
+				}
+				
+				if(%isRobed)
+					Player::setArmor(%clientId, "AdminBootsRobedArmor");
+				else
+					Player::setArmor(%clientId, "AdminBootsArmor");
 			}
 		}
 	}
@@ -5370,6 +5653,9 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	{
 		$SkillUpgradeRefreshScheduled[%clientId] = "";
 	}
+	
+	// Release Recursion Guard
+	$InRefreshAll[%clientId] = false;
 }
 
 // CRITICAL: New function specifically for enemy bots - does NOT touch team at all
@@ -6205,6 +6491,13 @@ function SetStuffString(%stuff, %item, %amount)
 	dbecho($dbechoMode, "SetStuffString(" @ %stuff @ ", " @ %item @ ", " @ %amount @ ")");
 
 	//replaces both Add and Remove stuff string functions by enabling negative values for %amount
+
+	// CRITICAL: Handle uninitialized BankStorage that may come in as 0 or "0"
+	// This can happen when $ClientData[clientId, "BankStorage"] was never set
+	// Use explicit string comparison to avoid TorqueScript's loose type coercion
+	%stuffStr = %stuff @ "";  // Force string conversion
+	if(%stuffStr == "0" || %stuffStr == "")
+		%stuff = "";
 
 	//echo("DEBUG SetStuffString: INPUT - stuff='" @ %stuff @ "', item='" @ %item @ "', amount=" @ %amount);
 	%stuff = FixStuffString(%stuff);

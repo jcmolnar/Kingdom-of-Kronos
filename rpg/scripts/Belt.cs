@@ -326,7 +326,8 @@ function MenuViewBackpack(%clientId, %page)
 
 function MenuViewBelt(%clientId, %page)
 {
-	Client::buildMenu(%clientId, ".:(Backpack):.", "ViewBelt", true);
+	%beltWeight = Belt::GetWeight(%clientId);
+	Client::buildMenu(%clientId, ".:(Backpack):. Weight: " @ %beltWeight, "ViewBelt", true);
 	
 	%cnt = 1; // Initialize menu counter
 	for(%i = 1; %i < Belt::GetLastItem(); %i++)
@@ -2747,8 +2748,8 @@ function Belt::DropItem(%clientId, %item, %amnt, %type)
 		Belt::TakeThisStuff(%clientId, %item, %amnt);
 		TossLootbag(%clientId, %item @ " " @ %amnt, 8, "*", 0, 1);
 		SaveCharacter(%clientId);
-		// Save world after 3 second delay (allows character save to complete first)
-		schedule("SaveWorld();", 3);
+		// Queue deployable-only world save after 3 seconds (preserves lootbag crash safety, avoids full-save storms)
+		RequestWorldSave("belt_drop", 3, "deployables");
 	}
 }
 
@@ -4465,6 +4466,7 @@ function Belt::Shop(%clientId, %npc, %shopIndices)
 	%cnt = 1;
 	Client::addMenuItem(%clientId, %cnt++ @ ". Standard Shop", "standard");
 	Client::addMenuItem(%clientId, %cnt++ @ ". Buy Accessories", "buy");
+	Client::addMenuItem(%clientId, %cnt++ @ ". Buy Consumables", "buyconsumables");
 	Client::addMenuItem(%clientId, %cnt++ @ ". Sell Backpack Items", "sell");
 	Client::addMenuItem(%clientId, "xFinished", "done");
 }
@@ -4479,6 +4481,10 @@ function processMenuBeltShop(%clientId, %opt)
 	else if(%opt == "buy")
 	{
 		MenuBuyBeltAccessories(%clientId, 1);
+	}
+	else if(%opt == "buyconsumables")
+	{
+		MenuBuyBeltConsumables(%clientId, 1);
 	}
 	else if(%opt == "sell")
 	{
@@ -4530,6 +4536,7 @@ function MenuBuyBeltAccessories(%clientId, %page)
 	
 	// Pagination
 	%l = 6; // Items per page
+	if(%page == "" || %page == -1 || %page == 0) %page = 1;
 	%np = floor(%itemCount / %l);
 	%lb = (%page * %l) - (%l - 1);
 	%ub = %lb + (%l - 1);
@@ -4611,6 +4618,238 @@ function processMenuBuyBeltAccessories(%clientId, %opt)
 	MenuBuyBeltItem(%clientId, %o, %p);
 }
 
+// Buy Consumables menu - mirrors MenuBuyBeltAccessories but for Consumables category
+function MenuBuyBeltConsumables(%clientId, %page)
+{
+	%shopIndices = %clientId.beltShopIndices;
+	
+	Client::buildMenu(%clientId, ".:( Buy Consumables ):.", "BuyBeltConsumables", true);
+	
+	// Build list of purchasable items based on shop indices
+	// Shop indices are defined in $AccessoryVar[item, $ShopIndex]
+	%itemList = "";
+	%itemCount = 0;
+	
+	// Iterate through all belt items in Consumables category
+	%beltCount = $Belt::Count["Consumables"];
+	for(%i = 0; %i < %beltCount; %i++)
+	{
+		%item = $BeltItem[%i, "Num", "Consumables"];
+		if(%item == "" || %item == -1)
+			continue;
+		
+		%itemShopIndex = $AccessoryVar[%item, $ShopIndex];
+		if(%itemShopIndex == "" || %itemShopIndex == -1)
+			continue;
+		
+		// Check if this item's shop index is in the merchant's shop list
+		for(%j = 0; GetWord(%shopIndices, %j) != -1; %j++)
+		{
+			if(GetWord(%shopIndices, %j) == %itemShopIndex)
+			{
+				%itemList = %itemList @ %item @ " ";
+				%itemCount++;
+				break;
+			}
+		}
+	}
+	
+	// Pagination
+	%l = 6; // Items per page
+	if(%page == "" || %page == -1 || %page == 0) %page = 1;
+	%np = floor(%itemCount / %l);
+	%lb = (%page * %l) - (%l - 1);
+	%ub = %lb + (%l - 1);
+	if(%ub > %itemCount)
+		%ub = %itemCount;
+	
+	%cnt = 1;
+	for(%i = %lb; %i <= %ub; %i++)
+	{
+		%item = GetWord(%itemList, %i - 1);
+		if(%item == "" || %item == -1)
+			continue;
+		
+		%name = $BeltItem[%item, "Name"];
+		if(%name == "")
+			%name = %item;
+		
+		%cost = Belt::GetBuyCost(%clientId, %item);
+		Client::addMenuItem(%clientId, %cnt++ @ ": " @ %name @ " ($" @ %cost @ ")", %item @ " " @ %page);
+	}
+	
+	// If no items found, show message
+	if(%itemCount == 0)
+	{
+		Client::addMenuItem(%clientId, "1: (No consumables available)", "noitems");
+	}
+	
+	// Navigation
+	if(%page == 1)
+	{
+		if(%itemCount > 6)
+			Client::addMenuItem(%clientId, "nNext >>", "page " @ (%page + 1));
+		Client::addMenuItem(%clientId, "bBack", "back");
+		Client::addMenuItem(%clientId, "xDone", "done");
+	}
+	else if(%page >= %np + 1 || %np == 0)
+	{
+		if(%page > 1)
+			Client::addMenuItem(%clientId, "p<< Prev", "page " @ (%page - 1));
+		Client::addMenuItem(%clientId, "bBack", "back");
+		Client::addMenuItem(%clientId, "xDone", "done");
+	}
+	else
+	{
+		Client::addMenuItem(%clientId, "nNext >>", "page " @ (%page + 1));
+		Client::addMenuItem(%clientId, "p<< Prev", "page " @ (%page - 1));
+		Client::addMenuItem(%clientId, "bBack", "back");
+		Client::addMenuItem(%clientId, "xDone", "done");
+	}
+}
+
+function processMenuBuyBeltConsumables(%clientId, %opt)
+{
+	%o = GetWord(%opt, 0);
+	%p = GetWord(%opt, 1);
+	
+	if(%o == "back")
+	{
+		// Return to main shop menu
+		Belt::Shop(%clientId, %clientId.currentBeltShop, %clientId.beltShopIndices);
+		return;
+	}
+	
+	if(%o == "done")
+	{
+		%clientId.currentBeltShop = "";
+		%clientId.beltShopIndices = "";
+		Client::cancelMenu(%clientId);
+		return;
+	}
+	
+	if(%o == "page")
+	{
+		MenuBuyBeltConsumables(%clientId, %p);
+		return;
+	}
+	
+	if(%o == "noitems" || %o == "cantafford")
+	{
+		// Ignore - stay on the same menu
+		MenuBuyBeltConsumables(%clientId, 1);
+		return;
+	}
+	
+	// Player selected an item to buy - show buy confirmation menu
+	// Pass "consumables" as the category so back button returns to consumables menu
+	MenuBuyBeltItemConsumable(%clientId, %o, %p);
+}
+
+// Buy menu for a specific consumable item
+function MenuBuyBeltItemConsumable(%clientId, %item, %fromPage)
+{
+	%name = $BeltItem[%item, "Name"];
+	if(%name == "")
+		%name = %item;
+	
+	%cost = Belt::GetBuyCost(%clientId, %item);
+	%coins = fetchData(%clientId, "COINS");
+	
+	Client::buildMenu(%clientId, %name, "BuyBeltItemConsumable", true);
+	
+	// Add INFO option first as option 1
+	// Add "info" as word 1, dummy "x" as word 2 to match buy quantity position
+	Client::addMenuItem(%clientId, "1: INFO", %item @ " info x " @ %fromPage);
+	
+	if(%coins >= %cost)
+	{
+		Client::addMenuItem(%clientId, "2: Buy 1 ($" @ %cost @ ")", %item @ " buy 1 " @ %fromPage);
+	}
+	else
+	{
+		Client::addMenuItem(%clientId, "2: (Cannot afford - $" @ %cost @ ")", "cantafford");
+	}
+	
+	// Show bulk options if player can afford
+	if(%coins >= %cost * 5)
+		Client::addMenuItem(%clientId, "3: Buy 5 ($" @ (%cost * 5) @ ")", %item @ " buy 5 " @ %fromPage);
+	if(%coins >= %cost * 10)
+		Client::addMenuItem(%clientId, "4: Buy 10 ($" @ (%cost * 10) @ ")", %item @ " buy 10 " @ %fromPage);
+	
+	Client::addMenuItem(%clientId, "bBack", "back " @ %fromPage);
+	Client::addMenuItem(%clientId, "xDone", "done");
+}
+
+function processMenuBuyBeltItemConsumable(%clientId, %opt)
+{
+	%item = GetWord(%opt, 0);
+	%action = GetWord(%opt, 1);
+	%qty = GetWord(%opt, 2);
+	%fromPage = GetWord(%opt, 3);
+	
+	if(%item == "back")
+	{
+		MenuBuyBeltConsumables(%clientId, %action);
+		return;
+	}
+	
+	if(%item == "done")
+	{
+		%clientId.currentBeltShop = "";
+		%clientId.beltShopIndices = "";
+		Client::cancelMenu(%clientId);
+		return;
+	}
+	
+	if(%item == "cantafford")
+	{
+		MenuBuyBeltItemConsumable(%clientId, %item, %fromPage);
+		return;
+	}
+	
+	if(%action == "info")
+	{
+		// Display consumable info using the same function as #w command (Acessory logic)
+		%msg = WhatIs(%item);
+		bottomprint(%clientId, %msg, 5);
+		
+		MenuBuyBeltItemConsumable(%clientId, %item, %fromPage);
+		return;
+	}
+	
+	if(%action == "buy")
+	{
+		%cost = Belt::GetBuyCost(%clientId, %item) * %qty;
+		%coins = fetchData(%clientId, "COINS");
+		
+		if(%coins >= %cost)
+		{
+			storeData(%clientId, "COINS", -1 * %cost, "inc");
+			Belt::GiveThisStuff(%clientId, %item, %qty, true);
+			
+			%name = $BeltItem[%item, "Name"];
+			if(%name == "")
+				%name = %item;
+			
+			Client::sendMessage(%clientId, $MsgGreen, "You purchased " @ %qty @ " " @ %name @ " for $" @ %cost @ ".~wbuysellsound.wav");
+			
+			RefreshAll(%clientId);
+			SaveCharacter(%clientId);
+		}
+		else
+		{
+			Client::sendMessage(%clientId, $MsgRed, "You cannot afford this item.~wC_BuySell.wav");
+		}
+		
+		MenuBuyBeltItemConsumable(%clientId, %item, %fromPage);
+		return;
+	}
+	
+	// Default - return to item menu
+	MenuBuyBeltItemConsumable(%clientId, %item, %fromPage);
+}
+
 function MenuBuyBeltItem(%clientId, %item, %fromPage)
 {
 	%name = $BeltItem[%item, "Name"];
@@ -4622,20 +4861,24 @@ function MenuBuyBeltItem(%clientId, %item, %fromPage)
 	
 	Client::buildMenu(%clientId, %name, "BuyBeltItem", true);
 	
+	// Add INFO option first as option 1
+	// Add "info" as word 1, dummy "x" as word 2 to match buy quantity position
+	Client::addMenuItem(%clientId, "1: INFO", %item @ " info x " @ %fromPage);
+	
 	if(%coins >= %cost)
 	{
-		Client::addMenuItem(%clientId, "1: Buy 1 ($" @ %cost @ ")", %item @ " buy 1 " @ %fromPage);
+		Client::addMenuItem(%clientId, "2: Buy 1 ($" @ %cost @ ")", %item @ " buy 1 " @ %fromPage);
 	}
 	else
 	{
-		Client::addMenuItem(%clientId, "1: (Cannot afford - $" @ %cost @ ")", "cantafford");
+		Client::addMenuItem(%clientId, "2: (Cannot afford - $" @ %cost @ ")", "cantafford");
 	}
 	
 	// Show bulk options if player can afford
 	if(%coins >= %cost * 5)
-		Client::addMenuItem(%clientId, "2: Buy 5 ($" @ (%cost * 5) @ ")", %item @ " buy 5 " @ %fromPage);
+		Client::addMenuItem(%clientId, "3: Buy 5 ($" @ (%cost * 5) @ ")", %item @ " buy 5 " @ %fromPage);
 	if(%coins >= %cost * 10)
-		Client::addMenuItem(%clientId, "3: Buy 10 ($" @ (%cost * 10) @ ")", %item @ " buy 10 " @ %fromPage);
+		Client::addMenuItem(%clientId, "4: Buy 10 ($" @ (%cost * 10) @ ")", %item @ " buy 10 " @ %fromPage);
 	
 	Client::addMenuItem(%clientId, "bBack", "back " @ %fromPage);
 	Client::addMenuItem(%clientId, "xDone", "done");
@@ -4672,6 +4915,17 @@ function processMenuBuyBeltItem(%clientId, %opt)
 	
 	if(%action == "cantafford")
 	{
+		MenuBuyBeltItem(%clientId, %item, %fromPage);
+		return;
+	}
+	
+	if(%action == "info")
+	{
+		// Display accessory info using the same function as #w command
+		%msg = WhatIs(%item);
+		bottomprint(%clientId, %msg, 5);
+		
+		// Return to the buy menu
 		MenuBuyBeltItem(%clientId, %item, %fromPage);
 		return;
 	}

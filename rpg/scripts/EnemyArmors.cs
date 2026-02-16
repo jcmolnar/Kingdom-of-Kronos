@@ -2304,16 +2304,19 @@ PlayerData ZombieArmor
 
 	footPrints = { 0, 1 };
 
-	boxWidth = 0.5;
-	boxDepth = 0.5;
-	boxNormalHeight = 2.3;
-	boxCrouchHeight = 1.8;
-
-	boxNormalHeadPercentage  = 0.83;
+// Physical Box (Scaled 5x)
+	boxWidth = 0.5;         // (0.5 * 5)
+	boxDepth = 0.5;         // (0.5 * 5)
+	boxNormalHeight = 2.3;  // (2.3 * 5)
+	boxCrouchHeight = 1.8;   // (1.8 * 5)
+	// Hit Zone Ratios (STAY THE SAME)
+	// These are percentages of the height. 
+	// If you multiply these by 5, the head would be 415% above the feet!
+	boxNormalHeadPercentage  = 0.83; 
 	boxNormalTorsoPercentage = 0.53;
 	boxCrouchHeadPercentage  = 0.6666;
 	boxCrouchTorsoPercentage = 0.3333;
-
+	// Orientation Percentages (STAY THE SAME)
 	boxHeadLeftPercentage  = 0;
 	boxHeadRightPercentage = 1;
 	boxHeadBackPercentage  = 0;

@@ -59,6 +59,14 @@ $BOT_CLEANUP_DEBUG = 0;       // Controls [BOT CLEANUP] messages
 $TOWNBOT_ARMOR_DEBUG = 0;     // Controls [TOWNBOT ARMOR DEBUG] messages
 $RECONCILE_DEBUG = 0;         // Controls [RECONCILE] messages
 
+// Empty-zone check tuning (performance/safety balance)
+// $ZoneEmptyCheckInterval: how often PeriodicEmptyZoneCheck runs
+// $ZoneEmptyAuditInterval: how often stable empty zones are force-audited
+// $ZoneEmptyDespawnRetryInterval: minimum delay before retrying despawn on stable empty zones
+$ZoneEmptyCheckInterval = 30;
+$ZoneEmptyAuditInterval = 180;
+$ZoneEmptyDespawnRetryInterval = 120;
+
 
 // Bot tracking counters
 $TotalActiveBots = 0;      // Total count of all active bots (enemy + town)
@@ -10181,7 +10189,7 @@ function InitTownBots()
 	echo("===== InitTownBots() completed - Registered " @ GetWordCount($TownBotRegistry) @ " bots for dynamic loading =====");
 	
 	// Start periodic empty zone check to catch zones that should be empty but aren't being despawned
-	// This runs every 30 seconds to verify zones are actually empty and despawn bots if needed
+	// Runs on $ZoneEmptyCheckInterval, with throttled deep audits to reduce load on stable empty zones
 	schedule("PeriodicEmptyZoneCheck();", 60);  // Start after 60 seconds to let server fully initialize
 	
 	// Start periodic bot team check to fix bots that are on team -1
@@ -11638,30 +11646,36 @@ function DespawnZoneBots(%zoneIndex)
 	%zoneFolderID = $Zone::FolderID[%zoneIndex];
 	if(%zoneFolderID == "" || %zoneFolderID == -1)
 		return; // Invalid zone index
+
+	// Reuse standard AI debug flags so despawn tracing can be toggled globally.
+	%despawnDebug = ($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG);
 	
 	// DEBUG: Log all connected players and their zone data for diagnosis
 	%zoneDesc = $Zone::Desc[%zoneIndex];
-	echo("[DESPAWN DEBUG] === DespawnZoneBots(" @ %zoneIndex @ ") - " @ %zoneDesc @ " ===");
-	echo("[DESPAWN DEBUG] Zone FolderID: " @ %zoneFolderID @ ", $ZonePlayerCount: " @ $ZonePlayerCount[%zoneIndex]);
+	if(%despawnDebug) echo("[DESPAWN DEBUG] === DespawnZoneBots(" @ %zoneIndex @ ") - " @ %zoneDesc @ " ===");
+	if(%despawnDebug) echo("[DESPAWN DEBUG] Zone FolderID: " @ %zoneFolderID @ ", $ZonePlayerCount: " @ $ZonePlayerCount[%zoneIndex]);
 	
 	// DEBUG: Iterate all connected players and show their zone data  
-	echo("[DESPAWN DEBUG] Connected players zone check:");
-	%debugPlayerCount = 0;
-	for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
+	if(%despawnDebug)
 	{
-		%debugPlayerCount++;
-		%playerName = Client::getName(%cl);
-		%playerZone = fetchData(%cl, "zone");
-		%playerZoneIndex = Zone::getIndex(%playerZone);
-		%isInTargetZone = (%playerZone == %zoneFolderID);
-		echo("[DESPAWN DEBUG]   Player: " @ %playerName @ " (clientId=" @ %cl @ ") - zone='" @ %playerZone @ "' (index=" @ %playerZoneIndex @ ") matchesTarget=" @ %isInTargetZone);
+		echo("[DESPAWN DEBUG] Connected players zone check:");
+		%debugPlayerCount = 0;
+		for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
+		{
+			%debugPlayerCount++;
+			%playerName = Client::getName(%cl);
+			%playerZone = fetchData(%cl, "zone");
+			%playerZoneIndex = Zone::getIndex(%playerZone);
+			%isInTargetZone = (%playerZone == %zoneFolderID);
+			echo("[DESPAWN DEBUG]   Player: " @ %playerName @ " (clientId=" @ %cl @ ") - zone='" @ %playerZone @ "' (index=" @ %playerZoneIndex @ ") matchesTarget=" @ %isInTargetZone);
+		}
+		echo("[DESPAWN DEBUG] Total connected players: " @ %debugPlayerCount);
 	}
-	echo("[DESPAWN DEBUG] Total connected players: " @ %debugPlayerCount);
 	
 	%playerList = Zone::getPlayerList(%zoneFolderID, 2); // Type 2 = real players only (not bots)
 	%hasPlayers = (%playerList != "" && %playerList != -1);
 	
-	echo("[DESPAWN DEBUG] Zone::getPlayerList returned: '" @ %playerList @ "' hasPlayers=" @ %hasPlayers);
+	if(%despawnDebug) echo("[DESPAWN DEBUG] Zone::getPlayerList returned: '" @ %playerList @ "' hasPlayers=" @ %hasPlayers);
 	
 	if(%hasPlayers)
 	{
@@ -11673,7 +11687,7 @@ function DespawnZoneBots(%zoneIndex)
 	}
 	
 	// DEBUG: If no players found, this despawn will proceed - log prominently
-	echo("[DESPAWN DEBUG] *** PROCEEDING WITH DESPAWN - Zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") detected as EMPTY ***");
+	if(%despawnDebug) echo("[DESPAWN DEBUG] *** PROCEEDING WITH DESPAWN - Zone " @ %zoneIndex @ " (" @ %zoneDesc @ ") detected as EMPTY ***");
 	
 	// Clear the despawn schedule flag
 	$ZoneBotDespawnSchedule[%zoneIndex] = "";
@@ -11686,6 +11700,7 @@ function DespawnZoneBots(%zoneIndex)
 	// First, collect all town bot clientIds to remove from TownBotList (optimization: rebuild list once at end)
 	%clientIdsToRemove = "";
 	%botCount = 0;
+	%despawnRunKey = %zoneIndex @ "_" @ getSimTime();
 	
 	// First, despawn all town bots in this zone
 	for(%i = 0; (%botName = GetWord($TownBotRegistry, %i)) != -1; %i++)
@@ -11821,6 +11836,7 @@ function DespawnZoneBots(%zoneIndex)
 			
 			// Collect clientId for removal (optimization: rebuild list once at end)
 				%clientIdsToRemove = %clientIdsToRemove @ %clientId @ " ";
+				$DespawnRemoveMark[%despawnRunKey, %clientId] = 1;
 				%botCount++;
 				
 				// CRITICAL: Register bot in graveyard BEFORE deletion to prevent client ID reuse collision
@@ -11837,7 +11853,7 @@ function DespawnZoneBots(%zoneIndex)
 				if(%despawnPlayerName == "" || %despawnPlayerName == -1)
 					%despawnPlayerName = "Unknown";
 				schedule("if($DespawnValidationToken[" @ %clientId @ "] == \"" @ %validationToken @ "\" && !isFile(\"temp\\\\" @ %despawnPlayerName @ ".cs\")) { if(isObject(" @ %playerObj @ ")) deleteObject(" @ %playerObj @ "); $DespawnValidationToken[" @ %clientId @ "] = \"\"; }", 1.0);
-				echo("Despawned bot: " @ %botName @ " (zone " @ %zoneIndex @ ")");
+				if(%despawnDebug) echo("Despawned bot: " @ %botName @ " (zone " @ %zoneIndex @ ")");
 			}
 			else
 			{
@@ -11859,7 +11875,8 @@ function DespawnZoneBots(%zoneIndex)
 				
 				// Bot already deleted, still collect for list removal
 				%clientIdsToRemove = %clientIdsToRemove @ %clientId @ " ";
-				echo("Bot " @ %botName @ " already deleted, will remove from list");
+				$DespawnRemoveMark[%despawnRunKey, %clientId] = 1;
+				if(%despawnDebug) echo("Bot " @ %botName @ " already deleted, will remove from list");
 			}
 			
 			// Clear spawn tracking
@@ -11886,18 +11903,8 @@ function DespawnZoneBots(%zoneIndex)
 		%newList = "";
 		for(%j = 0; (%id = GetWord($TownBotList, %j)) != -1; %j++)
 		{
-			// Check if this ID should be removed
-			%shouldRemove = false;
-			for(%k = 0; (%removeId = GetWord(%clientIdsToRemove, %k)) != -1; %k++)
-			{
-				if(%id == %removeId)
-				{
-					%shouldRemove = true;
-					break;
-				}
-			}
-			
-			if(!%shouldRemove)
+			// O(1) membership check for this despawn pass (avoids nested scans on large lists)
+			if($DespawnRemoveMark[%despawnRunKey, %id] == "")
 				%newList = %newList @ %id @ " ";
 		}
 		$TownBotList = %newList;
@@ -11925,16 +11932,7 @@ function DespawnZoneBots(%zoneIndex)
 		// CRITICAL: Skip bots that were already processed by the first loop (town bots)
 		// The first loop clears their data but schedules deletion for 1 second later
 		// So GetBotIdList() might still return them before they're actually deleted
-		%alreadyProcessed = false;
-		for(%chk = 0; (%chkId = GetWord(%clientIdsToRemove, %chk)) != -1; %chk++)
-		{
-			if(%botId == %chkId)
-			{
-				%alreadyProcessed = true;
-				break;
-			}
-		}
-		if(%alreadyProcessed)
+		if($DespawnRemoveMark[%despawnRunKey, %botId] != "")
 			continue;
 		
 		// Validate bot still exists
@@ -11943,7 +11941,7 @@ function DespawnZoneBots(%zoneIndex)
 			continue;
 		
 		// DEBUG: Trace enemy bot candidates
-		echo("[DESPAWN DEBUG] Checking bot candidate: " @ %botId @ " (" @ Client::getName(%botId) @ ")");
+		if(%despawnDebug) echo("[DESPAWN DEBUG] Checking bot candidate: " @ %botId @ " (" @ Client::getName(%botId) @ ")");
 		
 		// UNIFIED SAFEGUARD: Verify this is a bot (handles Real Players vs Ghost Bots)
 		if(!IsSafeToModify(%botId, "DespawnZoneBots (Enemy)"))
@@ -12004,11 +12002,11 @@ function DespawnZoneBots(%zoneIndex)
 		%targetZoneFolder = $Zone::FolderID[%zoneIndex];
 		if(%targetZoneFolder == "" || %targetZoneFolder == -1)
 		{
-			echo("[DESPAWN DEBUG] Invalid targetZoneFolder for index " @ %zoneIndex);
+			if(%despawnDebug) echo("[DESPAWN DEBUG] Invalid targetZoneFolder for index " @ %zoneIndex);
 			continue; // Invalid zone index, skip
 		}
 		
-		echo("[DESPAWN DEBUG] Processing bot " @ %botId @ " for target zone INDEX " @ %zoneIndex @ " (folderID " @ %targetZoneFolder @ ")");
+		if(%despawnDebug) echo("[DESPAWN DEBUG] Processing bot " @ %botId @ " for target zone INDEX " @ %zoneIndex @ " (folderID " @ %targetZoneFolder @ ")");
 		
 		// Compare bot's zone INDEX directly with target zone INDEX
 		// CRITICAL FIX: %botZone is a zone INDEX (13, 17, etc.) and must be compared to %zoneIndex (also an index)
@@ -12019,7 +12017,7 @@ function DespawnZoneBots(%zoneIndex)
 		if(%botZone == %zoneIndex)
 		{
 			%match = true;
-			echo("[DESPAWN DEBUG] MATCH! Bot " @ %botId @ " zone=" @ %botZone @ " matches target zoneIndex=" @ %zoneIndex);
+			if(%despawnDebug) echo("[DESPAWN DEBUG] MATCH! Bot " @ %botId @ " zone=" @ %botZone @ " matches target zoneIndex=" @ %zoneIndex);
 		}
 		else
 		{
@@ -12032,7 +12030,7 @@ function DespawnZoneBots(%zoneIndex)
 			if(%originZone == %targetZoneFolder)
 			{
 				// Match found via SpawnOriginZoneID (comparing folder IDs)!
-				echo("[DESPAWN DEBUG] MATCH! Bot " @ %botId @ " matched via SpawnOriginZoneID=" @ %originZone @ " == targetZoneFolder=" @ %targetZoneFolder);
+				if(%despawnDebug) echo("[DESPAWN DEBUG] MATCH! Bot " @ %botId @ " matched via SpawnOriginZoneID=" @ %originZone @ " == targetZoneFolder=" @ %targetZoneFolder);
 				%match = true;
 				%matchedViaOrigin = true;
 			}
@@ -12040,7 +12038,7 @@ function DespawnZoneBots(%zoneIndex)
 
 		if(!%match)
 		{
-			echo("[DESPAWN DEBUG] Zone Mismatch for " @ %botId @ ": botZone(index)=" @ %botZone @ " != targetZoneIndex=" @ %zoneIndex @ ", originZone(folderID)=" @ %originZone @ " != targetZoneFolder=" @ %targetZoneFolder @ ". Skipping.");
+			if(%despawnDebug) echo("[DESPAWN DEBUG] Zone Mismatch for " @ %botId @ ": botZone(index)=" @ %botZone @ " != targetZoneIndex=" @ %zoneIndex @ ", originZone(folderID)=" @ %originZone @ " != targetZoneFolder=" @ %targetZoneFolder @ ". Skipping.");
 			continue; // Bot is in a different zone, skip to prevent killing bots in other zones
 		}
 		
@@ -12118,8 +12116,14 @@ function DespawnZoneBots(%zoneIndex)
 			// when those enemies despawn due to the zone becoming empty
 			storeData(%botId, "noExperienceFlag", True);
 			Player::Kill(%botId);
-			echo("Despawned enemy bot from " @ %spawnType @ " " @ %spawnPointId @ " (zone " @ %zoneIndex @ ", zoneDesc=" @ %zoneDesc @ ")");
+			if(%despawnDebug) echo("Despawned enemy bot from " @ %spawnType @ " " @ %spawnPointId @ " (zone " @ %zoneIndex @ ", zoneDesc=" @ %zoneDesc @ ")");
 		}
+	}
+
+	// Clear temporary removal marks created for this despawn pass.
+	for(%clearIdx = 0; (%clearId = GetWord(%clientIdsToRemove, %clearIdx)) != -1; %clearIdx++)
+	{
+		$DespawnRemoveMark[%despawnRunKey, %clearId] = "";
 	}
 }
 
@@ -12161,29 +12165,81 @@ function CheckAndDespawnZoneBots(%zoneIndex)
 // This catches cases where $ZonePlayerCount got out of sync
 function PeriodicEmptyZoneCheck()
 {
-	// Check all zones (not just zones with town bots)
+	%checkInterval = $ZoneEmptyCheckInterval;
+	if(%checkInterval == "" || %checkInterval <= 0)
+		%checkInterval = 30;
+	
+	%auditInterval = $ZoneEmptyAuditInterval;
+	if(%auditInterval == "" || %auditInterval <= 0)
+		%auditInterval = 180;
+	
+	%despawnRetryInterval = $ZoneEmptyDespawnRetryInterval;
+	if(%despawnRetryInterval == "" || %despawnRetryInterval <= 0)
+		%despawnRetryInterval = 120;
+	
+	%now = getSimTime();
+	
+	// Only run full player-list scans for zones that are active/pending, plus periodic safety audits.
 	for(%zoneIndex = 1; %zoneIndex <= $Zone::Count; %zoneIndex++)
 	{
 		%zoneFolderID = $Zone::FolderID[%zoneIndex];
 		if(%zoneFolderID == "" || %zoneFolderID == -1)
 			continue; // Invalid zone index, skip
 		
+		%storedCount = $ZonePlayerCount[%zoneIndex];
+		if(%storedCount == "")
+			%storedCount = 0;
+		
+		%despawnPending = ($ZoneBotDespawnSchedule[%zoneIndex] == "pending");
+		%lastAudit = $ZoneEmptyLastAudit[%zoneIndex];
+		%shouldAudit = false;
+		
+		// Active zones and pending despawns are always audited.
+		if(%storedCount > 0 || %despawnPending)
+		{
+			%shouldAudit = true;
+		}
+		// Stable empty zones are only audited periodically as a safety net.
+		else if(%lastAudit == "" || %lastAudit == -1 || (%now - %lastAudit) >= %auditInterval)
+		{
+			%shouldAudit = true;
+		}
+		
+		if(!%shouldAudit)
+			continue;
+		
+		$ZoneEmptyLastAudit[%zoneIndex] = %now;
+		
 		%playerList = Zone::getPlayerList(%zoneFolderID, 2); // Type 2 = real players only (not bots)
 		%hasPlayers = (%playerList != "" && %playerList != -1);
 		
 		if(!%hasPlayers)
 		{
-			// Zone is empty - despawn bots and fix player count
+			// Zone is empty - keep count synced.
 			$ZonePlayerCount[%zoneIndex] = 0;
-			DespawnZoneBots(%zoneIndex);
+			
+			// Despawn immediately on transitions/pending work, otherwise retry at a slower safety cadence.
+			%lastDespawnAttempt = $ZoneEmptyLastDespawnAttempt[%zoneIndex];
+			%shouldDespawn = false;
+			if(%storedCount > 0 || %despawnPending)
+			{
+				%shouldDespawn = true;
+			}
+			else if(%lastDespawnAttempt == "" || %lastDespawnAttempt == -1 || (%now - %lastDespawnAttempt) >= %despawnRetryInterval)
+			{
+				%shouldDespawn = true;
+			}
+			
+			if(%shouldDespawn)
+			{
+				$ZoneEmptyLastDespawnAttempt[%zoneIndex] = %now;
+				DespawnZoneBots(%zoneIndex);
+			}
 		}
 		else
 		{
 			// Zone has players - fix the count if it's wrong
 			%actualPlayerCount = GetWordCount(%playerList);
-			%storedCount = $ZonePlayerCount[%zoneIndex];
-			if(%storedCount == "")
-				%storedCount = 0;
 			
 			if(%actualPlayerCount != %storedCount)
 			{
@@ -12193,8 +12249,7 @@ function PeriodicEmptyZoneCheck()
 		}
 	}
 	
-	// Schedule next check in 30 seconds
-	schedule("PeriodicEmptyZoneCheck();", 30);
+	schedule("PeriodicEmptyZoneCheck();", %checkInterval);
 }
 
 // Periodic check to fix enemy bots that are on team -1
@@ -14076,4 +14131,3 @@ echo(" Total Real: " @ %realCount @ " | Total AI: " @ %aiCount);
 
 echo("==================================================");
 }
-

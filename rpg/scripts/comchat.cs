@@ -985,11 +985,11 @@ function remoteSay(%clientId, %team, %message, %senderName)
 					// Use higher velocity (10) for #dropcoins to drop coins further from player
 					%toss = 10;
 	
-	                        TossLootbag(%TrueClientId, "COINS " @ %cropped, %toss, "*", 0);
+					TossLootbag(%TrueClientId, "COINS " @ %cropped, %toss, "*", 0);
 					RefreshAll(%TrueClientId);
 					SaveCharacter(%TrueClientId);
-					// Save world after 3 second delay (allows character save to complete first)
-					schedule("SaveWorld();", 3);
+					// Queue deployable-only world save after 3 seconds (preserves lootbag crash safety, avoids full-save storms)
+					RequestWorldSave("drop_coins", 3, "deployables");
 	
 	                        Client::sendMessage(%TrueClientId, 0, "You dropped " @ %cropped @ " coins.");
 	                        playSound(SoundMoney1, GameBase::getPosition(%TrueClientId));
@@ -1889,8 +1889,8 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 					TossLootbag(%TrueClientId, fetchData(%TrueClientId, "TempPack"), 5, %namelist, 0);
 					RefreshAll(%TrueClientId);
 					SaveCharacter(%TrueClientId);
-					// Save world after 3 second delay (allows character save to complete first)
-					schedule("SaveWorld();", 3);
+					// Queue deployable-only world save after 3 seconds (preserves lootbag crash safety, avoids full-save storms)
+					RequestWorldSave("create_pack", 3, "deployables");
 	
 					remotePlayMode(%TrueClientId);
 				}
@@ -4143,7 +4143,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 	            if(%clientToServerAdminLevel >= 4)
 	            {
 	                  if(%cropped == "")
-	                        SaveWorld();
+	                        RequestWorldSave("admin_saveworld", 0, "full");
 	                  else
 	                        Client::sendMessage(%TrueClientId, 0, "Do not use parameters for this function call.");
 	            }

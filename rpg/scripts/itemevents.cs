@@ -483,7 +483,7 @@ function Item::onCollision(%this,%object)
 				if(%isPlayerOwned)
 				{
 					SaveCharacter(%clientId);
-					SaveWorld();
+					RequestWorldSave("lootbag_pickup", 0, "deployables");
 				}
 				
 				// Schedule a worldsave to remove this lootbag from the save file
@@ -496,7 +496,7 @@ function Item::onCollision(%this,%object)
 					%timeUntilSaveWorld = ($SaveWorldFreq - ($ticker[1] * 5)) * 5; // ticker increments every 5 seconds
 					// For frequent syncing, use a short fixed delay; ignore overlap optimization
 					%delay = 30;
-					schedule("SaveWorldDeployables(); $LootbagSaveWorldScheduled = \"\";", %delay);
+					schedule("RequestWorldSave(\"lootbag_sync\", 0, \"deployables\"); $LootbagSaveWorldScheduled = \"\";", %delay);
 				}
 			}
 			else
@@ -582,6 +582,23 @@ function Item::onUse(%player,%item)
 		//this is how you toggle back and forth from equipped to carrying.
 		if(%item.className == Accessory)
 		{
+			// Check for robe talent requirements (must unlock talent before equipping)
+			if(%item == "JudgementRobe" && !Ascension::HasTalent(%clientId, "JudgementRobeTalent"))
+			{
+				Client::sendMessage(%clientId, $MsgRed, "You must unlock the Judgement Robe talent first! Visit an Ascension trainer.");
+				return;
+			}
+			if(%item == "StormRobe" && !Ascension::HasTalent(%clientId, "StormRobeTalent"))
+			{
+				Client::sendMessage(%clientId, $MsgRed, "You must unlock the Storm Robe talent first! Visit an Ascension trainer.");
+				return;
+			}
+			if(%item == "VoidRobe" && !Ascension::HasTalent(%clientId, "VoidRobeTalent"))
+			{
+				Client::sendMessage(%clientId, $MsgRed, "You must unlock the Void Robe talent first! Visit an Ascension trainer.");
+				return;
+			}
+
 			%cnt = 0;
 			%max = getNumItems();
 			for(%i = 0; %i < %max; %i++)

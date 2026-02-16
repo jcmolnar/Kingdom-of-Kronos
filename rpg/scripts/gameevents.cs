@@ -75,7 +75,7 @@ function RecursiveWorld(%seconds)
 		}
 
 		//Save World call
-		SaveWorld();
+		RequestWorldSave("autosave_ticker", 0, "full");
 
 		$ticker[1] = 0;
 	}
