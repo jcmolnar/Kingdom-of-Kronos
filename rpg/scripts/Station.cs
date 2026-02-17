@@ -4,10 +4,13 @@
 function Station::onActivate(%this)
 {
 	//echo("Activate " @ %this);
+	//echo("Activate " @ %this);
 	%obj = Station::getTarget(%this);
 	if (%obj != -1) {
                 GameBase::playSequence(%this,1,"none");
 		GameBase::setSequenceDirection(%this,1,1);
+		
+		// Transmog Hook REMOVED: Now handled in onCollision (Merchant Bot Pattern)
 	}
 	else 
 		GameBase::setActive(%this,false);
@@ -22,10 +25,43 @@ function Station::onDeactivate(%this)
 
 function Station::onEndSequence(%this,%thread)
 {
-	//echo("End sequence " @ %this);
+	echo("[STATION DEBUG] onEndSequence called: station=" @ %this @ ", thread=" @ %thread @ ", isActive=" @ GameBase::isActive(%this));
  	if (%thread == 1 && GameBase::isActive(%this)) {
+		echo("[STATION DEBUG] Thread 1 complete, starting thread 2");
                 GameBase::playSequence(%this,2,"none");
 		return true;
+	}
+	
+	// FIX: Polling loop to keep station active while player is near, and deactivate when they leave.
+	// This allows the station to "reset" so it can be re-triggered (re-opening the menu) when approached again.
+	if (%thread == 2 && GameBase::isActive(%this))
+	{
+		echo("STATION DEBUG: onEndSequence Thread 2 Active for " @ %this);
+		
+		// CRITICAL: Check if station object is still valid
+		if(!isObject(%this)) {
+			//echo("STATION DEBUG: Station object " @ %this @ " is invalid/destroyed during onEndSequence. Aborting.");
+			return;
+		}
+
+		// Check if player is still in range (using getTarget which uses LOS/Distance)
+		%target = Station::getTarget(%this);
+		//echo("STATION DEBUG: Checking target... Result: " @ %target);
+		
+		if(%target != -1)
+		{
+			// Player still here, loop the "active" animation sequence
+			//echo("STATION DEBUG: Player " @ %target @ " active. Looping sequence.");
+			GameBase::playSequence(%this, 2, "none");
+			return true;
+		}
+		else
+		{
+			// Player left, deactivate station so it can be used again later
+			//echo("STATION DEBUG: Player left. Deactivating station " @ %this);
+			GameBase::setActive(%this, false);
+			return true;
+		}
 	}
 	%clientId = %this.target;
 	if(%clientId == "") {
@@ -121,6 +157,7 @@ function Station::getTarget(%this)
 	  	// 	los::object
 	  	%obj = getObjectType($los::object);
 		dbecho(3, "STATION: LOS got " @ %obj);
+		//echo("STATION DEBUG: getTarget LOS hit " @ %obj);
 	  	if (%obj == "Player") {
          if( Player::isAiControlled( $los::object ) != "True" ) {
 			   return $los::object;
@@ -133,16 +170,39 @@ function Station::getTarget(%this)
 
 function Station::onCollision(%this, %object)
 {
-	dbecho(3, "STATION: Collision (" @ %this @ "," @ %object @ ")");
+	// CRITICAL FIX: Server crash during restart
+	// Validate objects exist before touching them. During shutdown, collision events can fire on destroyed objects.
+	if(!isObject(%this) || !isObject(%object)) return;
+	
 	%obj = getObjectType(%object);
 	if (%obj == "Player") {
   	 	%clientId = Player::getClient(%object);
+  	 	// Validate client
+  	 	if(%clientId == -1 || %clientId == "") return;
+  	 	
  		if(GameBase::getTeam(%object) == GameBase::getTeam(%this) || GameBase::getTeam(%this) == -1) {
 			if (GameBase::getDamageState(%this) == "Enabled") {
-				if (GameBase::isPowered(%this)) { 
-					if(%this.enterTime == "")
-						%this.enterTime = getSimTime();
-					GameBase::setActive(%this,true);
+				if (GameBase::isPowered(%this) || GameBase::getDataName(%this) == "InventoryStation") { 
+					
+					// Only Activate if not already active (this is where we open the menu ONCE)
+					if(!GameBase::isActive(%this))
+					{
+						if(%this.enterTime == "")
+							%this.enterTime = getSimTime();
+						GameBase::setActive(%this,true);
+						
+						// TRANSMOG STATION: Open menu only on first activation
+						if(GameBase::getDataName(%this) == "InventoryStation")
+						{
+							// Link player to station so we can deactivate after selection
+							%object.Station = %this;
+							GenerateTransmogMenu(%clientId);
+							Client::sendMessage(%clientId, 0, "Welcome to the Transmog Station!");
+							
+							// Schedule a check to deactivate when player leaves (every 1 second)
+							schedule("TransmogStation::checkPlayerLeft(" @ %this @ ");", 1.0, %this);
+						}
+					}
 				}
 				else 
 					Client::sendMessage(%clientId,0,"Unit is not powered");
@@ -259,9 +319,10 @@ StaticShapeData InventoryStation
 
 function InventoryStation::onEndSequence(%this,%thread)
 {
-	//echo("End Seq ",%thread);
-	if (Station::onEndSequence(%this,%thread)) 
-		InventoryStation::onResupply(%this,"InvList");
+	echo("[STATION DEBUG] InventoryStation::onEndSequence called: station=" @ %this @ ", thread=" @ %thread);
+	// Transmog Station: Menu is opened in onCollision, NOT here.
+	// Just pass through to the base Station handler which handles player detection and deactivation.
+	return Station::onEndSequence(%this,%thread);
 }
 
 function InventoryStation::onResupply(%this,%InvShopList)

@@ -72,9 +72,11 @@ function GetClientDataType(%clientId)
 // Helper function to get data from appropriate array
 // During migration: checks new array first, falls back to old array
 // After migration: only uses new arrays
-function GetDataFromArray(%clientId, %type)
+function GetDataFromArray(%clientId, %type, %clientType)
 {
-	%clientType = GetClientDataType(%clientId);
+	// Optional fast-path: caller may provide resolved type to avoid repeated lookups
+	if(%clientType == "" || %clientType == -1)
+		%clientType = GetClientDataType(%clientId);
 	
 	if(%clientType == "player")
 	{
@@ -99,9 +101,11 @@ function GetDataFromArray(%clientId, %type)
 // Helper function to set data in appropriate array
 // PRIORITY 4: Bots only write to their specific array (no dual-write to $ClientData)
 // This prevents stale bot data in $ClientData from causing player misidentification
-function SetDataInArray(%clientId, %type, %value)
+function SetDataInArray(%clientId, %type, %value, %clientType)
 {
-	%clientType = GetClientDataType(%clientId);
+	// Optional fast-path: caller may provide resolved type to avoid repeated lookups
+	if(%clientType == "" || %clientType == -1)
+		%clientType = GetClientDataType(%clientId);
 	
 	if(%clientType == "player")
 	{
@@ -447,7 +451,8 @@ function storeData(%clientId, %type, %amt, %special)
 		%clientType = GetClientDataType(%clientId);
 		
 		// Get current value from appropriate array
-		%currentValue = GetDataFromArray(%clientId, %type);
+		// Pass resolved client type so storeData only resolves type once per call
+		%currentValue = GetDataFromArray(%clientId, %type, %clientType);
 		if(%currentValue == "")
 			%currentValue = 0;
 
@@ -469,7 +474,8 @@ function storeData(%clientId, %type, %amt, %special)
 		}
 		
 		// Store in appropriate array
-		SetDataInArray(%clientId, %type, %newValue);
+		// Pass resolved client type so storeData only resolves type once per call
+		SetDataInArray(%clientId, %type, %newValue, %clientType);
 	}
 }
 
@@ -645,6 +651,8 @@ function processMenupickclass(%clientId, %opt)
 
 	//######### set a few start-up variables ########
 	storeData(%clientId, "COINS", GetRoll($initcoins[fetchData(%clientId, "GROUP")]));
+	storeData(%clientId, "BANK", 0);           // Initialize bank coins to 0
+	storeData(%clientId, "BankStorage", "");   // Initialize bank item storage to empty
 
 	//add $autoStartupSP for each skill
 	for(%i = 1; %i <= getNumSkills(); %i++)

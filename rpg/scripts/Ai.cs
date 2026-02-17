@@ -40,6 +40,7 @@ $AI_DEBUG_ENABLED = 0;        // Controls [INERT DEBUG], [SPAWN FLOW], [AI DEBUG
 $AI_SPAWN_DEBUG = 0;          // Controls [SPAWN FLOW] messages specifically
 $AI_PERIODIC_DEBUG = 0;       // Controls [INERT DEBUG] AI::Periodic messages
 $LOOTBAG_DEBUG = 0;           // Controls [LOOTBAG AGGREGATE], [LOOT DEBUG] messages
+$ONKILLED_DEBUG = 0;          // Controls [ONKILLED DEBUG] messages in Player::onKilled
 $Debug::SafeGuards = 0;       // Controls [SAFEGUARD] player protection logging
 
 // Granular Debug Flags (Turn off to reduce spam)
@@ -873,33 +874,132 @@ function UnregisterBot(%clientId, %excludeObject)
 	// CRITICAL: Also scan MissionCleanup since orphaned objects end up there
 	if(isObject("MissionCleanup"))
 	{
-		%group = nameToID("MissionCleanup");
-		%count = Group::objectCount(%group);
-		for(%i = %count - 1; %i >= 0; %i--)
+		// Death-path optimization: defer MissionCleanup scan out of Player::onKilled callback
+		// to avoid synchronous full-group scans during bot-death bursts.
+		if(%excludeObject != "" && %excludeObject != -1)
 		{
-			%obj = Group::getObject(%group, %i);
-			if(!isObject(%obj)) continue;
-			if(getObjectType(%obj) != "Player") continue;
-			
-			%objClientId = Player::getClient(%obj);
-			if(%objClientId == %clientId)
+			ScheduleDeferredMissionCleanupOrphanScan(%clientId, %excludeObject);
+		}
+		else
+		{
+			%group = nameToID("MissionCleanup");
+			%count = Group::objectCount(%group);
+			for(%i = %count - 1; %i >= 0; %i--)
 			{
-				// CRITICAL: Skip if this is the dying object (passed via %excludeObject)
-				// This prevents use-after-free crash when called from Player::onKilled
-				if(%obj == %excludeObject)
-				{
-					if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Skipping dying object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " (excluded)");
-					continue;
-				}
+				%obj = Group::getObject(%group, %i);
+				if(!isObject(%obj)) continue;
+				if(getObjectType(%obj) != "Player") continue;
 				
-				echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " - scheduling deletion");
-				// Schedule deletion to prevent crash during death processing
-				schedule("if(isObject(" @ %obj @ ")) deleteObject(" @ %obj @ ");", 0.5);
+				%objClientId = Player::getClient(%obj);
+				if(%objClientId == %clientId)
+				{
+					// CRITICAL: Skip if this is the dying object (passed via %excludeObject)
+					// This prevents use-after-free crash when called from Player::onKilled
+					if(%obj == %excludeObject)
+					{
+						if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Skipping dying object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " (excluded)");
+						continue;
+					}
+					
+					echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " - scheduling deletion");
+					// Schedule deletion to prevent crash during death processing
+					schedule("if(isObject(" @ %obj @ ")) deleteObject(" @ %obj @ ");", 0.5);
+				}
 			}
 		}
 	}
 	
 	echo("[BOT REGISTRY] Unregistered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName @ ", wasInList=" @ %foundInList);
+}
+
+// Schedule deferred MissionCleanup orphan scans for death-path unregisters.
+// This keeps Player::onKilled callback lean while preserving orphan cleanup behavior.
+function ScheduleDeferredMissionCleanupOrphanScan(%clientId, %excludeObject)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+	
+	// Avoid stacking scans for the same client ID in the same short window.
+	if($DeferredMissionCleanupScanScheduled[%clientId] != "")
+		return;
+	
+	$DeferredMissionCleanupScanScheduled[%clientId] = true;
+	// Token guards against clientId reuse between schedule and execution.
+	%scanToken = %clientId @ "_" @ getSimTime() @ "_" @ floor(getRandom() * 1000000);
+	$DeferredMissionCleanupScanToken[%clientId] = %scanToken;
+	
+	%excludeObjectArg = %excludeObject;
+	if(%excludeObjectArg == "" || %excludeObjectArg == -1)
+		%excludeObjectArg = -1;
+	
+	schedule("DeferredMissionCleanupOrphanScan(" @ %clientId @ ", " @ %excludeObjectArg @ ", \"" @ %scanToken @ "\");", 0.25);
+}
+
+function DeferredMissionCleanupOrphanScan(%clientId, %excludeObject, %scanToken)
+{
+	// Abort stale scheduled scans if the client ID has been reused/retokenized.
+	if($DeferredMissionCleanupScanToken[%clientId] != %scanToken)
+		return;
+	
+	$DeferredMissionCleanupScanScheduled[%clientId] = "";
+	$DeferredMissionCleanupScanToken[%clientId] = "";
+	
+	if(%clientId == "" || %clientId == -1)
+		return;
+	
+	if(!isObject("MissionCleanup"))
+		return;
+	
+	%ownedObj = Client::getOwnedObject(%clientId);
+	// Hard guard: never run orphan deletion when this client ID currently owns a live player object.
+	if(%ownedObj != "" && %ownedObj != -1 && isObject(%ownedObj))
+	{
+		if(!Player::isAiControlled(%ownedObj))
+		{
+			%ownedName = Client::getName(%clientId);
+			if(%ownedName != "" && %ownedName != -1 && isFile("temp\\" @ %ownedName @ ".cs"))
+			{
+				if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Deferred orphan cleanup cancelled: clientId " @ %clientId @ " now belongs to player '" @ %ownedName @ "'");
+				return;
+			}
+			
+			// Even without a save-file match, avoid touching active non-AI owned objects.
+			if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Deferred orphan cleanup cancelled: clientId " @ %clientId @ " has active non-AI owned object " @ %ownedObj);
+			return;
+		}
+	}
+	
+	%group = nameToID("MissionCleanup");
+	%count = Group::objectCount(%group);
+	for(%i = %count - 1; %i >= 0; %i--)
+	{
+		%obj = Group::getObject(%group, %i);
+		if(!isObject(%obj)) continue;
+		if(getObjectType(%obj) != "Player") continue;
+		if(%obj == %excludeObject) continue;
+		if(%ownedObj != "" && %ownedObj != -1 && %obj == %ownedObj) continue;
+		
+		%objClientId = Player::getClient(%obj);
+		if(%objClientId != %clientId)
+			continue;
+		
+		// Additional collision safety: don't touch non-AI player objects with character saves.
+		if(!Player::isAiControlled(%obj))
+		{
+			%objName = Client::getName(%objClientId);
+			if(%objName != "" && %objName != -1 && isFile("temp\\" @ %objName @ ".cs"))
+			{
+				if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Deferred orphan cleanup skipped player object " @ %obj @ " for clientId=" @ %clientId @ " (" @ %objName @ ")");
+				continue;
+			}
+		}
+		
+		if(!IsSafeToDeletePlayerObject(%obj, %clientId, "DeferredMissionCleanupOrphanScan"))
+			continue;
+		
+		if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Deferred orphan cleanup: object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId);
+		schedule("if(isObject(" @ %obj @ ")) deleteObject(" @ %obj @ ");", 0.5);
+	}
 }
 
 // =============================================================================
@@ -1955,7 +2055,8 @@ function DecrementSpawnCounter(%clientId, %excludeObject)
 		if($SPAWN_COUNTER_DEBUG) echo("[SPAWN COUNTER] WARNING: Could not find spawn point for clientId " @ %clientId @ " - counter NOT decremented");
 	
 	// Still unregister even if we couldn't find spawn point
-	UnregisterBot(%clientId);
+	// Pass excludeObject to avoid touching the actively dying object in callback context
+	UnregisterBot(%clientId, %excludeObject);
 	
 	return false;
 }
@@ -14000,7 +14101,8 @@ function onClientDrop(%clientId)
 			if(GetWord(%spawnInfo, 0) == "SpawnPoint" && %spawnPointId != "")
 			{
 				echo("[CLIENT DROP] Attempting fail-safe counter decrement for SpawnPoint " @ %spawnPointId);
-				DecrementSpawnCounter(%spawnPointId, %clientId);
+				// DecrementSpawnCounter expects clientId as first argument
+				DecrementSpawnCounter(%clientId);
 			}
 		}
 		

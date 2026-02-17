@@ -15,6 +15,7 @@ $RaceToArmorType[MaleHuman] = MaleHumanArmor7;
 $ArmorTypeToRace[MaleHumanArmor7] = MaleHuman;
 
 $ArmorForSpeed[MaleHuman, -7] = MaleHumanArmor0;
+
 $ArmorForSpeed[MaleHuman, -6] = MaleHumanArmor1;
 $ArmorForSpeed[MaleHuman, -5] = MaleHumanArmor2;
 $ArmorForSpeed[MaleHuman, -4] = MaleHumanArmor3;

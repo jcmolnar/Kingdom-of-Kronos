@@ -1082,6 +1082,8 @@ function remoteSay(%clientId, %team, %message, %senderName)
 		if(%providedCode == %storedCode)
 		{
 			$AFKZoneWarnAck[%TrueClientId] = %now;
+			$AFKZoneWarnUntil[%TrueClientId] = ""; // Clear active warning immediately after valid verify
+			$AFKZoneWarnPos[%TrueClientId] = "";
 			$AFKZoneCode[%TrueClientId] = ""; // Clear code after successful verification
 			
 			// CRITICAL: Treat verification as valid activity!
@@ -6852,6 +6854,34 @@ if(%w1 == "#deletebot")
 		{
 			%targetName = GetWord(%message, 1);  // Extract player name from command
 			Admin::DebugPlayerFlags(%TrueClientId, %targetName);
+		}
+		else
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "Admin only.");
+		}
+		return;
+	}
+	// DEBUG: Diagnose Telekinesis gating (talent + bot classification)
+	if(%w1 == "#debugtele" || %w1 == "#debugtelekinesis")
+	{
+		if(%clientToServerAdminLevel >= 1)
+		{
+			%targetName = GetWord(%message, 1);  // Optional player name or clientId
+			Admin::DebugTelekinesisState(%TrueClientId, %targetName);
+		}
+		else
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "Admin only.");
+		}
+		return;
+	}
+	// DEBUG: Diagnose Telekinesis bag candidate filtering near a player
+	if(%w1 == "#debugtelebags")
+	{
+		if(%clientToServerAdminLevel >= 1)
+		{
+			%targetName = GetWord(%message, 1);  // Optional player name or clientId
+			Admin::DebugTelekinesisBags(%TrueClientId, %targetName);
 		}
 		else
 		{

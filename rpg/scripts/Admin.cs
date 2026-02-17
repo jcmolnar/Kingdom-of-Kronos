@@ -1485,6 +1485,222 @@ function Admin::DebugPlayerFlags(%adminId, %targetName)
 }
 
 //============================================================================
+// DEBUG: Admin::DebugTelekinesisState - Diagnose Telekinesis eligibility
+// Usage: #debugtele or #debugtele <playername|clientId>
+//============================================================================
+function Admin::DebugTelekinesisState(%adminId, %targetName)
+{
+	// If no target name, use admin as target
+	if(%targetName == "" || %targetName == -1)
+		%targetId = %adminId;
+	else
+	{
+		// Check if input is a numeric clientId (all digits)
+		%isNumeric = true;
+		for(%i = 0; %i < String::len(%targetName); %i++)
+		{
+			%char = String::getSubStr(%targetName, %i, 1);
+			if(%char < "0" || %char > "9")
+			{
+				%isNumeric = false;
+				break;
+			}
+		}
+		
+		if(%isNumeric)
+			%targetId = %targetName;  // Use directly as clientId
+		else
+			%targetId = NEWgetClientByName(%targetName);  // Look up by name
+	}
+	
+	if(%targetId == -1 || %targetId == "")
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "Player '" @ %targetName @ "' not found.");
+		return;
+	}
+	
+	%name = Client::getName(%targetId);
+	%talents = fetchData(%targetId, "AscensionTalents");
+	%isRPGAI = isRPGAI(%targetId);
+	%isAiControlled = Player::isAiControlled(%targetId);
+	%hasTelekinesis = Ascension::HasTalent(%targetId, "Telekinesis");
+	%rawHasTelekinesis = false;
+	if(%talents != "" && %talents != -1 && String::findSubStr(%talents, "Telekinesis") >= 0)
+		%rawHasTelekinesis = true;
+	
+	Admin::DebugMsg(%adminId, $MsgYellow, "=== TELEKINESIS DEBUG FOR " @ %name @ " (ID: " @ %targetId @ ") ===");
+	Admin::DebugMsg(%adminId, 0, "  HasTalent(Telekinesis): " @ %hasTelekinesis);
+	Admin::DebugMsg(%adminId, 0, "  isRPGAI(): " @ %isRPGAI);
+	Admin::DebugMsg(%adminId, 0, "  Player::isAiControlled(): " @ %isAiControlled);
+	Admin::DebugMsg(%adminId, 0, "  AscensionTalents: " @ Admin::FlagValue(%talents));
+	Admin::DebugMsg(%adminId, 0, "  RawTalentsContainsTelekinesis: " @ %rawHasTelekinesis);
+	
+	if(!%hasTelekinesis && %rawHasTelekinesis && (%isRPGAI || %isAiControlled))
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "  WARNING: Talent exists in data, but HasTalent returned false due AI/bot classification.");
+	}
+	
+	Admin::DebugMsg(%adminId, $MsgYellow, "=== END TELEKINESIS DEBUG ===");
+}
+
+//============================================================================
+// DEBUG: Admin::DebugTelekinesisBags - Inspect bag eligibility near a player
+// Usage: #debugtelebags or #debugtelebags <playername|clientId>
+//============================================================================
+function Admin::DebugTelekinesisBags(%adminId, %targetName)
+{
+	// Resolve target
+	if(%targetName == "" || %targetName == -1)
+		%targetId = %adminId;
+	else
+	{
+		%isNumeric = true;
+		for(%i = 0; %i < String::len(%targetName); %i++)
+		{
+			%char = String::getSubStr(%targetName, %i, 1);
+			if(%char < "0" || %char > "9")
+			{
+				%isNumeric = false;
+				break;
+			}
+		}
+		if(%isNumeric)
+			%targetId = %targetName;
+		else
+			%targetId = NEWgetClientByName(%targetName);
+	}
+	
+	if(%targetId == -1 || %targetId == "")
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "Player '" @ %targetName @ "' not found.");
+		return;
+	}
+	
+	%playerObj = Client::getOwnedObject(%targetId);
+	if(%playerObj == "" || %playerObj == -1 || !isObject(%playerObj))
+	{
+		Admin::DebugMsg(%adminId, $MsgRed, "Target has no valid Player object.");
+		return;
+	}
+	
+	%playerName = Client::getName(%targetId);
+	%playerPos = GameBase::getPosition(%playerObj);
+	%radius = $TelekinesisRadius;
+	if(%radius == "" || %radius <= 0)
+		%radius = 10;
+	
+	%hasLootbagGroup = isObject("LootbagGroup");
+	%hasMissionCleanup = isObject("MissionCleanup");
+	%groupCount = 0;
+	%missionCount = 0;
+	if(%hasLootbagGroup) %groupCount = Group::objectCount(LootbagGroup);
+	if(%hasMissionCleanup) %missionCount = Group::objectCount(MissionCleanup);
+	
+	Admin::DebugMsg(%adminId, $MsgYellow, "=== TELE BAG DEBUG FOR " @ %playerName @ " (ID: " @ %targetId @ ") ===");
+	Admin::DebugMsg(%adminId, 0, "  PlayerPos: " @ %playerPos);
+	Admin::DebugMsg(%adminId, 0, "  TelekinesisRadius: " @ %radius);
+	Admin::DebugMsg(%adminId, 0, "  LootbagGroup exists/count: " @ %hasLootbagGroup @ "/" @ %groupCount);
+	Admin::DebugMsg(%adminId, 0, "  MissionCleanup exists/count: " @ %hasMissionCleanup @ "/" @ %missionCount);
+	Admin::DebugMsg(%adminId, 0, "  ScanToken: " @ $TelekinesisScanToken @ "  LastMissionSync: " @ $TelekinesisLastMissionSync);
+	
+	%nearPrinted = 0;
+	%eligiblePrinted = 0;
+	%seen = " ";
+	%maxLines = 20;
+	%closeRange = 30; // Debug visibility range
+	
+	// Scan LootbagGroup first, then MissionCleanup for missed registrations.
+	for(%pass = 0; %pass < 2; %pass++)
+	{
+		if(%pass == 0)
+		{
+			if(!%hasLootbagGroup) continue;
+			%setName = "LootbagGroup";
+			%setId = LootbagGroup;
+		}
+		else
+		{
+			if(!%hasMissionCleanup) continue;
+			%setName = "MissionCleanup";
+			%setId = MissionCleanup;
+		}
+		
+		%count = Group::objectCount(%setId);
+		for(%i = 0; %i < %count; %i++)
+		{
+			%bag = Group::getObject(%setId, %i);
+			if(!isObject(%bag))
+				continue;
+			
+			// De-dup between sets
+			if(String::findSubStr(%seen, " " @ %bag @ " ") != -1)
+				continue;
+			%seen = %seen @ %bag @ " ";
+			
+			if(getObjectType(%bag) == "Player")
+				continue;
+			
+			%objType = getObjectType(%bag);
+			%mapName = GameBase::getMapName(%bag);
+			%lootData = $loot[%bag];
+			%candidate = true;
+			if(%objType != "Item" || (%mapName != "Backpack" && %lootData == "") || %lootData == "" || %lootData == -1)
+				%candidate = false;
+			
+			%bagPos = GameBase::getPosition(%bag);
+			%dist = Vector::getDistance(%playerPos, %bagPos);
+			
+			%ownerName = "";
+			%namelist = "";
+			%inRange = false;
+			%nameAllowed = false;
+			%eligible = false;
+			%processing = $TelekinesisProcessing[%bag];
+			
+			if(%candidate)
+			{
+				%ownerName = GetWord(%lootData, 0);
+				%namelist = GetWord(%lootData, 1);
+				%inRange = (%dist <= %radius);
+				%nameAllowed = (IsInCommaList(%namelist, %playerName) || %namelist == "*");
+				%eligible = (%inRange && %nameAllowed);
+			}
+			
+			%print = false;
+			if(%eligible)
+				%print = true;
+			else if(%dist <= %closeRange)
+				%print = true;
+			
+			if(%print && %nearPrinted < %maxLines)
+			{
+				Admin::DebugMsg(%adminId, 0,
+					"  [" @ %setName @ "] bag=" @ %bag @
+					" dist=" @ floor(%dist * 100) / 100 @
+					" candidate=" @ %candidate @
+					" inRange=" @ %inRange @
+					" nameAllowed=" @ %nameAllowed @
+					" eligible=" @ %eligible @
+					" processing=" @ %processing @
+					" map=" @ %mapName @
+					" owner=" @ %ownerName @
+					" namelist=" @ %namelist);
+				%nearPrinted++;
+				if(%eligible)
+					%eligiblePrinted++;
+			}
+		}
+	}
+	
+	if(%nearPrinted <= 0)
+		Admin::DebugMsg(%adminId, $MsgRed, "  No nearby bag objects found within " @ %closeRange @ " units.");
+	else
+		Admin::DebugMsg(%adminId, $MsgBeige, "  Nearby lines printed: " @ %nearPrinted @ ", eligible lines: " @ %eligiblePrinted);
+	
+	Admin::DebugMsg(%adminId, $MsgYellow, "=== END TELE BAG DEBUG ===");
+}
+
+//============================================================================
 // DEBUG: Admin::FixPlayerVisibility - Force a visual refresh of a player
 // Usage: #fixvisible <playername or clientId>
 //============================================================================

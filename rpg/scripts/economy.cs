@@ -1,12 +1,20 @@
-function ShowCoinsDisplay(%clientId)
+function ShowCoinsDisplay(%clientId, %token)
 {
 	dbecho($dbechoMode, "ShowCoinsDisplay(" @ %clientId @ ")");
-
-	// Cancel any existing coin display schedule
-	if(%clientId.coinDisplaySchedule != "")
+	
+	// Tribes 1 has no cancel(). Use a generation token so stale scheduled
+	// callbacks are ignored.
+	if(%token == "" || %token == -1)
 	{
-		cancel(%clientId.coinDisplaySchedule);
-		%clientId.coinDisplaySchedule = "";
+		if(%clientId.coinDisplayToken == "" || %clientId.coinDisplayToken == -1)
+			%clientId.coinDisplayToken = 0;
+		
+		%clientId.coinDisplayToken++;
+		%token = %clientId.coinDisplayToken;
+	}
+	else if(%token != %clientId.coinDisplayToken)
+	{
+		return;
 	}
 
 	// Only display and schedule if player is still at a shop
@@ -17,8 +25,8 @@ function ShowCoinsDisplay(%clientId)
 		%msg = "<f1>Coins: <f2>" @ %coins;
 		bottomprint(%clientId, %msg, -1);
 
-		// Schedule next update in 1 second
-		%clientId.coinDisplaySchedule = schedule("ShowCoinsDisplay(" @ %clientId @ ");", 1);
+		// Schedule next update in 1 second (same token keeps this chain valid)
+		schedule("ShowCoinsDisplay(" @ %clientId @ ", " @ %token @ ");", 1);
 	}
 	else
 	{
@@ -30,13 +38,12 @@ function ShowCoinsDisplay(%clientId)
 function StopCoinsDisplay(%clientId)
 {
 	dbecho($dbechoMode, "StopCoinsDisplay(" @ %clientId @ ")");
-
-	// Cancel the coin display schedule
-	if(%clientId.coinDisplaySchedule != "")
-	{
-		cancel(%clientId.coinDisplaySchedule);
-		%clientId.coinDisplaySchedule = "";
-	}
+	
+	// Invalidate any pending ShowCoinsDisplay schedule callback.
+	if(%clientId.coinDisplayToken == "" || %clientId.coinDisplayToken == -1)
+		%clientId.coinDisplayToken = 0;
+	%clientId.coinDisplayToken++;
+	%clientId.coinDisplaySchedule = "";
 
 	// Clear the bottom print
 	bottomprint(%clientId, "", -1);
@@ -166,6 +173,23 @@ function buyItem(%clientId, %item)
 
 	if(IsDead(%clientId))
 		return;
+
+	// Check for robe talent requirements (must unlock talent before purchasing)
+	if(%item == "JudgementRobe" && !Ascension::HasTalent(%clientId, "JudgementRobeTalent"))
+	{
+		Client::sendMessage(%clientId, $MsgRed, "You must unlock the Judgement Robe talent first! Visit an Ascension trainer.");
+		return;
+	}
+	if(%item == "StormRobe" && !Ascension::HasTalent(%clientId, "StormRobeTalent"))
+	{
+		Client::sendMessage(%clientId, $MsgRed, "You must unlock the Storm Robe talent first! Visit an Ascension trainer.");
+		return;
+	}
+	if(%item == "VoidRobe" && !Ascension::HasTalent(%clientId, "VoidRobeTalent"))
+	{
+		Client::sendMessage(%clientId, $MsgRed, "You must unlock the Void Robe talent first! Visit an Ascension trainer.");
+		return;
+	}
 
 	%player = Client::getOwnedObject(%clientId);
 

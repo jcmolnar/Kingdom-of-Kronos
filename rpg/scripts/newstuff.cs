@@ -537,3 +537,146 @@ function WorldSplitter::onMount(%player,%item,$WeaponSlot)
    bottomprint(%client, "<f1>World Splitter: <f0>Attack: <f2>900    <f0>Skill Slashing Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>3.5 Lbs    <f3>SPECIAL: Alternating Phys/Magic Damage");
 }
 //============================================================================
+
+//****************************************************************************************************
+//   SPECIAL ARMORS (Remort 100 Tier)
+//****************************************************************************************************
+
+// Judgement Robe - 10% Damage Reflection
+$ItemCost[JudgementRobe] = 1000000000;
+$AccessoryVar[JudgementRobe, $AccessoryType] = $BodyAccessoryType;
+$AccessoryVar[JudgementRobe, $SpecialVar] = "7 2500 4 1500 3 750 10 5.0";
+$AccessoryVar[JudgementRobe, $Weight] = 100;
+$AccessoryVar[JudgementRobe, $MiscInfo] = "A robe woven with the essence of divine judgement - 25% chance to reflect 10% of incoming damage back to attackers.";
+$ArmorSkin[JudgementRobe] = "robered";
+$ArmorPlayerModel[JudgementRobe] = "Robed";
+$ArmorHitSound[JudgementRobe] = SoundHitFlesh;
+$ArmorList[988] = "JudgementRobe";
+$SkillRestriction[JudgementRobe] = $MinRemort @ " 100";
+$ArmorEffect[JudgementRobe] = "RETRIBUTION";
+$ArmorEffectChance[JudgementRobe] = 25;
+
+ItemImageData JudgementRobeImage
+{
+	shapeFile = "orb";
+	mountPoint = 1;
+	mountOffset = {0.0, 0.0, 1.5};
+	mountRotation = {0, 0, 0};
+
+	lightType = 1;
+	lightRadius = 15;
+	lightTime = 9999;
+	lightColor = { 1.0, 0.2, 0.2 };
+};
+ItemData JudgementRobe
+{
+	description = "Judgement Robe";
+	className = "Accessory";
+	shapeFile = "discammo";
+	imageType = JudgementRobeImage;
+
+	heading = "eMiscellany";
+	price = 0;
+};
+ItemData JudgementRobe0
+{
+	description = "Judgement Robe";
+	className = "Equipped";
+	shapeFile = "discammo";
+	imageType = JudgementRobeImage;
+
+	heading = "aArmor";
+};
+
+// Storm Robe - 25% chance to zap attacker for 500 damage
+$ItemCost[StormRobe] = 1000000000;
+$AccessoryVar[StormRobe, $AccessoryType] = $BodyAccessoryType;
+$AccessoryVar[StormRobe, $SpecialVar] = "7 2200 4 1200 3 1200 10 4.5";
+$AccessoryVar[StormRobe, $Weight] = 100;
+$AccessoryVar[StormRobe, $MiscInfo] = "A robe crackling with storm energy - 25% chance to zap attackers for 500 damage.";
+$ArmorSkin[StormRobe] = "robeblue";
+$ArmorPlayerModel[StormRobe] = "Robed";
+$ArmorHitSound[StormRobe] = SoundHitFlesh;
+$ArmorList[989] = "StormRobe";
+$SkillRestriction[StormRobe] = $MinRemort @ " 100";
+$ArmorEffect[StormRobe] = "STATIC_DISCHARGE";
+$ArmorEffectChance[StormRobe] = 25;
+
+ItemImageData StormRobeImage
+{
+	shapeFile = "orb";
+	mountPoint = 1;
+	mountOffset = {0.0, 0.0, 1.5};
+	mountRotation = {0, 0, 0};
+
+	lightType = 1;
+	lightRadius = 15;
+	lightTime = 9999;
+	lightColor = { 0.3, 0.5, 1.0 };
+};
+ItemData StormRobe
+{
+	description = "Storm Robe";
+	className = "Accessory";
+	shapeFile = "discammo";
+	imageType = StormRobeImage;
+
+	heading = "eMiscellany";
+	price = 0;
+};
+ItemData StormRobe0
+{
+	description = "Storm Robe";
+	className = "Equipped";
+	shapeFile = "discammo";
+	imageType = StormRobeImage;
+
+	heading = "aArmor";
+};
+
+// Void Robe - 5% chance to completely dodge an attack
+$ItemCost[VoidRobe] = 1000000000;
+$AccessoryVar[VoidRobe, $AccessoryType] = $BodyAccessoryType;
+$AccessoryVar[VoidRobe, $SpecialVar] = "7 2100 4 1100 3 1500 10 4.0";
+$AccessoryVar[VoidRobe, $Weight] = 100;
+$AccessoryVar[VoidRobe, $MiscInfo] = "A robe that phases between dimensions - 5% chance to completely avoid incoming attacks.";
+$ArmorSkin[VoidRobe] = "robeblack";
+$ArmorPlayerModel[VoidRobe] = "Robed";
+$ArmorHitSound[VoidRobe] = SoundHitFlesh;
+$ArmorList[990] = "VoidRobe";
+$SkillRestriction[VoidRobe] = $MinRemort @ " 100";
+$ArmorEffect[VoidRobe] = "PHASE_SHIFT";
+$ArmorEffectChance[VoidRobe] = 5;
+
+ItemImageData VoidRobeImage
+{
+	shapeFile = "orb";
+	mountPoint = 1;
+	mountOffset = {0.0, 0.0, 1.5};
+	mountRotation = {0, 0, 0};
+
+	lightType = 1;
+	lightRadius = 12;
+	lightTime = 9999;
+	lightColor = { 0.1, 0.0, 0.2 };
+};
+ItemData VoidRobe
+{
+	description = "Void Robe";
+	className = "Accessory";
+	shapeFile = "discammo";
+	imageType = VoidRobeImage;
+
+	heading = "eMiscellany";
+	price = 0;
+};
+ItemData VoidRobe0
+{
+	description = "Void Robe";
+	className = "Equipped";
+	shapeFile = "discammo";
+	imageType = VoidRobeImage;
+
+	heading = "aArmor";
+};
+//============================================================================

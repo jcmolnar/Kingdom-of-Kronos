@@ -274,7 +274,7 @@ function Lightning::damageTarget(%target, %timeSlice, %damPerSec, %enDrainPerSec
 
 RocketData SpellBomb1
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = mortarExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -291,7 +291,7 @@ RocketData SpellBomb1
 
 RocketData SpellBomb2
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = mineExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -308,7 +308,7 @@ RocketData SpellBomb2
 
 RocketData SpellBomb3
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = grenadeExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -325,7 +325,7 @@ RocketData SpellBomb3
 
 RocketData SpellBomb4
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = Shockwave;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -342,7 +342,7 @@ RocketData SpellBomb4
 
 RocketData SpellBomb5
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = LargeShockwave;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -359,7 +359,7 @@ RocketData SpellBomb5
 
 RocketData SpellBomb6
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = rocketExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -376,7 +376,7 @@ RocketData SpellBomb6
 
 RocketData SpellBomb7
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = energyExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -393,7 +393,7 @@ RocketData SpellBomb7
 
 RocketData SpellBomb8
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = blasterExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -410,7 +410,7 @@ RocketData SpellBomb8
 
 RocketData SpellBomb9
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = plasmaExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -427,7 +427,7 @@ RocketData SpellBomb9
 
 RocketData SpellBomb10
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = turretExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -444,7 +444,7 @@ RocketData SpellBomb10
 
 RocketData SpellBomb11
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = bulletExp0;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -461,7 +461,7 @@ RocketData SpellBomb11
 
 RocketData SpellBomb12
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = debrisExpSmall;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -478,7 +478,7 @@ RocketData SpellBomb12
 
 RocketData SpellBomb13
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = debrisExpMedium;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -495,7 +495,7 @@ RocketData SpellBomb13
 
 RocketData SpellBomb14
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = debrisExpLarge;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -512,7 +512,7 @@ RocketData SpellBomb14
 
 RocketData SpellBomb15
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = flashExpSmall;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -529,7 +529,7 @@ RocketData SpellBomb15
 
 RocketData SpellBomb16
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = flashExpMedium;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -546,7 +546,7 @@ RocketData SpellBomb16
 
 RocketData SpellBomb17
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = flashExpLarge;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -563,7 +563,7 @@ RocketData SpellBomb17
 
 RocketData SpellBomb18
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = whiteExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -580,7 +580,7 @@ RocketData SpellBomb18
 
 RocketData SpellBomb19
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = WhiteShockwave;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -597,7 +597,7 @@ RocketData SpellBomb19
 
 RocketData SpellBomb20
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = IonExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -614,7 +614,7 @@ RocketData SpellBomb20
 
 RocketData SpellBomb21
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = IonExp2;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -631,7 +631,7 @@ RocketData SpellBomb21
 
 RocketData SpellBomb22
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = IonShockwave;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -648,7 +648,7 @@ RocketData SpellBomb22
 
 RocketData SpellBomb23
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = IonShockwave2;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -665,7 +665,7 @@ RocketData SpellBomb23
 
 RocketData SpellBomb24
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = PBShockWave;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -682,7 +682,7 @@ RocketData SpellBomb24
 
 RocketData SpellBomb25
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = LitBoltExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -699,7 +699,7 @@ RocketData SpellBomb25
 
 RocketData SpellBomb26
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = TimeShockwave;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -716,7 +716,7 @@ RocketData SpellBomb26
 
 RocketData SpellBomb27
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = turretSlowExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -733,7 +733,7 @@ RocketData SpellBomb27
 
 RocketData SpellBomb28
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = acidExp;
 	collisionRadius = 0.5;
 	mass = 0.1;
@@ -750,7 +750,7 @@ RocketData SpellBomb28
 
 RocketData SpellBomb29
 {
-	bulletShapeName = "";
+	bulletShapeName = "PlasmaBolt.dts";
 	explosionTag = bulletExp0;
 	collisionRadius = 0.5;
 	mass = 0.1;

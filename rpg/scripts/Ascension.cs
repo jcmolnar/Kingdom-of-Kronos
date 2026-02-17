@@ -54,7 +54,7 @@ $AscensionTalent[Telekinesis, Name] = "Telekinesis";
 $AscensionTalent[Telekinesis, Cost] = 30;
 $AscensionTalent[Telekinesis, CostType] = "remort";
 $AscensionTalent[Telekinesis, MinRemort] = 0;
-$AscensionTalent[Telekinesis, Desc] = "Auto-pickup loot within 5 unit radius";
+$AscensionTalent[Telekinesis, Desc] = "Auto-pickup loot within 10 unit radius";
 
 // SP-cost talents
 $AscensionTalent[IronSkin, Name] = "Iron Skin";
@@ -69,12 +69,44 @@ $AscensionTalent[DodgeMastery, CostType] = "sp";
 $AscensionTalent[DodgeMastery, MinRemort] = 25;
 $AscensionTalent[DodgeMastery, Desc] = "Permanent 10% chance to dodge all damage";
 
+// Robe unlock talents (dynamic cost based on owned count: 25/10/5)
+$AscensionTalent[JudgementRobeTalent, Name] = "Judgement Robe";
+$AscensionTalent[JudgementRobeTalent, Cost] = 25;
+$AscensionTalent[JudgementRobeTalent, CostType] = "remort";
+$AscensionTalent[JudgementRobeTalent, MinRemort] = 125;
+$AscensionTalent[JudgementRobeTalent, Desc] = "Unlock Judgement Robe (25% reflect 10% damage) for purchase at Giovanni's shop";
+$AscensionTalent[JudgementRobeTalent, DynamicCost] = "robe";
+
+$AscensionTalent[StormRobeTalent, Name] = "Storm Robe";
+$AscensionTalent[StormRobeTalent, Cost] = 25;
+$AscensionTalent[StormRobeTalent, CostType] = "remort";
+$AscensionTalent[StormRobeTalent, MinRemort] = 110;
+$AscensionTalent[StormRobeTalent, Desc] = "Unlock Storm Robe (25% zap for 500 damage) for purchase at Giovanni's shop";
+$AscensionTalent[StormRobeTalent, DynamicCost] = "robe";
+
+$AscensionTalent[VoidRobeTalent, Name] = "Void Robe";
+$AscensionTalent[VoidRobeTalent, Cost] = 25;
+$AscensionTalent[VoidRobeTalent, CostType] = "remort";
+$AscensionTalent[VoidRobeTalent, MinRemort] = 105;
+$AscensionTalent[VoidRobeTalent, Desc] = "Unlock Void Robe (5% phase shift dodge) for purchase at Giovanni's shop";
+$AscensionTalent[VoidRobeTalent, DynamicCost] = "robe";
+
 // Talent list for iteration
-$AscensionTalentList = "DualWielding ExpAffinity1 ExpAffinity2 ExpAffinity3 GoldDigger BerserkerRage SpellEcho Telekinesis IronSkin DodgeMastery";
+$AscensionTalentList = "DualWielding ExpAffinity1 ExpAffinity2 ExpAffinity3 GoldDigger BerserkerRage SpellEcho Telekinesis IronSkin DodgeMastery JudgementRobeTalent StormRobeTalent VoidRobeTalent";
 
 //=============================================================================
 // CORE FUNCTIONS
 //=============================================================================
+
+function Ascension::CanonicalTalentId(%talentName)
+{
+	// Backward compatibility alias:
+	// Old code uses "DualWield", canonical talent id is "DualWielding".
+	if(String::ICompare(%talentName, "DualWield") == 0)
+		return "DualWielding";
+	
+	return %talentName;
+}
 
 function Ascension::HasTalent(%clientId, %talentName)
 {
@@ -87,9 +119,34 @@ function Ascension::HasTalent(%clientId, %talentName)
 	if(%talents == "" || %talents == -1 || %talents == "0")
 		return false;
 	
-	// Search for talent in space-separated list
-	if(String::findSubStr(%talents, %talentName) >= 0)
+	%canonicalTarget = Ascension::CanonicalTalentId(%talentName);
+	%hasTalent = false;
+	
+	// Exact token scan to avoid substring collisions (e.g., Name vs Name2).
+	for(%i = 0; (%ownedTalent = GetWord(%talents, %i)) != -1; %i++)
+	{
+		if(%ownedTalent == "" || %ownedTalent == "0")
+			continue;
+		
+		%canonicalOwned = Ascension::CanonicalTalentId(%ownedTalent);
+		if(String::ICompare(%canonicalOwned, %canonicalTarget) == 0)
+		{
+			%hasTalent = true;
+			break;
+		}
+	}
+	
+	if(%hasTalent)
+	{
+		// Lazy bootstrap: if Telekinesis is owned but scan loop is not running,
+		// schedule it immediately. This recovers from missed startup scheduling.
+		if(%canonicalTarget == "Telekinesis")
+		{
+			if($TelekinesisScanToken == "" || $TelekinesisScanToken == -1)
+				Ascension::ScheduleTelekinesisScan(1);
+		}
 		return true;
+	}
 	
 	return false;
 }
@@ -101,13 +158,15 @@ function Ascension::UnlockTalent(%clientId, %talentName)
 	// SAFEGUARD: Bots cannot unlock talents
 	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
 		return;
+	
+	%talentName = Ascension::CanonicalTalentId(%talentName);
 		
 	%talents = fetchData(%clientId, "AscensionTalents");
 	if(%talents == "" || %talents == -1 || %talents == "0")
 		%talents = "";
 	
-	// Add talent to list
-	if(String::findSubStr(%talents, %talentName) == -1)
+	// Add talent to list if not already there
+	if(!Ascension::HasTalent(%clientId, %talentName))
 	{
 		if(%talents == "")
 			%talents = %talentName;
@@ -121,12 +180,50 @@ function Ascension::UnlockTalent(%clientId, %talentName)
 	return false;
 }
 
+function Ascension::GetRobeTalentCount(%clientId)
+{
+	// Count how many robe talents this player has unlocked
+	%count = 0;
+	if(Ascension::HasTalent(%clientId, "JudgementRobeTalent")) %count++;
+	if(Ascension::HasTalent(%clientId, "StormRobeTalent")) %count++;
+	if(Ascension::HasTalent(%clientId, "VoidRobeTalent")) %count++;
+	return %count;
+}
+
+function Ascension::GetRobeCost(%clientId)
+{
+	// Get dynamic cost for next robe talent based on how many already owned
+	%count = Ascension::GetRobeTalentCount(%clientId);
+	if(%count == 0) return 25;  // First robe: 25 RL
+	if(%count == 1) return 10;  // Second robe: 10 RL
+	return 5;                    // Third robe: 5 RL
+}
+
+function Ascension::GetRobeMinRemort(%clientId)
+{
+	// Get minimum remort required to buy a robe talent
+	// After spending RL, player must still have 100 RL to equip
+	%count = Ascension::GetRobeTalentCount(%clientId);
+	if(%count == 0) return 125;  // 125 - 25 = 100
+	if(%count == 1) return 110;  // 110 - 10 = 100
+	return 105;                   // 105 - 5 = 100
+}
+
 function Ascension::CanAfford(%clientId, %talentName)
 {
 	// Check if player can afford the talent
+	%talentName = Ascension::CanonicalTalentId(%talentName);
+	
 	%cost = $AscensionTalent[%talentName, Cost];
 	%costType = $AscensionTalent[%talentName, CostType];
 	%minRemort = $AscensionTalent[%talentName, MinRemort];
+	
+	// Handle dynamic robe talent costs
+	if($AscensionTalent[%talentName, DynamicCost] == "robe")
+	{
+		%cost = Ascension::GetRobeCost(%clientId);
+		%minRemort = Ascension::GetRobeMinRemort(%clientId);
+	}
 	
 	// Check minimum remort requirement
 	%currentRemort = fetchData(%clientId, "RemortStep");
@@ -152,6 +249,7 @@ function Ascension::CanAfford(%clientId, %talentName)
 function Ascension::Purchase(%clientId, %talentName)
 {
 	// Purchase a talent (deduct cost and unlock)
+	%talentName = Ascension::CanonicalTalentId(%talentName);
 	
 	// Check if already owned
 	if(Ascension::HasTalent(%clientId, %talentName))
@@ -178,6 +276,10 @@ function Ascension::Purchase(%clientId, %talentName)
 		%costType = $AscensionTalent[%talentName, CostType];
 		%cost = $AscensionTalent[%talentName, Cost];
 		
+		// Handle dynamic robe costs in error message
+		if($AscensionTalent[%talentName, DynamicCost] == "robe")
+			%cost = Ascension::GetRobeCost(%clientId);
+		
 		if(%costType == "remort")
 			Client::sendMessage(%clientId, 0, "You need " @ %cost @ " remorts to unlock this!");
 		else
@@ -189,6 +291,10 @@ function Ascension::Purchase(%clientId, %talentName)
 	// Deduct cost
 	%cost = $AscensionTalent[%talentName, Cost];
 	%costType = $AscensionTalent[%talentName, CostType];
+	
+	// Handle dynamic robe costs
+	if($AscensionTalent[%talentName, DynamicCost] == "robe")
+		%cost = Ascension::GetRobeCost(%clientId);
 	
 	if(%costType == "remort")
 	{
@@ -209,11 +315,15 @@ function Ascension::Purchase(%clientId, %talentName)
 	// Unlock talent
 	Ascension::UnlockTalent(%clientId, %talentName);
 	
+	// Wake Telekinesis scan immediately after unlock (safe: single scheduler handle).
+	if(%talentName == "Telekinesis")
+		Ascension::ScheduleTelekinesisScan(1);
+	
 	// NOTE: Caller (processMenuConfirmAscension) shows the success message
 
 	
 	// Special instructions for specific talents
-	if(%talentName == "DualWield")
+	if(Ascension::CanonicalTalentId(%talentName) == "DualWielding")
 	{
 		Client::sendMessage(%clientId, 0, "Use #dualwield to toggle dual wielding mode.");
 		Client::sendMessage(%clientId, 0, "Equip a weapon normally, then equip another to hold it in your off-hand.");
@@ -245,38 +355,253 @@ function Ascension::GetExpMultiplier(%clientId)
 //=============================================================================
 // TELEKINESIS AUTO-LOOT SYSTEM
 //=============================================================================
-// Periodically scans for lootbags within 50m and auto-picks them up
+// Periodically scans for lootbags and auto-picks them up
 // Uses existing loot pickup logic to prevent duplication
 // Respects lootbag permissions (namelist)
 // Does NOT interfere with lootbag aggregation
 
-$TelekinesisRadius = 5;           // 5 game units - close-range magic auto-loot
+$TelekinesisRadius = 10;          // 10 game units - close-range magic auto-loot
 $TelekinesisScanInterval = 10;    // 10 seconds between scans (aggregation uses 30s)
+$TelekinesisNoBagInterval = 20;   // Slow down polling when no lootbags are found
 $TelekinesisMaxPerPass = 5;       // Max bags to process per scan (prevents freeze)
+$TelekinesisLootScanBudget = 120; // Max LootbagGroup objects inspected per scan
+$TelekinesisIdleInterval = 60;    // Check less frequently when no active Telekinesis players
+$TelekinesisMissionSyncInterval = 60; // Fallback MissionCleanup sync cadence
+$TelekinesisMissionScanBudget = 180;  // Max MissionCleanup objects inspected per sync
 
 function Ascension::StartTelekinesisLoop()
 {
 	// Start the periodic scan for all players
-	schedule("Ascension::TelekinesisScanAll();", $TelekinesisScanInterval);
+	Ascension::ScheduleTelekinesisScan($TelekinesisScanInterval);
 }
 
-function Ascension::TelekinesisScanAll()
+function Ascension::ScheduleTelekinesisScan(%delay)
 {
-	// Scan LootbagGroup for bags, find eligible players, use round-robin for fairness
-	if(!isObject("LootbagGroup"))
+	// Tribes 1 has no cancel(). Use a generation token so only the latest
+	// scheduled callback is allowed to run.
+	if(%delay == "" || %delay <= 0)
+		%delay = 1;
+	
+	if($TelekinesisScanToken == "" || $TelekinesisScanToken == -1)
+		$TelekinesisScanToken = 0;
+	
+	$TelekinesisScanToken++;
+	%token = $TelekinesisScanToken;
+	schedule("Ascension::TelekinesisScanAll(" @ %token @ ");", %delay);
+}
+
+function Ascension::EnsureTelekinesisLoopForClient(%clientId)
+{
+	// Start/wake Telekinesis scan loop when a real player with the talent joins/spawns.
+	if(%clientId == "" || %clientId == -1)
+		return false;
+	
+	// Never treat bots as Telekinesis owners.
+	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+		return false;
+	
+	if(!Ascension::HasTalent(%clientId, "Telekinesis"))
+		return false;
+	
+	// Always wake quickly on join/spawn. Token guard keeps this safe.
+	Ascension::ScheduleTelekinesisScan(1);
+	return true;
+}
+
+function Ascension::TelekinesisScanAll(%token)
+{
+	// Ignore stale callbacks from older schedules.
+	if(%token != $TelekinesisScanToken)
+		return;
+	
+	// Build active Telekinesis player list first.
+	// If no connected/active players have the talent, skip loot scanning work.
+	%activeTeleList = "";
+	%activeTeleCount = 0;
+	for(%id = Client::getFirst(); %id != -1; %id = Client::getNext(%id))
 	{
-		schedule("Ascension::TelekinesisScanAll();", $TelekinesisScanInterval);
+		if(!Ascension::HasTalent(%id, "Telekinesis") || IsDead(%id))
+			continue;
+		
+		%playerObj = Client::getOwnedObject(%id);
+		if(%playerObj == -1 || %playerObj == "")
+			continue;
+		
+		%activeTeleList = %activeTeleList @ %id @ " ";
+		%activeTeleCount++;
+	}
+	
+	if(%activeTeleCount <= 0)
+	{
+		Ascension::ScheduleTelekinesisScan($TelekinesisIdleInterval);
 		return;
 	}
 	
-	%count = Group::objectCount(LootbagGroup);
+	// Scan LootbagGroup first. MissionCleanup fallback is throttled to avoid
+	// expensive full-group sweeps while still fixing initial registration misses.
+	%hasLootbagGroup = isObject("LootbagGroup");
+	%hasMissionCleanup = isObject("MissionCleanup");
+	if(!%hasLootbagGroup && !%hasMissionCleanup)
+	{
+		Ascension::ScheduleTelekinesisScan($TelekinesisNoBagInterval);
+		return;
+	}
+	
+	%bagList = "";
+	%bagCount = 0;
+	%seenBags = " ";
+	
+	// Primary source: LootbagGroup (chunked with a rolling cursor)
+	if(%hasLootbagGroup)
+	{
+		%count = Group::objectCount(LootbagGroup);
+		if(%count > 0)
+		{
+			%scanBudget = $TelekinesisLootScanBudget;
+			if(%scanBudget == "" || %scanBudget <= 0 || %scanBudget > %count)
+				%scanBudget = %count;
+			
+			%scanStart = $TelekinesisLootScanCursor;
+			if(%scanStart == "" || %scanStart == -1 || %scanStart < 0 || %scanStart >= %count)
+				%scanStart = 0;
+			
+			for(%n = 0; %n < %scanBudget; %n++)
+			{
+				%idx = %scanStart + %n;
+				if(%idx >= %count)
+					%idx -= %count;
+				
+				%bag = Group::getObject(LootbagGroup, %idx);
+				
+				if(!isObject(%bag))
+					continue;
+				
+				// CRITICAL SAFEGUARD: Skip Player objects
+				if(getObjectType(%bag) == "Player")
+					continue;
+				
+				%objType = getObjectType(%bag);
+				%mapName = GameBase::getMapName(%bag);
+				%lootData = $loot[%bag];
+				
+				// Only process valid lootbags
+				if(%objType != "Item" || (%mapName != "Backpack" && %lootData == ""))
+					continue;
+				
+				if(%lootData == "" || %lootData == -1)
+					continue;
+				
+				// Skip duplicates
+				if(String::findSubStr(%seenBags, " " @ %bag @ " ") != -1)
+					continue;
+				
+				%seenBags = %seenBags @ %bag @ " ";
+				%bagList = %bagList @ %bag @ " ";
+				%bagCount++;
+			}
+			
+			%nextScan = %scanStart + %scanBudget;
+			if(%nextScan >= %count)
+				%nextScan -= %count;
+			$TelekinesisLootScanCursor = %nextScan;
+		}
+		else
+		{
+			$TelekinesisLootScanCursor = 0;
+		}
+	}
+	
+	// Fallback source: MissionCleanup (for bags not yet in LootbagGroup)
+	// Run when LootbagGroup is missing/empty OR periodically by throttle.
+	%doMissionSync = false;
+	if(%hasMissionCleanup)
+	{
+		if(!%hasLootbagGroup)
+			%doMissionSync = true;
+		else if(Group::objectCount(LootbagGroup) <= 0)
+			%doMissionSync = true;
+		else
+		{
+			%now = getSimTime();
+			%lastSync = $TelekinesisLastMissionSync;
+			if(%lastSync == "" || %lastSync == -1 || (%now - %lastSync) >= $TelekinesisMissionSyncInterval)
+				%doMissionSync = true;
+		}
+	}
+	
+	if(%doMissionSync)
+	{
+		%missionGroup = nameToID("MissionCleanup");
+		%missionCount = Group::objectCount(%missionGroup);
+		if(%missionCount > 0)
+		{
+			%missionScanBudget = $TelekinesisMissionScanBudget;
+			if(%missionScanBudget == "" || %missionScanBudget <= 0 || %missionScanBudget > %missionCount)
+				%missionScanBudget = %missionCount;
+			
+			%missionScanStart = $TelekinesisMissionScanCursor;
+			if(%missionScanStart == "" || %missionScanStart == -1 || %missionScanStart < 0 || %missionScanStart >= %missionCount)
+				%missionScanStart = 0;
+			
+			for(%n = 0; %n < %missionScanBudget; %n++)
+			{
+				%idx = %missionScanStart + %n;
+				if(%idx >= %missionCount)
+					%idx -= %missionCount;
+				
+				%bag = Group::getObject(%missionGroup, %idx);
+				
+				if(!isObject(%bag))
+					continue;
+				
+				// CRITICAL SAFEGUARD: Skip Player objects
+				if(getObjectType(%bag) == "Player")
+					continue;
+				
+				// Skip duplicates already seen from LootbagGroup
+				if(String::findSubStr(%seenBags, " " @ %bag @ " ") != -1)
+					continue;
+				
+				%objType = getObjectType(%bag);
+				%mapName = GameBase::getMapName(%bag);
+				%lootData = $loot[%bag];
+				
+				// Only process valid lootbags
+				if(%objType != "Item" || (%mapName != "Backpack" && %lootData == ""))
+					continue;
+				
+				if(%lootData == "" || %lootData == -1)
+					continue;
+				
+				// Add to LootbagGroup for future scans if available
+				if(%hasLootbagGroup)
+					addToSet(LootbagGroup, %bag);
+				
+				%seenBags = %seenBags @ %bag @ " ";
+				%bagList = %bagList @ %bag @ " ";
+				%bagCount++;
+			}
+			
+			%missionNextScan = %missionScanStart + %missionScanBudget;
+			if(%missionNextScan >= %missionCount)
+				%missionNextScan -= %missionCount;
+			$TelekinesisMissionScanCursor = %missionNextScan;
+		}
+		else
+		{
+			$TelekinesisMissionScanCursor = 0;
+		}
+		
+		$TelekinesisLastMissionSync = getSimTime();
+	}
+	
 	%processed = 0;
 	
-	for(%i = 0; %i < %count && %processed < $TelekinesisMaxPerPass; %i++)
+	for(%i = 0; %i < %bagCount && %processed < $TelekinesisMaxPerPass; %i++)
 	{
-		%bag = Group::getObject(LootbagGroup, %i);
+		%bag = GetWord(%bagList, %i);
 		
-		if(!isObject(%bag))
+		if(%bag == "" || %bag == -1 || !isObject(%bag))
 			continue;
 		
 		// CRITICAL SAFEGUARD: Skip Player objects (same as aggregation)
@@ -299,10 +624,9 @@ function Ascension::TelekinesisScanAll()
 		%eligibleList = "";
 		%eligibleCount = 0;
 		
-		for(%id = Client::getFirst(); %id != -1; %id = Client::getNext(%id))
+		for(%p = 0; %p < %activeTeleCount; %p++)
 		{
-			if(!Ascension::HasTalent(%id, "Telekinesis") || IsDead(%id))
-				continue;
+			%id = GetWord(%activeTeleList, %p);
 			
 			%playerObj = Client::getOwnedObject(%id);
 			if(%playerObj == -1 || %playerObj == "")
@@ -314,15 +638,13 @@ function Ascension::TelekinesisScanAll()
 			if(%dist > $TelekinesisRadius)
 				continue;
 			
-			// Check eligibility: own bag, public loot, or bot-killed loot on namelist
+			// Check eligibility using Item::onCollision permission rules
 			%playerName = Client::getName(%id);
 			%eligible = false;
 			
-			if(String::ICompare(%ownerName, %playerName) == 0)
-				%eligible = true;
-			else if(%ownerName == "*")
-				%eligible = true;
-			else if(IsLootOwnerBot(%ownerName) && IsInCommaList(%namelist, %playerName))
+			// Reuse Item::onCollision loot permission logic:
+			// IsInCommaList(namelist, playerName) OR namelist == "*"
+			if(IsInCommaList(%namelist, %playerName) || %namelist == "*")
 				%eligible = true;
 			
 			if(%eligible)
@@ -365,8 +687,12 @@ function Ascension::TelekinesisScanAll()
 		}
 	}
 	
-	// Schedule next scan
-	schedule("Ascension::TelekinesisScanAll();", $TelekinesisScanInterval);
+	// Schedule next scan (slow down when no loot candidates were found).
+	%nextInterval = $TelekinesisScanInterval;
+	if(%bagCount <= 0)
+		%nextInterval = $TelekinesisNoBagInterval;
+	
+	Ascension::ScheduleTelekinesisScan(%nextInterval);
 }
 
 function Ascension::TelekinesisPickup(%clientId, %bag)
@@ -493,6 +819,11 @@ function SetupAscensionShop(%clientId, %botId, %page)
 		%talent = GetWord(%unownedList, %i);
 		%name = $AscensionTalent[%talent, Name];
 		%cost = $AscensionTalent[%talent, Cost];
+		
+		// Handle dynamic robe costs for display
+		if($AscensionTalent[%talent, DynamicCost] == "robe")
+			%cost = Ascension::GetRobeCost(%clientId);
+			
 		%costType = $AscensionTalent[%talent, CostType];
 		%requires = $AscensionTalent[%talent, Requires];
 		
@@ -595,6 +926,11 @@ function processMenuSelectAscension(%clientId, %code)
 	
 	// Show talent info
 	%cost = $AscensionTalent[%talent, Cost];
+	
+	// Handle dynamic robe costs for display
+	if($AscensionTalent[%talent, DynamicCost] == "robe")
+		%cost = Ascension::GetRobeCost(%clientId);
+		
 	%costType = $AscensionTalent[%talent, CostType];
 	%desc = $AscensionTalent[%talent, Desc];
 	%requires = $AscensionTalent[%talent, Requires];

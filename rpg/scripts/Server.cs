@@ -276,6 +276,7 @@ function createServer(%mission, %dedicated)
 	exec(BaseDebrisData);
 	exec(BaseProjData);
 	exec(ArmorData);
+	exec(MonsterAdminArmors);
 	exec(Mission);
 	exec(Item);
 	exec(Accessory);
@@ -322,6 +323,7 @@ function createServer(%mission, %dedicated)
 	exec(remortseal);
 	exec(DualWielding);
 	exec(Ascension);
+	exec(TransmogSystem);
 	exec(lasvegas);
 	//exec(DebugInit); only need if debugging
 	//exec(backpack); we implemented belt.cs instead of backpack.cs

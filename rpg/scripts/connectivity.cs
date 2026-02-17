@@ -438,6 +438,35 @@ function Server::onClientConnect(%clientId)
 	// Clear temporary player state variables so the profile is as clean as possible
 	ClearPlayerVariables(%clientId);
 	Game::refreshClientScore(%clientId);	//so the player appears in the score list right away
+	
+	// STUCK PLAYER DETECTION: Schedule a check 45 seconds after connect
+	// If player still hasn't spawned (no HasLoadedAndSpawned), they're stuck and need to reconnect
+	schedule("CheckStuckJoiningPlayer(" @ %clientId @ ");", 45);
+}
+
+// CheckStuckJoiningPlayer - Detects players stuck in "joining" state and prompts reconnect
+function CheckStuckJoiningPlayer(%clientId)
+{
+	// Verify player still exists
+	%name = Client::getName(%clientId);
+	if(%name == "" || %name == -1)
+		return; // Player disconnected, nothing to do
+	
+	// Skip bots
+	if(Player::isAiControlled(%clientId) || isRPGAI(%clientId))
+		return;
+	
+	// Check if player has successfully spawned
+	%hasLoaded = fetchData(%clientId, "HasLoadedAndSpawned");
+	if(%hasLoaded == "" || %hasLoaded == "0" || %hasLoaded == -1 || %hasLoaded == "False")
+	{
+		// Player is STUCK in joining state!
+		echo("WARNING: Player '" @ %name @ "' (clientId=" @ %clientId @ ") appears stuck in joining state after 45 seconds.");
+		
+		// Send them a visible message
+		centerprint(%clientId, "<f1><jc>CONNECTION ISSUE DETECTED\n\n<f0>Your character failed to fully load.\nPlease disconnect and reconnect to fix this.\n\nIf this persists, try restarting your client.", 30);
+		Client::sendMessage(%clientId, $MsgRed, "CONNECTION ISSUE: Your character did not fully load. Please disconnect and reconnect.");
+	}
 }
 
 function Game::onPlayerConnected(%playerId)

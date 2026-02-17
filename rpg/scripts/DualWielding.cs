@@ -18,7 +18,7 @@
 //   - Toggle mode persists across death/respawn (disabled on remort)
 //
 // SKILL REQUIREMENT:
-//   - Players must have Ascension talent "DualWield" to dual wield
+//   - Players must have Ascension talent "DualWielding" to dual wield
 //  - Can be changed to skill requirement if needed 
 // LIMITATIONS:
 //   - Off-hand weapon uses slot 6 for visual display
@@ -122,7 +122,7 @@ $DualWield::AllowForBots = false;              // Whether bots can dual wield
 // OLD SKILL REQUIREMENT (replaced by Ascension talent system)
 // $DualWield::RequiredSkillLevel = 300;        // Required Slashing skill to dual wield
 // $DualWield::RequiredSkillType = 1;           // Skill type: 1 = Slashing ($SkillSlashing)
-// NOTE: Dual wielding now requires the "DualWield" Ascension talent (purchased from Ascension NPC)
+// NOTE: Dual wielding requires the "DualWielding" Ascension talent (legacy alias "DualWield" is supported)
 
 // Damage multipliers (0.7 = 70% damage, 1.0 = full damage)
 // Per-weapon override: $DualWield::DamageMultiplier[DiamondClaymore] = 0.8;
@@ -499,7 +499,7 @@ function DualWield::IsEnabled(%clientId)
     
     // CRITICAL: Verify player has the Ascension talent
     // This prevents double attacks if off-hand weapon data exists but player lacks the talent
-    if(!Ascension::HasTalent(%clientId, "DualWield"))
+    if(!Ascension::HasTalent(%clientId, "DualWielding"))
         return false;
     
     %offHandWeapon = DualWield::GetOffHandWeapon(%clientId);
@@ -590,7 +590,7 @@ function DualWield::CanDualWield(%clientId)
         return false;
     
     // Check Ascension talent - this is the ONLY way to unlock dual wielding
-    if(!Ascension::HasTalent(%clientId, "DualWield"))
+    if(!Ascension::HasTalent(%clientId, "DualWielding"))
         return false;
     
     return true;

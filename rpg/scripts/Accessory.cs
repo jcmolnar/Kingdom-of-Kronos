@@ -100,7 +100,7 @@ $HardcodedItemCost[HeavenlyAntiMagicBelt] = 200000000;
 $HardcodedItemCost[Tent] = 4000;
 $HardcodedItemCost[ScoutVehicle] = 500000;
 $HardcodedItemCost[AdminOrb] = 99999999999999;
-$HardcodedItemCost[OrbOfBreath] = 1000;
+$HardcodedItemCost[OrbOfLight] = 10000;
 //boots
 $HardcodedItemCost[CheetaursPaws] = 1500;
 $HardcodedItemCost[BootsOfGliding] = 8000;
@@ -601,7 +601,7 @@ function GetCurrentlyWearingArmor(%clientId)
 //   POTIONS
 //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-$AccessoryVar[BluePotion, $Weight] = 4;
+$AccessoryVar[BluePotion, $Weight] = 0.5;
 $AccessoryVar[BluePotion, $MiscInfo] = "A blue potion that heals 15 HP";
 // ItemData BluePotion - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
 //{
@@ -637,7 +637,7 @@ function BluePotion::onUse(%player,%item)
 		UseSkill(%clientId, $SkillHealing, True, True);
 }
 
-$AccessoryVar[CrystalBluePotion, $Weight] = 10;
+$AccessoryVar[CrystalBluePotion, $Weight] = 1;
 $AccessoryVar[CrystalBluePotion, $MiscInfo] = "A crystal blue potion that heals 60 HP";
 // ItemData CrystalBluePotion - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
 //{
@@ -673,7 +673,7 @@ function CrystalBluePotion::onUse(%player,%item)
 		UseSkill(%clientId, $SkillHealing, True, True);
 }
 
-$AccessoryVar[EnergyVial, $Weight] = 2;
+$AccessoryVar[EnergyVial, $Weight] = 0.5;
 $AccessoryVar[EnergyVial, $MiscInfo] = "An energy vial that provides 16 MP";
 // ItemData EnergyVial - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
 //{
@@ -705,7 +705,7 @@ function EnergyVial::onUse(%player,%item)
 	refreshAll(%clientId);
 }
 
-$AccessoryVar[CrystalEnergyVial, $Weight] = 5;
+$AccessoryVar[CrystalEnergyVial, $Weight] = 1;
 $AccessoryVar[CrystalEnergyVial, $MiscInfo] = "A crystal energy vial that provides 50 MP";
 // ItemData CrystalEnergyVial - MIGRATED TO BELT SYSTEM (no longer uses ItemData)
 //{
@@ -1459,25 +1459,16 @@ function AdminBoots::startRaceChangeSequence(%clientId)
 		return;
 	
 	// CRITICAL: Block attacks during the entire AdminBoots sequence to prevent spam
-	// Each datablock change (armor or race) can trigger an engine-level fire event if holding the button.
 	$SkillUpgradeRefreshScheduled[%clientId] = "true";
 	
 	// CRITICAL: Preserve current mana before race change (ChangeRace sets mana to full)
 	%currentMana = fetchData(%clientId, "MANA");
-	
-	// CRITICAL: Set a flag to prevent RefreshAll from resetting mana during this sequence
 	storeData(%clientId, "AdminBootsPreserveMana", %currentMana);
-	
-	// Set armor to AdminBootsArmor for free flight (jetEnergyDrain = 0.0) with reduced speed
-	// This is what actually enables the flight properties and applies the speed reduction
-	Player::setArmor(%clientId, "AdminBootsArmor");
-	
-	// Refresh character to ensure DeathKnight values apply
-	RefreshAll(%clientId);
 	
 	// Switch back to Human (this will set mana to full, but we'll restore it)
 	ChangeRace(%clientId, "Human");
-	// Immediately restore mana after ChangeRace (before RefreshAll calls)
+	
+	// Immediately restore mana after ChangeRace
 	if(%currentMana != "" && %currentMana != -1 && %currentMana != "0")
 	{
 		%maxMana = fetchData(%clientId, "MaxMANA");
@@ -1485,18 +1476,10 @@ function AdminBoots::startRaceChangeSequence(%clientId)
 			setMANA(%clientId, %currentMana);
 	}
 	
-	// Refresh again to ensure all values are properly applied
+	// Refresh once to ensure all values (including new AdminBoots armor) apply
 	RefreshAll(%clientId);
 	
-	// Update appearance to ensure armor/visual updates
-	UpdateAppearance(%clientId);
-	
-	RefreshAll(%clientId);
-	
-	// Ensure armor is set to AdminBootsArmor (in case UpdateAppearance changed it)
-	Player::setArmor(%clientId, "AdminBootsArmor");
-	
-	// Final mana restoration after all RefreshAll calls
+	// Final mana restoration after RefreshAll
 	if(%currentMana != "" && %currentMana != -1 && %currentMana != "0")
 	{
 		%maxMana = fetchData(%clientId, "MaxMANA");
@@ -2099,9 +2082,8 @@ $AccessoryVar[Bible, $MiscInfo] = "Do you have time to talk about your lord and 
 
 //========= ORBS ===================================================
 
-//i suggest putting orbs that protect from water at the top of the list.
-//$ItemList[Orb, 2] = "OrbOfBreath";
 $ItemList[Orb, 1] = "AdminOrb";
+$ItemList[Orb, 2] = "OrbOfLight";
 
 //Admin Orb
 $AccessoryVar[AdminOrb, $AccessoryType] = $ShieldAccessoryType;
@@ -2144,11 +2126,42 @@ ItemData AdminOrb0
 	heading = "aArmor";
 };
 
-//Orb of Breath
-$AccessoryVar[OrbOfBreath, $AccessoryType] = $ShieldAccessoryType;
-$AccessoryVar[OrbOfBreath, $Weight] = 0.8;
-$AccessoryVar[OrbOfBreath, $MiscInfo] = "The Orb Of Breath provides you with a temporary ability to breathe underwater.";
-$OverrideMountPoint[OrbOfBreath] = 2;
-$BurnOut[OrbOfBreath] = 300;
-$BurnOutInRain[OrbOfBreath] = 0;
-$ProtectFromWater[OrbOfBreath] = True;
+$AccessoryVar[OrbOfLight, $AccessoryType] = $ShieldAccessoryType;
+$AccessoryVar[OrbOfLight, $Weight] = 1.0;
+$AccessoryVar[OrbOfLight, $MiscInfo] = "The Orb Of Light provides you with a bit of illumination.";
+$OverrideMountPoint[OrbOfLight] = 2;
+$BurnOut[OrbOfLight] = 9999;
+$BurnOutInRain[OrbOfLight] = 9999;
+$ProtectFromWater[OrbOfLight] = "";
+
+ItemImageData OrbOfLightImage
+{
+	shapeFile = "orb";
+	mountPoint = $OverrideMountPoint[OrbOfLight];
+	mountOffset = {0.0, 0.0, 1.8};
+	mountRotation = {5, 3, 3};
+
+	lightType = 2;
+	lightRadius = 10;
+	lightTime = 9999;
+	lightColor = { 1.0, 1.0, 0.8 };
+};
+ItemData OrbOfLight
+{
+	description = "Orb Of Light";
+	className = "Accessory";
+	shapeFile = "orb";
+	imageType = OrbOfLightImage;
+
+	heading = "eMiscellany";
+	price = 0;
+};
+ItemData OrbOfLight0
+{
+	description = "Lit Orb Of Light";
+	className = "Equipped";
+	shapeFile = "orb";
+	imageType = OrbOfLightImage;
+
+	heading = "aArmor";
+};

@@ -5192,7 +5192,7 @@ function TeleportToMarker(%clientId, %markergroup, %testpos, %random)
 	return False;
 }
 
-function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
+function TossLootbag(%clientId, %loot, %vel, %namelist, %t, %sourceObj)
 {
 	dbecho($dbechoMode2, "TossLootbag(" @ %clientId @ ", " @ %loot @ ", " @ %vel @ ", " @ %namelist @ ", " @ %t @ ")");
 
@@ -5205,6 +5205,9 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 	}
 
 	%player = Client::getOwnedObject(%clientId);
+	%throwSource = %player;
+	if(%sourceObj != "" && %sourceObj != -1 && isObject(%sourceObj) && getObjectType(%sourceObj) == "Player")
+		%throwSource = %sourceObj;
 	%ownerName = Client::getName(%clientId);
 
 	// DEBUG: Log when enemy bots drop lootbags
@@ -5290,7 +5293,22 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t)
 	// DEBUG: Log after addToSet (use echo so it always prints)
 	if($LOOTBAG_DEBUG) echo("[LOOTBAG DEBUG] TossLootbag - Successfully added lootbag " @ %lootbag @ " to MissionCleanup");
 	GameBase::setMapName(%lootbag, "Backpack");
-	GameBase::throw(%lootbag, %player, %vel, false);
+	if(%throwSource != "" && %throwSource != -1 && isObject(%throwSource) && getObjectType(%throwSource) == "Player")
+	{
+		GameBase::throw(%lootbag, %throwSource, %vel, false);
+	}
+	else
+	{
+		%fallbackPos = "";
+		if(%player != "" && %player != -1 && isObject(%player))
+			%fallbackPos = GameBase::getPosition(%player);
+		if((%fallbackPos == "" || %fallbackPos == -1) && %sourceObj != "" && %sourceObj != -1 && isObject(%sourceObj) && getObjectType(%sourceObj) == "Player")
+			%fallbackPos = GameBase::getPosition(%sourceObj);
+		if(%fallbackPos == "" || %fallbackPos == -1)
+			%fallbackPos = "0 0 0";
+		echo("WARNING: TossLootbag - Invalid throw source for clientId=" @ %clientId @ ". Placing lootbag at " @ %fallbackPos);
+		GameBase::setPosition(%lootbag, %fallbackPos);
+	}
 
 	//Make sure there aren't more than 15 packs per player... This is to resolve lag problems
 	%lootbaglist = fetchData(%clientId, "lootbaglist");
@@ -8315,6 +8333,16 @@ function AFKZone_Tick()
 		%warnUntil = $AFKZoneWarnUntil[%id];
 		if(%warnUntil != "")
 		{
+			%warnAck = $AFKZoneWarnAck[%id];
+			if(%warnAck != "")
+			{
+				// Honor a valid #verify response: clear this warning cycle and keep the player in-zone.
+				AFKZone_ClearWarning(%id);
+				$AFKZoneLastPos[%id] = %pos;
+				$AFKZoneLastMove[%id] = %now;
+				continue;
+			}
+
 			%warnPos = $AFKZoneWarnPos[%id];
 			%movedSinceWarn = false;
 			if(%warnPos != "" && Vector::getDistance(%pos, %warnPos) > 1)
@@ -8328,7 +8356,7 @@ function AFKZone_Tick()
 			
 			if(%now >= %warnUntil)
 			{
-				// Even if they typed #verify, lack of movement or incorrect code triggers teleport
+				// No movement and no valid #verify acknowledgment before expiry: teleport out.
 				AFKZone_Teleport(%id);
 				continue;
 			}

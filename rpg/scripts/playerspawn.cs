@@ -316,6 +316,10 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 		}
 		// Clear spawn protection after 5 seconds
 		schedule("Game::ClearSpawnProtection(" @ %clientId @ ");", 5);
+		
+		// Ensure Telekinesis loop is running for players who own Telekinesis.
+		// This makes startup independent from admin debug commands.
+		Ascension::EnsureTelekinesisLoopForClient(%clientId);
 	}
 
 	if(%clientId.RespawnMeInArena)

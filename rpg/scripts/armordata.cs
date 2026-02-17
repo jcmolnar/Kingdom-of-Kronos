@@ -26,6 +26,8 @@ DamageSkinData armorDamageSkins
    bmpName[9] = "dskin10_armor";
 };
 
+
+
 exec("HumanArmors");
 
 exec("EnemyArmors");

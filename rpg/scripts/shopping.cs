@@ -252,7 +252,7 @@ $AccessoryVar[Knife, $ShopIndex] = 55;
 $AccessoryVar[PickAxe, $ShopIndex] = 63;
 $AccessoryVar[Tent, $ShopIndex] = 98;
 $AccessoryVar[AdminOrb, $ShopIndex] = 99;
-$AccessoryVar[OrbOfBreath, $ShopIndex] = 103;
+$AccessoryVar[OrbOfLight, $ShopIndex] = 103;
 
 $AccessoryVar[BlackStatue, $ShopIndex] = 100;
 $AccessoryVar[SkeletonBone, $ShopIndex] = 101;
@@ -361,6 +361,9 @@ $AccessoryVar[WhiteDiamondVoidImpaler, $ShopIndex] = 235;
 $AccessoryVar[FinalVerdict, $ShopIndex] = 236;
 $AccessoryVar[StormCaller, $ShopIndex] = 237;
 $AccessoryVar[WorldSplitter, $ShopIndex] = 238;
+$AccessoryVar[JudgementRobe, $ShopIndex] = 239;
+$AccessoryVar[StormRobe, $ShopIndex] = 240;
+$AccessoryVar[VoidRobe, $ShopIndex] = 241;
 
 
 // ============================================

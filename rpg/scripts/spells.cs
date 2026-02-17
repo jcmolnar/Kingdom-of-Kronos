@@ -16,7 +16,112 @@ $LOSRadiusSelfType = 6;			//casts at LOS and around LOS and to self
 $SelfRadiusLOSRadiusType = 7;		//casts to self and around self and to LOS and around LOS
 
 //-- SPELL DEFINITIONS -------------------------------------------------------------------------------------------
-$SPELL_DEBUG = 1;
+$SPELL_DEBUG = 0;
+$SpellExplosionMode = "rocket"; // "hybrid" or "rocket"
+
+function SpellExplosion_UseHybrid()
+{
+	%mode = $SpellExplosionMode;
+	if(%mode == "" || %mode == "hybrid" || %mode == "HYBRID")
+		return true;
+	return false;
+}
+
+function SetSpellExplosionMode(%mode)
+{
+	if(%mode == "hybrid" || %mode == "HYBRID")
+		$SpellExplosionMode = "hybrid";
+	else if(%mode == "rocket" || %mode == "ROCKET")
+		$SpellExplosionMode = "rocket";
+	else
+	{
+		echo("SetSpellExplosionMode: Invalid mode '" @ %mode @ "'. Use 'hybrid' or 'rocket'.");
+		return;
+	}
+
+	echo("SetSpellExplosionMode: Using " @ $SpellExplosionMode @ " mode.");
+}
+
+function BuildSpellBombTransform(%sourceObj, %castPos)
+{
+	if(%castPos == "" || %castPos == -1)
+		return "";
+	
+	%mt = "";
+	if(%sourceObj != -1 && %sourceObj != "" && isObject(%sourceObj))
+		%mt = GameBase::getMuzzleTransform(%sourceObj);
+	
+	// Fallback to identity basis if muzzle transform is unavailable.
+	if(%mt == "" || %mt == -1)
+		return "1 0 0 0 1 0 0 0 1 " @ %castPos;
+	
+	return getWord(%mt, 0) @ " " @ getWord(%mt, 1) @ " " @ getWord(%mt, 2) @ " " @
+		getWord(%mt, 3) @ " " @ getWord(%mt, 4) @ " " @ getWord(%mt, 5) @ " " @
+		getWord(%mt, 6) @ " " @ getWord(%mt, 7) @ " " @ getWord(%mt, 8) @ " " @ %castPos;
+}
+
+function SpellResolveSourceObject(%clientId)
+{
+	%sourceObj = -1;
+	
+	if(%clientId != 0 && %clientId != -1)
+	{
+		%candidate = Client::getOwnedObject(%clientId);
+		if(%candidate != -1 && %candidate != "" && isObject(%candidate) && getObjectType(%candidate) == "Player")
+			%sourceObj = %candidate;
+	}
+	
+	if(%sourceObj == -1)
+	{
+		%candidate = Client::getOwnedObject(2048);
+		if(%candidate != -1 && %candidate != "" && isObject(%candidate) && getObjectType(%candidate) == "Player")
+			%sourceObj = %candidate;
+	}
+	
+	if(%sourceObj == -1)
+	{
+		%list = GetEveryoneIdList();
+		for(%i = 0; (%id = GetWord(%list, %i)) != -1; %i++)
+		{
+			%candidate = Client::getOwnedObject(%id);
+			if(%candidate != -1 && %candidate != "" && isObject(%candidate) && getObjectType(%candidate) == "Player")
+			{
+				%sourceObj = %candidate;
+				break;
+			}
+		}
+	}
+	
+	return %sourceObj;
+}
+
+// Tornado visuals are authored with a different forward/up axis.
+// Use a fixed 90-degree X-axis basis so the effect stays upright.
+function BuildTornadoBombTransform(%castPos)
+{
+	if(%castPos == "" || %castPos == -1)
+		return "";
+	
+	// Rotation basis = Rx(90deg): [1 0 0; 0 0 -1; 0 1 0]
+	return "1 0 0 0 0 -1 0 1 0 " @ %castPos;
+}
+
+function PowerCloud_ClearCache(%clientId, %token)
+{
+	if($PowerCloudCacheToken[%clientId] != %token)
+		return;
+	
+	SpellTargetCache_Clear(%clientId);
+	$PowerCloudCacheToken[%clientId] = "";
+}
+
+function PowerCloud_NextToken(%clientId)
+{
+	if($PowerCloudTokenGen[%clientId] == "" || $PowerCloudTokenGen[%clientId] == -1)
+		$PowerCloudTokenGen[%clientId] = 0;
+	$PowerCloudTokenGen[%clientId]++;
+	return $PowerCloudTokenGen[%clientId];
+}
 
 $Spell::keyword[1] = "firebomb";
 $Spell::index[firebomb] = 1;
@@ -1137,7 +1242,12 @@ function BeginCastSpell(%clientId, %keyword)
 	%w2 = String::getSubStr(%keyword, %w1Len + 1, 99999);
 
 	%player = Client::getOwnedObject(%clientId);
-	%playerPos = GameBase::getPosition(%clientId);
+	if(%player == -1 || %player == "" || !isObject(%player))
+	{
+		Client::sendMessage(%clientId, $MsgWhite, "You cannot cast right now.");
+		return False;
+	}
+	%playerPos = GameBase::getPosition(%player);
 
 		for(%i = 1; $Spell::keyword[%i] != ""; %i++)
 		{
@@ -1204,8 +1314,10 @@ function BeginCastSpell(%clientId, %keyword)
 					// CRITICAL: Capture caster name at cast time for identity validation
 					// This prevents ghost damage if another bot takes this clientId before spell fires
 					%casterName = Client::getName(%clientId);
+					%safeCasterName = String::replace(%casterName, "\"", "");
+					%safeW2 = String::replace(%w2, "\"", "");
 
-					schedule("%retval=DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\", \"" @ %casterName @ "\"); if(%retval){refreshMANA(" @ %clientId @ ", " @ %tempManaCost @ ");}", $Spell::delay[%i]);
+					schedule("%retval=DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %safeW2 @ "\", \"" @ %safeCasterName @ "\"); if(%retval){refreshMANA(" @ %clientId @ ", " @ %tempManaCost @ ");}", $Spell::delay[%i]);
 					schedule("storeData(" @ %clientId @ ", \"SpellCastStep\", \"\");sendDoneRecovMsg(" @ %clientId @ ");", %recovTime);
 				
 					// ASCENSION: Spell Echo - 15% chance to cast offensive spells twice (no extra mana cost)
@@ -1215,11 +1327,7 @@ function BeginCastSpell(%clientId, %keyword)
 						{
 							// Schedule echo cast slightly after original - use SILENT version (no explosions)
 							%echoDelay = $Spell::delay[%i] + 0.5;
-							schedule("DoCastSpell_Silent(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %w2 @ "\", \"" @ %casterName @ "\");", %echoDelay);
-
-							// CRITICAL: Clear SpellCastStep after echo completes to prevent casting lock
-							%echoClearDelay = %echoDelay + 0.5;
-							schedule("storeData(" @ %clientId @ ", \"SpellCastStep\", \"\");", %echoClearDelay);
+							schedule("DoCastSpell_Silent(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %safeW2 @ "\", \"" @ %safeCasterName @ "\");", %echoDelay);
 							Client::sendMessage(%clientId, 0, "Spell Echo!");
 						}
 					}
@@ -1252,12 +1360,16 @@ function DoCastSpell_Silent(%clientId, %index, %oldpos, %castPos, %castObj, %w2,
 	if(%expectedCasterName != "" && %expectedCasterName != -1)
 	{
 		%currentCasterName = Client::getName(%clientId);
-		if(%currentCasterName != %expectedCasterName)
-		{
-			echo("[SPELL ECHO SAFETY] BLOCKED orphan echo - Original: " @ %expectedCasterName @ ", Current: " @ %currentCasterName);
-			return False;
-		}
+			if(%currentCasterName != %expectedCasterName)
+			{
+				echo("[SPELL ECHO SAFETY] BLOCKED orphan echo - Original: " @ %expectedCasterName @ ", Current: " @ %currentCasterName);
+				return False;
+			}
 	}
+	
+	%casterObj = Client::getOwnedObject(%clientId);
+	if(%casterObj == -1 || %casterObj == "" || !isObject(%casterObj))
+		return False;
 	
 	// Get spell info
 	%spellRadius = $Spell::radius[%index];
@@ -1278,7 +1390,8 @@ function DoCastSpell_Silent(%clientId, %index, %oldpos, %castPos, %castObj, %w2,
 		{
 			// These use ApocalypseBatchExplosions
 			// Assume data arrays are already populated by the original cast
-			ApocalypseBatchExplosions(%clientId, %index, 0, true);
+			%apocToken = $ApocalypseDataToken[%clientId];
+			ApocalypseBatchExplosions(%clientId, %index, 0, true, %apocToken);
 			return True;
 		}
 		else if(%index == 46)
@@ -1360,8 +1473,13 @@ function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expec
 	}
 
 	%player = Client::getOwnedObject(%clientId);
+	if(%player == -1 || %player == "" || !isObject(%player))
+	{
+		storeData(%clientId, "SpellCastStep", "");
+		return False;
+	}
 
-	if(Vector::getDistance(%oldpos, GameBase::getPosition(%clientId)) > $Spell::graceDistance[%index])
+	if(Vector::getDistance(%oldpos, GameBase::getPosition(%player)) > $Spell::graceDistance[%index])
 	{
 		Client::sendMessage(%clientId, $MsgBeige, "Your casting was interrupted.");
 		storeData(%clientId, "SpellCastStep", 2);
@@ -1627,10 +1745,22 @@ function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expec
 
 		if(%castPos != "")
 		{
-			// Batch schedule calls for better performance
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb2\", \"" @ %castPos @ "\", True, " @ %index @ ");", 0.0, %player);
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb2\", \"" @ %castPos @ "\", True, " @ %index @ ");", 0.5, %player);
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb2\", \"" @ %castPos @ "\", True, " @ %index @ ");", 1.0, %player);
+			// Build once for the 3 pulse sequence so each pulse avoids a full container query.
+			%pcToken = PowerCloud_NextToken(%clientId);
+			$PowerCloudCacheToken[%clientId] = %pcToken;
+			%spellRadius = $Spell::radius[%index];
+			if(%spellRadius == "" || %spellRadius <= 0)
+				%spellRadius = 10;
+			%cacheRadius = %spellRadius + 12; // movement buffer during the pulse window
+			SpellTargetCache_Build(%clientId, %castPos, %cacheRadius);
+			%safeExpectedCasterName = String::replace(%expectedCasterName, "\"", "");
+
+			// Keep these on scheduler root (not object-bound) to avoid edge cases when
+			// the player object changes between cast and delayed pulses.
+			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ");", 0.0);
+			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ");", 0.5);
+			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ");", 1.0);
+			schedule("PowerCloud_ClearCache(" @ %clientId @ ", " @ %pcToken @ ");", 1.5);
 
 			%overrideEndSound = True;
 			%returnFlag = True;
@@ -2541,6 +2671,11 @@ if (%index == 21)
 			%castZ = GetWord(%castPos, 2);
 			
 			// Initialize Batch Data
+			if($ApocalypseDataToken[%clientId] == "" || $ApocalypseDataToken[%clientId] == -1)
+				$ApocalypseDataToken[%clientId] = 0;
+			$ApocalypseDataToken[%clientId]++;
+			%apocToken = $ApocalypseDataToken[%clientId];
+
 			$ApocalypseBasePos[%clientId] = %castPos;
 			$ApocalypseUseCachedDamage[%clientId] = true;
 			
@@ -2605,7 +2740,7 @@ if (%index == 21)
 			$ApocalypseDataCount[%clientId] = %count;
 			
 			// Start batch processing
-			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", 0);", 0.1);
+			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", 0, 0, " @ %apocToken @ ");", 0.1);
 			
 			%overrideEndSound = True;
 			%returnFlag = True;
@@ -2736,6 +2871,13 @@ function Turret::objectiveDestroyed() {}
 			%ypos=getword(%castpos,1);
 			%zpos=getword(%castpos,2);
 			
+			// Stamp this Apocalypse cast with a generation token so stale scheduled
+			// callbacks from older casts cannot wipe/override current data.
+			if($ApocalypseDataToken[%clientId] == "" || $ApocalypseDataToken[%clientId] == -1)
+				$ApocalypseDataToken[%clientId] = 0;
+			$ApocalypseDataToken[%clientId]++;
+			%apocToken = $ApocalypseDataToken[%clientId];
+			
 			// PERFORMANCE: Build target cache (Max offset is ~30, spell radius is 100)
 			SpellTargetCache_Build(%clientId, %castPos, 130);
 			$ApocalypseUseCachedDamage[%clientId] = true;
@@ -2784,7 +2926,7 @@ function Turret::objectiveDestroyed() {}
 			
 			// Start the batch processing
 			schedule("playSound(LaunchET, \"" @ %castPos @ "\");", 5);
-			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", 0);", 5);
+			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", 0, 0, " @ %apocToken @ ");", 5);
 			
 			Client::sendMessage(%clientId, $MsgBeige, "Run for Cover.");
 			%overrideEndSound = True;
@@ -2803,6 +2945,11 @@ function Turret::objectiveDestroyed() {}
 			%xpos=getword(%castpos,0);
 			%ypos=getword(%castpos,1);
 			%zpos=getword(%castpos,2);
+			
+			if($ApocalypseDataToken[%clientId] == "" || $ApocalypseDataToken[%clientId] == -1)
+				$ApocalypseDataToken[%clientId] = 0;
+			$ApocalypseDataToken[%clientId]++;
+			%apocToken = $ApocalypseDataToken[%clientId];
 			
 			// Store explosion data in arrays for batch processing
 			$ApocalypseData[%clientId, 0] = "Bomb5 0 0 85 True 0.0";
@@ -2827,7 +2974,7 @@ function Turret::objectiveDestroyed() {}
 			
 			// Start the batch processing
 			schedule("playSound(LaunchET, \"" @ %castPos @ "\");", 5);
-			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", 0);", 5);
+			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", 0, 0, " @ %apocToken @ ");", 5);
 			
 			Client::sendMessage(%clientId, $MsgBeige, "Run for Cover.");
 			%overrideEndSound = True;
@@ -2874,6 +3021,49 @@ function Turret::objectiveDestroyed() {}
 	}
 }
 
+function SpellPowerCloudPulse(%clientId, %castPos, %index, %expectedCasterName, %token)
+{
+	if($PowerCloudCacheToken[%clientId] != %token)
+	{
+		if($SPELL_DEBUG)
+			echo("[SPELL DEBUG] PowerCloud pulse blocked (token mismatch). clientId=" @ %clientId @ " expected=" @ %token @ " active=" @ $PowerCloudCacheToken[%clientId]);
+		return;
+	}
+	
+	// Guard against clientId reuse before delayed pulse fires.
+	if(%expectedCasterName != "" && %expectedCasterName != -1)
+	{
+		%currentCasterName = Client::getName(%clientId);
+		if(%currentCasterName != %expectedCasterName)
+		{
+			if($SPELL_DEBUG)
+				echo("[SPELL DEBUG] PowerCloud pulse blocked (caster mismatch). clientId=" @ %clientId @ " expected=" @ %expectedCasterName @ " current=" @ %currentCasterName);
+			return;
+		}
+	}
+	
+	if(%castPos == "" || %castPos == -1)
+		return;
+
+	%casterObj = Client::getOwnedObject(%clientId);
+	if(%casterObj == -1 || %casterObj == "" || !isObject(%casterObj) || getObjectType(%casterObj) != "Player")
+	{
+		if($SPELL_DEBUG)
+			echo("[SPELL DEBUG] PowerCloud pulse blocked (invalid caster object). clientId=" @ %clientId @ " casterObj=" @ %casterObj);
+		return;
+	}
+	
+	if($SpellTargetCache[%clientId, "count"] != "" && $SpellTargetCache[%clientId, "count"] > 0)
+	{
+		CreateAndDetBomb_VisualOnly(%clientId, "Bomb2", %castPos, %index);
+		SpellRadiusDamage_Cached(%clientId, %castPos, %index);
+	}
+	else
+	{
+		CreateAndDetBomb(%clientId, "Bomb2", %castPos, 1, %index);
+	}
+}
+
 function CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index)
 {
 	dbecho($dbechoMode, "CreateAndDetBomb(" @ %clientId @ ", " @ %b @ ", " @ %castPos @ ", " @ %index @ ")");
@@ -2881,37 +3071,32 @@ function CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index)
 	// Convert bomb type (e.g., "Bomb1") to projectile name (e.g., "SpellBomb1")
 	%projName = "Spell" @ %b;
 	
-	// PERFORMANCE: Spawn a Mine for visual explosion. 
-	// Projects (SpellBombX) are used for networking, but the Mine triggers the actual explosionTag reliably.
-	%sourceObj = -1;
-	if(%clientId != 0 && %clientId != -1)
-	{
-		%sourceObj = Client::getOwnedObject(%clientId);
-	}
-	
-	if(%sourceObj == -1)
-	{
-		%sourceObj = Client::getOwnedObject(2048);
-		if(%sourceObj == -1)
-		{
-			%list = GetEveryoneIdList();
-			if(%list != "")
-				%sourceObj = Client::getOwnedObject(GetWord(%list, 0));
-		}
-	}
+	// Hybrid mode keeps Mine visuals; rocket mode skips Mine creation and uses projectile-only FX.
+	%sourceObj = SpellResolveSourceObject(%clientId);
 	
 	if(%sourceObj != -1)
 	{
-		%bomb = newObject("", "Mine", %b);
-		if(%bomb != -1)
+		if(SpellExplosion_UseHybrid())
 		{
-			addToSet("MissionCleanup", %bomb);
-			GameBase::setPosition(%bomb, %castPos);
-			schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.4);
+			%bomb = newObject("", "Mine", %b);
+			if(%bomb != -1)
+			{
+				addToSet("MissionCleanup", %bomb);
+				GameBase::setPosition(%bomb, %castPos);
+				schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.4);
+			}
 		}
 		
-		%trans = %castPos @ " 0 0 0";
-		Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0", 0.1);
+		if(%index == 46)
+			%trans = BuildTornadoBombTransform(%castPos);
+		else
+			%trans = BuildSpellBombTransform(%sourceObj, %castPos);
+		if(%trans != "")
+			Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0");
+	}
+	else if($SPELL_DEBUG)
+	{
+		echo("[SPELL DEBUG] CreateAndDetBomb: No valid source object for clientId " @ %clientId @ ", bomb=" @ %b);
 	}
 	
 	if(%doDamage && %clientId != 0 && %clientId != -1)
@@ -2933,36 +3118,32 @@ function CreateAndDetBomb_VisualOnly(%clientId, %b, %castPos, %index)
 
 	%projName = "Spell" @ %b;
 	
-	// Restore Mine creation for visuals
-	
-	// Spawn invisible projectile for network synchronization
-	%sourceObj = -1;
-	if(%clientId != 0 && %clientId != -1)
-		%sourceObj = Client::getOwnedObject(%clientId);
-	
-	if(%sourceObj == -1)
-	{
-		%sourceObj = Client::getOwnedObject(2048);
-		if(%sourceObj == -1)
-		{
-			%list = GetEveryoneIdList();
-			if(%list != "")
-				%sourceObj = Client::getOwnedObject(GetWord(%list, 0));
-		}
-	}
+	// Hybrid mode keeps Mine visuals; rocket mode skips Mine creation and uses projectile-only FX.
+	%sourceObj = SpellResolveSourceObject(%clientId);
 	
 	if(%sourceObj != -1)
 	{
-		%bomb = newObject("", "Mine", %b);
-		if(%bomb != -1)
+		if(SpellExplosion_UseHybrid())
 		{
-			addToSet("MissionCleanup", %bomb);
-			GameBase::setPosition(%bomb, %castPos);
-			schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.4);
+			%bomb = newObject("", "Mine", %b);
+			if(%bomb != -1)
+			{
+				addToSet("MissionCleanup", %bomb);
+				GameBase::setPosition(%bomb, %castPos);
+				schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.4);
+			}
 		}
 		
-		%trans = %castPos @ " 0 0 0";
-		Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0", 0.1);
+		if(%index == 46)
+			%trans = BuildTornadoBombTransform(%castPos);
+		else
+			%trans = BuildSpellBombTransform(%sourceObj, %castPos);
+		if(%trans != "")
+			Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0");
+	}
+	else if($SPELL_DEBUG)
+	{
+		echo("[SPELL DEBUG] CreateAndDetBomb_VisualOnly: No valid source object for clientId " @ %clientId @ ", bomb=" @ %b);
 	}
 	
 	// NOTE: No damage calculation here - that's done via SpellRadiusDamage_Cached
@@ -2976,7 +3157,7 @@ function CreateAndDetBomb_VisualOnly(%clientId, %b, %castPos, %index)
 }
 
 // Optimized batch processing function for Apocalypse spell
-function ApocalypseBatchExplosions(%clientId, %index, %startIdx, %silent)
+function ApocalypseBatchExplosions(%clientId, %index, %startIdx, %silent, %token)
 {
 	// Validate clientId - if it's 0 or invalid, try to get it from stored data
 	if(%clientId == 0 || %clientId == -1)
@@ -2985,6 +3166,14 @@ function ApocalypseBatchExplosions(%clientId, %index, %startIdx, %silent)
 		// This shouldn't happen, but handle it gracefully
 		return;
 	}
+	
+	// Default token for compatibility with older call sites.
+	if(%token == "" || %token == -1)
+		%token = $ApocalypseDataToken[%clientId];
+	
+	// Ignore stale callbacks from older Apocalypse casts.
+	if(%token != $ApocalypseDataToken[%clientId])
+		return;
 	
 	%basePos = $ApocalypseBasePos[%clientId];
 	%count = $ApocalypseDataCount[%clientId];
@@ -3076,7 +3265,7 @@ function ApocalypseBatchExplosions(%clientId, %index, %startIdx, %silent)
 			%batchDuration = %lastDelay - %startDelay;
 			if(%batchDuration < 0.1) %batchDuration = 0.1;
 			
-			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", " @ %nextIdx @ ", " @ %silent @ ");", %batchDuration);
+			schedule("ApocalypseBatchExplosions(" @ %clientId @ ", " @ %index @ ", " @ %nextIdx @ ", " @ %silent @ ", " @ %token @ ");", %batchDuration);
 		}
 	}
 	else
@@ -3086,7 +3275,7 @@ function ApocalypseBatchExplosions(%clientId, %index, %startIdx, %silent)
 		if(!%silent)
 		{
 			// Clean up data arrays after a short delay to ensure all explosions are processed
-			schedule("ApocalypseCleanup(" @ %clientId @ ", " @ %count @ ");", 12.0);
+			schedule("ApocalypseCleanup(" @ %clientId @ ", " @ %count @ ", " @ %token @ ");", 12.0);
 		}
 	}
 
@@ -3136,14 +3325,18 @@ function ApocalypseCreateExplosion(%clientId, %bombType, %pos, %doDamage, %index
 		if(%silent) return;
 
 		// PERFORMANCE: Use the optimized visual-only helper instead of re-implementing
-		// This avoids the slow newObject("", "Mine", ...) calls and handles sound throttling.
+		// so mode switching (hybrid vs rocket) and sound throttling stay centralized.
 		CreateAndDetBomb_VisualOnly(%clientId, %bombType, %pos, %index);
 	}
 }
 
 // Cleanup function to remove data arrays
-function ApocalypseCleanup(%clientId, %count)
+function ApocalypseCleanup(%clientId, %count, %token)
 {
+	// Ignore stale cleanup callbacks from older casts.
+	if(%token != $ApocalypseDataToken[%clientId])
+		return;
+
 	if($SPELL_DEBUG) echo("[SPELL DEBUG] Apocalypse Finished. Total Damage Calls: " @ $SpellTotalDamageCalls[%clientId]);
 	$SpellTotalDamageCalls[%clientId] = 0;
 
@@ -3283,6 +3476,13 @@ function SpellDamageBuffer_Flush(%clientId, %targetId, %index)
 	if(%totalDamage == "" || %totalDamage == 0)
 		return;
 	
+	// Target may have died/despawned since this flush was scheduled.
+	if(!isObject(%targetId) || getObjectType(%targetId) != "Player")
+	{
+		$SpellDamageBuffer[%targetId, %clientId] = 0;
+		return;
+	}
+	
 	// Reset buffer BEFORE calling SpellDamage to avoid race conditions if 
 	// another explosion hits during the flush processing.
 	$SpellDamageBuffer[%targetId, %clientId] = 0;
@@ -3385,6 +3585,11 @@ function TornadoBatchExplosions(%clientId, %index, %startIdx, %silent)
 			$TornadoData[%clientId, %i] = "";
 		$TornadoDataCount[%clientId] = "";
 		$TornadoBasePos[%clientId] = "";
+		
+		// Tornado uses the shared cached-damage path. Clear these at the end
+		// so later spells don't accidentally reuse stale cache/flags.
+		$ApocalypseUseCachedDamage[%clientId] = "";
+		SpellTargetCache_Clear(%clientId);
 	}
 	}
 }
@@ -3393,6 +3598,21 @@ function SpellDamage(%clientId, %targetId, %damageValue, %index)
 {
 	$SpellTotalDamageCalls[%clientId]++;
 	dbecho($dbechoMode, "SpellDamage(" @ %clientId @ ", " @ %targetId @ ", " @ %damageValue @ ", " @ %index @ ")");
+	
+	// Accept both Player objects and client IDs.
+	%targetObj = %targetId;
+	if(!isObject(%targetObj))
+		return;
+	
+	if(getObjectType(%targetObj) != "Player")
+	{
+		%resolvedObj = Client::getOwnedObject(%targetId);
+		if(%resolvedObj == -1 || %resolvedObj == "" || !isObject(%resolvedObj))
+			return;
+		if(getObjectType(%resolvedObj) != "Player")
+			return;
+		%targetObj = %resolvedObj;
+	}
 
 	// SEAL BATTLE FIX: Prevent SealMage bots from damaging themselves with their own spells
 	// Check if caster is a SealMage and target is the same bot
@@ -3400,9 +3620,9 @@ function SpellDamage(%clientId, %targetId, %damageValue, %index)
 	if(String::findSubStr(%casterDisplayName, "SealMage") == 0)
 	{
 		// Caster is a SealMage - check if target is the same bot (self-damage)
-		%targetClientId = Player::getClient(%targetId);
+		%targetClientId = Player::getClient(%targetObj);
 		if(%targetClientId == -1)
-			%targetClientId = GetClientIdFromPlayerObject(%targetId);
+			%targetClientId = GetClientIdFromPlayerObject(%targetObj);
 		
 		if(%targetClientId == %clientId)
 		{
@@ -3421,12 +3641,18 @@ function SpellDamage(%clientId, %targetId, %damageValue, %index)
 	// 	%damageValue = floor(%damageValue * %spellMult);
 	// }
 
-	GameBase::virtual(%targetId, "onDamage", $SpellDamageType, %damageValue, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, $Spell::keyword[%index]);
+	GameBase::virtual(%targetObj, "onDamage", $SpellDamageType, %damageValue, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, $Spell::keyword[%index]);
 }
 
 function SpellRadiusDamage(%clientId, %pos, %index)
 {
 	dbecho($dbechoMode, "SpellRadiusDamage(" @ %clientId @ ", " @ %pos @ ", " @ %index @ ")");
+	
+	if(%pos == "" || %pos == -1)
+		return;
+	
+	if($Spell::radius[%index] == "" || $Spell::radius[%index] <= 0)
+		return;
 
 	%b = $Spell::radius[%index] * 2;
 	%set = newObject("set", SimSet);
@@ -3467,6 +3693,11 @@ function DoSpellDamage(%object, %clientId, %pos, %index)
 function SpellCalcRadiusDamage(%dist, %radius, %dmg, %percMin, %percMax)
 {
 	dbecho($dbechoMode, "SpellCalcRadiusDamage(" @ %dist @ ", " @ %radius @ ", " @ %dmg @ ", " @ %percMin @ ", " @ %percMax @ ")");
+	
+	if(%radius == "" || %radius <= 0)
+		return 0;
+	if(%dmg == "" || %dmg == 0)
+		return 0;
 
 	// Cache division result
 	%dmgPerRadius = %dmg / %radius;

@@ -48,6 +48,7 @@ $AccessoryVar[Knife, $AccessoryType] = $SwordAccessoryType;
 $AccessoryVar[Dagger, $AccessoryType] = $SwordAccessoryType;
 $AccessoryVar[PickAxe, $AccessoryType] = $AxeAccessoryType;
 $AccessoryVar[CastingBlade, $AccessoryType] = $SwordAccessoryType;
+$AccessoryVar[CrystalSpear, $AccessoryType] = $PolearmAccessoryType;
 //Custom Weap Types
 $AccessoryVar[RustyIronBlade, $AccessoryType] = $SwordAccessoryType;
 $AccessoryVar[ButterKnife, $AccessoryType] = $SwordAccessoryType;
@@ -112,6 +113,7 @@ $AccessoryVar[SealFighterBlade, $SpecialVar] = "6 220";
 $AccessoryVar[SealGuardianBlade, $SpecialVar] = "6 220";
 $AccessoryVar[BlackDiamondDreamSword, $SpecialVar] = "6 300";
 $AccessoryVar[BlackDiamondAtomSplitter, $SpecialVar] = "6 450";
+$AccessoryVar[CrystalSpear, $SpecialVar] = "6 60";
 //.................................................................................
 $AccessoryVar[Club, $SpecialVar] = "6 55";			//12 (3)
 //Custom Weap Damages
@@ -170,6 +172,7 @@ $AccessoryVar[SealFighterBlade, $Weight] = "4";
 $AccessoryVar[SealGuardianBlade, $Weight] = "4";
 $AccessoryVar[BlackDiamondDreamSword, $Weight] = "3.5";
 $AccessoryVar[BlackDiamondAtomSplitter, $Weight] = "3";
+$AccessoryVar[CrystalSpear, $Weight] = 5;
 //.................................................................................
 $AccessoryVar[Club, $Weight] = 4;
 //Custom weap weights
@@ -215,6 +218,7 @@ $AccessoryVar[Knife, $MiscInfo] = "A knife";
 $AccessoryVar[Dagger, $MiscInfo] = "A dagger";
 $AccessoryVar[PickAxe, $MiscInfo] = "A pick axe";
 $AccessoryVar[CastingBlade, $MiscInfo] = "Selects the best spell and casts it.  Used only for bots.";
+$AccessoryVar[CrystalSpear, $MiscInfo] = "A Crystal Spear";
 //Custom weap Descriptions
 $AccessoryVar[RustyIronBlade, $MiscInfo] = "An unreliable dull Iron Blade";
 $AccessoryVar[ButterKnife, $MiscInfo] = "A simple and almost useless Butter Knife";
@@ -269,6 +273,7 @@ $SkillType[Knife] = $SkillPiercing;
 $SkillType[Dagger] = $SkillPiercing;
 $SkillType[PickAxe] = $SkillPiercing;
 $SkillType[CastingBlade] = $SkillPiercing;
+$SkillType[CrystalSpear] = $SkillPiercing;
 //Custom Weap Skilltypes
 $SkillType[RustyIronBlade] = $SkillSlashing;
 $SkillType[ButterKnife] = $SkillPiercing;
@@ -352,6 +357,7 @@ function GenerateAllWeaponCosts()
 	$ItemCost[Knife] = 50000;
 	$ItemCost[Dagger] = 0;
 	$ItemCost[CastingBlade] = 0;
+	$ItemCost[CrystalSpear] = 0;
 //Custom weap Costs
 	$ItemCost[RustyIronBlade] = GenerateItemCost(RustyIronBlade);
 	$ItemCost[ButterKnife] = GenerateItemCost(ButterKnife);
@@ -2809,6 +2815,48 @@ function BlackDiamondAtomSmasher::onMount(%player,%item,$WeaponSlot)
 {   %client = Player::getclient(%player); 
    bottomprint(%client, "<f1>Black Diamond Atom Smasher: <f0>Attack: <f2>490    <f0>Skill Bludgeoning Req @ <f2>1580 Remort 30    <f0>Speed: <f2>0.82 Seconds    <f0>Price: <f2>$251700000    <f0>Weight: <f2>3 Lbs");
 }
+//****************************************************************************************************
+//   AXE TEST
+//****************************************************************************************************
+
+ItemImageData crystalspearImage
+{
+	shapeFile  = "spear";
+	mountPoint = 0;
+
+	weaponType = 0; // Single Shot
+	reloadTime = 0;
+	fireTime = 1.0;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing1;
+	sfxActivate = AxeSlash2;
+};
+ItemData crystalspear
+{
+	heading = "bWeapons";
+	description = "spear";
+	className = "Weapon";
+	shapeFile  = "spear";
+	hudIcon = "axe";
+	shadowDetailMask = 4;
+	imageType = crystalspearImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function crystalspearImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(crystalspear), crystalspear);
+}
+
+function crystalspear::onMount(%player,%item,$WeaponSlot) 
+{   %client = Player::getclient(%player); 
+   bottomprint(%client, "<f1>Crystal Spear: <f0>Attack: <f2>60    <f0>Skill Slashing Req @ <f2>0    <f0>Speed: <f2>1.0 Seconds    <f0>Price: <f2>$0    <f0>Weight: <f2>5 Lbs");
+}
+
 //****************************************************************************************************
 //   CLUB
 //****************************************************************************************************

@@ -512,14 +512,17 @@ function Player::onKilled(%this)
 	%botInfoAiName = fetchData(%debugClientId, "BotInfoAiName");
 	%spawnBotInfo = fetchData(%debugClientId, "SpawnBotInfo");
 	
-	echo("[ONKILLED DEBUG] === Player::onKilled() ENTRY ===");
-	echo("[ONKILLED DEBUG]   PlayerObject(%%this): " @ %playerObj);
-	echo("[ONKILLED DEBUG]   Player::getClient(): " @ %clientIdFromGetClient);
-	echo("[ONKILLED DEBUG]   GetClientIdFromPlayerObject(): " @ %clientIdFromHelper);
-	echo("[ONKILLED DEBUG]   Player::isAiControlled(): " @ %isAiControlled);
-	echo("[ONKILLED DEBUG]   Client::getName(): '" @ %nameFromClient @ "'");
-	echo("[ONKILLED DEBUG]   BotInfoAiName (via clientId " @ %debugClientId @ "): '" @ %botInfoAiName @ "'");
-	echo("[ONKILLED DEBUG]   SpawnBotInfo (via clientId " @ %debugClientId @ "): '" @ %spawnBotInfo @ "'");
+	if($ONKILLED_DEBUG)
+	{
+		echo("[ONKILLED DEBUG] === Player::onKilled() ENTRY ===");
+		echo("[ONKILLED DEBUG]   PlayerObject(%%this): " @ %playerObj);
+		echo("[ONKILLED DEBUG]   Player::getClient(): " @ %clientIdFromGetClient);
+		echo("[ONKILLED DEBUG]   GetClientIdFromPlayerObject(): " @ %clientIdFromHelper);
+		echo("[ONKILLED DEBUG]   Player::isAiControlled(): " @ %isAiControlled);
+		echo("[ONKILLED DEBUG]   Client::getName(): '" @ %nameFromClient @ "'");
+		echo("[ONKILLED DEBUG]   BotInfoAiName (via clientId " @ %debugClientId @ "): '" @ %botInfoAiName @ "'");
+		echo("[ONKILLED DEBUG]   SpawnBotInfo (via clientId " @ %debugClientId @ "): '" @ %spawnBotInfo @ "'");
+	}
 	
 	// CRITICAL: Detect if this might be a real player
 	%hasCharFile = false;
@@ -587,6 +590,7 @@ function Player::onKilled(%this)
 		{
 			// Not a bot and no valid client ID - this shouldn't happen, but return to be safe
 			if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): ERROR - Invalid clientId for player object " @ %this @ " and not a bot. Display name from %this: '" @ %playerNameFromThis @ "'");
+			Watchdog_Exit();
 			return;
 		}
 	}
@@ -1061,6 +1065,7 @@ function Player::onKilled(%this)
 			if(%botName == "")
 				%botName = fetchData(%clientId, "SpawnBotInfo");
 			echo("[DEBUG getItemCount] Player::onKilled - Player object doesn't exist before item loop, clientId: " @ %clientId @ ", bot: " @ %botName);
+			Watchdog_Exit();
 			return; // Player object doesn't exist
 		}
 		
@@ -1376,9 +1381,9 @@ function Player::onKilled(%this)
 			%keyItems = fetchData(%clientId, "KeyItems");
 			%consumables = fetchData(%clientId, "Consumables");
 			if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Bot " @ %botName @ " (clientId=" @ %clientId @ ") died. OriginalLootString='" @ %originalLootString @ "'");
-			if(%questItems != "" && %questItems != "0") echo("[LOOT DEBUG]   QuestItems: '" @ %questItems @ "'");
-			if(%keyItems != "" && %keyItems != "0") echo("[LOOT DEBUG]   KeyItems: '" @ %keyItems @ "'");
-			if(%consumables != "" && %consumables != "0") echo("[LOOT DEBUG]   Consumables: '" @ %consumables @ "'");
+			if($LOOTBAG_DEBUG && %questItems != "" && %questItems != "0") echo("[LOOT DEBUG]   QuestItems: '" @ %questItems @ "'");
+			if($LOOTBAG_DEBUG && %keyItems != "" && %keyItems != "0") echo("[LOOT DEBUG]   KeyItems: '" @ %keyItems @ "'");
+			if($LOOTBAG_DEBUG && %consumables != "" && %consumables != "0") echo("[LOOT DEBUG]   Consumables: '" @ %consumables @ "'");
 			%questItems = fetchData(%clientId, "QuestItems");
 			//echo("[LOOT DEBUG] Bot " @ %botName @ " QuestItems in belt: '" @ %questItems @ "'");
 		}
@@ -1819,7 +1824,7 @@ function Player::onKilled(%this)
 				if(%shouldDropLoot)
 				{
 					if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] Calling TossLootbag for bot (clientId=" @ %clientId @ ", tmploot='" @ %tmploot @ "')");
-					TossLootbag(%clientId, %tmploot, 1, "*", 300);
+					TossLootbag(%clientId, %tmploot, 1, "*", 300, %this);
 					if($LOOTBAG_DEBUG) echo("[LOOT DEBUG] TossLootbag returned for bot (clientId=" @ %clientId @ ")");
 				}
 			}
@@ -1828,10 +1833,10 @@ function Player::onKilled(%this)
 			%namelist = Client::getName(%clientId) @ ",";
 			if(fetchData(%clientId, "LCK") >= 0)
 			{
-				TossLootbag(%clientId, %tmploot, 5, %namelist, Cap(fetchData(%clientId, "LVL") * 300, 300, 3600));
+				TossLootbag(%clientId, %tmploot, 5, %namelist, Cap(fetchData(%clientId, "LVL") * 300, 300, 3600), %this);
 			}
 			else
-				TossLootbag(%clientId, %tmploot, 5, %namelist, Cap(fetchData(%clientId, "LVL") * 0.2, 5, "inf"));
+				TossLootbag(%clientId, %tmploot, 5, %namelist, Cap(fetchData(%clientId, "LVL") * 0.2, 5, "inf"), %this);
 			}
 		}
 	}
@@ -2770,6 +2775,8 @@ function Player::onKilled(%this)
 			RequestWorldSave("player_death", 3, "deployables");
 		}
 	}
+	
+	Watchdog_Exit();
 }
 
 function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%object,%weapon,%preCalcMiss)
