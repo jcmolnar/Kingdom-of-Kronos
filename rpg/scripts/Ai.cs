@@ -9749,6 +9749,15 @@ function CleanupGhostClientId(%clientId, %aiName)
 // PeriodicShellBotCheck: Scans for and detects shell bots (bots with no player object)
 function PeriodicShellBotCheck()
 {
+	// Detect-only diagnostic: it scans both bot registries but takes no action,
+	// so skip the scans entirely unless debugging. Loop stays alive so the
+	// flags can be flipped at runtime without restarting the scheduler.
+	if(!$AI_DEBUG_ENABLED && !$AI_SPAWN_DEBUG)
+	{
+		schedule("PeriodicShellBotCheck();", 30);
+		return;
+	}
+
 	Watchdog_Enter("PeriodicShellBotCheck");
 	%shellCount = 0;
 	// CRITICAL FIX: Client::getFirst()/getNext() only returns REAL player clients, NOT AI bots!
@@ -12438,8 +12447,10 @@ function PeriodicBotTeamCheck()
 	if(%fixedCount > 0)
 		echo("PeriodicBotTeamCheck - Fixed " @ %fixedCount @ " enemy bot(s) that were on team -1");
 	
-	// Schedule next check in 15 seconds (increased frequency for faster team fix detection)
-	schedule("PeriodicBotTeamCheck();", 15);
+	// Schedule next check in 30 seconds (was 15s; team-1 fixes are rare enough
+	// that the full GetBotIdList scan twice as often wasn't buying anything -
+	// the unconditional WARNING echoes will show if fixes start firing again)
+	schedule("PeriodicBotTeamCheck();", 30);
 }
 
 // Post-spawn initialization for town bots (Player objects)
