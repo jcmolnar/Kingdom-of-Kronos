@@ -813,7 +813,7 @@ function UnregisterBot(%clientId, %excludeObject)
 						continue;
 					}
 
-					echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in BotGroup for clientId=" @ %clientId @ " - scheduling deletion");
+					if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in BotGroup for clientId=" @ %clientId @ " - scheduling deletion");
 					// Schedule deletion to prevent crash during death processing
 					schedule("if(isObject(" @ %obj @ ")) deleteObject(" @ %obj @ ");", 0.5);
 				}
@@ -851,7 +851,7 @@ function UnregisterBot(%clientId, %excludeObject)
 						continue;
 					}
 					
-					echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " - scheduling deletion");
+					if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Found orphaned object " @ %obj @ " in MissionCleanup for clientId=" @ %clientId @ " - scheduling deletion");
 					// Schedule deletion to prevent crash during death processing
 					schedule("if(isObject(" @ %obj @ ")) deleteObject(" @ %obj @ ");", 0.5);
 				}
@@ -859,7 +859,7 @@ function UnregisterBot(%clientId, %excludeObject)
 		}
 	}
 	
-	echo("[BOT REGISTRY] Unregistered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName @ ", wasInList=" @ %foundInList);
+	if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY] Unregistered bot: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName @ ", wasInList=" @ %foundInList);
 }
 
 // Schedule deferred BotGroup orphan scans for death-path unregisters.
@@ -2416,7 +2416,7 @@ function PreSpawnCleanup(%clientId)
 	if(%clientId == "" || %clientId == -1)
 		return;
 	
-	echo("[PRE-SPAWN CLEANUP] Cleaning up stale data for clientId " @ %clientId);
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[PRE-SPAWN CLEANUP] Cleaning up stale data for clientId " @ %clientId);
 
 	if(%pobj != -1 && %pobj != "" && isObject(%pobj))
 	{
@@ -2445,14 +2445,14 @@ function PreSpawnCleanup(%clientId)
 			if(%actualClientId == %clientId)
 			{
 				// Bot is on this clientId - safe to delete by name
-				echo("[PRE-SPAWN CLEANUP] Deleting bot via AI::delete: " @ %aiName @ " (clientId=" @ %clientId @ ")");
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[PRE-SPAWN CLEANUP] Deleting bot via AI::delete: " @ %aiName @ " (clientId=" @ %clientId @ ")");
 				
 				// CRITICAL: Decrement $numAI if this is an Enemy Bot
 				if(%isEnemyBot && $numAI > 0)
 				{
 					$numAI--;
 					$Telemetry_NumAI_Dec++;
-					echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
 				}
 				
 				AI::delete(%aiName);
@@ -2468,7 +2468,7 @@ function PreSpawnCleanup(%clientId)
 				{
 					$numAI--;
 					$Telemetry_NumAI_Dec++;
-					echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
 				}
 				
 				deleteObject(%pobj);
@@ -2477,14 +2477,14 @@ function PreSpawnCleanup(%clientId)
 			else
 			{
 				// Bot name not found in AI engine - delete player object directly
-				echo("[PRE-SPAWN CLEANUP] Bot " @ %aiName @ " not found in AI engine, deleting player object for clientId " @ %clientId);
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[PRE-SPAWN CLEANUP] Bot " @ %aiName @ " not found in AI engine, deleting player object for clientId " @ %clientId);
 				
 				// CRITICAL: Decrement $numAI if this is an Enemy Bot
 				if(%isEnemyBot && $numAI > 0)
 				{
 					$numAI--;
 					$Telemetry_NumAI_Dec++;
-					echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
+					if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %aiName);
 				}
 				
 				deleteObject(%pobj);
@@ -2501,7 +2501,7 @@ function PreSpawnCleanup(%clientId)
 			{
 				$numAI--;
 				$Telemetry_NumAI_Dec++;
-				echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %clientId);
+				if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN COUNTER] PreSpawnCleanup: Decremented $numAI (now " @ $numAI @ ") for enemy bot " @ %clientId);
 			}
 			
 			deleteObject(%pobj);
@@ -2512,7 +2512,7 @@ function PreSpawnCleanup(%clientId)
 	// Clear bot registry entry if exists
 	if($BotRegistry[%clientId] != "" || $BotRegistry[%clientId, "team"] != "" || $BotRegistry[%clientId, "name"] != "")
 	{
-		echo("[PRE-SPAWN CLEANUP] Removing from bot registry");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[PRE-SPAWN CLEANUP] Removing from bot registry");
 		$BotRegistry[%clientId] = "";
 		$BotRegistry[%clientId, "team"] = "";
 		$BotRegistry[%clientId, "name"] = "";
@@ -2602,7 +2602,7 @@ function PreSpawnCleanup(%clientId)
 		$Directive99RemovalAttempted[%aiName] = "";
 	}
 	
-	echo("[PRE-SPAWN CLEANUP] Cleanup complete for clientId " @ %clientId);
+	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[PRE-SPAWN CLEANUP] Cleanup complete for clientId " @ %clientId);
 }
 
 // ============================================================================
@@ -5618,11 +5618,11 @@ function Spawn_AbortEmptyZone(%newName, %spawnPointId, %zoneIndex)
 		storeData(%ghostBotId, "SpawnBotInfo", "");
 		storeData(%ghostBotId, "BotInfoAiName", "");
 		$BotType[%ghostBotId] = "";
-		echo("[SPAWN AI] Deleting ghost bot via AI::delete: " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN AI] Deleting ghost bot via AI::delete: " @ %newName @ " (clientId=" @ %ghostBotId @ ")");
 	}
 	else
 	{
-		echo("[SPAWN AI] Couldn't find clientId for " @ %newName @ ", trying AI::delete anyway");
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN AI] Couldn't find clientId for " @ %newName @ ", trying AI::delete anyway");
 	}
 	
 	// ALWAYS try AI::delete by name - the bot was created by AI::spawn
