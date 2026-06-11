@@ -2415,9 +2415,20 @@ function PreSpawnCleanup(%clientId)
 	
 	if(%clientId == "" || %clientId == -1)
 		return;
-	
+
+	// TOWN BOT GUARD: Never clear a LIVE town bot from the enemy spawn path.
+	// Stale town bot data (no $TownBotClient entry) still gets cleaned below.
+	if(IsTownBotClientId(%clientId))
+	{
+		echo("[PRE-SPAWN CLEANUP] WARNING: clientId " @ %clientId @ " is a live town bot - skipping cleanup");
+		return;
+	}
+
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[PRE-SPAWN CLEANUP] Cleaning up stale data for clientId " @ %clientId);
 
+	// BUGFIX: %pobj was never assigned, so this entire stale-object cleanup
+	// block was dead code - lingering player objects were leaked (ghost/shell bots)
+	%pobj = Client::getOwnedObject(%clientId);
 	if(%pobj != -1 && %pobj != "" && isObject(%pobj))
 	{
 		// (Redundant safeguards removed - handled by IsSafeToModify at top of function)
@@ -2456,6 +2467,14 @@ function PreSpawnCleanup(%clientId)
 				}
 				
 				AI::delete(%aiName);
+
+				// AI::delete is a no-op if the engine no longer knows this name
+				// (e.g. dead AI renamed to Corpse*) - ensure the stale object is gone
+				if(isObject(%pobj))
+				{
+					deleteObject(%pobj);
+					Client::setOwnedObject(%clientId, -1);
+				}
 			}
 			else if(%actualClientId != -1 && %actualClientId != "" && %actualClientId != "False" && %actualClientId != "false")
 			{
