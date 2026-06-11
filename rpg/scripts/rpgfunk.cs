@@ -1023,11 +1023,13 @@ function SaveCharacter(%clientId)
 		%autoSkillPriority = "";
 	$funk::var["[\"" @ %name @ "\", 0, 55]"] = %autoSkillPriority;
 	
-	// Save AutoParty enabled state (field 56)
-	%autoPartyEnabled = fetchData(%clientId, "AutoParty_Enabled");
-	if(%autoPartyEnabled == "" || %autoPartyEnabled == "0" || %autoPartyEnabled == -1)
-		%autoPartyEnabled = "";
 	$funk::var["[\"" @ %name @ "\", 0, 56]"] = %autoPartyEnabled;
+	
+	// Save AutoSkill mute state (field 57)
+	%autoSkillMute = fetchData(%clientId, "AutoSkill_Mute");
+	if(%autoSkillMute == "" || %autoSkillMute == "0" || %autoSkillMute == -1)
+		%autoSkillMute = "";
+	$funk::var["[\"" @ %name @ "\", 0, 57]"] = %autoSkillMute;
 	
 
 	// Sync StoredQuestItems and StoredKeyItems from BeltStorage before saving
@@ -2042,11 +2044,13 @@ function LoadCharacter(%clientId)
 			%autoSkillPriority = "";
 		storeData(%clientId, "AutoSkill_Priority", %autoSkillPriority);
 		
-		// Load AutoParty enabled state (field 56)
-		%autoPartyEnabled = $funk::var[%name, 0, 56];
-		if(%autoPartyEnabled == "" || %autoPartyEnabled == " " || %autoPartyEnabled == "0" || %autoPartyEnabled == -1)
-			%autoPartyEnabled = "";
 		storeData(%clientId, "AutoParty_Enabled", %autoPartyEnabled);
+		
+		// Load AutoSkill mute state (field 57)
+		%autoSkillMute = $funk::var[%name, 0, 57];
+		if(%autoSkillMute == "" || %autoSkillMute == " " || %autoSkillMute == "0" || %autoSkillMute == -1)
+			%autoSkillMute = "";
+		storeData(%clientId, "AutoSkill_Mute", %autoSkillMute);
 		
 		// Note: Visual re-mount happens in Game::playerSpawn via schedule
 
@@ -2851,6 +2855,63 @@ function ProcessWorldSaveQueue(%token)
 	}
 }
 
+function SaveWorldScoutVehicle(%objID)
+{
+    if(%objID == -1 || %objID == "" || !isObject(%objID))
+        return;
+    if(GameBase::getDataName(%objID) != Scout)
+        return;
+    if(String::findSubStr($ScoutWorldSaveSeen, "|" @ %objID @ "|") != -1)
+        return;
+
+    $ScoutWorldSaveSeen = $ScoutWorldSaveSeen @ "|" @ %objID @ "| ";
+
+    %ownerName = $owner[%objID];
+    if(%ownerName == "")
+        return;
+
+    %isBotName = HasEnemyBotNamePrefix(%ownerName);
+    if(!%isBotName)
+    {
+        %ownerClientId = $TempClientNameCache[%ownerName];
+        if(%ownerClientId == "") %ownerClientId = -1;
+
+        if(%ownerClientId != -1 && isRPGAI(%ownerClientId))
+            %isBotName = true;
+    }
+
+    if(%isBotName)
+        return;
+
+    $ScoutWorldSaveIndex++;
+    $world::object[$ScoutWorldSaveIndex] = "Scout";
+    $world::owner[$ScoutWorldSaveIndex] = %ownerName;
+    $world::pos[$ScoutWorldSaveIndex] = GameBase::getPosition(%objID);
+    $world::rot[$ScoutWorldSaveIndex] = GameBase::getRotation(%objID);
+    $world::team[$ScoutWorldSaveIndex] = GameBase::getTeam(%objID);
+    $world::special[$ScoutWorldSaveIndex] = "";
+}
+
+function SaveWorldScoutVehicleGroup(%groupId)
+{
+    if(%groupId == -1 || %groupId == "" || !isObject(%groupId))
+        return;
+
+    %objCount = Group::objectCount(%groupId);
+    for(%j = 0; %j < %objCount; %j++)
+    {
+        %objID = Group::getObject(%groupId, %j);
+        if(%objID == -1 || %objID == "" || !isObject(%objID))
+            continue;
+
+        SaveWorldScoutVehicle(%objID);
+
+        %objectType = getObjectType(%objID);
+        if(%objectType == "SimGroup" || %objectType == "SimSet")
+            SaveWorldScoutVehicleGroup(%objID);
+    }
+}
+
 function SaveWorldDeployables() {
     dbecho($dbechoMode, "SaveWorldDeployables()");
     
@@ -2880,6 +2941,7 @@ function SaveWorldDeployables() {
     %ii = 0;
     %othercnt = 0;
     %lootbagCount = 0;
+    %deployableCount = 0;
     
     // Optimized: Scan LootbagGroup for lootbags (safer and much faster than MissionCleanup)
     // CRITICAL FIX: Use isObject() instead of nameToID() for more reliable group lookup
@@ -2973,21 +3035,61 @@ function SaveWorldDeployables() {
                     %loot = %w0 @ " * " @ String::getSubStr(%loot, String::len(%w0)+String::len(%w1)+2, 99999);
                 $world::special[%ii] = %loot;
             }
+            else if(%obj == "Scout")
+            {
+                %ownerName = $owner[%objID];
+                if(%ownerName == "")
+                    continue;
+
+                %isBotName = HasEnemyBotNamePrefix(%ownerName);
+                if(!%isBotName)
+                {
+                    %ownerClientId = $TempClientNameCache[%ownerName];
+                    if(%ownerClientId == "") %ownerClientId = -1;
+
+                    if(%ownerClientId != -1 && isRPGAI(%ownerClientId))
+                        %isBotName = true;
+                }
+
+                if(%isBotName)
+                    continue;
+
+                %ii++;
+                $world::object[%ii] = %obj;
+                $world::owner[%ii] = %ownerName;
+                $world::pos[%ii] = GameBase::getPosition(%objID);
+                $world::rot[%ii] = GameBase::getRotation(%objID);
+                $world::team[%ii] = GameBase::getTeam(%objID);
+                $world::special[%ii] = "";
+            }
         }
     }
+
+    // Scouts are usually nested inside MissionCleanup\Vehicle<clientId>, so scan recursively.
+    $ScoutWorldSaveIndex = %ii;
+    $ScoutWorldSaveSeen = %processedLootbags;
+    if(isObject("MissionCleanup"))
+        SaveWorldScoutVehicleGroup(nameToID("MissionCleanup"));
+    %ii = $ScoutWorldSaveIndex;
+    %processedLootbags = $ScoutWorldSaveSeen;
+    $ScoutWorldSaveIndex = "";
+    $ScoutWorldSaveSeen = "";
     
     // Then scan sequential IDs for other deployables (platforms, force fields, trees, etc.)
-    %deployableCount = 0;
     while (%othercnt < 15) {
         %i++;
         %ID = 8361 + %i;
         %obj = GameBase::getDataName(%ID);
-        if (String::findSubStr($WorldSaveList, "|" @ %obj @ "|") != -1) {
+        if(String::findSubStr(%processedLootbags, "|" @ %ID @ "|") != -1)
+            continue;
+        if (String::findSubStr($WorldSaveList, "|" @ %obj @ "|") != -1 || %obj == "Scout") {
             // Skip lootbags here since we already handled them from MissionCleanup
             if(%obj != "Lootbag")
             {
                 // CRITICAL: Skip deployables owned by bots (enemy or town bots)
                 %ownerName = $owner[%ID];
+                if(%obj == "Scout" && %ownerName == "")
+                    continue;
                 if(%ownerName != "")
                 {
                     // Use centralized HasEnemyBotNamePrefix() from Ai.cs for consistent bot detection
@@ -3110,6 +3212,8 @@ function LoadWorld() {
                 DeployTree($world::owner[%i], $world::team[%i], $world::pos[%i], $world::rot[%i]);
             } else if ($world::object[%i] == "Lootbag") {
                 DeployLootbag($world::pos[%i], $world::rot[%i], $world::special[%i]);
+            } else if ($world::object[%i] == "Scout") {
+                DeployScoutVehicle($world::owner[%i], $world::team[%i], $world::pos[%i], $world::rot[%i]);
             }
         }
 
@@ -3170,6 +3274,46 @@ function DeployLootbag(%pos, %rot, %special)
 	GameBase::setMapName(%lootbag, "Backpack");
 
 	return %lootbag;
+}
+
+function DeployScoutVehicle(%ownerName, %team, %pos, %rot)
+{
+	dbecho($dbechoMode, "DeployScoutVehicle(" @ %ownerName @ ", " @ %team @ ", " @ %pos @ ", " @ %rot @ ")");
+
+	if(%ownerName == "" || %ownerName == -1)
+		return -1;
+
+	%ownerClient = NEWgetClientByName(%ownerName);
+	%group = -1;
+	if(%ownerClient != -1 && %ownerClient != "")
+	{
+		%group = nameToId("MissionCleanup\\Vehicle" @ %ownerClient);
+		if(%group == -1)
+		{
+			%group = newObject("Vehicle" @ %ownerClient, SimGroup);
+			addToSet("MissionCleanup", %group);
+		}
+	}
+
+	%scout = newObject("Flyer", "Flier", "Scout", true);
+	if(%group != -1)
+		addToSet(%group, %scout);
+	else
+		addToSet("MissionCleanup", %scout);
+
+	GameBase::setTeam(%scout, %team);
+	GameBase::setPosition(%scout, %pos);
+	GameBase::setRotation(%scout, %rot);
+	$owner[%scout] = %ownerName;
+	$ScoutVehicleActiveByOwnerName[%ownerName] = %scout;
+
+	if(%ownerClient != -1 && %ownerClient != "")
+	{
+		$ScoutVehicleActive[%ownerClient] = %scout;
+		$ScoutVehicleOwner[%scout] = %ownerClient;
+	}
+
+	return %scout;
 }
 
 //=============================================================================
@@ -8397,36 +8541,6 @@ function StartAFKZoneEnforcement()
 // ============================================================
 // OBJECT SAFETY ARCHITECTURE
 // ============================================================
-
-// Global Safety Wrapper for object deletion
-// Prevents accidental deletion of Players/Bots when targeting generic IDs
-function SafeDeleteObject(%obj)
-{
-	// 1. Basic Validation
-	if(%obj == "" || %obj == -1) 
-		return;
-	
-	if(!isObject(%obj)) 
-		return;
-
-	// 2. Identify Object Type
-	%type = getObjectType(%obj);
-	
-	// 3. CRITICAL SAFEGUARDS
-	
-	// PROTECT PLAYERS / BOTS
-	if(%type == "Player")
-	{
-		%client = Player::getClient(%obj);
-		%name = Client::getName(%client);
-		echo("CRITICAL SAFEGUARD: Attempted to delete Player object " @ %obj @ " (" @ %name @ ") via generic SafeDeleteObject! Stack Trace:");
-		trace(1); trace(0); // Dump stack to console to catch the culprit
-		return; // ABORT DELETION
-	}
-	
-	// 4. Safe to Delete
-	deleteObject(%obj);
-}
 
 // Specialized wrapper for Lootbags to ensure we only delete actual lootbags
 function SafeDeleteLootbag(%obj)
