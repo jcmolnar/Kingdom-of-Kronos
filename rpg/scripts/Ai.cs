@@ -708,6 +708,11 @@ function RegisterBot(%clientId, %spawnPointId, %team, %aiName)
 	$BotRegistry[%clientId] = %spawnPointId;
 	$BotRegistry[%clientId, "team"] = %team;
 	$BotRegistry[%clientId, "name"] = %aiName;
+
+	// O(1) name->clientId map: fast path for AI::getClientIdFromName(),
+	// which otherwise scans every BaseRep per call (hot in AI::Periodic)
+	if(%aiName != "" && %aiName != -1)
+		$BotNameToClient[%aiName] = %clientId;
 	
 	// Add to registry list if not already present
 	%found = false;
@@ -753,6 +758,11 @@ function UnregisterBot(%clientId, %excludeObject)
 	
 	if($BOT_REGISTRY_DEBUG) echo("[BOT REGISTRY DEBUG] UnregisterBot called: clientId=" @ %clientId @ ", spawnPoint=" @ %spawnPointId @ ", name=" @ %aiName);
 	
+	// Clear the O(1) name->clientId map entry, but only if it still points at
+	// this clientId - a newer bot may have already reused the name
+	if(%aiName != "" && %aiName != -1 && $BotNameToClient[%aiName] == %clientId)
+		$BotNameToClient[%aiName] = "";
+
 	// Clear registry entries
 	$BotRegistry[%clientId] = "";
 	$BotRegistry[%clientId, "team"] = "";
@@ -9338,6 +9348,27 @@ function AI::AddBotToBotGroup(%aiId, %group)
 // Uses SILENT methods first to avoid console error spam from AI::getId()
 function AI::getClientIdFromName(%aiName)
 {
+	// FAST PATH: O(1) registry maps before the full BaseRep scan below.
+	// $BotNameToClient is maintained by RegisterBot/UnregisterBot (enemy bots),
+	// $TownBotSpawned by the town bot spawn flow. The mapping is verified
+	// against the bot data arrays before trusting it (clientId reuse safety).
+	%fastId = $BotNameToClient[%aiName];
+	if(%fastId == "" || %fastId == -1)
+		%fastId = $TownBotSpawned[%aiName];
+	if(%fastId != "" && %fastId != -1)
+	{
+		%fastObj = Client::getOwnedObject(%fastId);
+		if(%fastObj != -1 && %fastObj != "" && isObject(%fastObj))
+		{
+			%fastName = $EnemyBotData[%fastId, "BotInfoAiName"];
+			if(%fastName == "") %fastName = $TownBotData[%fastId, "BotInfoAiName"];
+			if(%fastName == "") %fastName = $BotInfoAiName[%fastId];
+			if(%fastName == "") %fastName = $ClientData[%fastId, "BotInfoAiName"];
+			if(%fastName == %aiName)
+				return %fastId;
+		}
+	}
+
 	// SILENT METHOD 1: Search by BotInfoAiName using BaseRep iteration
 	// This is checked FIRST because AI::getId() prints error messages when AI not found
 	for(%id = BaseRep::getFirst(); %id != -1; %id = BaseRep::getNext(%id))
