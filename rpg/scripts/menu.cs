@@ -30,8 +30,14 @@ function Client::cancelMenu(%clientId)
          %clientId.currentAscensionTrainer = "";
       }
 
-      // Removed remoteEval(%clientId, "CancelMenu") - this was causing "CANCEL: Unknown command" errors
-      // Menu state is already cleared server-side above, client will handle menu closure automatically
+      // Tell the client the menu is gone. Stock clients define
+      // remoteCancelMenu in base scripts.vol menu.cs, so this is
+      // vanilla-safe; without it, custom client menus (KronosMenu)
+      // never learn the menu closed and keep drawing after TAB-off.
+      // (The old "CANCEL: Unknown command" spam came from clients
+      // sending "CANCEL" TO the server - see remoteCANCEL stub below -
+      // not from this server->client eval.)
+      remoteEval(%clientId, "CancelMenu");
       Client::setMenuScoreVis(%clientId, false);
    }
 }

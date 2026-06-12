@@ -306,6 +306,14 @@ function Game::menuRequest(%clientId)
 
 	%curItem = 0;
 	Client::buildMenu(%clientId, "Options", "options", true);
+
+	// Bottom info box: own stats by default; a selected player's info
+	// (via scoreboard click -> remoteSelectClient) takes precedence.
+	// Scheduled slightly AFTER buildMenu - info lines sent before the
+	// score screen opens get hidden when it opens, so sending first
+	// showed nothing.
+	if(%clientId.selClient == "" || %clientId.selClient == -1)
+		schedule("if(Client::getName(" @ %clientId @ ") != \"\") KronosMenu_SendOwnInfo(" @ %clientId @ ");", 0.15);
 	if($curVoteTopic != "" && %clientId.vote == "")
 	{
 		Client::addMenuItem(%clientId, %curItem++ @ "Vote YES to " @ $curVoteTopic, "voteYes " @ $curVoteCount);
@@ -448,6 +456,10 @@ function Game::menuRequest(%clientId)
 					Client::addMenuItem(%clientId, %curItem++ @ "Damage Display: Float" , "toggledamagedisplay");
 				else if(%floatingStyle == "test")
 					Client::addMenuItem(%clientId, %curItem++ @ "Damage Display: FloatStyle2" , "toggledamagedisplay");
+				else if(%floatingStyle == "pop")
+					Client::addMenuItem(%clientId, %curItem++ @ "Damage Display: FloatStyle3 (Pop)" , "toggledamagedisplay");
+				else if(%floatingStyle == "nameplate")
+					Client::addMenuItem(%clientId, %curItem++ @ "Damage Display: Nameplate" , "toggledamagedisplay");
 				else
 				{
 					// Unknown style - default to float and save it
@@ -720,7 +732,19 @@ function processMenuOptions(%clientId, %option)
 			}
 			else if(%currentStyle == "test")
 			{
-				// FloatStyle2 -> Bottomprint (cycle back to start for players without client script)
+				// FloatStyle2 -> FloatStyle3 (Pop)
+				storeData(%clientId, "floatingAnimationStyle", "pop");
+				Client::sendMessage(%clientId, $MsgBeige, "Floating numbers style changed to FloatStyle3 (Pop). Requires ATKText.cs integration to Presto to work properly.");
+			}
+			else if(%currentStyle == "pop")
+			{
+				// FloatStyle3 -> Nameplate
+				storeData(%clientId, "floatingAnimationStyle", "nameplate");
+				Client::sendMessage(%clientId, $MsgBeige, "Floating numbers style changed to Nameplate. Damage you take floats downward; damage you deal shows on the target nameplate. Requires KronosHUD integration to Presto to work properly.");
+			}
+			else if(%currentStyle == "nameplate")
+			{
+				// Nameplate -> Bottomprint (cycle back to start for players without client script)
 				storeData(%clientId, "damageDisplayType", "bottomprint");
 				Client::sendMessage(%clientId, $MsgBeige, "Damage messages will now display at the bottom of the screen.");
 			}
@@ -1143,15 +1167,8 @@ function remoteSelectClient(%clientId, %selId)
           if(%clientId.menuMode == "options") 
                Game::menuRequest(%clientId);  
            
-          if(Client::getName(%clientId) != "")
-          {
-             remoteEval(%clientId, "setInfoLine", 1, "Press O and Read"); 
-             remoteEval(%clientId, "setInfoLine", 2, "Made By Asnabel"); 
-             remoteEval(%clientId, "setInfoLine", 3, "Modified more by Jobo"); 
-             remoteEval(%clientId, "setInfoLine", 4, "Xan = God"); 
-             remoteEval(%clientId, "setInfoLine", 5, "Panda = Hackproof"); 
-             remoteEval(%clientId, "setInfoLine", 6, "Welcome to Kingdom of Kronos");
-          } 
+          // Show the selected player's info in the bottom info box
+          KronosMenu_SendPlayerInfo(%clientId, %selId);
      } 
 }
 

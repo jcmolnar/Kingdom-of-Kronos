@@ -325,6 +325,7 @@ function createServer(%mission, %dedicated)
 	exec(Ascension);
 	exec(TransmogSystem);
 	exec(lasvegas);
+	exec(KronosHUD_Server);
 	//exec(DebugInit); only need if debugging
 	//exec(backpack); we implemented belt.cs instead of backpack.cs
 	
@@ -382,6 +383,10 @@ function createServer(%mission, %dedicated)
 	// Start watchdog heartbeat for freeze detection
 	StartWatchdog();
 	
+	// Start automated 60-hour restart timer
+	exec(AutoRestart);
+	InitAutoRestart();
+	
 	// Schedule periodic validation of spawn point counters to fix drift issues
 	// ValidateSpawnPointCounters removed - replaced by ReconcileSpawnCounters()
 
@@ -429,7 +434,6 @@ function createServer(%mission, %dedicated)
 		$Server::JoinPassword = $Server::Password;
       	connect($Server::Address);
 	}
-
 	return "True";
 }
 
