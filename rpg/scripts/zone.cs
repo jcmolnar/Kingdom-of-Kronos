@@ -219,6 +219,12 @@ function DoZoneCheck(%w, %d)
 		$QuestReload[Queen] = %tempQueen - 1;
 	else if(%tempQueen == 0)
 		$QuestReload[Queen] = "";
+		
+	%tempNullNull = $QuestReload[NullNull];
+	if(%tempNullNull != "" && %tempNullNull > 0)
+		$QuestReload[NullNull] = %tempNullNull - 1;
+	else if(%tempNullNull == 0)
+		$QuestReload[NullNull] = "";
 }
 
 //============================================================================

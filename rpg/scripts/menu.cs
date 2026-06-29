@@ -38,6 +38,12 @@ function Client::cancelMenu(%clientId)
       // sending "CANCEL" TO the server - see remoteCANCEL stub below -
       // not from this server->client eval.)
       remoteEval(%clientId, "CancelMenu");
+
+      // Closing the score screen also closes the Kronos shop/inventory
+      // panel (HUD clients) - it relies on the score dialog's cursor
+      if(%clientId.kshopOpen != "")
+         KronosShop_Close(%clientId, true);
+
       Client::setMenuScoreVis(%clientId, false);
    }
 }

@@ -5,18 +5,22 @@
 // 
 // Usage:
 //   #autoskill set endurance, weight capacity, slashing
+//   #autoskill set 1,2,3,4,5
+//   #autoskill all
 //   #autoskill show
+//   #autoskill hide
+//   #autoskill showmsg
 //   #autoskill clear
 //
-// Data is stored in funkvar slot 55 for save/load persistence.
+// Data is stored in funkvar slot 55 and slot 57 for save/load persistence.
 //
 //----------------------------------------------------------------------------------------------------
 // HOOKS / INTEGRATIONS:
 //----------------------------------------------------------------------------------------------------
 // Server.cs        - exec(AutoSkill); added to load this script
 // rpgstats.cs      - AutoSkill_Process() called in Game::refreshClientScore() on level-up
-// rpgfunk.cs       - SaveCharacter() saves AutoSkill_Priority to funkvar slot 55
-// rpgfunk.cs       - LoadCharacter() loads AutoSkill_Priority from funkvar slot 55
+// rpgfunk.cs       - SaveCharacter() saves AutoSkill_Priority to slot 55 and AutoSkill_Mute to slot 57
+// rpgfunk.cs       - LoadCharacter() loads AutoSkill_Priority from slot 55 and AutoSkill_Mute from slot 57
 // comchat.cs       - #autoskill command handler added
 // skills.cs        - Uses GetNumSkills(), AddSkillPoint(), $SkillDesc[], $PlayerSkill[]
 //====================================================================================================
@@ -28,7 +32,15 @@ function AutoSkill_GetSkillId(%skillName)
 	
 	// Trim whitespace from skill name
 	%skillName = String::trim(%skillName);
-	
+
+	// Numeric skill IDs are accepted directly: #autoskill set 1,2,3
+	if(%skillName >= 1 && $SkillDesc[%skillName] != "")
+	{
+		%desc = $SkillDesc[%skillName];
+		if(String::findSubStr(%desc, "no longer") == -1 && String::findSubStr(%desc, "No Longer") == -1)
+			return %skillName;
+	}
+
 	// Check each skill for a match using case-insensitive comparison
 	%numSkills = GetNumSkills();
 	for(%i = 1; %i <= %numSkills; %i++)
@@ -59,9 +71,101 @@ function AutoSkill_GetSkillId(%skillName)
 // Get skill name from ID
 function AutoSkill_GetSkillName(%skillId)
 {
-	if(%skillId >= 1 && %skillId <= GetNumSkills())
+	if(%skillId >= 1 && $SkillDesc[%skillId] != "")
 		return $SkillDesc[%skillId];
 	return "Unknown";
+}
+
+function AutoSkill_HasSkillId(%skillIds, %skillId)
+{
+	if(%skillIds == "" || %skillId == "" || %skillId == -1)
+		return false;
+
+	%wrapped = "," @ %skillIds @ ",";
+	if(String::findSubStr(%wrapped, "," @ %skillId @ ",") != -1)
+		return true;
+
+	return false;
+}
+
+// Safe network message sender to avoid Tribes 255-character crash
+function AutoSkill_SendSafeMessage(%clientId, %prefix, %list)
+{
+	%chunk = "";
+	%remaining = %list;
+	
+	while(String::len(%remaining) > 0)
+	{
+		%commaPos = String::findSubStr(%remaining, ",");
+		if(%commaPos == -1)
+		{
+			%item = %remaining;
+			%remaining = "";
+		}
+		else
+		{
+			%item = String::getSubStr(%remaining, 0, %commaPos);
+			%remaining = String::getSubStr(%remaining, %commaPos + 1, 999);
+		}
+		
+		%item = String::trim(%item);
+		if(%item != "")
+		{
+			if(%chunk == "")
+			{
+				%chunk = %item;
+			}
+			else if(String::len(%prefix @ %chunk @ ", " @ %item) < 200)
+			{
+				%chunk = %chunk @ ", " @ %item;
+			}
+			else
+			{
+				Client::sendMessage(%clientId, $MsgBeige, %prefix @ %chunk @ ",");
+				%prefix = "  "; // Indent subsequent chunks
+				%chunk = %item;
+			}
+		}
+	}
+	
+	if(%chunk != "")
+	{
+		Client::sendMessage(%clientId, $MsgBeige, %prefix @ %chunk);
+	}
+}
+
+function AutoSkill_SetAll(%clientId)
+{
+	dbecho($dbechoMode, "AutoSkill_SetAll(" @ %clientId @ ")");
+
+	%skillIds = "";
+	%validSkills = "";
+	%count = 0;
+	%numSkills = GetNumSkills();
+
+	for(%i = 1; %i <= %numSkills; %i++)
+	{
+		%desc = $SkillDesc[%i];
+		if(String::findSubStr(%desc, "no longer") != -1)
+			continue;
+		if(String::findSubStr(%desc, "No Longer") != -1)
+			continue;
+
+		if(%skillIds != "")
+			%skillIds = %skillIds @ ",";
+		%skillIds = %skillIds @ %i;
+
+		if(%validSkills != "")
+			%validSkills = %validSkills @ ", ";
+		%validSkills = %validSkills @ AutoSkill_GetSkillName(%i);
+		%count++;
+	}
+
+	storeData(%clientId, "AutoSkill_Priority", %skillIds);
+	AutoSkill_SendSafeMessage(%clientId, "Auto-skill priority set to all active skills: ", %validSkills);
+	Client::sendMessage(%clientId, $MsgBeige, "Your SP will automatically keep these skills maxed when you level up.");
+
+	return %count;
 }
 
 // Set auto-skill priority list (comma-separated skill names)
@@ -89,14 +193,17 @@ function AutoSkill_Set(%clientId, %skillList)
 				%skillId = AutoSkill_GetSkillId(%skill);
 				if(%skillId != -1)
 				{
-					if(%skillIds != "")
-						%skillIds = %skillIds @ ",";
-					%skillIds = %skillIds @ %skillId;
-					
-					if(%validSkills != "")
-						%validSkills = %validSkills @ ", ";
-					%validSkills = %validSkills @ AutoSkill_GetSkillName(%skillId);
-					%count++;
+					if(!AutoSkill_HasSkillId(%skillIds, %skillId))
+					{
+						if(%skillIds != "")
+							%skillIds = %skillIds @ ",";
+						%skillIds = %skillIds @ %skillId;
+
+						if(%validSkills != "")
+							%validSkills = %validSkills @ ", ";
+						%validSkills = %validSkills @ AutoSkill_GetSkillName(%skillId);
+						%count++;
+					}
 				}
 				else
 				{
@@ -118,14 +225,17 @@ function AutoSkill_Set(%clientId, %skillList)
 				%skillId = AutoSkill_GetSkillId(%skill);
 				if(%skillId != -1)
 				{
-					if(%skillIds != "")
-						%skillIds = %skillIds @ ",";
-					%skillIds = %skillIds @ %skillId;
-					
-					if(%validSkills != "")
-						%validSkills = %validSkills @ ", ";
-					%validSkills = %validSkills @ AutoSkill_GetSkillName(%skillId);
-					%count++;
+					if(!AutoSkill_HasSkillId(%skillIds, %skillId))
+					{
+						if(%skillIds != "")
+							%skillIds = %skillIds @ ",";
+						%skillIds = %skillIds @ %skillId;
+
+						if(%validSkills != "")
+							%validSkills = %validSkills @ ", ";
+						%validSkills = %validSkills @ AutoSkill_GetSkillName(%skillId);
+						%count++;
+					}
 				}
 				else
 				{
@@ -143,7 +253,7 @@ function AutoSkill_Set(%clientId, %skillList)
 	// Report to player
 	if(%count > 0)
 	{
-		Client::sendMessage(%clientId, $MsgBeige, "Auto-skill priority set: " @ %validSkills);
+		AutoSkill_SendSafeMessage(%clientId, "Auto-skill priority set: ", %validSkills);
 		Client::sendMessage(%clientId, $MsgBeige, "Your SP will automatically keep these skills maxed when you level up.");
 	}
 	else
@@ -167,6 +277,25 @@ function AutoSkill_Clear(%clientId)
 	storeData(%clientId, "AutoSkill_Priority", "");
 	Client::sendMessage(%clientId, $MsgBeige, "Auto-skill priority cleared. SP will no longer be auto-spent.");
 }
+
+// Hide auto-skill level-up messages
+function AutoSkill_Hide(%clientId)
+{
+	dbecho($dbechoMode, "AutoSkill_Hide(" @ %clientId @ ")");
+	storeData(%clientId, "AutoSkill_Mute", "true");
+	Client::sendMessage(%clientId, $MsgBeige, "Auto-skill level-up messages are now hidden. Use #autoskill showmsg to show them again.");
+	SaveCharacter(%clientId);
+}
+
+// Show auto-skill level-up messages again
+function AutoSkill_ShowMsg(%clientId)
+{
+	dbecho($dbechoMode, "AutoSkill_ShowMsg(" @ %clientId @ ")");
+	storeData(%clientId, "AutoSkill_Mute", "");
+	Client::sendMessage(%clientId, $MsgBeige, "Auto-skill level-up messages will now be displayed.");
+	SaveCharacter(%clientId);
+}
+
 
 // Show current auto-skill settings
 function AutoSkill_Show(%clientId)
@@ -216,8 +345,13 @@ function AutoSkill_Show(%clientId)
 		}
 	}
 	
-	Client::sendMessage(%clientId, $MsgBeige, "Auto-skill priority: " @ %display);
+	AutoSkill_SendSafeMessage(%clientId, "Auto-skill priority: ", %display);
 	Client::sendMessage(%clientId, $MsgBeige, "SP credits: " @ fetchData(%clientId, "SPcredits"));
+	
+	if(fetchData(%clientId, "AutoSkill_Mute") == "true")
+		Client::sendMessage(%clientId, $MsgBeige, "Level-up messages: Hidden (Use #autoskill showmsg to show)");
+	else
+		Client::sendMessage(%clientId, $MsgBeige, "Level-up messages: Visible (Use #autoskill hide to hide)");
 }
 
 // Process auto-skill spending - called when player gains SP (on level-up)
@@ -226,6 +360,7 @@ function AutoSkill_Process(%clientId)
 	dbecho($dbechoMode, "AutoSkill_Process(" @ %clientId @ ")");
 	
 	%skillIdsOriginal = fetchData(%clientId, "AutoSkill_Priority");
+	echo("[DEBUG] AutoSkill_Process: clientId=" @ %clientId @ " spCredits=" @ fetchData(%clientId, "SPcredits") @ " skillIds=" @ %skillIdsOriginal);
 	
 	// Robust empty check - handle "", -1, 0, " ", whitespace
 	if(%skillIdsOriginal == "" || %skillIdsOriginal == -1 || %skillIdsOriginal == "0" || %skillIdsOriginal == " ")
@@ -236,7 +371,7 @@ function AutoSkill_Process(%clientId)
 	if(%skillIdsOriginal == "")
 		return 0;
 	
-	%spCredits = fetchData(%clientId, "SPcredits");
+	%spCredits = fetchData(%clientId, "SPcredits") + 0;
 	if(%spCredits <= 0)
 		return 0; // No SP to spend
 	
@@ -244,14 +379,17 @@ function AutoSkill_Process(%clientId)
 	%skillsUpgraded = "";
 	
 	// Calculate skill cap based on level
-	%lvl = fetchData(%clientId, "LVL");
-	%remortStep = fetchData(%clientId, "RemortStep");
+	%lvl = fetchData(%clientId, "LVL") + 0;
+	%remortStep = fetchData(%clientId, "RemortStep") + 0;
 	if(%remortStep == "")
 		%remortStep = 0;
-	%skillCap = ($skillRangePerLevel * %lvl) + 20 + (%remortStep * 2);
+	%ub = (($skillRangePerLevel + 0) * %lvl) + 20 + (%remortStep * 2);
 	
 	// Parse skill IDs and spend SP on each skill in priority order
 	%skillIds = %skillIdsOriginal;
+	
+	// Cache the number of skills outside the loop to optimize performance
+	%numSkills = GetNumSkills() + 0;
 	
 	for(%priority = 0; %priority < 50 && %spCredits > 0; %priority++)
 	{
@@ -268,7 +406,7 @@ function AutoSkill_Process(%clientId)
 			%skillIds = String::getSubStr(%skillIds, %commaPos + 1, 999);
 		}
 		
-		// Robust skill ID validation - must be non-empty, not -1, and a valid positive number
+		// Robust skill ID validation
 		%skillId = String::trim(%skillId);
 		if(%skillId == "" || %skillId == -1 || %skillId == "0")
 		{
@@ -278,8 +416,15 @@ function AutoSkill_Process(%clientId)
 		}
 		
 		// Validate skill ID is a valid number in range
-		%numSkills = GetNumSkills();
-		if(%skillId < 1 || %skillId > %numSkills)
+		if((%skillId + 0) < 1 || (%skillId + 0) > %numSkills)
+		{
+			if(%skillIds == "")
+				break;
+			continue;
+		}
+		
+		// Skip no longer used skills (stealing: 7, mining: 17)
+		if((%skillId + 0) == 7 || (%skillId + 0) == 17)
 		{
 			if(%skillIds == "")
 				break;
@@ -287,60 +432,109 @@ function AutoSkill_Process(%clientId)
 		}
 		
 		// Calculate how many SP needed to max this skill
-		%currentSkill = $PlayerSkill[%clientId, %skillId];
-		if(%currentSkill == "")
-			%currentSkill = 0;
+		%currentSkill = $PlayerSkill[%clientId, %skillId] + 0;
+		
+		// Determine absolute cap for the skill
+		%absoluteLimit = 999999;
+		if(%skillId == 6)      %absoluteLimit = 1000; // bashing
+		else if(%skillId == 14) %absoluteLimit = 1000; // vehicle combat
+		else if(%skillId == 16) %absoluteLimit = 1000; // criticals
+		else if(%skillId == 18) %absoluteLimit = 100;  // speech
+		else if(%skillId == 21) %absoluteLimit = 1000; // haggling
+		
+		// Effective cap is the minimum of level upper bound and absolute limit
+		%effectiveCap = %ub + 0;
+		if(%absoluteLimit < %effectiveCap)
+			%effectiveCap = %absoluteLimit;
 		
 		// Skip if already at cap
-		if(%currentSkill >= %skillCap)
-			continue;
-		
-		// Calculate SP needed (accounting for class multiplier)
-		%spNeeded = 0;
-		%spSpentOnThisSkill = 0;
-		
-		// Spend SP until skill is maxed or out of SP
-		while(%currentSkill < %skillCap && %spCredits > 0)
+		if(%currentSkill >= %effectiveCap)
 		{
-			// Try to add a skill point
-			if(AddSkillPoint(%clientId, %skillId))
+			if(%skillIds == "")
+				break;
+			continue;
+		}
+		
+		// Get multiplier (custom logic for skill 16)
+		%multiplier = 1.0;
+		if(%skillId == 16)
+		{
+			%class = fetchData(%clientId, "CLASS");
+			%multiplier = 0.5; // Default Criticals multiplier
+			if(%class != "" && %class != -1)
 			{
-				storeData(%clientId, "SPcredits", 1, "dec");
-				%spCredits = fetchData(%clientId, "SPcredits");
-				%totalSpent++;
-				%spSpentOnThisSkill++;
-				%currentSkill = $PlayerSkill[%clientId, %skillId];
+				if($SkillMultiplier[%class, $SkillCriticals] != "")
+					%multiplier = $SkillMultiplier[%class, $SkillCriticals] + 0;
+			}
+		}
+		else
+		{
+			%multiplier = GetSkillMultiplier(%clientId, %skillId) + 0;
+		}
+		
+		if(%multiplier <= 0)
+		{
+			if(%skillIds == "")
+				break;
+			continue;
+		}
+		
+		// Single-step mathematical allocation
+		%pointsNeeded = %effectiveCap - %currentSkill;
+		%rawSpNeeded = %pointsNeeded / %multiplier;
+		%spNeeded = floor(%rawSpNeeded);
+		if(%spNeeded < %rawSpNeeded)
+			%spNeeded = %spNeeded + 1;
+		%spNeeded = %spNeeded + 0;
+		
+		%spToSpend = %spCredits + 0;
+		if(%spNeeded < %spToSpend)
+			%spToSpend = %spNeeded + 0;
+		
+		if(%spToSpend > 0)
+		{
+			%skillIncrease = %spToSpend * %multiplier;
+			%newSkill = %currentSkill + %skillIncrease;
+			if(%newSkill > %effectiveCap)
+				%newSkill = %effectiveCap;
+			
+			// Round appropriately based on skill type
+			if(%skillId == 16)
+			{
+				%newSkill = round(%newSkill * 10) / 10;
 			}
 			else
 			{
-				// Skill is capped or can't be upgraded further
-				break;
+				%newSkill = FixDecimals(%newSkill);
 			}
-		}
-		
-		if(%spSpentOnThisSkill > 0)
-		{
+			
+			// Set the new skill value directly
+			$PlayerSkill[%clientId, %skillId] = %newSkill;
+			
+			// Decrement SP
+			storeData(%clientId, "SPcredits", %spToSpend, "dec");
+			%spCredits = fetchData(%clientId, "SPcredits") + 0;
+			%totalSpent += %spToSpend;
+			
 			if(%skillsUpgraded != "")
 				%skillsUpgraded = %skillsUpgraded @ ", ";
 			%skillsUpgraded = %skillsUpgraded @ AutoSkill_GetSkillName(%skillId) @ " (" @ FormatSkillDisplay(%clientId, %skillId) @ ")";
 		}
 		
-		// Check if we're out of SP
-		if(%spCredits <= 0)
-			break;
-		
-		// If we've processed all skills
-		if(%skillIds == "")
+		// Check if we're out of SP or processed all skills
+		if(%spCredits <= 0 || %skillIds == "")
 			break;
 	}
 	
 	// Report results
 	if(%totalSpent > 0)
 	{
-		Client::sendMessage(%clientId, $MsgBeige, "[Auto-Skill] Spent " @ %totalSpent @ " SP: " @ %skillsUpgraded);
+		if(fetchData(%clientId, "AutoSkill_Mute") != "true")
+		{
+			AutoSkill_SendSafeMessage(%clientId, "[Auto-Skill] Spent " @ %totalSpent @ " SP: ", %skillsUpgraded);
+		}
 		
 		// Schedule a single throttled RefreshAll (same pattern as UseSkill)
-		// This prevents spam while ensuring the UI updates after all skills are processed
 		if($AutoSkillRefreshScheduled[%clientId] != "true")
 		{
 			$AutoSkillRefreshScheduled[%clientId] = "true";

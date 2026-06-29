@@ -4,6 +4,81 @@
 
 //----------------------------------------------------------------------------
 
+function ScoutVehicle::ClearActive(%clientId, %vehicle)
+{
+	if(%vehicle != "" && %vehicle != -1)
+	{
+		%ownerName = $owner[%vehicle];
+		$ScoutVehicleOwner[%vehicle] = "";
+		if(%ownerName != "" && $ScoutVehicleActiveByOwnerName[%ownerName] == %vehicle)
+			$ScoutVehicleActiveByOwnerName[%ownerName] = "";
+	}
+
+	if(%clientId != "" && %clientId != -1)
+	{
+		if($ScoutVehicleActive[%clientId] == %vehicle || %vehicle == "" || %vehicle == -1)
+			$ScoutVehicleActive[%clientId] = "";
+	}
+}
+
+function ScoutVehicle::ClearForObject(%vehicle)
+{
+	if(%vehicle == "" || %vehicle == -1)
+		return;
+
+	%clientId = $ScoutVehicleOwner[%vehicle];
+	%ownerName = $owner[%vehicle];
+	if(%clientId != "" && %clientId != -1 && $ScoutVehicleActive[%clientId] == %vehicle)
+		$ScoutVehicleActive[%clientId] = "";
+	if(%ownerName != "" && $ScoutVehicleActiveByOwnerName[%ownerName] == %vehicle)
+		$ScoutVehicleActiveByOwnerName[%ownerName] = "";
+
+	$ScoutVehicleOwner[%vehicle] = "";
+	$owner[%vehicle] = "";
+}
+
+function ScoutVehicle::GetActive(%clientId)
+{
+	%ownerName = Client::getName(%clientId);
+	%activeScout = $ScoutVehicleActive[%clientId];
+	if(%activeScout != "" && %activeScout != -1 && isObject(%activeScout))
+	{
+		if(GameBase::getDataName(%activeScout) == Scout && $ScoutVehicleOwner[%activeScout] == %clientId)
+			return %activeScout;
+	}
+
+	ScoutVehicle::ClearActive(%clientId, %activeScout);
+
+	%activeScout = $ScoutVehicleActiveByOwnerName[%ownerName];
+	if(%activeScout != "" && %activeScout != -1 && isObject(%activeScout))
+	{
+		if(GameBase::getDataName(%activeScout) == Scout && $owner[%activeScout] == %ownerName)
+		{
+			$ScoutVehicleActive[%clientId] = %activeScout;
+			$ScoutVehicleOwner[%activeScout] = %clientId;
+			return %activeScout;
+		}
+	}
+
+	%group = nameToId("MissionCleanup\\Vehicle" @ %clientId);
+	if(%group != -1 && isObject(%group))
+	{
+		%groupScout = nameToId("MissionCleanup\\Vehicle" @ %clientId @ "\\Flyer");
+		if(%groupScout != -1 && isObject(%groupScout) && GameBase::getDataName(%groupScout) == Scout)
+		{
+			$ScoutVehicleActive[%clientId] = %groupScout;
+			$ScoutVehicleOwner[%groupScout] = %clientId;
+			$owner[%groupScout] = Client::getName(%clientId);
+			$ScoutVehicleActiveByOwnerName[$owner[%groupScout]] = %groupScout;
+			return %groupScout;
+		}
+
+		deleteObject(%group);
+	}
+
+	return -1;
+}
+
 function Vehicle::onAdd(%this)
 {
 	%this.shieldStrength = 0.0;
@@ -598,9 +673,11 @@ function Vehicle::onDestroyed (%this,%mom)
 {
       %cl = GameBase::getControlClient(%this);
 	%pl = Client::getOwnedObject(%cl);
+	ScoutVehicle::ClearForObject(%this);
+	RequestWorldSave("scout_destroyed", 3, "deployables");
 	if(%pl != -1) {
 	   Player::setMountObject(%pl, -1, 0);
-   	Client::setControlObject(%cl, %pl);
+		Client::setControlObject(%cl, %pl);
 		if(%pl.lastWeapon != "") {
 			Player::useItem(%pl,%pl.lastWeapon);		 	
 			%pl.lastWeapon = "";

@@ -1279,6 +1279,7 @@ function SealBattle::ClearBotData(%clientId)
 	$SealBattleScaledStats[%clientId, "DMG"] = "";
 	$SealBattleScaledStats[%clientId, "MaxHP"] = "";
 	$SealBattleScaledStats[%clientId, "MaxMANA"] = "";
+	$SealBattleScaledStats[%clientId, "LCK"] = "";
 	
 	// Clear spell damage multiplier
 	$SealBattleSpellDmgMult[%clientId] = "";
@@ -2735,6 +2736,9 @@ function SealBattle::ReapplyScaledStats(%aiId, %round)
 		$SealBattleScaledStats[%aiId, "MDEF"] = "";
 		$SealBattleScaledStats[%aiId, "ATK"] = "";
 		$SealBattleScaledStats[%aiId, "DMG"] = "";
+		$SealBattleScaledStats[%aiId, "MaxHP"] = "";
+		$SealBattleScaledStats[%aiId, "MaxMANA"] = "";
+		$SealBattleScaledStats[%aiId, "LCK"] = "";
 		$SealBattleScaledStats[%aiId, "round"] = "";
 		return;
 	}

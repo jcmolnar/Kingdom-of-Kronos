@@ -347,10 +347,11 @@ function Server::onClientConnect(%clientId)
 	// If a bot Player object exists and is AI-controlled, force cleanup/kill the bot
 	if(%playerObj != -1 && %playerObj != "" && isObject(%playerObj))
 	{
-		%isAiControlled = Player::isAiControlled(%clientId);
-		%isRPGAI = isRPGAI(%clientId);
+		// CRITICAL SAFETY: only use engine AI state for destructive cleanup.
+		// isRPGAI() can be true from stale script arrays during clientId reuse.
+		%isAiControlled = Player::isAiControlled(%playerObj);
 		
-		if(%isAiControlled || %isRPGAI)
+		if(%isAiControlled)
 		{
 			// Active bot found at this client ID - this is a collision!
 			%botName = Client::getName(%clientId);
@@ -476,4 +477,3 @@ function Game::onPlayerConnected(%playerId)
 function Client::leaveGame(%clientId)
 {
 }
-

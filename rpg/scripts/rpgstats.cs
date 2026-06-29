@@ -130,6 +130,44 @@ function SetDataInArray(%clientId, %type, %value, %clientType)
 	}
 }
 
+// Temporary override helpers for high-churn cleanup paths.
+// Use Begin/End pairs around tightly scoped bot cleanup blocks.
+function BeginStoreDataClientTypeOverride(%clientId, %clientType)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+	if(%clientType == "" || %clientType == -1)
+		return;
+	if(%clientType != "player" && %clientType != "townbot" && %clientType != "enemybot")
+		return;
+
+	%depth = $StoreDataClientTypeOverrideDepth[%clientId];
+	if(%depth == "" || %depth == -1)
+		%depth = 0;
+
+	// Only set/refresh the type on first entry.
+	if(%depth <= 0)
+		$StoreDataClientTypeOverride[%clientId] = %clientType;
+
+	$StoreDataClientTypeOverrideDepth[%clientId] = %depth + 1;
+}
+
+function EndStoreDataClientTypeOverride(%clientId)
+{
+	if(%clientId == "" || %clientId == -1)
+		return;
+
+	%depth = $StoreDataClientTypeOverrideDepth[%clientId];
+	if(%depth == "" || %depth == -1 || %depth <= 1)
+	{
+		$StoreDataClientTypeOverrideDepth[%clientId] = "";
+		$StoreDataClientTypeOverride[%clientId] = "";
+		return;
+	}
+
+	$StoreDataClientTypeOverrideDepth[%clientId] = %depth - 1;
+}
+
 function fetchData(%clientId, %type)
 {
 	dbecho($dbechoMode, "fetchData(" @ %clientId @ ", " @ %type @ ")");
@@ -448,7 +486,11 @@ function storeData(%clientId, %type, %amt, %special)
 	}
 	else
 	{
-		%clientType = GetClientDataType(%clientId);
+		// Optional fast-path for high-frequency cleanup blocks.
+		// When an override is active, skip expensive type resolution checks.
+		%clientType = $StoreDataClientTypeOverride[%clientId];
+		if(%clientType == "" || %clientType == -1)
+			%clientType = GetClientDataType(%clientId);
 		
 		// Get current value from appropriate array
 		// Pass resolved client type so storeData only resolves type once per call
@@ -990,6 +1032,9 @@ function Game::refreshClientScore(%clientId)
 	{
             Client::setScore(%clientId, "%n\t" @ %z @ "\t  " @ fetchData(%clientId, "LVL") @ "\t" @ getFinalCLASS(%clientId) @ " RL" @ fetchData(%clientId, "RemortStep") @ "\t%l", fetchData(%clientId, "LVL"));
 	}
+
+	// Push stats to ScriptGL KronosHUD
+	KronosHUD_Push(%clientId);
 }
 
 function DoRemort(%clientId)

@@ -1,0 +1,54 @@
+kronosfix_server.dll  —  SERVER-side plugin (dedicated host)
+============================================================
+
+Notes
+=============
+Fixes the ~3-day dedicated-server FREEZE (the long-standing "server locks up
+after a few days of uptime" bug). Root cause is a 25-year-old floating-point
+precision limit in the sim clock, NOT a memory leak.
+
+Install (if not part of a distribution package)
+=============
+Drop kronosfix_server.dll in this Plugins\ folder and add to
+Plugins\Scripts\PluginLoader.cs (under the dedicated/server block):
+
+    $PluginLoader::kronosfix_server = true;
+
+On load it logs to kronosfix_server.log. When a rebase fires you'll see e.g.:
+    rebase: t=... shift=... events=... -> clock=... timeBase=...
+(NOTE: kronosfix_server_30stest.dll is a TEST build that rebases every 30s to
+prove the mechanism live — do NOT ship it; use the real kronosfix_server.dll,
+which rebases at a multi-hour threshold. Delete the test build after verifying.)
+
+The bug
+=============
+The sim clock is a 32-bit float counting seconds since server start. As it grows,
+the gap between representable float values (the ULP) widens. Kronos schedules
+events at 10ms (0.01s) granularity. At ~2^18 seconds (~3.03 days) the float ULP
+(0.03125s) exceeds 0.01s, so `now + 0.01 == now` -> the scheduler can never reach
+the next event time -> infinite loop -> freeze.
+
+How it works
+=============
+Hooks the server loop's advanceToTime call (FUN_004ebb2f). Once the clock passes
+a threshold, it REBASES: subtracts a fixed delta from the current time, the target
+time, AND every queued event's time, then bumps the time base by the same delta.
+Net effect: the clock is shifted back down into the high-precision float range
+while every event keeps the same RELATIVE timing, so nothing observable changes -
+it just never hits the precision wall. (A clean source-level fix also exists in
+TribesSource: SimManager::rebaseTime + SimEventQueue::rebaseTime, see
+re/freeze_fix_13.md / re/server_freeze_rundown.md.)
+
+Compatibility note (IMPORTANT for scripts that use getSimTime())
+=============
+The rebase shifts the sim clock BACKWARDS. Any script that stores an absolute getSimTime()
+value and later compares it (e.g. "was this freed in the last N seconds?") will see the delta
+go NEGATIVE right after a rebase, because the stored timestamp is now "in the future". Symptom
+seen in Kronos: AI.cs aborted bot spawns with "[SPAWN DANGER] ID REUSE DETECTED". Fix lives in
+the script side: AI.cs AI::detectSimRebase() detects the backwards jump and shifts every stored
+$ClientIdRecentlyFreed[] timestamp down by the same amount (called at each spawn entry), so the
+deltas stay correct. Any other time-delta logic on getSimTime() needs the same treatment.
+
+Layout: sim clock *0x6a841c, timeBase *0x6a8420; SimManager targetTime +0x6c,
+eventQueue +0x70 (size +0, array +0xc); SimEvent.time +0xc. Deep notes:
+re/server_freeze_rundown.md, re/DLL_RE_MANUAL.md in the Tribes Browser Based project.

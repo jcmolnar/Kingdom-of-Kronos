@@ -1,0 +1,62 @@
+kronos_playermanager.dll  —  SERVER-side plugin (dedicated host)
+================================================================
+
+Notes
+=============
+Gives script DETERMINISTIC control over client/bot ID assignment so AI bots can
+never inherit a real (or just-disconnected "zombie") player's client ID. That
+clash used to hand a bot a real player's ID -> black screen / corrupted session.
+Replaces the old predict-and-dodge script (support_getFreeId.cs).
+
+Install (if not part of a distribution package)
+=============
+Drop kronos_playermanager.dll in this Plugins\ folder and add to
+Plugins\Scripts\PluginLoader.cs (under the dedicated/server block):
+
+    $PluginLoader::kronos_playermanager = true;
+
+On load it writes kronos_playermanager.log; success looks like:
+    --- kronos_playermanager loaded (pinned=...) ---
+    install OK addClient-skip @0x0040b788 -> ...
+    getPlugin -> desc=... vtable=... init=...
+    registered 5 PlayerManager commands
+
+Functions (console commands)
+=============
+PlayerManager::getFreeId()
+    The authoritative next client ID the engine will assign (reads the REAL
+    free-pool head, skipping reserved IDs), or -1 if the server is full.
+
+PlayerManager::reserveId(id)
+    Mark a client ID reserved. The engine then physically cannot assign it to
+    anyone (bot or player) until released.
+
+PlayerManager::releaseId(id)
+    Un-reserve an ID.
+
+PlayerManager::isIdFree(id)
+    True if id is in the free pool AND not reserved.
+
+PlayerManager::getFreeList()
+    Space-separated list of currently-assignable IDs.
+
+Script integration (already wired in rpg\scripts\Ai.cs)
+=============
+- reserveId(%clientId) is called when a real player is detected (a save file
+  exists) at the 3 IsRealPlayer/IsSafeToModify/IsSafeToDeletePlayerObject points.
+- releaseId is scheduled 30s after disconnect (ClearPlayerSaveFileCache), so the
+  ID stays protected through the zombie-object teardown window.
+
+How it works
+=============
+1. ENFORCEMENT: a detour hook on the engine's addClient/spawn (FUN_0040b788)
+   rotates any RESERVED free-pool client object to the tail BEFORE the engine
+   pops the head, so the next spawn yields a non-reserved ID. A 128-bit reserved
+   bitmap (client id = 0x800 + index, 0..127) tracks reservations.
+2. REGISTRATION: getPlugin() returns the standard Kronos plugin descriptor; the
+   loader (mem.dll) calls its vtable[0] init AFTER the console is ready, which
+   registers the 5 commands via the engine's StringCallback addCommand
+   (0x005f4138) exactly the way the engine registers getNumClients.
+Server PlayerManager = *0x006a844c; free-pool head @ mgr+0x340f0; obj id @ +0xc.
+Built from a full RE of mem.dll's loader. Deep notes: re/playermanager.md,
+re/DLL_RE_MANUAL.md in the Tribes Browser Based project.

@@ -23,6 +23,12 @@ function remoterawKey(%client, %key, %mod)
 
 function remotePlayMode(%clientId)
 {
+	// Keep the Kronos shop state in sync - without this, a shop closed
+	// through this path leaves kshopOpen set and the next "i" press
+	// toggles a phantom panel closed instead of opening one
+	if(%clientId.kshopOpen != "")
+		KronosShop_Close(%clientId);
+
 	Client::clearItemShopping(%clientId);
 	Client::clearItemBuying(%clientId);
 	ClearCurrentShopVars(%clientId);
@@ -57,6 +63,18 @@ function remoteCommandMode(%clientId)
 
 function remoteInventoryMode(%clientId)
 {
+	// HUD clients: Kronos inventory screen instead of the stock gui
+	// mode (some client configs bind the inventory key here instead
+	// of ToggleInventoryMode, so both entries are gated)
+	if(%clientId.hasKronosHUD)
+	{
+		if(%clientId.kshopOpen != "")
+			KronosShop_Close(%clientId);
+		else if(!%clientId.guiLock && !Observer::isObserver(%clientId))
+			KronosShop_Open(%clientId, "inv", "");
+		return;
+	}
+
 	if(!%clientId.guiLock && !Observer::isObserver(%clientId))
 	{
 		remoteSCOM(%clientId, -1);
@@ -104,6 +122,17 @@ function remoteToggleCommandMode(%clientId)
 
 function remoteToggleInventoryMode(%clientId)
 {
+	// HUD clients: toggle the Kronos inventory screen instead of the
+	// stock CmdInventory gui mode (vanilla flow below is unchanged)
+	if(%clientId.hasKronosHUD)
+	{
+		if(%clientId.kshopOpen != "")
+			KronosShop_Close(%clientId);
+		else if(!Observer::isObserver(%clientId) && !%clientId.guiLock)
+			KronosShop_Open(%clientId, "inv", "");
+		return;
+	}
+
 	Client::clearItemShopping(%clientId);
 	Client::clearItemBuying(%clientId);
 	ClearCurrentShopVars(%clientId);

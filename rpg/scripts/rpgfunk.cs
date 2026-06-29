@@ -1023,6 +1023,10 @@ function SaveCharacter(%clientId)
 		%autoSkillPriority = "";
 	$funk::var["[\"" @ %name @ "\", 0, 55]"] = %autoSkillPriority;
 	
+	// Save AutoParty enabled state (field 56)
+	%autoPartyEnabled = fetchData(%clientId, "AutoParty_Enabled");
+	if(%autoPartyEnabled == "" || %autoPartyEnabled == "0" || %autoPartyEnabled == -1)
+		%autoPartyEnabled = "";
 	$funk::var["[\"" @ %name @ "\", 0, 56]"] = %autoPartyEnabled;
 	
 	// Save AutoSkill mute state (field 57)
@@ -2044,6 +2048,10 @@ function LoadCharacter(%clientId)
 			%autoSkillPriority = "";
 		storeData(%clientId, "AutoSkill_Priority", %autoSkillPriority);
 		
+		// Load AutoParty enabled state (field 56)
+		%autoPartyEnabled = $funk::var[%name, 0, 56];
+		if(%autoPartyEnabled == "" || %autoPartyEnabled == " " || %autoPartyEnabled == "0" || %autoPartyEnabled == -1)
+			%autoPartyEnabled = "";
 		storeData(%clientId, "AutoParty_Enabled", %autoPartyEnabled);
 		
 		// Load AutoSkill mute state (field 57)
@@ -5406,6 +5414,9 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t, %sourceObj)
 	%loot = %ownerName @ " " @ %namelist @ " " @ %loot;
 
 	$loot[%lootbag] = %loot;
+	// remember the newest bag so rapid drops can merge into it
+	// (KronosHUD_Server.cs remoteKShopBeltDrop)
+	%clientId.lastLootbag = %lootbag;
 	storeData(%clientId, "lootbaglist", AddToCommaList(fetchData(%clientId, "lootbaglist"), %lootbag));
 
 	// CRITICAL: Validate MissionCleanup exists before adding lootbag
@@ -5804,6 +5815,9 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 
 //	echo("===== DEBUG RefreshAll: COMPLETE =====");
 	
+	// Push stats to ScriptGL KronosHUD
+	KronosHUD_Push(%clientId);
+
 	// WATCHDOG: Clear tracking for this function
 	Watchdog_Exit();
 
@@ -6363,7 +6377,7 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 				%w2 = floor(%w2 * 1.25);
 			
 			storeData(%clientId, "COINS", %w2, "inc");
-			if(%echo) Client::sendMessage(%clientId, 0, "You received " @ %w2 @ " coins.");
+			if(%echo) Client::sendMessage(%clientId, 0, "You received " @ %w2 @ " coins.~loot");
 		}
 		else if(%w == "EXP")
 		{

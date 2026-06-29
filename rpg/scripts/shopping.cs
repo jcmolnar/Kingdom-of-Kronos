@@ -10,7 +10,13 @@ function SetupShop(%clientId, %id)
 	Client::clearItemShopping(%clientId);
 	Client::clearItemBuying(%clientId);
 
-	Client::setGuiMode(%clientId, 4);
+	// HUD clients get the Kronos shop screen (opened at the end of this
+	// function, after the item list below is built); vanilla clients
+	// get the stock CmdInventory gui mode - unchanged.
+	%clientId.kshopCount = 0;
+	%clientId.kshopBeltCnt = 0;
+	if(!%clientId.hasKronosHUD)
+		Client::setGuiMode(%clientId, 4);
 
 	%txt = "<f1><jc>COINS: " @ fetchData(%clientId, "COINS");
 	Client::setInventoryText(%clientId, %txt);
@@ -55,6 +61,10 @@ function SetupShop(%clientId, %id)
 			{
 				Client::setItemShopping(%clientId, %item);
 				Client::setItemBuying(%clientId, %item);
+
+				// record for the Kronos shop push (HUD clients)
+				%clientId.kshopIdx[%clientId.kshopCount] = %z;
+				%clientId.kshopCount++;
 			}
 		}
 		
@@ -96,11 +106,20 @@ function SetupShop(%clientId, %id)
 					{
 						Client::setItemShopping(%clientId, %item);
 						Client::setItemBuying(%clientId, %item);
+
+						// record for the Kronos shop push (HUD clients)
+						%clientId.kshopBeltItem[%clientId.kshopBeltCnt] = %item;
+						%clientId.kshopBeltCnt++;
 					}
 				}
 			}
 		}
 	}
+
+	// HUD clients: open the Kronos shop screen now that the stock
+	// list is captured (vanilla clients are already in gui mode 4)
+	if(%clientId.hasKronosHUD)
+		KronosShop_Open(%clientId, "shop", Client::getName(%id));
 }
 
 function SetupBank(%clientId, %id)
@@ -241,6 +260,7 @@ $AccessoryVar[CrystalBluePotion, $ShopIndex] = 2;
 $AccessoryVar[EnergyVial, $ShopIndex] = 3;
 $AccessoryVar[CrystalEnergyVial, $ShopIndex] = 4;
 $AccessoryVar[ScoutVehicle, $ShopIndex] = 5;
+$AccessoryVar[HeavenlyAntiMagicBelt, $ShopIndex] = 226;
 
 $AccessoryVar[CheetaursPaws, $ShopIndex] = 33;
 $AccessoryVar[BootsOfGliding, $ShopIndex] = 34;
@@ -342,7 +362,6 @@ $AccessoryVar[DiamondKnightShield, $ShopIndex] = 215;
 $AccessoryVar[BlackDiamondFullPlate, $ShopIndex] = 216;
 $AccessoryVar[RedDiamondPlate, $ShopIndex] = 217;
 $AccessoryVar[GodlyAntiMagicBelt, $ShopIndex] = 218;
-$AccessoryVar[HeavenlyAntiMagicBelt, $ShopIndex] = 226;
 $AccessoryVar[BlackDiamondKnightShield, $ShopIndex] = 219;
 $AccessoryVar[RedDiamondKingShield, $ShopIndex] = 227;
 $AccessoryVar[WhiteDiamondKingShield, $ShopIndex] = 228;
@@ -364,6 +383,9 @@ $AccessoryVar[WorldSplitter, $ShopIndex] = 238;
 $AccessoryVar[JudgementRobe, $ShopIndex] = 239;
 $AccessoryVar[StormRobe, $ShopIndex] = 240;
 $AccessoryVar[VoidRobe, $ShopIndex] = 241;
+$AccessoryVar[SoulReaver, $ShopIndex] = 242;
+$AccessoryVar[SkyRender, $ShopIndex] = 243;
+$AccessoryVar[EchoFang, $ShopIndex] = 244;
 
 
 // ============================================

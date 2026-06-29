@@ -152,7 +152,7 @@ function Item::giveItem(%player, %item, %delta, %showmsg)
 	}
 
 	if(%showmsg)
-		Client::sendMessage(%clientId, 0, "You received " @ %delta @ " " @ %item.description @ ".");
+		Client::sendMessage(%clientId, 0, "You received " @ %delta @ " " @ %item.description @ ".~loot");
 
 	// Validate player object exists before modifying items
 	%playerObj = Client::getOwnedObject(%clientId);

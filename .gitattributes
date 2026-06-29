@@ -1,0 +1,23 @@
+# Line-ending policy: store LF in the repo, check out CRLF in the working tree.
+# This keeps diffs clean while matching the historical CRLF working copies on
+# Windows. Binary game/build assets are marked so Git never rewrites their bytes.
+
+# Engine scripts, configs, docs
+*.cs    text eol=crlf
+*.txt   text eol=crlf
+*.md    text eol=crlf
+*.mis   text eol=crlf
+*.cfg   text eol=crlf
+
+# Binary assets - never normalize
+*.dll   binary
+*.exe   binary
+*.dts   binary
+*.DTS   binary
+*.bmp   binary
+*.png   binary
+*.vol   binary
+*.dso   binary
+*.bin   binary
+*.rar   binary
+*.zip   binary

@@ -721,7 +721,7 @@ function Ascension::TelekinesisPickup(%clientId, %bag)
 	if(%newloot != "")
 	{
 		if(%ownerName == "*" || IsLootOwnerBot(%ownerName))
-			Client::sendMessage(%clientId, 0, "Telekinesis: Collected loot.");
+			Client::sendMessage(%clientId, 0, "Telekinesis: Collected loot.~loot");
 		else
 			Client::sendMessage(%clientId, 0, "Telekinesis: Recovered your backpack.");
 		

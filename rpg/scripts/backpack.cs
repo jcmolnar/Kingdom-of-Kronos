@@ -183,7 +183,7 @@ function processMenuBackpackDrop(%clientId, %opt)
 	else if(%option == "examine")
 	{
 		%msg = WhatIs(%item);
-		bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
+		KronosExamineInfo(%clientId, %msg, floor(String::len(%msg) / 20));
 	}
 	return;
 }
@@ -743,7 +743,7 @@ function Backpack::GiveThisStuff(%clientid, %item, %amnt, %echo)
 		%list = fetchdata(%clientid,%type);
 		%count = Backpack::ItemCount(%item,%list);
 
-		if(%echo) Client::sendMessage(%clientId, 0, "You received " @ %amnt @ " " @ $Backpackitem[%item, "Name"] @".");
+		if(%echo) Client::sendMessage(%clientId, 0, "You received " @ %amnt @ " " @ $Backpackitem[%item, "Name"] @".~loot");
 
 		if(%count > 0)
 		{

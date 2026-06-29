@@ -12,6 +12,9 @@
 if($dedicated) {
 	$PluginLoader::DoSFix = true;
 	$PluginLoader::ClientSideAddonPlugin = false;
+	$PluginLoader::kronosfix_server = true;
+	$PluginLoader::kronos_playermanager = true;
+	$PluginLoader::kronos_aiteardown = true;
 }
 else {
 	$PluginLoader::DoSFix = false; //Because dosfix doesn't play nice with special chats

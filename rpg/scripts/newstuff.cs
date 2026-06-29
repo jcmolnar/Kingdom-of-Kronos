@@ -45,7 +45,7 @@ function TerminusEstImage::onFire(%player, %slot)
 
 function TerminusEst::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Terminus Est: <f0>Attack: <f2>600    <f0>Skill Slashing Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
+   KronosWeaponInfo(%client, "<f1>Terminus Est: <f0>Attack: <f2>600    <f0>Skill Slashing Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
 }
 
 //****************************************************************************************************
@@ -95,7 +95,7 @@ function AecoSeoreiImage::onFire(%player, %slot)
 
 function AecoSeorei::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Aeco Seorei: <f0>Attack: <f2>600    <f0>Skill Piercing Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
+   KronosWeaponInfo(%client, "<f1>Aeco Seorei: <f0>Attack: <f2>600    <f0>Skill Piercing Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
 }
 
 //****************************************************************************************************
@@ -145,7 +145,7 @@ function MorningStarImage::onFire(%player, %slot)
 
 function MorningStar::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Morning Star: <f0>Attack: <f2>600    <f0>Skill Bludgeoning Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
+   KronosWeaponInfo(%client, "<f1>Morning Star: <f0>Attack: <f2>600    <f0>Skill Bludgeoning Req @ <f2>2030 Remort 50    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$700,000,000    <f0>Weight: <f2>10 Lbs");
 }
 
 
@@ -286,7 +286,7 @@ function WhiteDiamondVoidCutterImage::onFire(%player, %slot)
 
 function WhiteDiamondVoidCutter::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>White Diamond Void Cutter: <f0>Attack: <f2>750    <f0>Skill Slashing Req @ <f2>2500 Remort 75    <f0>Speed: <f2>0.45 Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>White Diamond Void Cutter: <f0>Attack: <f2>750    <f0>Skill Slashing Req @ <f2>2500 Remort 75    <f0>Speed: <f2>0.45 Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
 }
 
 // WhiteDiamondVoidCrusher (Bludgeoning)
@@ -333,7 +333,7 @@ function WhiteDiamondVoidCrusherImage::onFire(%player, %slot)
 
 function WhiteDiamondVoidCrusher::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>White Diamond Void Crusher: <f0>Attack: <f2>1146    <f0>Skill Bludgeoning Req @ <f2>2500 Remort 75    <f0>Speed: <f2>" @ GetDelay(WhiteDiamondVoidCrusher) @ " Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>White Diamond Void Crusher: <f0>Attack: <f2>1146    <f0>Skill Bludgeoning Req @ <f2>2500 Remort 75    <f0>Speed: <f2>" @ GetDelay(WhiteDiamondVoidCrusher) @ " Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
 }
 
 // WhiteDiamondVoidImpaler (Polearm)
@@ -381,7 +381,7 @@ function WhiteDiamondVoidImpalerImage::onFire(%player, %slot)
 
 function WhiteDiamondVoidImpaler::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>White Diamond Void Impaler: <f0>Attack: <f2>750    <f0>Skill Piercing Req @ <f2>2500 Remort 75    <f0>Speed: <f2>0.45 Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>White Diamond Void Impaler: <f0>Attack: <f2>750    <f0>Skill Piercing Req @ <f2>2500 Remort 75    <f0>Speed: <f2>0.45 Seconds    <f0>Price: <f2>$5,000,000,000    <f0>Weight: <f2>2.5 Lbs");
 }
 
 //****************************************************************************************************
@@ -435,7 +435,7 @@ function FinalVerdictImage::onFire(%player, %slot)
 
 function FinalVerdict::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Final Verdict: <f0>Attack: <f2>900    <f0>Skill Bludgeoning Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>3.0 Lbs    <f3>SPECIAL: 1% Instant Kill (Not Quest/Seal/Colloseum Bots)");
+   KronosWeaponInfo(%client, "<f1>Final Verdict: <f0>Attack: <f2>900    <f0>Skill Bludgeoning Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>3.0 Lbs    <f3>SPECIAL: 1% Instant Kill (Not Quest/Seal/Colloseum Bots)");
 }
 
 // Storm Caller (Piercing - Trident) - Lightning strike every 5 hits
@@ -485,7 +485,7 @@ function StormCallerImage::onFire(%player, %slot)
 
 function StormCaller::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Storm Caller: <f0>Attack: <f2>900    <f0>Skill Piercing Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>2.0 Lbs    <f3>SPECIAL: Lightning Strike every 5 hits");
+   KronosWeaponInfo(%client, "<f1>Storm Caller: <f0>Attack: <f2>900    <f0>Skill Piercing Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>2.0 Lbs    <f3>SPECIAL: Lightning Strike every 5 hits");
 }
 
 // World Splitter (Slashing - Claymore) - Odd hits physical, even hits magic
@@ -534,7 +534,167 @@ function WorldSplitterImage::onFire(%player, %slot)
 
 function WorldSplitter::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>World Splitter: <f0>Attack: <f2>900    <f0>Skill Slashing Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>3.5 Lbs    <f3>SPECIAL: Alternating Phys/Magic Damage");
+   KronosWeaponInfo(%client, "<f1>World Splitter: <f0>Attack: <f2>900    <f0>Skill Slashing Req @ <f2>2800 Remort 100    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$10,000,000,000    <f0>Weight: <f2>3.5 Lbs    <f3>SPECIAL: Alternating Phys/Magic Damage");
+}
+//============================================================================
+
+//****************************************************************************************************
+//   MYTHIC WEAPONS (Remort 125 Tier)
+//****************************************************************************************************
+
+// Soul Reaver (Bludgeoning - Hammer) - 5% lifesteal on every hit, kills bank Souls (max 10),
+// next hit at 10 souls erupts in a Soul Nova for massive bonus damage. Souls are lost on death.
+$AccessoryVar[SoulReaver, $AccessoryType] = $BludgeonAccessoryType;
+$AccessoryVar[SoulReaver, $SpecialVar] = "6 1000";
+$AccessoryVar[SoulReaver, $Weight] = 3.0;
+$AccessoryVar[SoulReaver, $MiscInfo] = "A hammer that drinks the life of its victims - heals the wielder on every strike and harvests souls from kills. At 10 souls the next strike unleashes a Soul Nova. Souls are lost on death.";
+$SkillType[SoulReaver] = $SkillBludgeoning;
+$ItemCost[SoulReaver] = 25000000000;
+$SkillRestriction[SoulReaver] = $SkillBludgeoning @ " 3000 " @ $MinRemort @ " 125";
+$WeaponDelay[SoulReaver] = 0.5;
+$WeaponEffect[SoulReaver] = "SOUL_HARVEST";
+$WeaponEffectLifesteal[SoulReaver] = 5;	// % of damage dealt returned as HP
+$WeaponEffectMaxSouls[SoulReaver] = 10;	// souls needed to trigger Soul Nova
+
+ItemImageData SoulReaverImage
+{
+	shapeFile  = "hammer";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing5;
+	sfxActivate = AxeSlash2;
+};
+ItemData SoulReaver
+{
+	heading = "bWeapons";
+	description = "Soul Reaver";
+	className = "Weapon";
+	shapeFile  = "hammer";
+	hudIcon = "sclub";
+	shadowDetailMask = 4;
+	imageType = SoulReaverImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function SoulReaverImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(SoulReaver), SoulReaver);
+}
+
+function SoulReaver::onMount(%player,%item,$WeaponSlot)
+{   %client = Player::getclient(%player);
+   KronosWeaponInfo(%client, "<f1>Soul Reaver: <f0>Attack: <f2>1000    <f0>Skill Bludgeoning Req @ <f2>3000 Remort 125    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$25,000,000,000    <f0>Weight: <f2>3.0 Lbs    <f3>SPECIAL: 5% Lifesteal + Kills bank Souls, 10 Souls = SOUL NOVA");
+}
+
+// Sky Render (Piercing - Trident) - Every 4th hit harpoons the target skyward,
+// then impales them with a delayed strike where they land.
+$AccessoryVar[SkyRender, $AccessoryType] = $PolearmAccessoryType;
+$AccessoryVar[SkyRender, $SpecialVar] = "6 1000";
+$AccessoryVar[SkyRender, $Weight] = 2.0;
+$AccessoryVar[SkyRender, $MiscInfo] = "A trident that commands the sky itself - every 4th strike launches the victim into the air and impales them with a delayed skyfall strike. Note: Does not launch Quest, Seal or Colloseum Bots.";
+$SkillType[SkyRender] = $SkillPiercing;
+$ItemCost[SkyRender] = 25000000000;
+$SkillRestriction[SkyRender] = $SkillPiercing @ " 3000 " @ $MinRemort @ " 125";
+$WeaponDelay[SkyRender] = 0.5;
+$WeaponEffect[SkyRender] = "SKY_LAUNCH";
+$WeaponEffectFrequency[SkyRender] = 4;	// launch every Nth hit
+
+ItemImageData SkyRenderImage
+{
+	shapeFile  = "trident";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing3;
+	sfxActivate = AxeSlash2;
+};
+ItemData SkyRender
+{
+	heading = "bWeapons";
+	description = "Sky Render";
+	className = "Weapon";
+	shapeFile  = "trident";
+	hudIcon = "trident";
+	shadowDetailMask = 4;
+	imageType = SkyRenderImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function SkyRenderImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(SkyRender), SkyRender);
+}
+
+function SkyRender::onMount(%player,%item,$WeaponSlot)
+{   %client = Player::getclient(%player);
+   KronosWeaponInfo(%client, "<f1>Sky Render: <f0>Attack: <f2>1000    <f0>Skill Piercing Req @ <f2>3000 Remort 125    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$25,000,000,000    <f0>Weight: <f2>2.0 Lbs    <f3>SPECIAL: Every 4th hit launches target skyward + delayed impale");
+}
+
+// Echo Fang (Slashing - Katana) - Every hit echoes 2 seconds later for 40% of its damage.
+// Consecutive hits within 1.5s build Momentum: +10% bonus damage per stack (max +50%).
+$AccessoryVar[EchoFang, $AccessoryType] = $SwordAccessoryType;
+$AccessoryVar[EchoFang, $SpecialVar] = "6 1000";
+$AccessoryVar[EchoFang, $Weight] = 3.5;
+$AccessoryVar[EchoFang, $MiscInfo] = "A blade that cuts through time - every wound reopens 2 seconds later for 40% of its damage, and relentless attacks build Momentum for up to +50% bonus damage";
+$SkillType[EchoFang] = $SkillSlashing;
+$ItemCost[EchoFang] = 25000000000;
+$SkillRestriction[EchoFang] = $SkillSlashing @ " 3000 " @ $MinRemort @ " 125";
+$WeaponDelay[EchoFang] = 0.5;
+$WeaponEffect[EchoFang] = "ECHO_STRIKE";
+$WeaponEffectEchoPercent[EchoFang] = 40;	// % of dealt damage repeated as echo
+$WeaponEffectEchoDelay[EchoFang] = 2.0;		// seconds until echo fires
+
+ItemImageData EchoFangImage
+{
+	shapeFile  = "katana";
+	mountPoint = 0;
+
+	weaponType = 0;
+	reloadTime = 0;
+	fireTime = 0.5;
+	minEnergy = 0;
+	maxEnergy = 0;
+
+	accuFire = true;
+
+	sfxFire = SoundSwing2;
+	sfxActivate = ActivateAS;
+};
+ItemData EchoFang
+{
+	heading = "bWeapons";
+	description = "Echo Fang";
+	className = "Weapon";
+	shapeFile  = "katana";
+	hudIcon = "blaster";
+	shadowDetailMask = 4;
+	imageType = EchoFangImage;
+	price = 0;
+	showWeaponBar = true;
+};
+function EchoFangImage::onFire(%player, %slot)
+{
+	MeleeAttack(%player, GetRange(EchoFang), EchoFang);
+}
+
+function EchoFang::onMount(%player,%item,$WeaponSlot)
+{   %client = Player::getclient(%player);
+   KronosWeaponInfo(%client, "<f1>Echo Fang: <f0>Attack: <f2>1000    <f0>Skill Slashing Req @ <f2>3000 Remort 125    <f0>Speed: <f2>0.50 Seconds    <f0>Price: <f2>$25,000,000,000    <f0>Weight: <f2>3.5 Lbs    <f3>SPECIAL: Hits echo for 40% dmg after 2s + Momentum stacks up to +50%");
 }
 //============================================================================
 

@@ -60,7 +60,7 @@ AddAd("=-Auto Skill Upgrades=-",
       "No more manually increasing skills as you level.");
 
 AddAd("Join the TRPG Discord Server!",
-      "https://discord.gg/r3CGT9TY");
+      "https://discord.gg/XUetW8rCrW");
 
 AddAd("NEW DUNGEON ALERT!",
       "The Void has been added as the newest high level dungeon",
@@ -131,11 +131,13 @@ function Advertize(%stage)
 	echo("Advertize stage " @ %stage @ " of " @ $AdTotalCount);
 	
 	// Display all lines for this ad
+	// ~adv tag: lets clients with ChatFilter.cs mute ads; the engine
+	// strips ~tags before display so vanilla clients see no difference
 	for(%line = 0; %line < 5; %line++)
 	{
 		%text = $AdLine[%stage, %line];
 		if(%text != "")
-			Messageall(2, %text);
+			Messageall(2, %text @ "~adv");
 	}
 	
 	%stage++;

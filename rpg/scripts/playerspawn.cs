@@ -458,11 +458,12 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 	// This is scheduled slightly later to ensure main weapon is mounted first
 	schedule("DualWield::RestoreOffHandVisual(" @ %clientId @ ");", 0.5);
 	
-	// Disable default command menu (Change Teams, etc) to allow RPG HUD on TAB
-	remoteEval(%clientId, "setCommandStatus", 0);
-	schedule("if(Client::getName(" @ %clientId @ ") != \"\") remoteEval(" @ %clientId @ ", \"setCommandStatus\", 0);", 0.5);
-	schedule("if(Client::getName(" @ %clientId @ ") != \"\") remoteEval(" @ %clientId @ ", \"setCommandStatus\", 0);", 1.0);
-	schedule("if(Client::getName(" @ %clientId @ ") != \"\") remoteEval(" @ %clientId @ ", \"setCommandStatus\", 0);", 2.0);
+	// REMOVED: remoteEval(%clientId, "setCommandStatus", 0) calls (x4)
+	// No client defines remoteSetCommandStatus - these only produced
+	// "RemoteSetCommandStatus: Unknown command" errors in the client
+	// console on every spawn. setCommandStatus is a server-side engine
+	// command (client, status, message), not a client remote function,
+	// and the RPG menu on TAB is handled by Game::menuRequest anyway.
 	
 	// DEFENSIVE FIX: Final startFadeIn call at end of spawn to ensure visibility
 	// This is a "belt and suspenders" approach - even if something caused the player/bot

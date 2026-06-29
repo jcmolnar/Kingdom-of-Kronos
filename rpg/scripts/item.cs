@@ -90,18 +90,31 @@ function Item::pop(%item)
 	dbecho($dbechoMode, "Item::pop(" @ %item @ ")");
 
  	GameBase::startFadeOut(%item);
-	// CRITICAL: Use SafeDeleteItem to prevent accidental Player deletion
-	// Object IDs may be reused, so we must verify type before deleting
-	schedule("SafeDeleteItem(" @ %item @ ");", 2.5, %item);
+	// CRITICAL: stamp a per-pop token so the deferred delete can confirm this is still the SAME item.
+	// Object IDs get recycled within the 2.5s window; a recycled Player OR a different Item will not
+	// carry this token, so SafeDeleteItem can refuse to delete the wrong (recycled) object.
+	%popToken = %item @ "_" @ getSimTime();
+	%item.popToken = %popToken;
+	schedule("SafeDeleteItem(" @ %item @ ", \"" @ %popToken @ "\");", 2.5, %item);
 }
 
 // CRITICAL SAFEGUARD: Safe item deletion that verifies object type before deleting
 // This prevents accidental Player deletion if object ID was recycled
-function SafeDeleteItem(%obj)
+function SafeDeleteItem(%obj, %token)
 {
 	if(!isObject(%obj))
 		return; // Object already deleted
-	
+
+	// PRIMARY GUARD: token match. If %obj.popToken no longer equals the token we scheduled with, this
+	// object ID was recycled to a DIFFERENT object since Item::pop() (a Player, or another Item) and we
+	// must NOT delete it. Catches every recycle case, not just Player. (%token=="" => legacy caller,
+	// falls through to the type checks below.)
+	if(%token != "" && %obj.popToken != %token)
+	{
+		echo("CRITICAL SAFEGUARD: SafeDeleteItem - object " @ %obj @ " no longer matches its pop token (ID recycled, type=" @ getObjectType(%obj) @ "). Aborting delete.");
+		return;
+	}
+
 	%type = getObjectType(%obj);
 	if(%type == "Player")
 	{

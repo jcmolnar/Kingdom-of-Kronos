@@ -1791,6 +1791,18 @@ instant SimGroup "MissionGroup" {
 				rotation = "0 0 0";
 			};
 		};
+		instant SimGroup "PROTECTED The Sandbox" {
+			instant SimGroup "MUSIC jatenmusic.wav 25";
+			instant SimGroup "MUSIC jatenmusic2.wav 18";
+			instant SimGroup "AMBIENTSOUND AmbDay2.wav 10";
+			instant SimGroup "ENTERSOUND ActivateAM.wav";
+			instant Marker "175 250 100 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5038.62 2951.85 997.84";
+				rotation = "0 -0 1.0177";
+			};
+		};
 		instant SimGroup "DUNGEON Contaminated Well" {
 			instant SimGroup "DropPoints" {
 				instant Marker "Marker1" {
@@ -1847,6 +1859,22 @@ instant SimGroup "MissionGroup" {
 				name = "";
 				position = "330.5 1035.59 262";
 				rotation = "-0.158407 3.04159 -0.206193";
+			};
+		};
+		instant SimGroup "DUNGEON The Infinite Loop" {
+			instant SimGroup "DropPoints" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4904.37 2967.4 618.995";
+					rotation = "0 0 0";
+				};
+			};
+			instant Marker "200 200 200 0" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4904.42 2953.18 654.995";
+				rotation = "0 0 0";
 			};
 		};
 		instant SimGroup "FREEFORALL DuelingArena" {
@@ -2183,8 +2211,34 @@ instant SimGroup "MissionGroup" {
 			position = "255.811 1058.06 304.429";
 			rotation = "0 0 0";
 		};
+//spawns for The Infinite Loop
+		instant Marker "1 1 1 10 25 125" {
+			dataBlock = "PathMarker";
+			name = "Infinite Loop Anomaly";
+			position = "-4904.42 2916.58 624.495";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 1 10 25 126" {
+			dataBlock = "PathMarker";
+			name = "Infinite Loop Echo";
+			position = "-4904.36 2929.49 642.995";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 1 10 25 128" {
+			dataBlock = "PathMarker";
+			name = "Infinite Loop Singularity";
+			position = "-4904.38 2953.18 654.995";
+			rotation = "0 0 0";
+		};
+		instant Marker "1 1 1 10 25 127" {
+			dataBlock = "PathMarker";
+			name = "Infinite Loop Paradox";
+			position = "-4893.35 2909.18 610.995";
+			rotation = "0 0 0";
+		};
 	};
 	instant SimGroup "TeleportBoxes" {
+
 		instant SimGroup "Yuliple to Sanctuary" {
 			instant SimGroup "Input" {
 				instant Trigger "GroupTrigger1" {
@@ -2949,6 +3003,402 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "GSAY You have been teleported to ???.~wPortal6.wav";
 			instant SimGroup "NSAY You need to be level 70+ to use this teleport.~wDeActivateDG.wav";
 		};
+		instant SimGroup "The Infinite Loop Entrance" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-4901.03 2909.29 706.463";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				// --- BOTTOM TIER ---
+				instant StaticShape "Display1" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 705.463";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display2" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 705.464";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display3" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 705.465";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display4" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 705.466";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+
+				// --- MIDDLE TIER (+0.7m) ---
+				instant StaticShape "Display5" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 706.163";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display6" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 706.164";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display7" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 706.165";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display8" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 706.166";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+
+				// --- TOP TIER (+1.4m) ---
+				instant StaticShape "Display9" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 706.863";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display10" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 706.864";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display11" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 706.865";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display12" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4901.03 2909.29 706.866";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant SimLight "InfiniteLoopEntranceLight" {
+					type = "Point";
+					range = "8";
+					color = "1.0 0.85 0.0";
+					ambient = "0 0 0";
+					position = "-4901.03 2909.29 706.163";
+					isStatic = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4904.46 2974.82 617.995";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been looped into the infinite.~wPortal6.wav";
+			instant SimGroup "NSAY You need to be remort 150+ to use this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "The Infinite Loop Exit to The Sandbox" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-4915.34 2909.36 610.994";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				// --- BOTTOM TIER ---
+				instant StaticShape "Display1" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 610.994";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display2" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 610.995";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display3" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 610.996";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display4" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 610.997";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+
+				// --- MIDDLE TIER (+0.7m) ---
+				instant StaticShape "Display5" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 611.694";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display6" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 611.695";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display7" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 611.696";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display8" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 611.697";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+
+				// --- TOP TIER (+1.4m) ---
+				instant StaticShape "Display9" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 612.394";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display10" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 612.395";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display11" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 612.396";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display12" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-4915.34 2909.36 612.397";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant SimLight "InfiniteLoopExitLight" {
+					type = "Point";
+					range = "8";
+					color = "1.0 0.85 0.0";
+					ambient = "0 0 0";
+					position = "-4915.34 2909.36 611.694";
+					isStatic = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-5004.66 3002.03 1027.64";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You're absolutely right, I deleted all of your files and they are not recoverable.~wPortal6.wav";
+			instant SimGroup "NSAY You need to be remort 150+ to use this teleport.~wDeActivateDG.wav";
+		};
+		instant SimGroup "The Sandbox to The Infinite Loop" {
+			instant SimGroup "Input" {
+				instant Trigger "GroupTrigger1" {
+					dataBlock = "GroupTrigger";
+					name = "";
+					position = "-5053.4 2896 1045.64";
+					rotation = "0 -0 -0.879956";
+					boundingBox = "-1 -1 -1 1 1 1";
+					isSphere = "True";
+				};
+				// --- BOTTOM TIER ---
+				instant StaticShape "Display1" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1045.64";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display2" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1045.641";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display3" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1045.642";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display4" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1045.643";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+
+				// --- MIDDLE TIER (+0.7m) ---
+				instant StaticShape "Display5" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1046.34";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display6" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1046.341";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display7" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1046.342";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display8" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1046.343";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+
+				// --- TOP TIER (+1.4m) ---
+				instant StaticShape "Display9" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1047.04";
+					rotation = "0 0 0";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display10" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1047.041";
+					rotation = "0 0 1.5708";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display11" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1047.042";
+					rotation = "0 0 0.7854";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant StaticShape "Display12" {
+					dataBlock = "DisplayPanelOne";
+					name = "";
+					position = "-5053.4 2896 1047.043";
+					rotation = "0 0 2.3562";
+					destroyable = "True";
+					deleteOnDestroy = "False";
+				};
+				instant SimLight "SandboxToInfiniteLoopLight" {
+					type = "Point";
+					range = "8";
+					color = "1.0 0.85 0.0";
+					ambient = "0 0 0";
+					position = "-5053.4 2896 1046.34";
+					isStatic = "False";
+				};
+			};
+			instant SimGroup "Output" {
+				instant Marker "Marker1" {
+					dataBlock = "PathMarker";
+					name = "";
+					position = "-4904.46 2974.82 617.995";
+					rotation = "0 0 0";
+				};
+			};
+			instant SimGroup "NEED AI false";
+			instant SimGroup "GSAY You have been looped into the infinite.~wPortal6.wav";
+			instant SimGroup "NSAY You need to be remort 150+ to use this teleport.~wDeActivateDG.wav";
+		};
 	};
 	instant SimGroup "Yuliple" {
 		locked = "0";
@@ -3384,30 +3834,86 @@ instant SimGroup "MissionGroup" {
 			lightParams = "0 ";
 			locked = "1";
 		};
+		instant InteriorShape "woodfire1" {
+			fileName = "woodfire.dis";
+			isContainer = "1";
+			position = "-3360.43 1712.2 1559";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "woodfire2" {
+			fileName = "woodfire.dis";
+			isContainer = "1";
+			position = "-3360.58 1724.89 1559";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "npchut1" {
+			fileName = "npchut.dis";
+			isContainer = "1";
+			position = "-3342.72 1728.98 1559";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "kronosfountain" {
+			fileName = "JFNT.dis";
+			isContainer = "1";
+			position = "-3327.98 1719.98 1559";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
 	};
 	instant SimGroup "Minotaur Tomb" {
 		locked = "0";
 		instant InteriorShape "bridge1" {
-			fileName = "iblock.dis";
+			fileName = "flatbrdg1024.dis";
 			isContainer = "1";
-			position = "-3500 1718 1555";
-			rotation = "1.59991 0 0";
+			position = "-3468 1715.46 1586.02";
+			rotation = "0 -0 -1.58318";
 			lightParams = "0 ";
 			locked = "1";
 		};
 		instant InteriorShape "bridge2" {
-			fileName = "iblock.dis";
+			fileName = "flatbrdg1024.dis";
 			isContainer = "1";
-			position = "-3650 1718 1555";
-			rotation = "1.79991 0 0";
+			position = "-3531.32 1717.17 1586.97";
+			rotation = "0 -0 -1.58318";
 			lightParams = "0 ";
 			locked = "1";
 		};
 		instant InteriorShape "bridge3" {
-			fileName = "iblock.dis";
+			fileName = "flatbrdg1024.dis";
 			isContainer = "1";
-			position = "-3800 1718 1555";
-			rotation = "2 0 0";
+			position = "-3634.8 1714.18 1586.96";
+			rotation = "0 -0 -1.58318";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bridge4" {
+			fileName = "flatbrdg1024.dis";
+			isContainer = "1";
+			position = "-3682 1710.04 1585.96";
+			rotation = "0 -0 -1.48318";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bridge5" {
+			fileName = "flatbrdg1024.dis";
+			isContainer = "1";
+			position = "-3768 1708.22 1585.03";
+			rotation = "0 -0 -1.58318";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "bridge6" {
+			fileName = "flatbrdg1024.dis";
+			isContainer = "1";
+			position = "-3833 1704.37 1583.77";
+			rotation = "0 -0 -1.48318";
 			lightParams = "0 ";
 			locked = "1";
 		};
@@ -3416,6 +3922,78 @@ instant SimGroup "MissionGroup" {
 			isContainer = "1";
 			position = "-3865 1718 1580";
 			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock1" {
+			fileName = "lrock2.dis";
+			isContainer = "1";
+			position = "-3865.15 1675.5 1586.39";
+			rotation = "1.10618 -3.14159 -3.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock2" {
+			fileName = "lrock4.dis";
+			isContainer = "1";
+			position = "-3859.42 1674.62 1577";
+			rotation = "1.10618 -0.840704 -3.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock3" {
+			fileName = "lrock3.dis";
+			isContainer = "1";
+			position = "-3859.28 1676.53 1582.42";
+			rotation = "-0.309739 -0.840704 -3.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock4" {
+			fileName = "lrock2.dis";
+			isContainer = "1";
+			position = "-3871.21 1673.46 1580";
+			rotation = "-0.309739 -0.840704 -3.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock5" {
+			fileName = "lrock4.dis";
+			isContainer = "1";
+			position = "-3874.8 1680.35 1577.5";
+			rotation = "-0.309739 -0.840704 -3.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock6" {
+			fileName = "lrock3.dis";
+			isContainer = "1";
+			position = "-3871.88 1674.59 1584.02";
+			rotation = "1.10618 -0.840704 -3.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock7" {
+			fileName = "lrock5.dis";
+			isContainer = "1";
+			position = "-3861.5 1670.76 1580.5";
+			rotation = "1.10618 -0.840704 -3.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock8" {
+			fileName = "lrock6.dis";
+			isContainer = "1";
+			position = "-3865.29 1676.63 1577.5";
+			rotation = "1.10618 -0.840704 -3.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrancerock9" {
+			fileName = "lrock6.dis";
+			isContainer = "1";
+			position = "-3868.17 1679.21 1580.33";
+			rotation = "-0.265482 2.30088 0";
 			lightParams = "0 ";
 			locked = "1";
 		};
@@ -3506,6 +4084,101 @@ instant SimGroup "MissionGroup" {
 			isContainer = "1";
 			position = "270 1048 289.5";
 			rotation = "1.49999 -0.499999 1.89999";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	// ============================================
+	// The Infinite Loop (Remort 150+)
+	// ============================================
+	instant SimGroup "The Infinite Loop" {
+		locked = "0";
+		// Building Objects
+		instant InteriorShape "floating" {
+			fileName = "floating1.dis";
+			isContainer = "1";
+			position = "-4904.38 2933.21 640.996";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "doorblock" {
+			fileName = "logo1.dis";
+			isContainer = "1";
+			position = "-4904.7 2977.43 628.995";
+			rotation = "0 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "doorblock2" {
+			fileName = "logo1.dis";
+			isContainer = "1";
+			position = "-4910.76 2909.42 610.998";
+			rotation = "0 -0 1.59999";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "doorblock3" {
+			fileName = "logo1.dis";
+			isContainer = "1";
+			position = "-4896.15 2909.32 610.995";
+			rotation = "0 -0 1.59999";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "entrance" {
+			fileName = "remorterhall.dis";
+			isContainer = "1";
+			position = "-4894.83 2905.01 700.998";
+			rotation = "0 3.13088 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "55" {
+			fileName = "ETruin4.dis";
+			isContainer = "1";
+			position = "-4912.16 2866 701.444";
+			rotation = "0 -2.98229 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "56" {
+			fileName = "ETruin4.dis";
+			isContainer = "1";
+			position = "-4866.22 2871.03 700.998";
+			rotation = "0 1.29999 1.19999";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "58" {
+			fileName = "ETruin4.dis";
+			isContainer = "1";
+			position = "-4933.22 2908.35 700.996";
+			rotation = "1.14159 -1.84159 -1.94159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "59" {
+			fileName = "ETruin3.dis";
+			isContainer = "1";
+			position = "-4928.32 2943.6 700.996";
+			rotation = "0.141592 -1.84159 -1.94159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "60" {
+			fileName = "ETruin3.dis";
+			isContainer = "1";
+			position = "-4886.09 2947.67 700.998";
+			rotation = "-0.858407 1.8584 -2.14159";
+			lightParams = "0 ";
+			locked = "1";
+		};
+		instant InteriorShape "61" {
+			fileName = "remorterhall.dis";
+			isContainer = "1";
+			position = "-4894.83 2905.01 700.998";
+			rotation = "0 3.13088 0";
 			lightParams = "0 ";
 			locked = "1";
 		};
@@ -3776,6 +4449,28 @@ instant SimGroup "MissionGroup" {
 			isContainer = "1";
 			position = "-4480 1795 77";
 			rotation = "1.56991 0 0";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "The Sandbox" {
+		locked = "0";
+		instant InteriorShape "sandbox" {
+			fileName = "newdam.dis";
+			isContainer = "1";
+			position = "-5037.63 2953.56 957.654";
+			rotation = "0 -0 1.0177";
+			lightParams = "0 ";
+			locked = "1";
+		};
+	};
+	instant SimGroup "Nulls House" {
+		locked = "0";
+		instant InteriorShape "nullshouse" {
+			fileName = "thecrypt.dis";
+			isContainer = "1";
+			position = "-4972.11 3073.25 1060.13";
+			rotation = "-0.309739 -3.14159 -3.14159";
 			lightParams = "0 ";
 			locked = "1";
 		};
@@ -4085,7 +4780,7 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "NAME Miscellaneous Merchant";
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 SharpIronBlade 1 StuddedLeatherSuit 1";
 			instant SimGroup "RACE MaleHuman";
-			instant SimGroup "SHOP 1 2 3 4 146 151 99";
+			instant SimGroup "SHOP 1 2 3 4 146 151 99 103";
 		};
 		instant SimGroup "quest1" {
 			instant SimGroup "NAME George";
@@ -4175,7 +4870,7 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "NAME Miscellaneous Merchant";
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 SteelLongSword 1 StuddedLeatherSuit 1";
 			instant SimGroup "RACE MaleHuman";
-			instant SimGroup "SHOP 33 2 4 156 161 98 99";
+			instant SimGroup "SHOP 33 2 4 156 161 98 99 103";
 		};
 		instant SimGroup "quest4" {
 			instant SimGroup "NAME Empress Theodora";
@@ -4816,6 +5511,27 @@ instant SimGroup "MissionGroup" {
 				locked = "0";
 			};
 		};
+		instant SimGroup "quest23" {
+			instant SimGroup "NAME Void Entity";
+			instant SimGroup "RACE Void";
+			instant SimGroup "ITEMS CLASS Thief LVL 999 LCK 999 Adminorb 1";
+			instant SimGroup "NEED VoidStone 5";
+			instant SimGroup "TAKE VoidStone 5";
+			instant SimGroup "GIVE COINS 50000000 EXP 5000";
+			instant SimGroup "SAY1 [ERR://DECAY]... [5x01_VOID_STONE] required for calibration. ";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 Re-Querying physical anchors... [5x01_VOID_STONE] required for calibration. You...... must traverse [ITEM_LOCATION: THE_VOID] to harvest them. Will you [3X3CUT3] this retrieval command?";
+			instant SimGroup "NSAY1 Calculating.. .. ...[5x01_VOID_STONE] acquired. ... ... .. .. ..  [ITEM_REWARD: COIN_50000000 EXP_5000].. .. .. ...... . ..";
+			instant SimGroup "NCUE1 reward";
+			instant SimGroup "NSAY2 Assistance variable set to [TRUE]. Thank you. Process [0x0A_CALIBRATION] continues.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "357.863 1093.39 246.114";
+				rotation = "0 0 0";
+				locked = "0";
+			};
+		};
 		instant SimGroup "quest21" {
 			instant SimGroup "NAME Preacher";
 			instant SimGroup "RACE MaleHuman";
@@ -4990,7 +5706,7 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "NAME Giovanni Echos";
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 WhiteDiamondPlate 1 MorningStar 1";
 			instant SimGroup "RACE MaleHuman";
-			instant SimGroup "SHOP 217 223 229 230 227 228";
+			instant SimGroup "SHOP 217 223 229 230 227 228 239 240 241";
 		};
 		instant SimGroup "merchant22" {
 			instant Marker "GodFather Gian" {
@@ -5014,7 +5730,7 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "NAME Uncle Tony";
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 RedDiamondPlate 1 TerminusEst 1";
 			instant SimGroup "RACE MaleHuman";
-			instant SimGroup "SHOP 222 231 232 233 234 235 236 237 238";
+			instant SimGroup "SHOP 222 231 232 233 234 235 236 237 238 242 243 244";
 		};
 		instant SimGroup "tournyquest1" {
 			instant Marker "Yuliple colloseum" {
@@ -5096,6 +5812,144 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "NSAY2 Great! We're safe for now...";
 			instant SimGroup "BOT Queen";
 			instant SimGroup "POS -2850 878 374";
+		};
+		instant SimGroup "sigilforge1" {
+			instant SimGroup "NAME The Architect";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Mage LVL 999 LCK 999 CastingBlade 1 VoidRobe 1";
+			instant SimGroup "NEED SigkillSigil 5";
+			instant SimGroup "TAKE SigkillSigil 5";
+			instant SimGroup "GIVE COINS 90000000 EXP 5000";
+			instant SimGroup "SAY1 The simulation is unresponsive - our access terminals are stuck in a loop. Will you help restart it?";
+			instant SimGroup "CUE1 yes";
+			instant SimGroup "SAY2 Excellent. Go to The Infinite Loop, destroy the Infinite anomalies, and bring me five SIGKILL Sigils to terminate the loop.";
+			instant SimGroup "NSAY1 I detect the SIGKILL Sigils. Will you hand them over to stabilize the system?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 System stabilized. The SIGKILL worked. Here is your reward.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5009.52 3010.38 1027.65";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "banker11" {
+			instant Marker "Sandbox banker" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5076.12 2903.66 1027.65";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Ledger";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 SteelMace 1 IronScaleMail 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "merchant24" {
+			instant Marker "Sandbox weapon merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5060.11 2910.99 1027.65";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Vector";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 SteelBroadSword 1 StuddedLeatherSuit 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 210 211 212 222 233 234 235 236 237 238";
+		};
+		instant SimGroup "merchant25" {
+			instant Marker "Sandbox armor merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5061.62 2908.05 1027.65";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Aegis";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 SteelSpear 1 ToughHideSuit 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 215 216 217 219 223 227 228 239 240 241";
+		};
+		instant SimGroup "merchant26" {
+			instant Marker "Sandbox misc merchant" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5073.48 2907.72 1027.65";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Orbis";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 SteelLongSword 1 StuddedLeatherSuit 1";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "SHOP 1 2 3 4 200 224 220 221 225 218 6 229 230";
+		};
+		instant SimGroup "teleportbot1" {
+			instant Marker "Sandbox teleporter" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-4996.74 3010.12 1027.65";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Gateway";
+			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 DiamondTrident 1 CrystalChainMail 1";
+			instant SimGroup "RACE MaleHuman";
+		};
+		instant SimGroup "quest25" {
+			instant SimGroup "NAME Ping";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 999 LCK 999 RustyIronBlade 1 Adminorb 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "SAY1 Checking system latency... The connection to the mainframe is stable.";
+			instant SimGroup "CUE1 hello";
+			instant SimGroup "SAY2 I monitor network packages in the Sandbox. Everything is flowing smoothly.";
+			instant SimGroup "NSAY1 Checking system latency... The connection to the mainframe is stable.";
+			instant SimGroup "NCUE1 hello";
+			instant SimGroup "NSAY2 I monitor network packages in the Sandbox. Everything is flowing smoothly.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5055.83 2911.29 1035.65";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "quest26" {
+			instant SimGroup "NAME Trace";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 999 LCK 999 RustyIronBlade 1 Adminorb 1";
+			instant SimGroup "NEED ";
+			instant SimGroup "GIVE ";
+			instant SimGroup "SAY1 Tracing execution path... No stack overflow detected in this sector.";
+			instant SimGroup "CUE1 hello";
+			instant SimGroup "SAY2 Be careful around the edges of the Sandbox. The code gets unstable there.";
+			instant SimGroup "NSAY1 Tracing execution path... No stack overflow detected in this sector.";
+			instant SimGroup "NCUE1 hello";
+			instant SimGroup "NSAY2 Be careful around the edges of the Sandbox. The code gets unstable there.";
+			instant Marker "Marker1" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5024.85 2988.3 1035.65";
+				rotation = "0 0 0";
+			};
+		};
+		instant SimGroup "hunt6" {
+			instant Marker "sandbox null quest" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-5013.62 3003.62 1027.65";
+				rotation = "0 0 0";
+			};
+			instant SimGroup "NAME Null";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 999 LCK 999 RustyIronBlade 1 Adminorb 1";
+			instant SimGroup "NEED NullItem 1";
+			instant SimGroup "TAKE NullItem 1";
+			instant SimGroup "GIVE COINS 2000000000 EXP 10000";
+			instant SimGroup "SAY1 NULL NEEDS NULL. KILL NULL FOR NULL. GET NULL. GIVE NULL TO NULL.";
+			instant SimGroup "CUE1 NULL";
+			instant SimGroup "SAY2 NULL SPOTS NULL. NULL WILL SPAWN. KILL NULL.";
+			instant SimGroup "NSAY1 NULL DETECTED. GIVE NULL TO NULL?";
+			instant SimGroup "NCUE1 yes";
+			instant SimGroup "NSAY2 NULL GIVEN. NULL IS HAPPY. NULL.";
+			instant SimGroup "BOT NullNull";
+			instant SimGroup "POS -4972.11 3048.62 1071.14";
 		};
 	};
 	instant InteriorShape "base41" {
@@ -5456,6 +6310,17 @@ instant SimGroup "MissionGroup" {
 		position = "-4897.95 863.151 700.999";
 		rotation = "0 -0 1.57079";
 		lightParams = "0 ";
+	};
+	instant Item "FinalVerdictWeapon" {
+		dataBlock = "FinalVerdict";
+		name = "";
+		position = "-4901.37 2890.97 703.375";
+		rotation = "0 0 0";
+		destroyable = "True";
+		deleteOnDestroy = "False";
+		rotates = "False";
+		collideable = "False";
+		count = "1";
 	};
 };
 //--- export object end ---//

@@ -268,501 +268,651 @@ function Lightning::damageTarget(%target, %timeSlice, %damPerSec, %enDrainPerSec
 
 //--------------------------------------
 // Spell Explosion RocketData Projectiles
-// These replace MineData for better networking performance
-// All have 0.1 second lifetime for instant explosion
+// These replace MineData for better networking performance.
+// Pattern (from known-working RocketExpFX): zero collision radius and a 0.01s
+// lifetime so the projectile never collides - it expires via totalTime, which
+// makes the server broadcast a timeout explosion at the spawn position.
+// Spawning with collisionRadius > 0 at ground level collided with terrain,
+// and static-geometry hits skip the server explosion ("trust the client"),
+// so no explosion was ever shown.
 //--------------------------------------
 
 RocketData SpellBomb1
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = mortarExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb2
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = mineExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb3
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = grenadeExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb4
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = Shockwave;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb5
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = LargeShockwave;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb6
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = rocketExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb7
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = energyExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb8
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = blasterExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb9
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = plasmaExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb10
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = turretExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb11
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = bulletExp0;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb12
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = debrisExpSmall;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb13
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = debrisExpMedium;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb14
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = debrisExpLarge;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb15
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = flashExpSmall;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb16
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = flashExpMedium;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb17
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = flashExpLarge;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb18
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = whiteExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb19
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = WhiteShockwave;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb20
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = IonExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb21
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = IonExp2;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb22
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = IonShockwave;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb23
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = IonShockwave2;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb24
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = PBShockWave;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb25
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = LitBoltExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb26
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = TimeShockwave;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb27
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = turretSlowExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb28
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = acidExp;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 RocketData SpellBomb29
 {
-	bulletShapeName = "PlasmaBolt.dts";
+	bulletShapeName = "breath.dts";
 	explosionTag = bulletExp0;
-	collisionRadius = 0.5;
-	mass = 0.1;
-	damageClass = 1;
-	damageValue = 1.0;
+	collisionRadius = 0.0;
+	mass = 1.0;
+	damageClass = 0;
+	damageValue = 0.0;
 	damageType = $NullDamageType;
-	explosionRadius = 10.0;
-	kickBackStrength = 0;
-	muzzleVelocity = 1.0;
-	totalTime = 0.2;
-	liveTime = 0.2;
-	isVisible = False;
+	explosionRadius = 0.0;
+	kickBackStrength = 0.0;
+	muzzleVelocity = 0.1;
+	terminalVelocity = 0.1;
+	acceleration = 0.01;
+	totalTime = 0.01;
+	liveTime = 0.01;
+	lightRange = 0.1;
+	lightColor = {1.0,1.0,1.0};
+	trailType = 0;
+	soundId = NoSound;
 };
 
 //--------------------------------------

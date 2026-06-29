@@ -884,7 +884,7 @@ function RustyIronBladeImage::onFire(%player, %slot)
 
 function RustyIronBlade::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Rusty Iron Blade: <f0>Attack: <f2>9    <f0>Skill Slashing Req @ <f2>0    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$68    <f0>Weight: <f2>4 Lbs");
+   KronosWeaponInfo(%client, "<f1>Rusty Iron Blade: <f0>Attack: <f2>9    <f0>Skill Slashing Req @ <f2>0    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$68    <f0>Weight: <f2>4 Lbs");
 }
 //****************************************************************************************************
 //   SHARP IRON BLADE
@@ -925,7 +925,7 @@ function SharpIronBladeImage::onFire(%player, %slot)
 
 function SharpIronBlade::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Sharp Iron Blade: <f0>Attack: <f2>16    <f0>Skill Slashing Req @ <f2>45    <f0>Speed: <f2>1.01 Second    <f0>Price: <f2>$374    <f0>Weight: <f2>4.5 Lbs ");
+   KronosWeaponInfo(%client, "<f1>Sharp Iron Blade: <f0>Attack: <f2>16    <f0>Skill Slashing Req @ <f2>45    <f0>Speed: <f2>1.01 Second    <f0>Price: <f2>$374    <f0>Weight: <f2>4.5 Lbs ");
 }
 //****************************************************************************************************
 //   IRON BROADSWORD
@@ -966,7 +966,7 @@ function IronBroadSwordImage::onFire(%player, %slot)
 
 function IronBroadSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Iron Broad Sword: <f0>Attack: <f2>27    <f0>Skill Slashing Req @ <f2>90    <f0>Speed: <f2>1.12 Seconds    <f0>Price: <f2>$1,757    <f0>Weight: <f2>5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Iron Broad Sword: <f0>Attack: <f2>27    <f0>Skill Slashing Req @ <f2>90    <f0>Speed: <f2>1.12 Seconds    <f0>Price: <f2>$1,757    <f0>Weight: <f2>5 Lbs");
 }
 //****************************************************************************************************
 //   STEEL BROADSWORD
@@ -1007,7 +1007,7 @@ function SteelBroadSwordImage::onFire(%player, %slot)
 
 function SteelBroadSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Steel Broad Sword: <f0>Attack: <f2>40    <f0>Skill Slashing Req @ <f2>140    <f0>Speed: <f2>1.12 Seconds    <f0>Price: <f2>$5,287    <f0>Weight: <f2>5.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Steel Broad Sword: <f0>Attack: <f2>40    <f0>Skill Slashing Req @ <f2>140    <f0>Speed: <f2>1.12 Seconds    <f0>Price: <f2>$5,287    <f0>Weight: <f2>5.5 Lbs");
 }
 //****************************************************************************************************
 //   STEEL LONGSWORD
@@ -1048,7 +1048,7 @@ function SteelLongSwordImage::onFire(%player, %slot)
 
 function SteelLongSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Steel Long Sword: <f0>Attack: <f2>55    <f0>Skill Slashing Req @ <f2>200    <f0>Speed: <f2>1.34 Seconds    <f0>Price: <f2>$12,449    <f0>Weight: <f2>6 Lbs");
+   KronosWeaponInfo(%client, "<f1>Steel Long Sword: <f0>Attack: <f2>55    <f0>Skill Slashing Req @ <f2>200    <f0>Speed: <f2>1.34 Seconds    <f0>Price: <f2>$12,449    <f0>Weight: <f2>6 Lbs");
 }
 //****************************************************************************************************
 //   GOLDEN LONGSWORD
@@ -1089,7 +1089,7 @@ function GoldenLongSwordImage::onFire(%player, %slot)
 
 function GoldenLongSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Golden Long Sword: <f0>Attack: <f2>70    <f0>Skill Slashing Req @ <f2>260    <f0>Speed: <f2>1.46 Seconds    <f0>Price: <f2>$22,957    <f0>Weight: <f2>6.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Golden Long Sword: <f0>Attack: <f2>70    <f0>Skill Slashing Req @ <f2>260    <f0>Speed: <f2>1.46 Seconds    <f0>Price: <f2>$22,957    <f0>Weight: <f2>6.5 Lbs");
 }
 //****************************************************************************************************
 //   GOLDEN BASTARDSWORD
@@ -1130,7 +1130,7 @@ function GoldenBastardSwordImage::onFire(%player, %slot)
 
 function GoldenBastardSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Golden Bastard Sword: <f0>Attack: <f2>90    <f0>Skill Slashing Req @ <f2>340    <f0>Speed: <f2>1.57 Seconds    <f0>Price: <f2>$43,531    <f0>Weight: <f2>7 Lbs");
+   KronosWeaponInfo(%client, "<f1>Golden Bastard Sword: <f0>Attack: <f2>90    <f0>Skill Slashing Req @ <f2>340    <f0>Speed: <f2>1.57 Seconds    <f0>Price: <f2>$43,531    <f0>Weight: <f2>7 Lbs");
 }
 //****************************************************************************************************
 //   CRYSTAL BASTARDSWORD
@@ -1171,7 +1171,7 @@ function CrystalBastardSwordImage::onFire(%player, %slot)
 
 function CrystalBastardSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Crystal Bastard Sword: <f0>Attack: <f2>115    <f0>Skill Slashing Req @ <f2>440    <f0>Speed: <f2>1.68 Seconds    <f0>Price: <f2>$83,526    <f0>Weight: <f2>7.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Crystal Bastard Sword: <f0>Attack: <f2>115    <f0>Skill Slashing Req @ <f2>440    <f0>Speed: <f2>1.68 Seconds    <f0>Price: <f2>$83,526    <f0>Weight: <f2>7.5 Lbs");
 }
 //****************************************************************************************************
 //   TEMPERED CRYSTAL BASTARDSWORD
@@ -1212,7 +1212,7 @@ function TemperedCrystalBastardSwordImage::onFire(%player, %slot)
 
 function TemperedCrystalBastardSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Tempered Crystal Bastard Sword: <f0>Attack: <f2>140    <f0>Skill Slashing Req @ <f2>540    <f0>Speed: <f2>1.79 Seconds    <f0>Price: <f2>$136,211    <f0>Weight: <f2>8 Lbs");
+   KronosWeaponInfo(%client, "<f1>Tempered Crystal Bastard Sword: <f0>Attack: <f2>140    <f0>Skill Slashing Req @ <f2>540    <f0>Speed: <f2>1.79 Seconds    <f0>Price: <f2>$136,211    <f0>Weight: <f2>8 Lbs");
 }
 //****************************************************************************************************
 //   CRYSTAL CLAYMORE
@@ -1253,7 +1253,7 @@ function CrystalClaymoreImage::onFire(%player, %slot)
 
 function CrystalClaymore::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Crystal Claymore: <f0>Attack: <f2>165    <f0>Skill Slashing Req @ <f2>640    <f0>Speed: <f2>1.91 Seconds    <f0>Price: <f2>$199,898    <f0>Weight: <f2>8.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Crystal Claymore: <f0>Attack: <f2>165    <f0>Skill Slashing Req @ <f2>640    <f0>Speed: <f2>1.91 Seconds    <f0>Price: <f2>$199,898    <f0>Weight: <f2>8.5 Lbs");
 }
 //****************************************************************************************************
 //   DIAMOND CLAYMORE
@@ -1294,7 +1294,7 @@ function DiamondClaymoreImage::onFire(%player, %slot)
 
 function DiamondClaymore::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Diamond Claymore: <f0>Attack: <f2>195    <f0>Skill Slashing Req @ <f2>740    <f0>Speed: <f2>1.91 Seconds    <f0>Price: <f2>$370,895    <f0>Weight: <f2>8.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Diamond Claymore: <f0>Attack: <f2>195    <f0>Skill Slashing Req @ <f2>740    <f0>Speed: <f2>1.91 Seconds    <f0>Price: <f2>$370,895    <f0>Weight: <f2>8.5 Lbs");
 }
 
 //****************************************************************************************************
@@ -1336,7 +1336,7 @@ function DiamondLegendSwordImage::onFire(%player, %slot)
 
 function DiamondLegendSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Diamond Legend Sword: <f0>Attack: <f2>220    <f0>Skill Slashing Req @ <f2>840 Remort 1    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$9,425,500    <f0>Weight: <f2>4 Lbs");
+   KronosWeaponInfo(%client, "<f1>Diamond Legend Sword: <f0>Attack: <f2>220    <f0>Skill Slashing Req @ <f2>840 Remort 1    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$9,425,500    <f0>Weight: <f2>4 Lbs");
 }
 
 //****************************************************************************************************
@@ -1378,7 +1378,7 @@ function SealFighterBladeImage::onFire(%player, %slot)
 
 function SealFighterBlade::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Seal Fighter Blade: <f0>Attack: <f2>220    <f0>Skill Slashing    <f0>Speed: <f2>0.89 Seconds");
+   KronosWeaponInfo(%client, "<f1>Seal Fighter Blade: <f0>Attack: <f2>220    <f0>Skill Slashing    <f0>Speed: <f2>0.89 Seconds");
 }
 
 //****************************************************************************************************
@@ -1420,7 +1420,7 @@ function SealGuardianBladeImage::onFire(%player, %slot)
 
 function SealGuardianBlade::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Seal Guardian Blade: <f0>Attack: <f2>220    <f0>Skill Slashing    <f0>Speed: <f2>0.89 Seconds");
+   KronosWeaponInfo(%client, "<f1>Seal Guardian Blade: <f0>Attack: <f2>220    <f0>Skill Slashing    <f0>Speed: <f2>0.89 Seconds");
 }
 
 //****************************************************************************************************
@@ -1462,7 +1462,7 @@ function BlackDiamondDreamSwordImage::onFire(%player, %slot)
 
 function BlackDiamondDreamSword::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Black Diamond Dream Sword: <f0>Attack: <f2>300    <f0>Skill Slashing Req @ <f2>1200 Remort 10    <f0>Speed: <f2>0.78 Seconds    <f0>Price: <f2>$48,670,000    <f0>Weight: <f2>3.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Black Diamond Dream Sword: <f0>Attack: <f2>300    <f0>Skill Slashing Req @ <f2>1200 Remort 10    <f0>Speed: <f2>0.78 Seconds    <f0>Price: <f2>$48,670,000    <f0>Weight: <f2>3.5 Lbs");
 }
 //****************************************************************************************************
 //   BLACK DIAMOND ATOM SPLITTER
@@ -1503,7 +1503,7 @@ function BlackDiamondAtomSplitterImage::onFire(%player, %slot)
 
 function BlackDiamondAtomSplitter::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Black Diamond Atom Splitter: <f0>Attack: <f2>450    <f0>Skill Slashing Req @ <f2>1580 Remort 30    <f0>Speed: <f2>0.67 Seconds    <f0>Price: <f2>$385,923,000    <f0>Weight: <f2>3 Lbs");
+   KronosWeaponInfo(%client, "<f1>Black Diamond Atom Splitter: <f0>Attack: <f2>450    <f0>Skill Slashing Req @ <f2>1580 Remort 30    <f0>Speed: <f2>0.67 Seconds    <f0>Price: <f2>$385,923,000    <f0>Weight: <f2>3 Lbs");
 }
 //****************************************************************************************************
 //   BUTTER KNIFE
@@ -1544,7 +1544,7 @@ function ButterKnifeImage::onFire(%player, %slot)
 
 function ButterKnife::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Butter Knife: <f0>Attack: <f2>5    <f0>Skill Piercing Req @ <f2>0    <f0>Speed: <f2>0.78 Seconds    <f0>Price: <f2>$12    <f0>Weight: <f2>3.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Butter Knife: <f0>Attack: <f2>5    <f0>Skill Piercing Req @ <f2>0    <f0>Speed: <f2>0.78 Seconds    <f0>Price: <f2>$12    <f0>Weight: <f2>3.5 Lbs");
 }
 
 //****************************************************************************************************
@@ -1586,7 +1586,7 @@ function LongKnifeImage::onFire(%player, %slot)
 
 function LongKnife::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Long Knife: <f0>Attack: <f2>13    <f0>Skill Piercing Req @ <f2>45    <f0>Speed: <f2>0.78 Seconds    <f0>Price: <f2>$440    <f0>Weight: <f2>3.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Long Knife: <f0>Attack: <f2>13    <f0>Skill Piercing Req @ <f2>45    <f0>Speed: <f2>0.78 Seconds    <f0>Price: <f2>$440    <f0>Weight: <f2>3.5 Lbs");
 }
 
 //****************************************************************************************************
@@ -1628,7 +1628,7 @@ function IronSpearImage::onFire(%player, %slot)
 
 function IronSpear::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Iron Spear: <f0>Attack: <f2>34    <f0>Skill Piercing Req @ <f2>90    <f0>Speed: <f2>1.34 Seconds    <f0>Price: <f2>$2,100    <f0>Weight: <f2>4.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Iron Spear: <f0>Attack: <f2>34    <f0>Skill Piercing Req @ <f2>90    <f0>Speed: <f2>1.34 Seconds    <f0>Price: <f2>$2,100    <f0>Weight: <f2>4.5 Lbs");
 }
 //****************************************************************************************************
 //   STEEL SPEAR
@@ -1669,7 +1669,7 @@ function SteelSpearImage::onFire(%player, %slot)
 
 function SteelSpear::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Steel Spear: <f0>Attack: <f2>48    <f0>Skill Piercing Req @ <f2>140    <f0>Speed: <f2>1.49 Seconds    <f0>Price: <f2>$5,049    <f0>Weight: <f2>5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Steel Spear: <f0>Attack: <f2>48    <f0>Skill Piercing Req @ <f2>140    <f0>Speed: <f2>1.49 Seconds    <f0>Price: <f2>$5,049    <f0>Weight: <f2>5 Lbs");
 }
 //****************************************************************************************************
 //   STEEL PIKE
@@ -1710,7 +1710,7 @@ function SteelPikeImage::onFire(%player, %slot)
 
 function SteelPike::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Steel Pike: <f0>Attack: <f2>65    <f0>Skill Piercing Req @ <f2>200    <f0>Speed: <f2>1.64 Seconds    <f0>Price: <f2>$10,993    <f0>Weight: <f2>5.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Steel Pike: <f0>Attack: <f2>65    <f0>Skill Piercing Req @ <f2>200    <f0>Speed: <f2>1.64 Seconds    <f0>Price: <f2>$10,993    <f0>Weight: <f2>5.5 Lbs");
 }
 //****************************************************************************************************
 //   GOLDEN PIKE
@@ -1751,7 +1751,7 @@ function GoldenPikeImage::onFire(%player, %slot)
 
 function GoldenPike::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Golden Pike: <f0>Attack: <f2>83    <f0>Skill Piercing Req @ <f2>260    <f0>Speed: <f2>1.79 Seconds    <f0>Price: <f2>$19,685    <f0>Weight: <f2>6 Lbs");
+   KronosWeaponInfo(%client, "<f1>Golden Pike: <f0>Attack: <f2>83    <f0>Skill Piercing Req @ <f2>260    <f0>Speed: <f2>1.79 Seconds    <f0>Price: <f2>$19,685    <f0>Weight: <f2>6 Lbs");
 }
 //****************************************************************************************************
 //   CRYSTAL PIKE
@@ -1792,7 +1792,7 @@ function CrystalPikeImage::onFire(%player, %slot)
 
 function CrystalPike::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Crystal Pike: <f0>Attack: <f2>105    <f0>Skill Piercing Req @ <f2>340    <f0>Speed: <f2>1.94 Seconds    <f0>Price: <f2>$34,939    <f0>Weight: <f2>6.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Crystal Pike: <f0>Attack: <f2>105    <f0>Skill Piercing Req @ <f2>340    <f0>Speed: <f2>1.94 Seconds    <f0>Price: <f2>$34,939    <f0>Weight: <f2>6.5 Lbs");
 }
 //****************************************************************************************************
 //   CRYSTAL TRIDENT
@@ -1833,7 +1833,7 @@ function CrystalTridentImage::onFire(%player, %slot)
 
 function CrystalTrident::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Crystal Trident: <f0>Attack: <f2>130    <f0>Skill Piercing Req @ <f2>440    <f0>Speed: <f2>2.09 Seconds    <f0>Price: <f2>$58,536    <f0>Weight: <f2>7 Lbs");
+   KronosWeaponInfo(%client, "<f1>Crystal Trident: <f0>Attack: <f2>130    <f0>Skill Piercing Req @ <f2>440    <f0>Speed: <f2>2.09 Seconds    <f0>Price: <f2>$58,536    <f0>Weight: <f2>7 Lbs");
 }
 //****************************************************************************************************
 //   TEMPERED CRYSTAL TRIDENT
@@ -1874,7 +1874,7 @@ function TemperedCrystalTridentImage::onFire(%player, %slot)
 
 function TemperedCrystalTrident::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Tempered Crystal Trident: <f0>Attack: <f2>160    <f0>Skill Piercing Req @ <f2>540    <f0>Speed: <f2>2.24 Seconds    <f0>Price: <f2>$97,772    <f0>Weight: <f2>7.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Tempered Crystal Trident: <f0>Attack: <f2>160    <f0>Skill Piercing Req @ <f2>540    <f0>Speed: <f2>2.24 Seconds    <f0>Price: <f2>$97,772    <f0>Weight: <f2>7.5 Lbs");
 }
 //****************************************************************************************************
 //   DIAMOND TRIDENT
@@ -1915,7 +1915,7 @@ function DiamondTridentImage::onFire(%player, %slot)
 
 function DiamondTrident::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Diamond Trident: <f0>Attack: <f2>190    <f0>Skill Piercing Req @ <f2>640    <f0>Speed: <f2>2.39 Seconds    <f0>Price: <f2>$145,430    <f0>Weight: <f2>8 Lbs");
+   KronosWeaponInfo(%client, "<f1>Diamond Trident: <f0>Attack: <f2>190    <f0>Skill Piercing Req @ <f2>640    <f0>Speed: <f2>2.39 Seconds    <f0>Price: <f2>$145,430    <f0>Weight: <f2>8 Lbs");
 }
 //****************************************************************************************************
 //   DIAMOND DEATH SPEAR
@@ -1956,7 +1956,7 @@ function DiamondDeathSpearImage::onFire(%player, %slot)
 
 function DiamondDeathSpear::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Diamond Death Spear: <f0>Attack: <f2>220    <f0>Skill Piercing Req @ <f2>740    <f0>Speed: <f2>2.39 Seconds    <f0>Price: <f2>$250,167    <f0>Weight: <f2>8 Lbs");
+   KronosWeaponInfo(%client, "<f1>Diamond Death Spear: <f0>Attack: <f2>220    <f0>Skill Piercing Req @ <f2>740    <f0>Speed: <f2>2.39 Seconds    <f0>Price: <f2>$250,167    <f0>Weight: <f2>8 Lbs");
 }
 //****************************************************************************************************
 //   DIAMOND LEGEND SPEAR
@@ -1997,7 +1997,7 @@ function DiamondLegendSpearImage::onFire(%player, %slot)
 
 function DiamondLegendSpear::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Diamond Legend Spear: <f0>Attack: <f2>260    <f0>Skill Piercing Req @ <f2>840 Remort 1    <f0>Speed: <f2>1.19 Seconds    <f0>Price: <f2>$6,032,280    <f0>Weight: <f2>4 Lbs");
+   KronosWeaponInfo(%client, "<f1>Diamond Legend Spear: <f0>Attack: <f2>260    <f0>Skill Piercing Req @ <f2>840 Remort 1    <f0>Speed: <f2>1.19 Seconds    <f0>Price: <f2>$6,032,280    <f0>Weight: <f2>4 Lbs");
 }
 //****************************************************************************************************
 //   BLACK DIAMOND DREAM SPEAR
@@ -2038,7 +2038,7 @@ function BlackDiamondDreamSpearImage::onFire(%player, %slot)
 
 function BlackDiamondDreamSpear::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Black Diamond Dream Spear: <f0>Attack: <f2>350    <f0>Skill Piercing Req @ <f2>1200 Remort 10    <f0>Speed: <f2>1.04 Seconds    <f0>Price: <f2>$29,696,300    <f0>Weight: <f2>3.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Black Diamond Dream Spear: <f0>Attack: <f2>350    <f0>Skill Piercing Req @ <f2>1200 Remort 10    <f0>Speed: <f2>1.04 Seconds    <f0>Price: <f2>$29,696,300    <f0>Weight: <f2>3.5 Lbs");
 }
 //****************************************************************************************************
 //   BLACK DIAMOND ATOM PIERCER
@@ -2079,7 +2079,7 @@ function BlackDiamondAtomPiercerImage::onFire(%player, %slot)
 
 function BlackDiamondAtomPiercer::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Black Diamond Atom Piercer: <f0>Attack: <f2>520    <f0>Skill Piercing Req @ <f2>1580 Remort 30    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$227,275,000    <f0>Weight: <f2>3 Lbs");
+   KronosWeaponInfo(%client, "<f1>Black Diamond Atom Piercer: <f0>Attack: <f2>520    <f0>Skill Piercing Req @ <f2>1580 Remort 30    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$227,275,000    <f0>Weight: <f2>3 Lbs");
 }
 //****************************************************************************************************
 //   KNIFE
@@ -2120,7 +2120,7 @@ function KnifeImage::onFire(%player, %slot)
 
 function Knife::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Knife: <f0>Attack: <f2>55    <f0>Skill Piercing Req @ <f2>Remort 5    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$50,000    <f0>Weight: <f2>4 Lbs");
+   KronosWeaponInfo(%client, "<f1>Knife: <f0>Attack: <f2>55    <f0>Skill Piercing Req @ <f2>Remort 5    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$50,000    <f0>Weight: <f2>4 Lbs");
 }
 //****************************************************************************************************
 //   DAGGER
@@ -2198,7 +2198,7 @@ function HatchetImage::onFire(%player, %slot)
 
 function Hatchet::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Hatchet: <f0>Attack: <f2>60    <f0>Skill Slashing Req @ <f2>Remort 5    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$50,000    <f0>Weight: <f2>5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Hatchet: <f0>Attack: <f2>60    <f0>Skill Slashing Req @ <f2>Remort 5    <f0>Speed: <f2>0.89 Seconds    <f0>Price: <f2>$50,000    <f0>Weight: <f2>5 Lbs");
 }
 //****************************************************************************************************
 //   PICK AXE
@@ -2239,7 +2239,7 @@ function PickAxeImage::onFire(%player, %slot)
 
 function PickAxe::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Pick Axe: <f0>Attack: <f2>3    <f0>Skill Piercing Req @ <f2>0    <f0>Speed: <f2>1.09 Seconds    <f0>Price: <f2>$0    <f0>Weight: <f2>4 Lbs");
+   KronosWeaponInfo(%client, "<f1>Pick Axe: <f0>Attack: <f2>3    <f0>Skill Piercing Req @ <f2>0    <f0>Speed: <f2>1.09 Seconds    <f0>Price: <f2>$0    <f0>Weight: <f2>4 Lbs");
 }
 //****************************************************************************************************
 //   CRACKED STICK
@@ -2280,7 +2280,7 @@ function CrackedStickImage::onFire(%player, %slot)
 
 function CrackedStick::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Cracked Stick: <f0>Attack: <f2>13    <f0>Skill Bludgeoning Req @ <f2>0    <f0>Speed: <f2>1.23 Seconds    <f0>Price: <f2>$82    <f0>Weight: <f2>4.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Cracked Stick: <f0>Attack: <f2>13    <f0>Skill Bludgeoning Req @ <f2>0    <f0>Speed: <f2>1.23 Seconds    <f0>Price: <f2>$82    <f0>Weight: <f2>4.5 Lbs");
 }
 //****************************************************************************************************
 //   IRON STICK
@@ -2321,7 +2321,7 @@ function IronStickImage::onFire(%player, %slot)
 
 function IronStick::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Iron Stick: <f0>Attack: <f2>23    <f0>Skill Bludgeoning Req @ <f2>45    <f0>Speed: <f2>1.37 Seconds    <f0>Price: <f2>$462    <f0>Weight: <f2>5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Iron Stick: <f0>Attack: <f2>23    <f0>Skill Bludgeoning Req @ <f2>45    <f0>Speed: <f2>1.37 Seconds    <f0>Price: <f2>$462    <f0>Weight: <f2>5 Lbs");
 }
 //****************************************************************************************************
 //   IRON MACE
@@ -2362,7 +2362,7 @@ function IronMaceImage::onFire(%player, %slot)
 
 function IronMace::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Iron Mace: <f0>Attack: <f2>23    <f0>Skill Bludgeoning Req @ <f2>90    <f0>Speed: <f2>1.51 Seconds    <f0>Price: <f2>$1,704    <f0>Weight: <f2>5.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Iron Mace: <f0>Attack: <f2>23    <f0>Skill Bludgeoning Req @ <f2>90    <f0>Speed: <f2>1.51 Seconds    <f0>Price: <f2>$1,704    <f0>Weight: <f2>5.5 Lbs");
 }
 //****************************************************************************************************
 //   STEEL MACE
@@ -2403,7 +2403,7 @@ function SteelMaceImage::onFire(%player, %slot)
 
 function SteelMace::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Steel Mace: <f0>Attack: <f2>49    <f0>Skill Bludgeoning Req @ <f2>140    <f0>Speed: <f2>1.64 Seconds    <f0>Price: <f2>$3,864    <f0>Weight: <f2>6 Lbs");
+   KronosWeaponInfo(%client, "<f1>Steel Mace: <f0>Attack: <f2>49    <f0>Skill Bludgeoning Req @ <f2>140    <f0>Speed: <f2>1.64 Seconds    <f0>Price: <f2>$3,864    <f0>Weight: <f2>6 Lbs");
 }
 //****************************************************************************************************
 //   STEEL HAMMER
@@ -2444,7 +2444,7 @@ function SteelHammerImage::onFire(%player, %slot)
 
 function SteelHammer::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Steel Hammer: <f0>Attack: <f2>62    <f0>Skill Bludgeoning Req @ <f2>200    <f0>Speed: <f2>1.78 Seconds    <f0>Price: <f2>$6,884    <f0>Weight: <f2>6.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Steel Hammer: <f0>Attack: <f2>62    <f0>Skill Bludgeoning Req @ <f2>200    <f0>Speed: <f2>1.78 Seconds    <f0>Price: <f2>$6,884    <f0>Weight: <f2>6.5 Lbs");
 }
 //****************************************************************************************************
 //   STEEL WARHAMMER
@@ -2485,7 +2485,7 @@ function SteelWarHammerImage::onFire(%player, %slot)
 
 function SteelWarHammer::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Steel War Hammer: <f0>Attack: <f2>77    <f0>Skill Bludgeoning Req @ <f2>260    <f0>Speed: <f2>1.92 Seconds    <f0>Price: <f2>$11,632    <f0>Weight: <f2>7 Lbs");
+   KronosWeaponInfo(%client, "<f1>Steel War Hammer: <f0>Attack: <f2>77    <f0>Skill Bludgeoning Req @ <f2>260    <f0>Speed: <f2>1.92 Seconds    <f0>Price: <f2>$11,632    <f0>Weight: <f2>7 Lbs");
 }
 //****************************************************************************************************
 //   GOLDEN WARHAMMER
@@ -2526,7 +2526,7 @@ function GoldenWarHammerImage::onFire(%player, %slot)
 
 function GoldenWarHammer::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Golden War Hammer: <f0>Attack: <f2>95    <f0>Skill Bludgeoning Req @ <f2>340    <f0>Speed: <f2>2.06 Seconds    <f0>Price: <f2>$19,604    <f0>Weight: <f2>7.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Golden War Hammer: <f0>Attack: <f2>95    <f0>Skill Bludgeoning Req @ <f2>340    <f0>Speed: <f2>2.06 Seconds    <f0>Price: <f2>$19,604    <f0>Weight: <f2>7.5 Lbs");
 }
 //****************************************************************************************************
 //   GOLDEN DIVINE MACE
@@ -2567,7 +2567,7 @@ function GoldenDivineMaceImage::onFire(%player, %slot)
 
 function GoldenDivineMace::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Golden Divine Mace: <f0>Attack: <f2>120    <f0>Skill Bludgeoning Req @ <f2>440    <f0>Speed: <f2>2.19 Seconds    <f0>Price: <f2>$36,648    <f0>Weight: <f2>8 Lbs");
+   KronosWeaponInfo(%client, "<f1>Golden Divine Mace: <f0>Attack: <f2>120    <f0>Skill Bludgeoning Req @ <f2>440    <f0>Speed: <f2>2.19 Seconds    <f0>Price: <f2>$36,648    <f0>Weight: <f2>8 Lbs");
 }
 //****************************************************************************************************
 //   CRYSTAL DIVINE MACE
@@ -2608,7 +2608,7 @@ function CrystalDivineMaceImage::onFire(%player, %slot)
 
 function CrystalDivineMace::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Crystal Divine Mace: <f0>Attack: <f2>150    <f0>Skill Bludgeoning Req @ <f2>540    <f0>Speed: <f2>2.33 Seconds    <f0>Price: <f2>$66,865    <f0>Weight: <f2>8.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Crystal Divine Mace: <f0>Attack: <f2>150    <f0>Skill Bludgeoning Req @ <f2>540    <f0>Speed: <f2>2.33 Seconds    <f0>Price: <f2>$66,865    <f0>Weight: <f2>8.5 Lbs");
 }
 //****************************************************************************************************
 //   DIAMOND DIVINE MACE
@@ -2649,7 +2649,7 @@ function DiamondDivineMaceImage::onFire(%player, %slot)
 
 function DiamondDivineMace::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Diamond Divine Mace: <f0>Attack: <f2>180    <f0>Skill Bludgeoning Req @ <f2>640    <f0>Speed: <f2>2.47 Seconds    <f0>Price: <f2>$106,250    <f0>Weight: <f2>9 Lbs");
+   KronosWeaponInfo(%client, "<f1>Diamond Divine Mace: <f0>Attack: <f2>180    <f0>Skill Bludgeoning Req @ <f2>640    <f0>Speed: <f2>2.47 Seconds    <f0>Price: <f2>$106,250    <f0>Weight: <f2>9 Lbs");
 }
 //****************************************************************************************************
 //   DIAMOND BRAIN SPILLER
@@ -2690,7 +2690,7 @@ function DiamondBrainSpillerImage::onFire(%player, %slot)
 
 function DiamondBrainSpiller::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Diamond Brain Spiller: <f0>Attack: <f2>210    <f0>Skill Bludgeoning Req @ <f2>740    <f0>Speed: <f2>2.47 Seconds    <f0>Price: <f2>$187,944    <f0>Weight: <f2>9 Lbs");
+   KronosWeaponInfo(%client, "<f1>Diamond Brain Spiller: <f0>Attack: <f2>210    <f0>Skill Bludgeoning Req @ <f2>740    <f0>Speed: <f2>2.47 Seconds    <f0>Price: <f2>$187,944    <f0>Weight: <f2>9 Lbs");
 }
 //****************************************************************************************************
 //   DIAMOND LEGEND MACE
@@ -2731,7 +2731,7 @@ function DiamondLegendMaceImage::onFire(%player, %slot)
 
 function DiamondLegendMace::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Diamond Legend Mace: <f0>Attack: <f2>240    <f0>Skill Bludgeoning Req @ <f2>840 Remort 1    <f0>Speed: <f2>1.09 Seconds    <f0>Price: <f2>$6,189,820    <f0>Weight: <f2>4 Lbs");
+   KronosWeaponInfo(%client, "<f1>Diamond Legend Mace: <f0>Attack: <f2>240    <f0>Skill Bludgeoning Req @ <f2>840 Remort 1    <f0>Speed: <f2>1.09 Seconds    <f0>Price: <f2>$6,189,820    <f0>Weight: <f2>4 Lbs");
 }
 //****************************************************************************************************
 //   BLACK DIAMOND DREAM MACE
@@ -2772,7 +2772,7 @@ function BlackDiamondDreamMaceImage::onFire(%player, %slot)
 
 function BlackDiamondDreamMace::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Black Diamond Dream Mace: <f0>Attack: <f2>330    <f0>Skill Bludgeoning Req @ <f2>1200 Remort 10    <f0>Speed: <f2>0.96 Seconds    <f0>Price: <f2>$32957500    <f0>Weight: <f2>3.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Black Diamond Dream Mace: <f0>Attack: <f2>330    <f0>Skill Bludgeoning Req @ <f2>1200 Remort 10    <f0>Speed: <f2>0.96 Seconds    <f0>Price: <f2>$32957500    <f0>Weight: <f2>3.5 Lbs");
 }
 //****************************************************************************************************
 //   BLACK DIAMOND ATOM SMASHER
@@ -2813,7 +2813,7 @@ function BlackDiamondAtomSmasherImage::onFire(%player, %slot)
 
 function BlackDiamondAtomSmasher::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Black Diamond Atom Smasher: <f0>Attack: <f2>490    <f0>Skill Bludgeoning Req @ <f2>1580 Remort 30    <f0>Speed: <f2>0.82 Seconds    <f0>Price: <f2>$251700000    <f0>Weight: <f2>3 Lbs");
+   KronosWeaponInfo(%client, "<f1>Black Diamond Atom Smasher: <f0>Attack: <f2>490    <f0>Skill Bludgeoning Req @ <f2>1580 Remort 30    <f0>Speed: <f2>0.82 Seconds    <f0>Price: <f2>$251700000    <f0>Weight: <f2>3 Lbs");
 }
 //****************************************************************************************************
 //   AXE TEST
@@ -2854,7 +2854,7 @@ function crystalspearImage::onFire(%player, %slot)
 
 function crystalspear::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Crystal Spear: <f0>Attack: <f2>60    <f0>Skill Slashing Req @ <f2>0    <f0>Speed: <f2>1.0 Seconds    <f0>Price: <f2>$0    <f0>Weight: <f2>5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Crystal Spear: <f0>Attack: <f2>60    <f0>Skill Slashing Req @ <f2>0    <f0>Speed: <f2>1.0 Seconds    <f0>Price: <f2>$0    <f0>Weight: <f2>5 Lbs");
 }
 
 //****************************************************************************************************
@@ -2896,7 +2896,7 @@ function ClubImage::onFire(%player, %slot)
 
 function Club::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   bottomprint(%client, "<f1>Club: <f0>Attack: <f2>55    <f0>Skill Bludgeoning Req @ <f2>0    <f0>Speed: <f2>1.09 Seconds    <f0>Price: <f2>$50,000    <f0>Weight: <f2>4 Lbs");
+   KronosWeaponInfo(%client, "<f1>Club: <f0>Attack: <f2>55    <f0>Skill Bludgeoning Req @ <f2>0    <f0>Speed: <f2>1.09 Seconds    <f0>Price: <f2>$50,000    <f0>Weight: <f2>4 Lbs");
 }
 //****************************************************************************************************
 //   CASTING BLADE
@@ -3179,3 +3179,5 @@ function ListAllWeaponDPS()
 		$WeaponDPSList[%i, "type"] = "";
 	}
 }
+
+exec("base_weapons.cs");

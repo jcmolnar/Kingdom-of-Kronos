@@ -227,6 +227,9 @@ $WeaponShape[WhiteDiamondVoidImpaler] = "trident";
 $WeaponShape[FinalVerdict] = "BattleAxe";
 $WeaponShape[StormCaller] = "trident";
 $WeaponShape[WorldSplitter] = "katana";
+$WeaponShape[SoulReaver] = "hammer";
+$WeaponShape[SkyRender] = "trident";
+$WeaponShape[EchoFang] = "katana";
 
 //============================================================================
 // OFF-HAND WEAPON DEFINITIONS (Generic per shape)

@@ -27,6 +27,33 @@ function SpellExplosion_UseHybrid()
 	return false;
 }
 
+// Ring/shockwave explosions (faceCamera = false in their ExplosionData) orient
+// along the explosion axis. Rocket timeout explosions hardcode a HORIZONTAL
+// axis (0,1,0) in the client engine (RocketDumb::readExplosion), which rotates
+// the rings 90 degrees. Mine explosions use the mine's up vector (0,0,1), so
+// ring bombs must keep using the Mine path to stay flat.
+$SpellRingBomb[Bomb4] = true;	// Shockwave
+$SpellRingBomb[Bomb5] = true;	// LargeShockwave (Tornado rings)
+$SpellRingBomb[Bomb19] = true;	// WhiteShockwave
+$SpellRingBomb[Bomb22] = true;	// IonShockwave
+$SpellRingBomb[Bomb24] = true;	// PBShockWave
+$SpellRingBomb[Bomb26] = true;	// TimeShockwave
+
+// Per-spell damage-buffer flush window (seconds). SpellDamage_Buffered accumulates
+// all damage to a target within this window and applies it in ONE Player::onDamage
+// call. High-density AOE spells fire damage waves every ~0.2-0.3s, so a wider window
+// coalesces many waves into a single onDamage execution - the total damage, the
+// number of explosions, and the visuals are all unchanged; only the number of times
+// the expensive stat/skill/message pipeline runs goes down. Normal spells keep the
+// default 0.2s (set in SpellDamage_Buffered) for combat responsiveness.
+//   50 Ion Blast / 48 Apocalypse: 21 damage waves over ~4s -> ~5 onDamage calls (was ~21)
+//   46 Tornado: 37 waves over ~11s   51 Shredder / 66 Terminate: multi-wave
+$Spell::damageBufferWindow[50] = 0.25;	// Ion Blast
+$Spell::damageBufferWindow[48] = 1.0;	// Apocalypse
+$Spell::damageBufferWindow[46] = 0.6;	// Tornado
+$Spell::damageBufferWindow[51] = 0.6;	// Shredder
+$Spell::damageBufferWindow[66] = 0.6;	// Terminate
+
 function SetSpellExplosionMode(%mode)
 {
 	if(%mode == "hybrid" || %mode == "HYBRID")
@@ -121,6 +148,57 @@ function PowerCloud_NextToken(%clientId)
 		$PowerCloudTokenGen[%clientId] = 0;
 	$PowerCloudTokenGen[%clientId]++;
 	return $PowerCloudTokenGen[%clientId];
+}
+
+function SpellCast_NextToken(%clientId)
+{
+	if($SpellCastToken[%clientId] == "" || $SpellCastToken[%clientId] == -1)
+		$SpellCastToken[%clientId] = 0;
+	$SpellCastToken[%clientId]++;
+	return $SpellCastToken[%clientId];
+}
+
+// Reclaims a per-cast caster record once all of that cast's detonations have
+// fired (scheduled ~30s out, far beyond the ~1.5s max detonation window).
+function SpellCast_ClearCaster(%clientId, %castToken)
+{
+	$SpellCasterObj[%clientId, %castToken] = "";
+}
+
+function SpellCast_IsValid(%clientId, %expectedCasterName, %castToken, %context)
+{
+	// Authoritative check (token-bearing casts): OBJECT IDENTITY.
+	// At cast time we recorded, KEYED BY CAST TOKEN, the exact player object the
+	// caster controlled. A delayed detonation is only valid if that same object
+	// is STILL the one this client owns. Immune to clientId reuse (a recycled bot
+	// owns a DIFFERENT object) and to respawn (a new object). We do NOT supersede
+	// earlier casts by the same live bot: one that recasts before its prior bombs
+	// land is legitimate, and each cast validates against its OWN captured object.
+	// %expectedCasterName is now vestigial (kept only so schedule strings resolve).
+	if(%castToken != "" && %castToken != -1)
+	{
+		%origObj = $SpellCasterObj[%clientId, %castToken];
+		%curObj  = Client::getOwnedObject(%clientId);
+		if(%origObj == "" || %origObj == -1 || !isObject(%origObj) || %curObj != %origObj || getObjectType(%curObj) != "Player")
+		{
+			echo("[SPELL SAFETY] BLOCKED orphan " @ %context @ " - clientId " @ %clientId @ " token " @ %castToken @ " caster object changed (cast=" @ %origObj @ ", now=" @ %curObj @ ")");
+			return false;
+		}
+
+		// Identity confirmed; still honor the dead-caster gameplay rule.
+		if(IsInGraveyard(%clientId) || IsInGraveyard(Client::getName(%clientId)))
+		{
+			echo("[SPELL SAFETY] BLOCKED dead caster " @ %context @ " - clientId " @ %clientId);
+			return false;
+		}
+
+		return true;
+	}
+
+	// Every live caller passes a real cast token, so the block above always
+	// returns. A missing token means an unscheduled/immediate call where the
+	// caster is necessarily still valid this frame — allow it.
+	return true;
 }
 
 $Spell::keyword[1] = "firebomb";
@@ -1283,7 +1361,7 @@ function BeginCastSpell(%clientId, %keyword)
 				// For enemy bots, skip mana check. For players and town bots, check if they have enough mana.
 				if(%isEnemyBot || fetchData(%clientId, "MANA") >= %manaCost)
 					{
-					Client::sendMessage(%clientId, $MsgBeige, "Casting " @ $Spell::name[%i] @ ".");
+					Client::sendMessage(%clientId, $MsgBeige, "Casting " @ $Spell::name[%i] @ ".~spellc");
 
 					%losRange = $Spell::LOSrange[%i];
 					if(GameBase::getLOSinfo(%player, %losRange))
@@ -1311,13 +1389,26 @@ function BeginCastSpell(%clientId, %keyword)
 					%rtHalf = %rt / 2;
 					%recovTime = $Spell::delay[%i] + Cap(%rtHalf + ((1000 - %sk) / 1000 * %rtHalf), %rtHalf, %rt);
 
+					// KronosHUD cast bar: spell name, time until the spell
+					// fires, and full recovery time
+					if(!Player::isAiControlled(%clientId))
+						if(%clientId.hasKronosHUD)
+							remoteEval(%clientId, "KronosCast", $Spell::name[%i], $Spell::delay[%i], %recovTime);
+
 					// CRITICAL: Capture caster name at cast time for identity validation
 					// This prevents ghost damage if another bot takes this clientId before spell fires
 					%casterName = Client::getName(%clientId);
 					%safeCasterName = String::replace(%casterName, "\"", "");
 					%safeW2 = String::replace(%w2, "\"", "");
+					%castToken = SpellCast_NextToken(%clientId);
+					// Record the player object controlling THIS cast, KEYED BY TOKEN,
+					// so each cast validates against its own caster (a bot may recast
+					// before earlier bombs land). Reclaimed ~30s out, after all of this
+					// cast's detonations have fired.
+					$SpellCasterObj[%clientId, %castToken] = Client::getOwnedObject(%clientId);
+					schedule("SpellCast_ClearCaster(" @ %clientId @ ", " @ %castToken @ ");", 30);
 
-					schedule("%retval=DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %safeW2 @ "\", \"" @ %safeCasterName @ "\"); if(%retval){refreshMANA(" @ %clientId @ ", " @ %tempManaCost @ ");}", $Spell::delay[%i]);
+					schedule("%retval=DoCastSpell(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %safeW2 @ "\", \"" @ %safeCasterName @ "\", " @ %castToken @ "); if(%retval){refreshMANA(" @ %clientId @ ", " @ %tempManaCost @ ");}", $Spell::delay[%i]);
 					schedule("storeData(" @ %clientId @ ", \"SpellCastStep\", \"\");sendDoneRecovMsg(" @ %clientId @ ");", %recovTime);
 				
 					// ASCENSION: Spell Echo - 15% chance to cast offensive spells twice (no extra mana cost)
@@ -1327,7 +1418,7 @@ function BeginCastSpell(%clientId, %keyword)
 						{
 							// Schedule echo cast slightly after original - use SILENT version (no explosions)
 							%echoDelay = $Spell::delay[%i] + 0.5;
-							schedule("DoCastSpell_Silent(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %safeW2 @ "\", \"" @ %safeCasterName @ "\");", %echoDelay);
+							schedule("DoCastSpell_Silent(" @ %clientId @ ", " @ %i @ ", \"" @ %playerPos @ "\", \"" @ %lospos @ "\", \"" @ %losobj @ "\", \"" @ %safeW2 @ "\", \"" @ %safeCasterName @ "\", " @ %castToken @ ");", %echoDelay);
 							Client::sendMessage(%clientId, 0, "Spell Echo!");
 						}
 					}
@@ -1352,20 +1443,12 @@ function BeginCastSpell(%clientId, %keyword)
 // SILENT SPELL CAST - Used by Spell Echo to apply damage without visuals
 // This reduces visual clutter and improves performance for echoed spells
 //============================================================================
-function DoCastSpell_Silent(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expectedCasterName)
+function DoCastSpell_Silent(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expectedCasterName, %castToken)
 {
 	dbecho($dbechoMode, "DoCastSpell_Silent(" @ %clientId @ ", " @ %index @ ")");
 	
-	// Caster identity validation (same as regular DoCastSpell)
-	if(%expectedCasterName != "" && %expectedCasterName != -1)
-	{
-		%currentCasterName = Client::getName(%clientId);
-			if(%currentCasterName != %expectedCasterName)
-			{
-				echo("[SPELL ECHO SAFETY] BLOCKED orphan echo - Original: " @ %expectedCasterName @ ", Current: " @ %currentCasterName);
-				return False;
-			}
-	}
+	if(!SpellCast_IsValid(%clientId, %expectedCasterName, %castToken, "echo"))
+		return False;
 	
 	%casterObj = Client::getOwnedObject(%clientId);
 	if(%casterObj == -1 || %casterObj == "" || !isObject(%casterObj))
@@ -1430,7 +1513,9 @@ function DoCastSpell_Silent(%clientId, %index, %oldpos, %castPos, %castObj, %w2,
 		}
 
 		// Use cached damage if available (for other spells)
-		if($SpellTargetCache[%clientId, "count"] != "" && $SpellTargetCache[%clientId, "count"] > 0)
+		// count == 0 is a valid cache (all targets filtered, e.g. town bots),
+		// SpellRadiusDamage_Cached handles it without falling back.
+		if($SpellTargetCache[%clientId, "count"] != "")
 		{
 			SpellRadiusDamage_Cached(%clientId, %castPos, %index);
 		}
@@ -1455,21 +1540,14 @@ function DoCastSpell_Silent(%clientId, %index, %oldpos, %castPos, %castObj, %w2,
 	return False;
 }
 
-function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expectedCasterName)
+function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expectedCasterName, %castToken)
 {
 	dbecho($dbechoMode, "DoCastSpell(" @ %clientId @ ", " @ %index @ ", " @ %oldpos @ ", " @ %castPos @ ", " @ %castObj @ ", " @ %w2 @ ", " @ %expectedCasterName @ ")");
 
-	// CRITICAL: Caster identity validation to prevent ghost damage from clientId reuse
-	// If a bot dies after casting a spell and another bot takes its clientId, block the spell
-	if(%expectedCasterName != "" && %expectedCasterName != -1)
+	if(!SpellCast_IsValid(%clientId, %expectedCasterName, %castToken, "spell"))
 	{
-		%currentCasterName = Client::getName(%clientId);
-		if(%currentCasterName != %expectedCasterName)
-		{
-			echo("[SPELL SAFETY] BLOCKED orphan spell - Original caster: " @ %expectedCasterName @ ", Current entity at clientId " @ %clientId @ ": " @ %currentCasterName);
-			storeData(%clientId, "SpellCastStep", "");
-			return False;
-		}
+		storeData(%clientId, "SpellCastStep", "");
+		return False;
 	}
 
 	%player = Client::getOwnedObject(%clientId);
@@ -1482,6 +1560,8 @@ function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expec
 	if(Vector::getDistance(%oldpos, GameBase::getPosition(%player)) > $Spell::graceDistance[%index])
 	{
 		Client::sendMessage(%clientId, $MsgBeige, "Your casting was interrupted.");
+		if(%clientId.hasKronosHUD)
+			remoteEval(%clientId, "KronosCastStop");
 		storeData(%clientId, "SpellCastStep", 2);
 
 		return False;
@@ -1757,9 +1837,9 @@ function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expec
 
 			// Keep these on scheduler root (not object-bound) to avoid edge cases when
 			// the player object changes between cast and delayed pulses.
-			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ");", 0.0);
-			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ");", 0.5);
-			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ");", 1.0);
+			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ", " @ %castToken @ ");", 0.0);
+			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ", " @ %castToken @ ");", 0.5);
+			schedule("SpellPowerCloudPulse(" @ %clientId @ ", \"" @ %castPos @ "\", " @ %index @ ", \"" @ %safeExpectedCasterName @ "\", " @ %pcToken @ ", " @ %castToken @ ");", 1.0);
 			schedule("PowerCloud_ClearCache(" @ %clientId @ ", " @ %pcToken @ ");", 1.5);
 
 			%overrideEndSound = True;
@@ -1802,7 +1882,7 @@ function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expec
 		if(%clientId != %id)
 		{
 			%casterName = Client::getName(%clientId);
-			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 		}
 
 		refreshHP(%id, $Spell::damageValue[%index] / $TribesDamageToNumericDamage);
@@ -1820,7 +1900,7 @@ function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expec
 
 		Client::sendMessage(%clientId, $MsgBeige, "Healing " @ Client::getName(%id));
 		if(%clientId != %id)
-			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 
 		%r = round(($PlayerSkill[%clientId, $SkillDefensiveCasting] * -1)) / $TribesDamageToNumericDamage;
 
@@ -1841,7 +1921,7 @@ if(%index == 61)
 
 		Client::sendMessage(%clientId, $MsgBeige, "Healing " @ Client::getName(%id));
 		if(%clientId != %id)
-			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 
 		%r = round(($PlayerSkill[%clientId, $SkillDefensiveCasting] * -1.2)) / $TribesDamageToNumericDamage;
 
@@ -1862,7 +1942,7 @@ if(%index == 62)
 
 		Client::sendMessage(%clientId, $MsgBeige, "Healing " @ Client::getName(%id));
 		if(%clientId != %id)
-			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 
 		%r = round(($PlayerSkill[%clientId, $SkillDefensiveCasting] * -1.4)) / $TribesDamageToNumericDamage;
 
@@ -1883,7 +1963,7 @@ if(%index == 63)
 
 		Client::sendMessage(%clientId, $MsgBeige, "Healing " @ Client::getName(%id));
 		if(%clientId != %id)
-			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 
 		%r = round(($PlayerSkill[%clientId, $SkillDefensiveCasting] * -1.6)) / $TribesDamageToNumericDamage;
 
@@ -1904,7 +1984,7 @@ if(%index == 64)
 
 		Client::sendMessage(%clientId, $MsgBeige, "Healing " @ Client::getName(%id));
 		if(%clientId != %id)
-			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 
 		%r = round(($PlayerSkill[%clientId, $SkillDefensiveCasting] * -1.8)) / $TribesDamageToNumericDamage; //$Spell::damageValue[%index] + 
 
@@ -1925,7 +2005,7 @@ if(%index == 65)
 
 		Client::sendMessage(%clientId, $MsgBeige, "Healing " @ Client::getName(%id));
 		if(%clientId != %id)
-			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 
 		%r = $Spell::damageValue[%index] + round(($PlayerSkill[%clientId, $SkillDefensiveCasting] * -1.9)) / $TribesDamageToNumericDamage;
 
@@ -2007,7 +2087,7 @@ if(%index == 65)
 		if(%clientId != %id)
 		{
 			%casterName = Client::getName(%clientId);
-			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 		}
 
 		UpdateBonusState(%id, $Spell::damageValue[%index], $Spell::ticks[%index]);
@@ -2077,7 +2157,7 @@ if(%index == 65)
 			{
 				%tempPos = RandomPositionXY(%minrad, %maxrad);
 				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ %castZ;
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb10\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 7, %player);
+				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb10\", \"" @ %newPos @ "\", False, " @ %index @ ", " @ %castToken @ ");", %i / 7, %player);
 			}
 			CreateAndDetBomb(%clientId, "Bomb10", %castPos, True, %index);
 
@@ -2106,7 +2186,7 @@ if(%index == 65)
 			{
 				%tempPos = RandomPositionXY(%minrad, %maxrad);
 				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + (%i / 3));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb12\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 24, %player);
+				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb12\", \"" @ %newPos @ "\", False, " @ %index @ ", " @ %castToken @ ");", %i / 24, %player);
 			}
 			CreateAndDetBomb(%clientId, "Bomb12", %castPos, True, %index);
 
@@ -2135,9 +2215,9 @@ if(%index == 65)
 			{
 				%tempPos = RandomPositionXY(%minrad, %maxrad);
 				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ (%castZ + 72 - (%i * 3));
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb9\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 16, %player);
+				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb9\", \"" @ %newPos @ "\", False, " @ %index @ ", " @ %castToken @ ");", %i / 16, %player);
 			}
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb1\", \"" @ %castPos @ "\", True, " @ %index @ ");", 1.5, %player);
+			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb1\", \"" @ %castPos @ "\", True, " @ %index @ ", " @ %castToken @ ");", 1.5, %player);
 
 			%overrideEndSound = True;
 			%returnFlag = True;
@@ -2165,19 +2245,19 @@ if(%index == 65)
 				%tempPos = RandomPositionXY(%minrad, %maxrad);
 				%zOffset = %castZ + (%i / 4);
 				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ %zOffset;
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb7\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 20, %player);
+				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb7\", \"" @ %newPos @ "\", False, " @ %index @ ", " @ %castToken @ ");", %i / 20, %player);
 			}
 			for(%i = 0; %i <= 10; %i++)
 			{
 				%tempPos = RandomPositionXY(%minrad, %maxrad);
 				%zOffset = %castZ + (%i / 4);
 				%newPos = (GetWord(%tempPos, 0) + %castX) @ " " @ (GetWord(%tempPos, 1) + %castY) @ " " @ %zOffset;
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb8\", \"" @ %newPos @ "\", False, " @ %index @ ");", %i / 20, %player);
+				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb8\", \"" @ %newPos @ "\", False, " @ %index @ ", " @ %castToken @ ");", %i / 20, %player);
 			}
 
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb5\", \"" @ %castPos @ "\", False, " @ %index @ ");", 1.0, %player);
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb6\", \"" @ %castPos @ "\", False, " @ %index @ ");", 1.05, %player);
-			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb14\", \"" @ %castPos @ "\", True, " @ %index @ ");", 1.1, %player);
+			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb5\", \"" @ %castPos @ "\", False, " @ %index @ ", " @ %castToken @ ");", 1.0, %player);
+			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb6\", \"" @ %castPos @ "\", False, " @ %index @ ", " @ %castToken @ ");", 1.05, %player);
+			schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb14\", \"" @ %castPos @ "\", True, " @ %index @ ", " @ %castToken @ ");", 1.1, %player);
 
 			%overrideEndSound = True;
 			%returnFlag = True;
@@ -2311,7 +2391,7 @@ if (%index == 21)
 		if(%clientId != %id)
 		{
 			%casterName = Client::getName(%clientId);
-			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 		}
 
 		UpdateBonusState(%id, $Spell::damageValue[%index], $Spell::ticks[%index]);
@@ -2476,6 +2556,8 @@ if (%index == 21)
 					storeData(%id, "SpellCastStep", "");
 					ClearEvents(%id);
 					Client::sendMessage(%id, $MsgRed, "Your spell casting was interrupted!");
+					if(%id.hasKronosHUD)
+						remoteEval(%id, "KronosCastStop");
 				}
 				
 				//IHitHim(%clientid,%id,%c1 / 10);
@@ -2503,7 +2585,7 @@ if (%index == 21)
 		if(%clientId != %id)
 		{
 			%casterName = Client::getName(%clientId);
-			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 		}
 
 		UpdateBonusState(%id, %amount, $Spell::ticks[%index]);
@@ -2570,6 +2652,8 @@ if (%index == 21)
 					storeData(%id, "SpellCastStep", "");
 					ClearEvents(%id);
 					Client::sendMessage(%id, $MsgRed, "Your spell casting was interrupted!");
+					if(%id.hasKronosHUD)
+						remoteEval(%id, "KronosCastStop");
 				}
 				
 				//IHitHim(%clientid,%id,%c1 / 10);
@@ -2718,9 +2802,11 @@ if (%index == 21)
 				// Add Damage Bomb every 2nd tick (Total 21 damage bombs)
 				if(%t % 2 == 0)
 				{
-					%dType = "Bomb22";
-					if(%t % 4 == 0) %dType = "Bomb23";
-					
+					// Bomb23 only (IonShockwave2, faceCamera=true): keeps Ion Blast pure
+					// rocketdata. Bomb22 (IonShockwave) is a $SpellRingBomb and would
+					// spawn Mines, which lag when many damage hits land at once.
+					%dType = "Bomb23";
+
 					%tempPos = RandomPositionXY(%minrad, %maxrad);
 					%xOff = GetWord(%tempPos, 0);
 					%yOff = GetWord(%tempPos, 1);
@@ -2731,8 +2817,8 @@ if (%index == 21)
 				}
 			}
 			
-			// Final center blasts at end (T=4.1s)
-			$ApocalypseData[%clientId, %count] = "Bomb22 0 0 0 True 4.1";
+			// Final center blasts at end (T=4.1s) - Bomb23 only (pure rocketdata, see above)
+			$ApocalypseData[%clientId, %count] = "Bomb23 0 0 0 True 4.1";
 			%count++;
 			$ApocalypseData[%clientId, %count] = "Bomb23 0 0 0 True 4.1";
 			%count++;
@@ -2773,7 +2859,7 @@ if (%index == 21)
 			}
 			%newPos = %castX @ " " @ %castY @ " " @ (%castZ + 1.4);
 			for(%i = 0; %i < 4; %i++)
-				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb23\", \"" @ %newPos @ "\", true, " @ %index @ ");", %i / 5);
+				schedule("CreateAndDetBomb(" @ %clientId @ ", \"Bomb23\", \"" @ %newPos @ "\", true, " @ %index @ ", " @ %castToken @ ");", %i / 5);
 			%overrideEndSound = True;
 			%returnFlag = True;
 		}
@@ -2846,7 +2932,7 @@ function Turret::objectiveDestroyed() {}
 		if(%clientId != %id)
 		{
 			%casterName = Client::getName(%clientId);
-			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.");
+			Client::sendMessage(%id, $MsgBeige, %casterName @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 		}
 
 		UpdateBonusState(%id, %amount, $Spell::ticks[%index]);
@@ -3021,7 +3107,7 @@ function Turret::objectiveDestroyed() {}
 	}
 }
 
-function SpellPowerCloudPulse(%clientId, %castPos, %index, %expectedCasterName, %token)
+function SpellPowerCloudPulse(%clientId, %castPos, %index, %expectedCasterName, %token, %castToken)
 {
 	if($PowerCloudCacheToken[%clientId] != %token)
 	{
@@ -3030,17 +3116,8 @@ function SpellPowerCloudPulse(%clientId, %castPos, %index, %expectedCasterName, 
 		return;
 	}
 	
-	// Guard against clientId reuse before delayed pulse fires.
-	if(%expectedCasterName != "" && %expectedCasterName != -1)
-	{
-		%currentCasterName = Client::getName(%clientId);
-		if(%currentCasterName != %expectedCasterName)
-		{
-			if($SPELL_DEBUG)
-				echo("[SPELL DEBUG] PowerCloud pulse blocked (caster mismatch). clientId=" @ %clientId @ " expected=" @ %expectedCasterName @ " current=" @ %currentCasterName);
-			return;
-		}
-	}
+	if(!SpellCast_IsValid(%clientId, %expectedCasterName, %castToken, "PowerCloud pulse"))
+		return;
 	
 	if(%castPos == "" || %castPos == -1)
 		return;
@@ -3053,20 +3130,25 @@ function SpellPowerCloudPulse(%clientId, %castPos, %index, %expectedCasterName, 
 		return;
 	}
 	
-	if($SpellTargetCache[%clientId, "count"] != "" && $SpellTargetCache[%clientId, "count"] > 0)
+	// count == 0 is a valid cache (all targets filtered, e.g. town bots) -
+	// keep the visual pulse but let SpellRadiusDamage_Cached no-op the damage.
+	if($SpellTargetCache[%clientId, "count"] != "")
 	{
 		CreateAndDetBomb_VisualOnly(%clientId, "Bomb2", %castPos, %index);
 		SpellRadiusDamage_Cached(%clientId, %castPos, %index);
 	}
 	else
 	{
-		CreateAndDetBomb(%clientId, "Bomb2", %castPos, 1, %index);
+		CreateAndDetBomb(%clientId, "Bomb2", %castPos, 1, %index, %castToken);
 	}
 }
 
-function CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index)
+function CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index, %castToken)
 {
 	dbecho($dbechoMode, "CreateAndDetBomb(" @ %clientId @ ", " @ %b @ ", " @ %castPos @ ", " @ %index @ ")");
+
+	if(%castToken != "" && %castToken != -1 && !SpellCast_IsValid(%clientId, "", %castToken, "spell bomb"))
+		return;
 
 	// Convert bomb type (e.g., "Bomb1") to projectile name (e.g., "SpellBomb1")
 	%projName = "Spell" @ %b;
@@ -3076,7 +3158,9 @@ function CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index)
 	
 	if(%sourceObj != -1)
 	{
-		if(SpellExplosion_UseHybrid())
+		// Ring bombs always take the Mine path: Mine::Detonate explodes with the
+		// mine's upright axis, while rocket timeout explosions are rotated 90 degrees.
+		if(SpellExplosion_UseHybrid() || $SpellRingBomb[%b])
 		{
 			%bomb = newObject("", "Mine", %b);
 			if(%bomb != -1)
@@ -3086,19 +3170,24 @@ function CreateAndDetBomb(%clientId, %b, %castPos, %doDamage, %index)
 				schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.4);
 			}
 		}
-		
-		if(%index == 46)
-			%trans = BuildTornadoBombTransform(%castPos);
-		else
-			%trans = BuildSpellBombTransform(%sourceObj, %castPos);
-		if(%trans != "")
-			Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0");
+
+		// Skip the projectile for ring bombs so the Mine's flat ring isn't
+		// doubled with a rotated copy.
+		if(!$SpellRingBomb[%b])
+		{
+			if(%index == 46)
+				%trans = BuildTornadoBombTransform(%castPos);
+			else
+				%trans = BuildSpellBombTransform(%sourceObj, %castPos);
+			if(%trans != "")
+				Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0");
+		}
 	}
 	else if($SPELL_DEBUG)
 	{
 		echo("[SPELL DEBUG] CreateAndDetBomb: No valid source object for clientId " @ %clientId @ ", bomb=" @ %b);
 	}
-	
+
 	if(%doDamage && %clientId != 0 && %clientId != -1)
 		SpellRadiusDamage(%clientId, %castPos, %index);
 	
@@ -3123,7 +3212,9 @@ function CreateAndDetBomb_VisualOnly(%clientId, %b, %castPos, %index)
 	
 	if(%sourceObj != -1)
 	{
-		if(SpellExplosion_UseHybrid())
+		// Ring bombs always take the Mine path: Mine::Detonate explodes with the
+		// mine's upright axis, while rocket timeout explosions are rotated 90 degrees.
+		if(SpellExplosion_UseHybrid() || $SpellRingBomb[%b])
 		{
 			%bomb = newObject("", "Mine", %b);
 			if(%bomb != -1)
@@ -3133,13 +3224,18 @@ function CreateAndDetBomb_VisualOnly(%clientId, %b, %castPos, %index)
 				schedule("if(isObject(" @ %bomb @ ")) deleteObject(" @ %bomb @ ");", 0.4);
 			}
 		}
-		
-		if(%index == 46)
-			%trans = BuildTornadoBombTransform(%castPos);
-		else
-			%trans = BuildSpellBombTransform(%sourceObj, %castPos);
-		if(%trans != "")
-			Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0");
+
+		// Skip the projectile for ring bombs so the Mine's flat ring isn't
+		// doubled with a rotated copy.
+		if(!$SpellRingBomb[%b])
+		{
+			if(%index == 46)
+				%trans = BuildTornadoBombTransform(%castPos);
+			else
+				%trans = BuildSpellBombTransform(%sourceObj, %castPos);
+			if(%trans != "")
+				Projectile::spawnProjectile(%projName, %trans, %sourceObj, "0 0 0");
+		}
 	}
 	else if($SPELL_DEBUG)
 	{
@@ -3369,31 +3465,44 @@ function SpellTargetCache_Build(%clientId, %centerPos, %maxRadius)
 	%set = newObject("set", SimSet);
 	%n = containerBoxFillSet(%set, $SimPlayerObjectType, %centerPos, %boxSize, %boxSize, %boxSize, 0);
 	
-	// Store cached entities in global arrays
-	$SpellTargetCache[%clientId, "count"] = %n;
+	// Store cached entities in global arrays ("count" is set after the loop,
+	// since town bots are filtered out below)
 	$SpellTargetCache[%clientId, "centerPos"] = %centerPos;
 	$SpellTargetCache[%clientId, "maxRadius"] = %maxRadius;
 	
 	// Store each entity's object ID and position (position cached for distance calculations)
+	%stored = 0;
 	for(%i = 0; %i < %n; %i++)
 	{
 		%obj = Group::getObject(%set, %i);
-		$SpellTargetCache[%clientId, "obj", %i] = %obj;
-		$SpellTargetCache[%clientId, "pos", %i] = GameBase::getPosition(%obj);
+
+		// Town bots can never take spell damage (always nulled in Player::onDamage),
+		// so exclude them here. Checking once at cache build avoids running the full
+		// damage pipeline for every explosion against every town bot in a populated town.
+		%targetClientId = Player::getClient(%obj);
+		if(%targetClientId == -1)
+			%targetClientId = GetClientIdFromPlayerObject(%obj);
+		if(%targetClientId != -1 && isTownBot(%targetClientId))
+			continue;
+
+		$SpellTargetCache[%clientId, "obj", %stored] = %obj;
+		$SpellTargetCache[%clientId, "pos", %stored] = GameBase::getPosition(%obj);
+		%stored++;
 	}
-	
+	$SpellTargetCache[%clientId, "count"] = %stored;
+
 	deleteObject(%set);
-	
-	return %n;
+
+	return %stored;
 }
 
 // Clear the cached entities for a client
 function SpellTargetCache_Clear(%clientId)
 {
 	%count = $SpellTargetCache[%clientId, "count"];
-	if(%count == "" || %count == 0)
+	if(%count == "")
 		return;
-	
+
 	for(%i = 0; %i < %count; %i++)
 	{
 		$SpellTargetCache[%clientId, "obj", %i] = "";
@@ -3411,12 +3520,17 @@ function SpellRadiusDamage_Cached(%clientId, %explosionPos, %index)
 	dbecho($dbechoMode, "SpellRadiusDamage_Cached(" @ %clientId @ ", " @ %explosionPos @ ", " @ %index @ ")");
 	
 	%count = $SpellTargetCache[%clientId, "count"];
-	if(%count == "" || %count == 0)
+	if(%count == "")
 	{
 		// No cache - fall back to standard method (shouldn't happen but handle gracefully)
 		SpellRadiusDamage(%clientId, %explosionPos, %index);
 		return;
 	}
+	// count == 0 means a cache WAS built but every entity in range was filtered out
+	// (e.g. all town bots) - nothing to damage, and we must NOT fall back to the
+	// uncached path or every explosion would re-query and re-filter the same targets.
+	if(%count == 0)
+		return;
 	
 	%spellRadius = $Spell::radius[%index];
 	
@@ -3460,13 +3574,16 @@ function SpellDamage_Buffered(%clientId, %targetId, %damageValue, %index)
 	// If buffer is empty for this target/caster, schedule a flush
 	if($SpellDamageBuffer[%targetId, %clientId] == "" || $SpellDamageBuffer[%targetId, %clientId] == 0)
 	{
-		// 0.2s flush interval balances performance and responsiveness:
-		// - Groups 2-3 explosions per flush for Ion Blast (fires every ~0.1s)
-		// - Reduces onDamage calls by ~50% for echoed spells
-		// - Still fast enough to feel responsive in combat
-		schedule("SpellDamageBuffer_Flush(" @ %clientId @ ", " @ (%targetId+0) @ ", " @ %index @ ");", 0.2);
+		// Flush window coalesces multiple explosion hits into one Player::onDamage
+		// call. Per-spell override ($Spell::damageBufferWindow) lets high-density AOE
+		// spells use a wider window (see definitions near top of file); everything
+		// else defaults to 0.2s, fast enough to feel responsive in combat.
+		%window = $Spell::damageBufferWindow[%index];
+		if(%window == "" || %window == -1)
+			%window = 0.2;
+		schedule("SpellDamageBuffer_Flush(" @ %clientId @ ", " @ (%targetId+0) @ ", " @ %index @ ");", %window);
 	}
-	
+
 	$SpellDamageBuffer[%targetId, %clientId] += %damageValue;
 }
 
@@ -3683,8 +3800,16 @@ function DoSpellDamage(%object, %clientId, %pos, %index)
 
 	if(%dist <= $Spell::radius[%index])
 	{
+		// Town bots can never take spell damage (always nulled in Player::onDamage),
+		// so skip them before entering the damage pipeline.
+		%targetClientId = Player::getClient(%object);
+		if(%targetClientId == -1)
+			%targetClientId = GetClientIdFromPlayerObject(%object);
+		if(%targetClientId != -1 && isTownBot(%targetClientId))
+			return;
+
 		%newDamage = SpellCalcRadiusDamage(%dist, $Spell::radius[%index], $Spell::damageValue[%index], %percMin, %percMax);
-		// SpellDamage_Buffered() accumulates damage for targets within short windows 
+		// SpellDamage_Buffered() accumulates damage for targets within short windows
 		// to reduce the frequency of expensive onDamage calls.
 		SpellDamage_Buffered(%clientId, %object, %newDamage, %index);
 	}
@@ -3792,7 +3917,7 @@ function CalcSpellMiss(%clientId, %targetId, %index)
 function sendDoneRecovMsg(%clientId)
 {
 	//this function is here just to make the schedule command where this is called easier to read
-	Client::sendMessage(%clientId, $MsgBeige, "You are ready to cast.");
+	Client::sendMessage(%clientId, $MsgBeige, "You are ready to cast.~spellc");
 }
 
 function DoBoxFunction(%object, %clientId, %index, %extra)
@@ -3879,6 +4004,8 @@ if(%id != -1 && %id != %clientId)
 					storeData(%id, "SpellCastStep", "");
 					ClearEvents(%id);
 					Client::sendMessage(%id, $MsgRed, "Your spell casting was interrupted!");
+					if(%id.hasKronosHUD)
+						remoteEval(%id, "KronosCastStop");
 				}
 				
 				%castPos = GameBase::getPosition(%id);
@@ -3908,7 +4035,7 @@ if(%id != -1 && %id != %clientId)
 		{
 			Client::sendMessage(%clientId, $MsgBeige, "Shielding " @ Client::getName(%id));
 			if(%clientId != %id)
-				Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.");
+				Client::sendMessage(%id, $MsgBeige, Client::getName(%clientId) @ " is casting " @ $Spell::name[%index] @ " on you.~spellc");
 
 			UpdateBonusState(%id, $Spell::damageValue[%index], $Spell::ticks[%index]);
 
@@ -3994,9 +4121,9 @@ function SpellCanCastNow(%clientId, %keyword)
 function Client::setCommandStatus(%this, %status)
 {
 	// All players should use RPG menu, not base Tribes command menu
-	// Always keep command menu disabled
-	if(Client::getName(%this) != "")
-		remoteEval(%this, "setCommandStatus", 0);
+	// REMOVED: remoteEval(%this, "setCommandStatus", 0) - no client has
+	// remoteSetCommandStatus, it only printed "Unknown command" errors
+	// in the client console
 	// Open RPG options menu instead
 	Game::menuRequest(%this);
 }

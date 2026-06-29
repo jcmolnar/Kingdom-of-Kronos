@@ -120,7 +120,13 @@ function Player::onCollision(%this,%object)
 					// Specific Interaction Menus
 					if(String::findSubStr(%botType, "Banker") != -1 || String::findSubStr(%botType, "banker") != -1)
 					{
-						SetupBankDefault(%playerClientId, %botClientId);
+						// HUD clients get the modern bank storage UI (player
+						// equipment <-> bank storage + coin all-in/out); vanilla
+						// clients keep the stock banker menu.
+						if(%playerClientId.hasKronosHUD)
+							KronosBank_Open(%playerClientId, %botClientId);
+						else
+							SetupBankDefault(%playerClientId, %botClientId);
 					}
 					else if(String::findSubStr(%botType, "Merchant") != -1 || String::findSubStr(%botType, "merchant") != -1)
 					{
@@ -136,6 +142,13 @@ function Player::onCollision(%this,%object)
 					else if(String::findSubStr(%botType, "Ascension") != -1 || String::findSubStr(%botType, "ascension") != -1)
 					{
 						SetupAscensionShop(%playerClientId, %botClientId, 0);
+					}
+					// Generic NPC (not banker/merchant/ascension): HUD clients
+					// get the modern dialogue window; vanilla clients keep the
+					// stock behavior (just the greeting sound above).
+					else if(%playerClientId.hasKronosHUD)
+					{
+						KronosNPC_Open(%playerClientId, %botClientId);
 					}
 				}
 			}

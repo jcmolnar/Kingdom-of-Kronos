@@ -408,6 +408,53 @@ function GetClientOrBotName(%clientId)
 	return "";
 }
 
+// Compact verbose damage sentences into short floating text for the "pop" style
+// "You hit X for 16364!" -> "16364"   "X's attack hit you for 16364!" -> "-16364"
+// Critical hits -> "Crit! 16364"   Misses -> "Miss!" / "Dodged!"
+// Unknown formats are returned unchanged.
+function PopCompactDamageText(%msg, %viewType)
+{
+	// Strip font tags so parsing sees plain text
+	%plain = %msg;
+	%plain = String::replace(%plain, "<f0>", "");
+	%plain = String::replace(%plain, "<f1>", "");
+	%plain = String::replace(%plain, "<f2>", "");
+
+	// Miss messages have no damage number
+	if(String::findSubStr(%plain, ", but miss") != -1 || String::findSubStr(%plain, " missed ") != -1)
+	{
+		if(%viewType == "attacker")
+			return "Miss!";
+		return "Dodged!";
+	}
+
+	// Pull the amount after " for " (e.g. "16364!", "LCK!", "120 points of damage!")
+	%pos = String::findSubStr(%plain, " for ");
+	if(%pos == -1)
+		return %msg; // Unknown format - leave unchanged
+	%amount = String::getSubStr(%plain, %pos + 5, 99999);
+	%amount = String::replace(%amount, " points of damage", "");
+	%amount = String::replace(%amount, "!", "");
+	if(%amount == "")
+		return %msg;
+
+	%prefix = "";
+	if(String::findSubStr(%plain, "Bashed!") != -1 || String::findSubStr(%plain, "bashed") != -1)
+		%prefix = "Bash! ";
+	else if(String::findSubStr(%plain, "Pierced!") != -1 || String::findSubStr(%plain, "pierced") != -1)
+		%prefix = "Pierce! ";
+	else if(String::findSubStr(%plain, "Cleaved!") != -1 || String::findSubStr(%plain, "cleaved") != -1)
+		%prefix = "Cleave! ";
+
+	// Defender sees damage as negative (LCK has no number, so no minus sign)
+	if(%viewType == "defender" && %amount != "LCK")
+		%amount = "-" @ %amount;
+
+	if(String::findSubStr(%plain, "Critical") != -1 || String::findSubStr(%plain, "critically") != -1)
+		return "<f2>Crit! " @ %prefix @ %amount;
+	return %prefix @ %amount;
+}
+
 // Helper function to display damage messages based on player preference
 // %clientId: The client to send the message to
 // %message: The message text (may contain alignment tags like <jl> or <jr>)
@@ -441,7 +488,24 @@ function DisplayDamageMessage(%clientId, %message, %msgColor, %viewType)
 		// Default view type to "defender" if not specified
 		if(%viewType == "" || %viewType == -1)
 			%viewType = "defender";
-		
+
+		// Nameplate style: damage you deal shows on the KronosHUD target
+		// frame instead of floating text, so attacker messages are
+		// suppressed - except misses, which the target frame can't show.
+		// Incoming damage still floats (pop animation, falls downward).
+		if(%animationStyle == "nameplate")
+		{
+			%cleanMsg = PopCompactDamageText(%cleanMsg, %viewType);
+			if(%viewType == "attacker" && %cleanMsg != "Miss!")
+				return;
+			remoteEval(%clientId, "ATKText", %cleanMsg, "pop", %viewType);
+			return;
+		}
+
+		// The pop style shows short numbers instead of full sentences
+		if(%animationStyle == "pop")
+			%cleanMsg = PopCompactDamageText(%cleanMsg, %viewType);
+
 		// Send to floating damage display with appropriate view type
 		remoteEval(%clientId, "ATKText", %cleanMsg, %animationStyle, %viewType);
 		return;
@@ -771,7 +835,7 @@ function Player::onKilled(%this)
 						%botName = fetchData(%clientId, "BotInfoAiName");
 						if(%botName == "")
 							%botName = fetchData(%clientId, "SpawnBotInfo");
-						echo("[DEBUG getItemCount] Player::onKilled - Player object deleted before weapon count check, clientId: " @ %clientId @ ", bot: " @ %botName @ ", weapon: " @ %eitem);
+						if($ONKILLED_DEBUG) echo("[DEBUG getItemCount] Player::onKilled - Player object deleted before weapon count check, clientId: " @ %clientId @ ", bot: " @ %botName @ ", weapon: " @ %eitem);
 						// Skip weapon handling if player object is gone
 						%eamnt = 0;
 					}
@@ -810,8 +874,8 @@ function Player::onKilled(%this)
 								   %origItem == "LVLG" || %origItem == "LVLS" || %origItem == "LVLE")
 									continue; // Loop already increments by 2, so this correctly skips both keyword and its value
 								
-								// Case-insensitive comparison to handle weapon name inconsistencies
-								if(String::ICompare(%origItem, %eitem) == 0)
+								// Case-insensitive comparison to handle weapon name inconsistencies (handles both string names and datablock IDs)
+								if(String::ICompare(%origItem, %eitem) == 0 || (%eitem != "" && %eitem != -1 && String::ICompare(%origItem, Object::getName(%eitem)) == 0))
 								{
 									%originalCountStr = GetWord(%originalLootString, %k + 1);
 									%isWeaponInOriginalLootString = true;
@@ -1064,7 +1128,40 @@ function Player::onKilled(%this)
 			%botName = fetchData(%clientId, "BotInfoAiName");
 			if(%botName == "")
 				%botName = fetchData(%clientId, "SpawnBotInfo");
-			echo("[DEBUG getItemCount] Player::onKilled - Player object doesn't exist before item loop, clientId: " @ %clientId @ ", bot: " @ %botName);
+			if($ONKILLED_DEBUG) echo("[DEBUG getItemCount] Player::onKilled - Player object doesn't exist before item loop, clientId: " @ %clientId @ ", bot: " @ %botName);
+
+			// Emergency bot cleanup path:
+			// If a bot reaches this return, we would otherwise skip the later
+			// DecrementSpawnCounter/UnregisterBot path and leak spawn state.
+			%emergencySpawnInfo = fetchData(%clientId, "SpawnBotInfo");
+			%emergencyIsEnemyBot = (%emergencySpawnInfo != "" && %emergencySpawnInfo != "0" && %emergencySpawnInfo != -1);
+			%emergencyIsBot = %wasBotAtDeath || %isBot || Player::isAiControlled(%clientId) || isRPGAI(%clientId) || %emergencyIsEnemyBot;
+			if(%emergencyIsBot)
+			{
+				echo("WARNING: Player::onKilled - Missing player object before item loop for bot clientId " @ %clientId @ ". Running emergency DecrementSpawnCounter cleanup.");
+				DecrementSpawnCounter(%clientId, %this);
+
+				// Keep enemy-bot counters consistent with normal death path.
+				if(%emergencyIsEnemyBot)
+				{
+					$ActiveEnemyBots--;
+					$TotalActiveBots--;
+					if($ActiveEnemyBots < 0)
+						$ActiveEnemyBots = 0;
+					if($TotalActiveBots < 0)
+						$TotalActiveBots = 0;
+
+					if($numAI > 0)
+					{
+						$numAI--;
+						$Telemetry_NumAI_Dec++;
+					}
+					if($numAI < 0)
+						$numAI = 0;
+
+					Telemetry_RecordDeath();
+				}
+			}
 			Watchdog_Exit();
 			return; // Player object doesn't exist
 		}
@@ -1079,7 +1176,7 @@ function Player::onKilled(%this)
 				%botName = fetchData(%clientId, "BotInfoAiName");
 				if(%botName == "")
 					%botName = fetchData(%clientId, "SpawnBotInfo");
-				echo("[DEBUG getItemCount] Player::onKilled - Player object deleted during item loop (first check), clientId: " @ %clientId @ ", bot: " @ %botName);
+				if($ONKILLED_DEBUG) echo("[DEBUG getItemCount] Player::onKilled - Player object deleted during item loop (first check), clientId: " @ %clientId @ ", bot: " @ %botName);
 				break; // Exit loop if player object no longer exists
 			}
 			
@@ -1092,7 +1189,7 @@ function Player::onKilled(%this)
 				%botName = fetchData(%clientId, "BotInfoAiName");
 				if(%botName == "")
 					%botName = fetchData(%clientId, "SpawnBotInfo");
-				echo("[DEBUG getItemCount] Player::onKilled - Player object deleted during item loop, clientId: " @ %clientId @ ", bot: " @ %botName @ ", item: " @ %a);
+				if($ONKILLED_DEBUG) echo("[DEBUG getItemCount] Player::onKilled - Player object deleted during item loop, clientId: " @ %clientId @ ", bot: " @ %botName @ ", item: " @ %a);
 				break; // Exit loop if player object was deleted between checks
 			}
 			
@@ -1172,7 +1269,8 @@ function Player::onKilled(%this)
 							   %origItem == "LVLG" || %origItem == "LVLS" || %origItem == "LVLE")
 								continue; // Loop already increments by 2, so this correctly skips both keyword and its value
 							
-							if(%origItem == %itemName)
+							// Compare both direct names and resolved datablock IDs to name strings
+							if(%origItem == %itemName || (%itemName != "" && %itemName != -1 && %origItem == Object::getName(%itemName)))
 							{
 								%originalCountStr = GetWord(%originalLootString, %k + 1);
 								%spos = String::findSubStr(%originalCountStr, "/");
@@ -2061,6 +2159,10 @@ function Player::onKilled(%this)
 			// Get BotInfoAiName BEFORE clearing it (needed for AI::delete)
 			%botInfoAiName = fetchData(%clientId, "BotInfoAiName");
 			
+			// Performance: this block performs heavy storeData churn for enemy bots.
+			// Lock routing to enemybot for the duration to avoid repeated type resolution.
+			BeginStoreDataClientTypeOverride(%clientId, "enemybot");
+
 			// CRITICAL: Use centralized DecrementSpawnCounter() for reliable counter management
 			// This function uses the bot registry and multiple fallbacks to find the spawn point
 			// Pass %this as excludeObject to prevent UnregisterBot from deleting the dying player object
@@ -2307,14 +2409,13 @@ function Player::onKilled(%this)
 			storeData(%clientId, "ShovedByPlayer", ""); // Clear shove flag
 			storeData(%clientId, "botAttackMode", ""); // Clear bot attack mode
 			storeData(%clientId, "tmpbotdata", ""); // Clear bot targeting data
-			storeData(%clientId, "noBotSniff", ""); // Clear bot sniffing flag
 			
 			// Clear Seal Battle bot flags if this was a Seal Battle bot
 			%isSealBattleBot = fetchData(%clientId, "SealBattleBot");
-			if(%isSealBattleBot == "true" || %isSealBattleBot == "True" || %isSealBattleBot == "1")
+			%hadSealBattleBotFlag = (%isSealBattleBot == "true" || %isSealBattleBot == "True" || %isSealBattleBot == "1");
+			if(%hadSealBattleBotFlag)
 			{
 				storeData(%clientId, "SealBattleBot", "");
-				storeData(%clientId, "AImoveChance", ""); // Clear per-bot AImoveChance
 				storeData(%clientId, "AImaxRangeOverride", ""); // Clear detection range override
 			}
 			
@@ -2323,7 +2424,6 @@ function Player::onKilled(%this)
 			if(%isColloseumBot == "true")
 			{
 				storeData(%clientId, "ColloseumBot", "");
-				storeData(%clientId, "AImoveChance", ""); // Clear per-bot AImoveChance
 				storeData(%clientId, "AImaxRangeOverride", ""); // Clear detection range override
 			}
 			// CRITICAL: Clear all seal battle specific data to prevent transfer to new bots/players
@@ -2414,13 +2514,6 @@ function Player::onKilled(%this)
 			{
 				$aidirectiveTable[%clientId, %d] = "";
 			}
-			
-				// CRITICAL: Clear all directive table entries for this bot (by client ID)
-				// Clear common directives (0-99) to prevent stale directive data
-				for(%d = 0; %d <= 99; %d++)
-				{
-					$aidirectiveTable[%clientId, %d] = "";
-				}
 				
 				// CRITICAL: Clear belt cached lists to prevent memory leaks and graphical glitches
 				$Belt::CachedList[%clientId, "QuestItems"] = "";
@@ -2437,20 +2530,6 @@ function Player::onKilled(%this)
 			storeData(%clientId, "AIMovementLoopRunning", "");
 			storeData(%clientId, "BotAttackLoopActive", ""); // Clear attack loop flag (set for seal battle bots)
 			storeData(%clientId, "botTeam", "");
-			
-			// CRITICAL: Clear name-based spawn invulnerability flags for seal battle bots
-			// These are set using display names like "SealFighter1", "SealMage2", etc.
-			%displayName = Client::getName(%clientId);
-			if(%displayName != "" && %displayName != -1)
-			{
-				// Check if this is a seal battle bot name pattern
-				if(String::findSubStr(%displayName, "SealFighter") == 0 || 
-				   String::findSubStr(%displayName, "SealMage") == 0 || 
-				   String::findSubStr(%displayName, "SealGuardian") == 0)
-				{
-					$SpawnInvulnByName[%displayName] = "";
-				}
-			}
 			
 			// CRITICAL: Clear additional flags from arrays to prevent stale data
 			$EnemyBotData[%clientId, "ShovedByPlayer"] = "";
@@ -2500,24 +2579,24 @@ function Player::onKilled(%this)
 					$ClientData[%clientId, "BotInfoAiName"] = "";
 					if($BOT_SHELL_DEBUG) echo("[BOT SHELL DEBUG] Player::onKilled(): Cleared BotInfoAiName for non-spawn-point bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ")");
 				}
-				
-				// CRITICAL: Clean up scaled weapon damage arrays for seal battle bots
-				%isSealBattleBot = fetchData(%clientId, "SealBattleBot");
-				if(%isSealBattleBot == "true" || %isSealBattleBot == "True" || %isSealBattleBot == "1")
+			}
+
+			// Seal battle bots are TempSpawn enemy bots, so they usually still have SpawnBotInfo here.
+			// Use the pre-clear cached flag instead of refetching a value we already wiped above.
+			if(%hadSealBattleBotFlag)
+			{
+				%weapon = Player::getMountedItem(%clientId, $WeaponSlot);
+				if(%weapon != -1 && %weapon != "")
 				{
-					%weapon = Player::getMountedItem(%clientId, $WeaponSlot);
-					if(%weapon != -1 && %weapon != "")
-					{
-						%weaponName = getCroppedItem(%weapon);
-						// Clear the scaled damage for this bot's weapon
-						$SealBattleWeaponDamage[%clientId, %weaponName] = "";
-						// Clear the reverse lookup if this bot was the owner
-						if($SealBattleWeaponOwner[%weaponName] == %clientId)
-							$SealBattleWeaponOwner[%weaponName] = "";
-						echo("[SEAL BATTLE] Player::onKilled(): Cleared scaled weapon damage for Seal Battle Bot " @ %botInfoAiName @ " (weapon: " @ %weaponName @ ")");
-					}
+					%weaponName = getCroppedItem(%weapon);
+					$SealBattleWeaponDamage[%clientId, %weaponName] = "";
+					if($SealBattleWeaponOwner[%weaponName] == %clientId)
+						$SealBattleWeaponOwner[%weaponName] = "";
+					echo("[SEAL BATTLE] Player::onKilled(): Cleared scaled weapon damage for Seal Battle Bot " @ %botInfoAiName @ " (weapon: " @ %weaponName @ ")");
 				}
 			}
+
+			EndStoreDataClientTypeOverride(%clientId);
 		}
 		else
 		{
@@ -2547,7 +2626,7 @@ function Player::onKilled(%this)
 					// This is likely an enemy bot but SpawnBotInfo is missing
 					// Use centralized DecrementSpawnCounter() which has multiple fallback methods
 					echo("WARNING: Player::onKilled - Enemy bot " @ %botInfoAiName @ " (clientId=" @ %clientId @ ") died but SpawnBotInfo is missing! Using DecrementSpawnCounter() fallbacks...");
-					DecrementSpawnCounter(%clientId);
+					DecrementSpawnCounter(%clientId, %this);
 					
 					// CRITICAL FIX: Also decrement $numAI and record death telemetry!
 					// This was missing, causing $numAI leaks for bots that die before SpawnAIGetClientId runs
@@ -2931,6 +3010,18 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 		}
 		if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Shooter Resolved: " @ %shooterClient @ " (Original: " @ %object @ ")");
 
+		// Town NPCs should not die from player-controlled vehicle body impacts.
+		// Scout guns still use MissileDamageType and continue through the normal vehicle-combat path.
+		if(IsTownBot(%damagedClient) && (%type == $ImpactDamageType || %type == $CrushDamageType) && isObject(%object))
+		{
+			%impactObjectType = getObjectType(%object);
+			if(%impactObjectType == "Vehicle" || %impactObjectType == "Flier")
+			{
+				if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Blocked vehicle impact damage to town bot " @ %damagedClient @ " from object " @ %object);
+				return;
+			}
+		}
+
 		// PHASE 5 FIX: Check if the shooter's client ID was recently freed
 		// This blocks "ghost damage" from projectiles/spells of dead bots whose IDs were immediately reused
 		// CRITICAL: Window must be 30 seconds to match flag clearing duration and cover long-cast spells
@@ -3307,10 +3398,11 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							if(%targetMDEF == "" || %targetMDEF == -1) %targetMDEF = 0;
 							%mdefReduction = (getRandom() * (%targetMDEF / 10)) + 1;
 							%lightningDmg = floor(Cap(%lightningDmg - %mdefReduction, 1, "inf"));
-							
-							// Add lightning damage to total
-							%value += %lightningDmg;
-							
+
+							// Defer the bonus: %value gets fully recomputed below, so adding it
+							// here would be wiped out. Applied after the damage formula instead.
+							%lightningBonus = %lightningDmg;
+
 							Client::sendMessage(%shooterClient, $MsgYellow, "LIGHTNING STRIKE! +" @ %lightningDmg @ " bonus damage!");
 						}
 					}
@@ -3366,6 +3458,11 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				if(%value < 1)
 					%value = 1;
 			}
+
+			// Storm Caller lightning bonus (deferred from the effects block above so the
+			// damage formula recompute doesn't wipe it out)
+			if(%lightningBonus > 0)
+				%value += %lightningBonus;
 
 
 			if(%Bash)	//i'm doing this condition here because %mom is dependant on %value
@@ -4190,6 +4287,138 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					}
 				}
 
+				// =================================================================
+				// MYTHIC WEAPON EFFECTS (Post-Damage, Remort 125 Tier)
+				// These hooks run on the FINAL dealt damage (%backupValue, internal
+				// units) so lifesteal/echoes scale with what actually landed.
+				// Deaths caused by the bonus refreshHP calls below are picked up by
+				// the existing Player::IsDead check further down, so kill credit and
+				// Client::onKilled flow through the normal path.
+				// =================================================================
+				if(%weaponEffect != "" && !%isMiss && !%lckMiss && %backupValue > 0 && %shooterClient != %damagedClient)
+				{
+					// SOUL REAVER - lifesteal on every hit, Soul Nova at max souls
+					if(%weaponEffect == "SOUL_HARVEST")
+					{
+						// Lifesteal: heal % of displayed damage dealt
+						%stealPct = $WeaponEffectLifesteal[%weapon];
+						if(%stealPct == "" || %stealPct == -1) %stealPct = 5;
+						%dealtDisplay = %backupValue * $TribesDamageToNumericDamage;
+						%healAmt = floor(%dealtDisplay * %stealPct / 100);
+						if(%healAmt > 0)
+						{
+							%curHP = fetchData(%shooterClient, "HP");
+							%maxHP = fetchData(%shooterClient, "MaxHP");
+							%newHP = %curHP + %healAmt;
+							if(%newHP > %maxHP)
+								%newHP = %maxHP;
+							if(%newHP > %curHP)
+								setHP(%shooterClient, %newHP);
+						}
+
+						// Soul Nova: at max souls the current strike erupts
+						%maxSouls = $WeaponEffectMaxSouls[%weapon];
+						if(%maxSouls == "" || %maxSouls == -1) %maxSouls = 10;
+						%souls = $SoulStacks[%shooterClient];
+						if(%souls == "" || %souls == -1) %souls = 0;
+						if(%souls >= %maxSouls)
+						{
+							$SoulStacks[%shooterClient] = 0;
+
+							// Nova damage scales with souls consumed and Bludgeoning skill
+							%novaDmg = 200 * %souls;
+							%bludgeonSkill = $PlayerSkill[%shooterClient, $SkillBludgeoning];
+							if(%bludgeonSkill == "" || %bludgeonSkill == -1) %bludgeonSkill = 1000;
+							%novaDmg = round((%novaDmg * %bludgeonSkill) / 1000);
+
+							// Nova is magical - reduced by MDEF
+							%targetMDEF = fetchData(%damagedClient, "MDEF");
+							if(%targetMDEF == "" || %targetMDEF == -1) %targetMDEF = 0;
+							%mdefReduction = (getRandom() * (%targetMDEF / 10)) + 1;
+							%novaDmg = floor(Cap(%novaDmg - %mdefReduction, 1, "inf"));
+
+							refreshHP(%damagedClient, %novaDmg / $TribesDamageToNumericDamage);
+							CreateAndDetBomb_VisualOnly(%shooterClient, "Bomb10", %damagedClientPos, -1);
+							playSound(shockExplosion, %damagedClientPos);
+							Client::sendMessage(%shooterClient, $MsgRed, "SOUL NOVA! " @ %souls @ " souls erupt for " @ %novaDmg @ " bonus damage!");
+							Client::sendMessage(%damagedClient, $MsgRed, "SOUL NOVA! Harvested souls erupt against you for " @ %novaDmg @ " damage!");
+						}
+					}
+
+					// SKY RENDER - every Nth hit launches the target skyward, then a
+					// delayed impale strikes where they land
+					if(%weaponEffect == "SKY_LAUNCH")
+					{
+						%frequency = $WeaponEffectFrequency[%weapon];
+						if(%frequency == "" || %frequency == -1) %frequency = 4;
+
+						if(%hitCount > 0 && (%hitCount % %frequency) == 0)
+						{
+							// Same protections as Final Verdict: no launching town bots,
+							// teammates, party members, bosses, seal or colloseum bots
+							if(!MythicWeapon::IsProtectedTarget(%shooterClient, %damagedClient))
+							{
+								// Launch skyward (vertical impulse; bash shoves cap at ~5 vertical,
+								// 40 gives a clearly airborne launch without orbiting them)
+								Player::applyImpulse(%this, "0 0 40");
+								playSound(shockExplosion, %damagedClientPos);
+								Client::sendMessage(%shooterClient, $MsgYellow, "SKY RENDER! " @ Client::getName(%damagedClient) @ " is launched skyward!");
+								Client::sendMessage(%damagedClient, $MsgRed, "SKY RENDER! You are hurled into the sky!");
+
+								// Delayed impale where they come down - pass the player object
+								// id so a respawn/disconnect in the meantime cancels it
+								schedule("SkyRender::Impale(" @ %shooterClient @ ", " @ %damagedClient @ ", " @ %this @ ");", 1.5);
+							}
+						}
+					}
+
+					// ECHO FANG - hits pool into a delayed echo, consecutive hits build Momentum
+					if(%weaponEffect == "ECHO_STRIKE")
+					{
+						// Momentum: stacks from previous consecutive hits boost this hit
+						%now = getSimTime();
+						%combo = $EchoCombo[%shooterClient];
+						if(%combo == "" || %combo == -1) %combo = 0;
+						if(%now > $EchoComboExpire[%shooterClient])
+							%combo = 0;
+
+						if(%combo > 0)
+						{
+							%momentumDmg = floor(%backupValue * 0.10 * %combo * $TribesDamageToNumericDamage);
+							if(%momentumDmg > 0)
+							{
+								refreshHP(%damagedClient, %momentumDmg / $TribesDamageToNumericDamage);
+								if(%combo == 5)
+									Client::sendMessage(%shooterClient, $MsgYellow, "MAX MOMENTUM! +" @ %momentumDmg @ " bonus damage!");
+							}
+						}
+
+						// Build the combo for the next hit (max 5 = +50%)
+						%combo++;
+						if(%combo > 5)
+							%combo = 5;
+						$EchoCombo[%shooterClient] = %combo;
+						$EchoComboExpire[%shooterClient] = %now + 1.5;
+
+						// Echo: pool 40% of dealt damage, one delayed resolution per target
+						%echoPct = $WeaponEffectEchoPercent[%weapon];
+						if(%echoPct == "" || %echoPct == -1) %echoPct = 40;
+						%echoDelay = $WeaponEffectEchoDelay[%weapon];
+						if(%echoDelay == "" || %echoDelay == -1) %echoDelay = 2.0;
+
+						%echoDmg = %backupValue * %echoPct / 100;
+						%pool = $EchoPool[%shooterClient, %damagedClient];
+						if(%pool == "" || %pool == -1) %pool = 0;
+						$EchoPool[%shooterClient, %damagedClient] = %pool + %echoDmg;
+
+						if($EchoPending[%shooterClient, %damagedClient] != true)
+						{
+							$EchoPending[%shooterClient, %damagedClient] = true;
+							schedule("EchoFang::Echo(" @ %shooterClient @ ", " @ %damagedClient @ ", " @ %this @ ");", %echoDelay);
+						}
+					}
+				}
+
 			//display amount of damage caused
 			// Check for LCK miss first before converting -1 to 0
 			if(%lckMiss)
@@ -4423,6 +4652,15 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							}
 						}
 					
+					// Push target frame to attacker's ScriptGL HUD (with damage dealt)
+					if(%shooterClient != %damagedClient)
+					{
+						if(%isLCKHit)
+							KronosHUD_PushTarget(%shooterClient, %damagedClient, "LCK");
+						else
+							KronosHUD_PushTarget(%shooterClient, %damagedClient, %convValue);
+					}
+
 					if(%damagedDamageMode)
 					{
 						// Check for LCK hit first - use %Val2 which already has the correct LCK message
@@ -4644,6 +4882,9 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							// Convert old styles to new ones
 							if(%animationStyle == "redmoon" || %animationStyle == "wow")
 								%animationStyle = "float";
+							// Nameplate users see spectator damage as pop floats
+							if(%animationStyle == "nameplate")
+								%animationStyle = "pop";
 							// Send as spectator view (different position, white color)
 							remoteEval(%cl, "ATKText", %spectatorMsg, %animationStyle, "spectator");
 						}
@@ -4681,9 +4922,11 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 						%msg = "<jl>You try to hit " @ Client::getName(%damagedClient) @ ", but miss! (LCK)";
 						DisplayDamageMessage(%shooterClient, %msg, %msgcolor, "attacker");
 						
-						// Send ATKText for LCK miss to attacker (only if not AI controlled)
-						// Check if floating numbers are enabled (either explicitly or via damageDisplayType)
-						if(!Player::isAiControlled(%shooterClient) && %shooterClient != "" && %shooterClient != -1 && %shooterClient != 0)
+						// REMOVED: ATKText for LCK miss is now handled by DisplayDamageMessage above
+						// This block was sending a second floating message ("Your attack missed X!")
+						// on top of DisplayDamageMessage's ("You try to hit X, but miss! (LCK)")
+						// if(!Player::isAiControlled(%shooterClient) && %shooterClient != "" && %shooterClient != -1 && %shooterClient != 0)
+						if(false) // DISABLED
 						{
 							// Validate client is connected
 							%clientName = Client::getName(%shooterClient);
@@ -4713,9 +4956,11 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 						%msg = "<jr>" @ %hitby @ " tries to hit you, but misses! (LCK)";
 						DisplayDamageMessage(%damagedClient, %msg, %msgcolor, "defender");
 						
-						// Send ATKText for LCK miss to defender (only if not AI controlled)
-						// Check if floating numbers are enabled (either explicitly or via damageDisplayType)
-						if(!Player::isAiControlled(%damagedClient) && %damagedClient != "" && %damagedClient != -1 && %damagedClient != 0)
+						// REMOVED: ATKText for LCK miss is now handled by DisplayDamageMessage above
+						// This block was sending a second floating message ("X's attack missed you!")
+						// on top of DisplayDamageMessage's ("X tries to hit you, but misses! (LCK)")
+						// if(!Player::isAiControlled(%damagedClient) && %damagedClient != "" && %damagedClient != -1 && %damagedClient != 0)
+						if(false) // DISABLED
 						{
 							// Validate client is connected
 							%clientName = Client::getName(%damagedClient);
@@ -4884,6 +5129,29 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					if(%type == $ImpactDamageType && %object.clLastMount != "")
 					%shooterClient = %object.clLastMount;
 
+					// SOUL REAVER - killing blow banks a soul (up to max)
+					if(%weaponEffect == "SOUL_HARVEST" && %shooterClient != %damagedClient)
+					{
+						%maxSouls = $WeaponEffectMaxSouls[%weapon];
+						if(%maxSouls == "" || %maxSouls == -1) %maxSouls = 10;
+						%souls = $SoulStacks[%shooterClient];
+						if(%souls == "" || %souls == -1) %souls = 0;
+						if(%souls < %maxSouls)
+						{
+							%souls++;
+							$SoulStacks[%shooterClient] = %souls;
+							if(%souls == %maxSouls)
+								Client::sendMessage(%shooterClient, $MsgRed, "SOUL HARVESTED! (" @ %souls @ "/" @ %maxSouls @ ") Souls at maximum - your next strike unleashes SOUL NOVA!");
+							else
+								Client::sendMessage(%shooterClient, $MsgYellow, "SOUL HARVESTED! (" @ %souls @ "/" @ %maxSouls @ ")");
+						}
+					}
+
+					// Death wipes the victim's mythic weapon state (souls are lost on
+					// death by design; also prevents stale data on recycled client IDs)
+					$SoulStacks[%damagedClient] = 0;
+					$EchoCombo[%damagedClient] = 0;
+
 					Client::onKilled(%damagedClient, %shooterClient, %type);
 				}  // line 1237 - closes else from line 1219
 			}  // line 1238 - closes if(!Player::IsDead(%this)) from line 1209
@@ -4900,6 +5168,140 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 	}  // closes if(!IsDead(%this)) from line 759
 
   // closes function Player::onDamage from line 440
+// =================================================================
+// MYTHIC WEAPON HELPERS (Remort 125 Tier)
+// =================================================================
+
+// Shared protection check for mythic weapon effects that do more than damage
+// (launches, etc). Mirrors Final Verdict's protections: town bots, same-team
+// players (outside duels/hitlist), party members, bosses, seal battle bots,
+// and colloseum arena bots are all protected.
+function MythicWeapon::IsProtectedTarget(%shooterClient, %damagedClient)
+{
+	%targetName = Client::getName(%damagedClient);
+	%spawnBotInfo = fetchData(%damagedClient, "SpawnBotInfo");
+
+	// Protection 1: Town bots
+	if(isTownBot(%damagedClient))
+		return true;
+
+	// Protection 2: Same team players (unless in duel or on hit list)
+	%shooterTeam = GameBase::getTeam(%shooterClient);
+	%targetTeam = GameBase::getTeam(%damagedClient);
+	if(%shooterTeam == %targetTeam && !IsEnemyBot(%damagedClient))
+	{
+		%inDuel = (fetchData(%shooterClient, "DuelTarget") == %damagedClient);
+		%onHitList = (String::findSubStr(fetchData(%shooterClient, "Hitlist"), Client::getName(%damagedClient)) != -1);
+		if(!%inDuel && !%onHitList)
+			return true;
+	}
+
+	// Protection 3: Party members
+	%shooterParty = fetchData(%shooterClient, "PARTY");
+	%targetParty = fetchData(%damagedClient, "PARTY");
+	if(%shooterParty != "" && %shooterParty != -1 && %shooterParty == %targetParty)
+		return true;
+
+	// Protection 4: Bosses
+	if(String::findSubStr(%targetName, "Boss") != -1 ||
+	   String::findSubStr(%targetName, "King") != -1 ||
+	   String::findSubStr(%targetName, "Queen") != -1 ||
+	   String::findSubStr(%spawnBotInfo, "Boss") != -1)
+		return true;
+
+	// Protection 5: Seal Battle bots
+	%isSealBot = fetchData(%damagedClient, "SealBattleBot");
+	if(%isSealBot == "true" || %isSealBot == "True" || %isSealBot == "1")
+		return true;
+	if(String::findSubStr(%targetName, "SealFighter") == 0 ||
+	   String::findSubStr(%targetName, "SealMage") == 0 ||
+	   String::findSubStr(%targetName, "SealGuardian") == 0)
+		return true;
+
+	// Protection 6: Colloseum arena bots
+	%targetZoneId = fetchData(%damagedClient, "zone");
+	if(%targetZoneId == "" || %targetZoneId == -1 || %targetZoneId == "0")
+	{
+		%targetObj = Client::getOwnedObject(%damagedClient);
+		if(%targetObj != -1 && %targetObj != "")
+			%targetZoneId = ObjectInWhichZone(%targetObj);
+	}
+	if(%targetZoneId != "" && %targetZoneId != -1 && %targetZoneId != "0")
+	{
+		%targetZoneDesc = Zone::getDesc(%targetZoneId);
+		if(String::ICompare(%targetZoneDesc, "Colloseum") == 0)
+			return true;
+	}
+
+	return false;
+}
+
+// SKY RENDER delayed impale - fires 1.5s after the launch, hitting the target
+// where they are (usually mid-fall or on landing). %objAtLaunch is the player
+// object at launch time so a respawn/disconnect in the meantime cancels it.
+function SkyRender::Impale(%shooterClient, %damagedClient, %objAtLaunch)
+{
+	%targetObj = Client::getOwnedObject(%damagedClient);
+	if(%targetObj == -1 || %targetObj == "" || %targetObj != %objAtLaunch)
+		return;
+	if(IsDead(%damagedClient))
+		return;
+
+	%targetPos = GameBase::getPosition(%targetObj);
+	if(%targetPos == "" || %targetPos == -1)
+		return;
+
+	// Impale damage scales with Piercing skill, reduced by MDEF
+	%impaleDmg = 600;
+	%piercingSkill = $PlayerSkill[%shooterClient, $SkillPiercing];
+	if(%piercingSkill == "" || %piercingSkill == -1) %piercingSkill = 1000;
+	%impaleDmg = round((%impaleDmg * %piercingSkill) / 1000);
+
+	%targetMDEF = fetchData(%damagedClient, "MDEF");
+	if(%targetMDEF == "" || %targetMDEF == -1) %targetMDEF = 0;
+	%mdefReduction = (getRandom() * (%targetMDEF / 10)) + 1;
+	%impaleDmg = floor(Cap(%impaleDmg - %mdefReduction, 1, "inf"));
+
+	CreateAndDetBomb_VisualOnly(%shooterClient, "Bomb20", %targetPos, -1);
+	playSound(shockExplosion, %targetPos);
+	refreshHP(%damagedClient, %impaleDmg / $TribesDamageToNumericDamage);
+
+	Client::sendMessage(%shooterClient, $MsgYellow, "SKYFALL IMPALE! +" @ %impaleDmg @ " bonus damage!");
+	Client::sendMessage(%damagedClient, $MsgRed, "SKYFALL IMPALE! The trident strikes you from above for " @ %impaleDmg @ " damage!");
+}
+
+// ECHO FANG delayed echo - resolves the pooled echo damage for one
+// shooter/target pair. Hits landed while an echo is pending pool into it, so
+// each pair has at most one schedule in flight. %objAtHit is the target's
+// player object at hit time so a respawn/disconnect discards the pool.
+function EchoFang::Echo(%shooterClient, %damagedClient, %objAtHit)
+{
+	$EchoPending[%shooterClient, %damagedClient] = "";
+	%pool = $EchoPool[%shooterClient, %damagedClient];
+	$EchoPool[%shooterClient, %damagedClient] = 0;
+
+	if(%pool == "" || %pool == -1 || %pool <= 0)
+		return;
+
+	%targetObj = Client::getOwnedObject(%damagedClient);
+	if(%targetObj == -1 || %targetObj == "" || %targetObj != %objAtHit)
+		return;
+	if(IsDead(%damagedClient))
+		return;
+
+	%echoDisplay = round(%pool * $TribesDamageToNumericDamage);
+	if(%echoDisplay < 1)
+		return;
+
+	%targetPos = GameBase::getPosition(%targetObj);
+	refreshHP(%damagedClient, %pool);
+	if(%targetPos != "" && %targetPos != -1)
+		playSound(SoundHitShield, %targetPos);
+
+	Client::sendMessage(%shooterClient, $MsgYellow, "ECHO! Your wounds reopen for " @ %echoDisplay @ " delayed damage!");
+	Client::sendMessage(%damagedClient, $MsgRed, "ECHO! Your wounds reopen for " @ %echoDisplay @ " damage!");
+}
+
 function remoteKill(%clientId)
 {
 	dbecho($dbechoMode, "remoteKill(" @ %clientId @ ")");

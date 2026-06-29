@@ -10,6 +10,34 @@ $MsgBeige = 2;
 $MsgGreen = 3;
 $Refresh = "0";//Make sure you put this at the top of the comchat script
 
+// Restored helper for the #animations command. Plays the engine "player wave"
+// animations on a bot one at a time with 3s gaps. RemotePlayAnim(clientId, idx)
+// -> serverWave, which only plays ANIM_PLAYER_FIRST..LAST (indices 0-12:
+// 0 over-here, 1 point, 2 retreat, 3 stop, 4 salute, 5 celebration 1,
+// 6 celebration 2, 7 celebration 3, 8 taunt 1, 9 taunt 2, 10 pose kneel,
+// 11 pose stand, 12 wave). Indices >12 (e.g. run/die) are NOT playable this way.
+function PlayAnimationSequence(%clientId, %anim, %TrueClientId)
+{
+	// Done after the valid wave range.
+	if(%anim > 12)
+	{
+		if(%TrueClientId != "")
+			Client::sendMessage(%TrueClientId, $MsgGreen, "Animation sequence complete (played 0-12).");
+		return;
+	}
+
+	// Bot may have died / despawned mid-sequence.
+	%playerObj = Client::getOwnedObject(%clientId);
+	if(%playerObj == "" || %playerObj == -1)
+		return;
+
+	RemotePlayAnim(%clientId, %anim);
+	if(%TrueClientId != "")
+		Client::sendMessage(%TrueClientId, $MsgBeige, "Playing wave anim index " @ %anim @ " on client " @ %clientId);
+
+	schedule("PlayAnimationSequence(" @ %clientId @ ", " @ (%anim + 1) @ ", " @ %TrueClientId @ ");", 3);
+}
+
 function remoteSay(%clientId, %team, %message, %senderName)
 {
 	dbecho($dbechoMode, "remoteSay(" @ %clientId @ ", " @ %team @ ", \"" @ %message @ "\", " @ %senderName @ ")");
@@ -1085,7 +1113,7 @@ function remoteSay(%clientId, %team, %message, %senderName)
 			$AFKZoneWarnUntil[%TrueClientId] = ""; // Clear active warning immediately after valid verify
 			$AFKZoneWarnPos[%TrueClientId] = "";
 			$AFKZoneCode[%TrueClientId] = ""; // Clear code after successful verification
-			
+
 			// CRITICAL: Treat verification as valid activity!
 			// Update the last position tracker to the current position to prevent the "lack of movement" check
 			// from triggering the teleport in the next tick.
@@ -1751,6 +1779,8 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 									storeData(%id, "SpellCastStep", "");
 									ClearEvents(%id);
 									Client::sendMessage(%id, $MsgRed, "Your spell casting was interrupted!");
+									if(%id.hasKronosHUD)
+										remoteEval(%id, "KronosCastStop");
 								}
 							}
 						}
@@ -1956,8 +1986,8 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 		{
 			if(Player::getItemCount(%TrueClientId, ScoutVehicle))
 			{
-				%camp = nameToId("MissionCleanup\\Flyer" @ %TrueClientId);
-				if(%camp == -1)
+				%activeScout = ScoutVehicle::GetActive(%TrueClientId);
+				if(%activeScout == -1)
 				{
 					// Check if player is in a blocked zone type
 					%playerZone = fetchData(%TrueClientId, "zone");
@@ -1990,9 +2020,14 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 							GameBase::setTeam(%turret,GameBase::getTeam(%player));
 							GameBase::setPosition(%turret,$los::position);
 							GameBase::setRotation(%turret,%rot);
+							$ScoutVehicleActive[%TrueClientId] = %turret;
+							$ScoutVehicleOwner[%turret] = %TrueClientId;
+							$owner[%turret] = Client::getName(%TrueClientId);
+							$ScoutVehicleActiveByOwnerName[$owner[%turret]] = %turret;
 							Client::sendMessage(%TrueClientId,0,"Scout deployed.");
 							playSound(SoundPickupBackpack,$los::position);
-			      			return true;	
+							RequestWorldSave("scout_deploy", 3, "deployables");
+							return true;
 						}
 						else 
 							Client::sendMessage(%client,0,"Deploy position out of range");
@@ -2001,7 +2036,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 						Client::sendMessage(%TrueClientId, $MsgRed, "You can't set up a vehicle here.");
 				}
 				else
-					Client::sendMessage(%TrueClientId, $MsgRed, "You already have a vehicle setup somewhere.");
+					Client::sendMessage(%TrueClientId, $MsgRed, "You already have a scout deployed.");
 			}
 			else
 				Client::sendMessage(%TrueClientId, $MsgRed, "You aren't carrying a vehicle.");
@@ -2049,25 +2084,42 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 		if(%w1 == "#undeploy")
 		{
 			%camp = nameToId("MissionCleanup\\Vehicle" @ %TrueClientId);
-			if(%camp != -1)
+			%obj = ScoutVehicle::GetActive(%TrueClientId);
+			if(%obj != -1)
 			{
-				%obj = nameToId("MissionCleanup\\Vehicle" @ %TrueClientId @ "\\Flyer");
+				if(%obj == -1 || !isObject(%obj))
+				{
+					ScoutVehicle::ClearActive(%TrueClientId, %obj);
+					if(%camp != -1)
+						deleteObject(%camp);
+					Client::sendMessage(%TrueClientId, $MsgRed, "Your vehicle record was stale and has been cleared. You can deploy again.");
+					return;
+				}
 				if(Vector::getDistance(GameBase::getPosition(%TrueClientId), GameBase::getPosition(%obj)) <= 20)
 				{
 					if(Vector::getDistance(GameBase::getPosition(%TrueClientId), GameBase::getPosition(%obj)) >= 2)
 					{
-						%g = "MissionCleanup/Vehicle" @ %clientId;
+						%g = "MissionCleanup/Vehicle" @ %TrueClientId;
 
-						Player::incItemCount(%clientId, ScoutVehicle);
-						RefreshAll(%clientId);
-
-						//so the players in the grouptrigger get kicked out first.
-						Group::iterateRecursive(%g, GameBase::setPosition, "0 0 0");
+						Player::incItemCount(%TrueClientId, ScoutVehicle);
+						RefreshAll(%TrueClientId);
+						ScoutVehicle::ClearActive(%TrueClientId, %obj);
 
 						%gg = nameToId(%g);
-						schedule("deleteObject(" @ %gg @ ");", 5);
+						if(%gg != -1)
+						{
+							//so the players in the grouptrigger get kicked out first.
+							Group::iterateRecursive(%g, GameBase::setPosition, "0 0 0");
+							schedule("deleteObject(" @ %gg @ ");", 5);
+						}
+						else
+						{
+							GameBase::setPosition(%obj, "0 0 0");
+							schedule("if(isObject(" @ %obj @ ")) deleteObject(" @ %obj @ ");", 5);
+						}
 						Client::sendMessage(%TrueClientId, $MsgBeige, "Your vehicle has been packed up.");
 						SaveCharacter(%TrueClientId);
+						RequestWorldSave("scout_undeploy", 3, "deployables");
 					}
 					else
 						Client::sendMessage(%TrueClientId, $MsgRed, "Dismount your vehicle first.");
@@ -2443,10 +2495,12 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 		{
 			// Auto-skill point spending system
 			// Usage: #autoskill set <skill1>, <skill2>, ...
+			//        #autoskill set <skillId1>,<skillId2>,...
+			//        #autoskill all
 			//        #autoskill show
 			//        #autoskill clear
 			%subCmd = GetWord(%cropped, 0);
-			
+
 			if(String::ICompare(%subCmd, "set") == 0)
 			{
 				// Get everything after "set " as the skill list
@@ -2455,7 +2509,11 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 				if(%setPos != -1)
 					%skillList = String::getSubStr(%cropped, %setPos + 1, 999);
 				
-				if(%skillList != "" && %skillList != -1)
+				if(String::ICompare(String::trim(%skillList), "all") == 0)
+				{
+					AutoSkill_SetAll(%TrueClientId);
+				}
+				else if(%skillList != "" && %skillList != -1)
 				{
 					AutoSkill_Set(%TrueClientId, %skillList);
 				}
@@ -2463,11 +2521,24 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 				{
 					Client::sendMessage(%TrueClientId, $MsgBeige, "Usage: #autoskill set <skill1>, <skill2>, ...");
 					Client::sendMessage(%TrueClientId, $MsgBeige, "Example: #autoskill set endurance, weight capacity, slashing");
+					Client::sendMessage(%TrueClientId, $MsgBeige, "Example: #autoskill set 1,2,3,4,5");
 				}
+			}
+			else if(String::ICompare(%subCmd, "all") == 0)
+			{
+				AutoSkill_SetAll(%TrueClientId);
 			}
 			else if(String::ICompare(%subCmd, "show") == 0)
 			{
 				AutoSkill_Show(%TrueClientId);
+			}
+			else if(String::ICompare(%subCmd, "hide") == 0)
+			{
+				AutoSkill_Hide(%TrueClientId);
+			}
+			else if(String::ICompare(%subCmd, "showmsg") == 0)
+			{
+				AutoSkill_ShowMsg(%TrueClientId);
 			}
 			else if(String::ICompare(%subCmd, "clear") == 0)
 			{
@@ -2477,7 +2548,11 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 			{
 				Client::sendMessage(%TrueClientId, $MsgBeige, "Auto-Skill Commands:");
 				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill set <skill1>, <skill2>, ... - Set priority skills");
+				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill set 1,2,3,4,5 - Set priority skills by number");
+				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill all - Set all active skills");
 				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill show - View current settings");
+				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill hide - Hide level-up upgrade messages");
+				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill showmsg - Show level-up upgrade messages");
 				Client::sendMessage(%TrueClientId, $MsgBeige, "  #autoskill clear - Clear settings");
 			}
 			return;
@@ -2786,7 +2861,31 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 			if(GameBase::getLOSInfo(%player, 150))
 			{
 				%obj = $los::object;
-				$ObjectMapData["Type"] = GameBase::getDataName(%obj);
+				storeObject(%obj, "temp\\test_object_dump.cs");
+				%class = getObjectType(%obj);
+				
+				// Determine actual spawned object/asset type
+				if(%class == "InteriorShape")
+				{
+					%fileName = %obj.filename;
+					if(%fileName == "")
+						%fileName = %obj.fileName;
+					
+					if(%fileName != "")
+						%type = String::replace(%fileName, ".dis", "");
+					else
+						%type = "InteriorShape";
+				}
+				else
+				{
+					%type = GameBase::getDataName(%obj);
+					if(%type == "False" || %type == "")
+						%type = %class;
+				}
+
+				$ObjectMapData["Name"] = Object::getName(%obj);
+				$ObjectMapData["Class"] = %class;
+				$ObjectMapData["Type"] = %type;
 				$ObjectMapData["Position"] = GameBase::getPosition(%obj);
 				$ObjectMapData["Rotation"] = GameBase::getRotation(%obj);
 				export("ObjectMapData*", "temp\\-" @ $missionName @ "-MapData.cs", true);
@@ -6438,18 +6537,42 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 					%r2 = GetWord(%cropped, 6);
 					%r3 = GetWord(%cropped, 7);
 	
-					if(%x == -1 && %y == -1 && %z == -1)
+					if(%x != -1 && %y != -1 && %z != -1 && %r1 == -1 && %r2 == -1 && %r3 == -1)
 					{
-						GameBase::getLOSinfo(Client::getOwnedObject(%TrueClientId), 50000);
-						%pos = $los::position;
+						%absX = %x; if(%absX < 0) %absX = -%absX;
+						%absY = %y; if(%absY < 0) %absY = -%absY;
+						%absZ = %z; if(%absZ < 0) %absZ = -%absZ;
+						
+						if(%absX <= 360 && %absY <= 360 && %absZ <= 360)
+						{
+							// Treat as rotation, and spawn at LOS position!
+							%rot = %x @ " " @ %y @ " " @ %z;
+							GameBase::getLOSinfo(Client::getOwnedObject(%TrueClientId), 50000);
+							%pos = $los::position;
+						}
+						else
+						{
+							// Treat as position, default rotation
+							%pos = %x @ " " @ %y @ " " @ %z;
+							%rot = -1;
+						}
 					}
 					else
-						%pos = %x @ " " @ %y @ " " @ %z;
-	
-					if(%r1 == -1 && %r2 == -1 && %r3 == -1)
-						%rot = -1;
-					else
-						%rot = %r1 @ " " @ %r2 @ " " @ %r3;
+					{
+						// Standard 2-argument or 8-argument behavior
+						if(%x == -1 && %y == -1 && %z == -1)
+						{
+							GameBase::getLOSinfo(Client::getOwnedObject(%TrueClientId), 50000);
+							%pos = $los::position;
+						}
+						else
+							%pos = %x @ " " @ %y @ " " @ %z;
+
+						if(%r1 == -1 && %r2 == -1 && %r3 == -1)
+							%rot = -1;
+						else
+							%rot = %r1 @ " " @ %r2 @ " " @ %r3;
+					}
 	
 					%fname = %f @ ".dis";
 					%object = newObject(%tag, InteriorShape, %fname);
@@ -6521,6 +6644,182 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 			}
 			return;
 		}
+		if(%w1 == "#spawnshape")
+		{
+			if(%clientToServerAdminLevel >= 2)
+			{
+				if(%cropped != "")
+				{
+					%db = GetWord(%cropped, 0);
+					%tag = GetWord(%cropped, 1);
+					%arg2 = GetWord(%cropped, 2);
+
+					%class = "StaticShape";
+					%coordIdx = 2;
+					if(%arg2 == "Sensor" || %arg2 == "Turret" || %arg2 == "StaticShape" || %arg2 == "Item" || %arg2 == "SimLight" || %arg2 == "Trigger" || %arg2 == "InteriorShape" || %arg2 == "Moveable")
+					{
+						%class = %arg2;
+						%coordIdx = 3;
+					}
+
+					%x = GetWord(%cropped, %coordIdx);
+					%y = GetWord(%cropped, %coordIdx + 1);
+					%z = GetWord(%cropped, %coordIdx + 2);
+					%r1 = GetWord(%cropped, %coordIdx + 3);
+					%r2 = GetWord(%cropped, %coordIdx + 4);
+					%r3 = GetWord(%cropped, %coordIdx + 5);
+
+					%itemCount = 1;
+					if(%class == "Item")
+					{
+						if(%x != -1 && %y == -1 && %z == -1)
+						{
+							%itemCount = %x;
+							%x = -1;
+						}
+					}
+
+					%dbVal = %db;
+					%dbId = nameToID(%db);
+					if(%dbId != -1)
+						%dbVal = %dbId;
+					else
+					{
+						%evalId = eval("return " @ %db @ ";");
+						if(%evalId != "" && %evalId != 0)
+							%dbVal = %evalId;
+					}
+
+					if(%x != -1 && %y != -1 && %z != -1 && %r1 == -1 && %r2 == -1 && %r3 == -1)
+					{
+						%absX = %x; if(%absX < 0) %absX = -%absX;
+						%absY = %y; if(%absY < 0) %absY = -%absY;
+						%absZ = %z; if(%absZ < 0) %absZ = -%absZ;
+						
+						if(%absX <= 360 && %absY <= 360 && %absZ <= 360)
+						{
+							// Treat as rotation, and spawn at LOS position!
+							%rot = %x @ " " @ %y @ " " @ %z;
+							GameBase::getLOSinfo(Client::getOwnedObject(%TrueClientId), 50000);
+							%pos = $los::position;
+						}
+						else
+						{
+							// Treat as position, default rotation
+							%pos = %x @ " " @ %y @ " " @ %z;
+							%rot = -1;
+						}
+					}
+					else
+					{
+						// Standard behavior
+						if(%x == -1 && %y == -1 && %z == -1)
+						{
+							GameBase::getLOSinfo(Client::getOwnedObject(%TrueClientId), 50000);
+							%pos = $los::position;
+						}
+						else
+							%pos = %x @ " " @ %y @ " " @ %z;
+
+						if(%r1 == -1 && %r2 == -1 && %r3 == -1)
+							%rot = -1;
+						else
+							%rot = %r1 @ " " @ %r2 @ " " @ %r3;
+					}
+
+					if(%class == "Item")
+						%object = newObject(%tag, %class, %dbVal, %itemCount, false, true);
+					else if(%class == "Sensor" || %class == "Turret" || %class == "Moveable")
+						%object = newObject(%tag, %class, %dbVal, true);
+					else
+						%object = newObject(%tag, %class, %dbVal);
+
+					if(%object != 0 && %tag != -1)
+					{
+						if(IsInCommaList($StaticShapeList, %tag))
+						{
+							%o = $tagToObjectId[%tag];
+							deleteObject(%o);
+							$tagToObjectId[%tag] = "";
+							%w = "Replaced";
+						}
+						else
+						{
+							$StaticShapeList = AddToCommaList($StaticShapeList, %tag);
+							%w = "Spawned";
+						}
+
+						addToSet("MissionCleanup", %object);
+						$tagToObjectId[%tag] = %object;
+						%object.tag = %tag;
+
+						GameBase::setPosition(%object, %pos);
+						if(%rot != -1)
+							GameBase::setRotation(%object, %rot);
+
+						if(!%echoOff) Client::sendMessage(%TrueClientId, 0, %w @ " " @ %class @ " " @ %tag @ " (" @ %object @ ") at pos " @ %pos);
+					}
+					else
+						Client::sendMessage(%TrueClientId, 0, "Invalid datablock, class, or tagname.");
+				}
+				else
+					Client::sendMessage(%TrueClientId, 0, "#spawnshape datablock tagname [class] [x] [y] [z] [r1] [r2] [r3].");
+			}
+			return;
+		}
+		if(%w1 == "#delshape")
+		{
+			if(%clientToServerAdminLevel >= 2)
+			{
+				%tag = GetWord(%cropped, 0);
+
+				if(%cropped != -1)
+				{
+					if($tagToObjectId[%tag] != "")
+					{
+						%object = $tagToObjectId[%tag];
+						ClearEvents(%object);
+						deleteObject(%object);
+						$tagToObjectId[%tag] = "";
+						$StaticShapeList = RemoveFromCommaList($StaticShapeList, %tag);
+
+						if(!%echoOff) Client::sendMessage(%TrueClientId, 0, "Deleted " @ %tag @ " (" @ %object @ ")");
+					}
+					else
+						if(!%echoOff) Client::sendMessage(%TrueClientId, 0, "Invalid tagname.");
+				}
+				else
+					Client::sendMessage(%TrueClientId, 0, "#delshape tagname.");
+			}
+			return;
+		}
+		if(%w1 == "#listshapes")
+		{
+			if(%clientToServerAdminLevel >= 1)
+			{
+				Client::sendMessage(%TrueClientId, $MsgBeige, $StaticShapeList);
+			}
+			return;
+		}
+		if(%w1 == "#testdb")
+		{
+			if(%clientToServerAdminLevel >= 1)
+			{
+				%db = GetWord(%cropped, 0);
+				%itemData = getItemData(%db);
+				if(%itemData != "")
+					Client::sendMessage(%TrueClientId, 0, %db @ " is a loaded ItemData with ID " @ %itemData);
+				else
+				{
+					%id = nameToID(%db);
+					if(%id != -1)
+						Client::sendMessage(%TrueClientId, 0, %db @ " is a loaded object with ID " @ %id);
+					else
+						Client::sendMessage(%TrueClientId, 0, %db @ " is NOT loaded on the server.");
+				}
+			}
+			return;
+		}
 		if(%w1 == "#listpacks")
 		{
 			if(%clientToServerAdminLevel >= 1)
@@ -6543,6 +6842,8 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 							$DISlist = RemoveFromCommaList($DISlist, %c1.tag);
 						else if(IsInCommaList($SpawnPackList, %c1.tag))
 							$SpawnPackList = RemoveFromCommaList($SpawnPackList, %c1.tag);
+						else if(IsInCommaList($StaticShapeList, %c1.tag))
+							$StaticShapeList = RemoveFromCommaList($StaticShapeList, %c1.tag);
 					}
 					deleteObject(%c1);
 					ClearEvents(%c1);
@@ -8009,6 +8310,40 @@ if(%w1 == "#spawntelemetry")
 				// Also get LOS (line of sight) position
 				GameBase::getLOSinfo(%player, 50000);
 				Client::sendMessage(%TrueClientId, 0, "Position at LOS: " @ $los::position);
+			}
+			return;
+		}
+		if(%w1 == "#exportlos")
+		{
+			if(%clientToServerAdminLevel >= 2)
+			{
+				%player = Client::getOwnedObject(%TrueClientId);
+				if(GameBase::getLOSinfo(%player, 50000))
+				{
+					%losPos = $los::position;
+					if(%losPos != "" && %losPos != "0 0 0")
+					{
+						%name = GetWord(%cropped, 0);
+						if(%name == -1 || %name == "")
+							%name = "unnamed";
+						
+						%name = String::replace(%name, " ", "_");
+						
+						// Save to unique global variable and export it (using eval + export pattern similar to #exportdata)
+						eval("$ExportedLOS_" @ %name @ " = \"" @ %losPos @ "\";");
+						export("ExportedLOS_" @ %name, "temp\\exported_los.cs", true);
+						
+						Client::sendMessage(%TrueClientId, 0, "LOS exported successfully: $ExportedLOS_" @ %name @ " = \"" @ %losPos @ "\"");
+					}
+					else
+					{
+						Client::sendMessage(%TrueClientId, 0, "Error: Line of Sight target position is invalid.");
+					}
+				}
+				else
+				{
+					Client::sendMessage(%TrueClientId, 0, "Error: Line of Sight target not found.");
+				}
 			}
 			return;
 		}
@@ -10261,7 +10596,7 @@ if(%w1 == "#spawntelemetry")
 			// Check if Las Vegas gambling bots handle this
 			if(LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName, %message, %cropped, %initTalk))
 				return;
-			
+
 			if(%botType == "merchant")
 			{
 				//process merchant code
@@ -10451,7 +10786,7 @@ if(%w1 == "#spawntelemetry")
 						%n = Client::getName(%h);
 						%c = fetchData(%h, "bounty");
 
-						AI::sayLater(%TrueClientId, %closestId, "The highest bounty is currently on " @ %n @ " for $" @ %c @ ". Give me someone's name and I'll tell you their bounty, unless you want to BUY something." , True);
+						AI::sayLater(%TrueClientId, %closestId, "The highest bounty is currently on " @ %n @ " for $" @ %c @ ". Give me someone's name and I'll tell you their bounty, unless you want to [BUY] something." , True);
 
 						$state[%closestId, %TrueClientId] = 1;
 					}
@@ -10462,7 +10797,7 @@ if(%w1 == "#spawntelemetry")
 					{
 						%cost = GetLCKcost(%TrueClientId);
 
-						AI::sayLater(%TrueClientId, %closestId, "I will sell you one LCK point for $" @ %cost @ ". (YES/NO)", True);
+						AI::sayLater(%TrueClientId, %closestId, "I will sell you one LCK point for $" @ %cost @ ". ([YES]/[NO])", True);
 						$state[%closestId, %TrueClientId] = 2;
 					}
 					else
@@ -10485,7 +10820,7 @@ if(%w1 == "#spawntelemetry")
 						{
 							%l = fetchData(%h, "LVL");
 							%c = getFinalCLASS(%h);
-							AI::sayLater(%TrueClientId, %closestId, "Are you talking about " @ Client::getName(%h) @ " the Level " @ %l @ " " @ %c @ "?", True);
+							AI::sayLater(%TrueClientId, %closestId, "Are you talking about " @ Client::getName(%h) @ " the Level " @ %l @ " " @ %c @ "? ([YES]/[NO])", True);
 							storeData(%TrueClientId, "tmpdata", %h);
 							$state[%closestId, %TrueClientId] = 3;
 						}
@@ -10565,7 +10900,7 @@ if(%w1 == "#spawntelemetry")
 					{
 						if($arenaOn)
 						{
-							AI::sayLater(%TrueClientId, %closestId, "I am in charge of admitting fighters.  Do you want to ENTER for $" @ $teleportInArenaCost @ "?", True);
+							AI::sayLater(%TrueClientId, %closestId, "I am in charge of admitting fighters.  Do you want to [ENTER] for $" @ $teleportInArenaCost @ "?", True);
 							$state[%closestId, %TrueClientId] = 1;
 						}
 						else
@@ -10613,7 +10948,7 @@ if(%w1 == "#spawntelemetry")
 				{
 					if(%initTalk)
 					{
-						AI::sayLater(%TrueClientId, %closestId, "Hi, do you want to LEAVE the dueling arena?", True);
+						AI::sayLater(%TrueClientId, %closestId, "Hi, do you want to [LEAVE] the dueling arena?", True);
 						$state[%closestId, %TrueClientId] = 1;
 					}
 				}
@@ -10696,6 +11031,60 @@ if(%w1 == "#spawntelemetry")
 					}
 				}	
 			}
+			else if(%botType == "teleportbot")
+			{
+				%trigger[2] = "loop";
+				%trigger[3] = "demise";
+				%trigger[4] = "enigma";
+				%trigger[5] = "echos";
+				%trigger[6] = "yuliple";
+				if($state[%closestId, %TrueClientId] == "")
+				{
+					if(%initTalk)
+					{
+						AI::sayLater(%TrueClientId, %closestId, "Greetings. I can transport you to areas isolated from standard magic. Where would you like to be transported to? [loop],[demise],[enigma],[echos],[yuliple]", True);
+						$state[%closestId, %TrueClientId] = 1;
+					}
+				}
+				else if($state[%closestId, %TrueClientId] == 1)
+				{
+					if(String::findSubStr(%message, %trigger[2]) != -1)
+					{
+						AI::sayLater(%TrueClientId, %closestId, "As you wish. Good Luck!", True);
+						$state[%closestId, %TrueClientId] = "";
+						%lospos = "-4904.37 2967.4 618.995";
+						GameBase::setPosition(%TrueClientId, %lospos);
+					}
+					else if(String::findSubStr(%message, %trigger[3]) != -1)
+					{
+						AI::sayLater(%TrueClientId, %closestId, "As you wish. Good Luck!", True);
+						$state[%closestId, %TrueClientId] = "";
+						%lospos = "-1769 2239 -84";
+						GameBase::setPosition(%TrueClientId, %lospos);
+					}
+					else if(String::findSubStr(%message, %trigger[4]) != -1)
+					{
+						AI::sayLater(%TrueClientId, %closestId, "As you wish. Good Luck!", True);
+						$state[%closestId, %TrueClientId] = "";
+						%lospos = "-3123 2322 -410";
+						GameBase::setPosition(%TrueClientId, %lospos);
+					}
+					else if(String::findSubStr(%message, %trigger[5]) != -1)
+					{
+						AI::sayLater(%TrueClientId, %closestId, "As you wish. Good Luck!", True);
+						$state[%closestId, %TrueClientId] = "";
+						%lospos = "893.104 1396 -398";
+						GameBase::setPosition(%TrueClientId, %lospos);
+					}
+					else if(String::findSubStr(%message, %trigger[6]) != -1)
+					{
+						AI::sayLater(%TrueClientId, %closestId, "As you wish. Good Luck!", True);
+						$state[%closestId, %TrueClientId] = "";
+						%lospos = "-399 -2325 78";
+						GameBase::setPosition(%TrueClientId, %lospos);
+					}
+				}	
+			}
 			else if(%botType == "hunt")
 			{
 				//process quest code
@@ -10746,7 +11135,11 @@ if(%w1 == "#spawntelemetry")
 								if(NEWgetClientByName($BotInfo[%aiName, BOT] @ 0) == -1)
 									%n = AI::helper($BotInfo[%aiName, BOT], $BotInfo[%aiName, BOT] @ 0, "TempSpawn " @ $BotInfo[%aiName, POS] @ " " @ 1, default);
 								$state[%closestId, %TrueClientId] = "";
-								$QuestReload[$BotInfo[%aiName, BOT]] = 90;
+								// Per-quest reload override (ticks of 2s each); default 90 (=180s) if unset
+								%questReloadTime = $QuestReloadTime[$BotInfo[%aiName, BOT]];
+								if(%questReloadTime == "" || %questReloadTime <= 0)
+									%questReloadTime = 90;
+								$QuestReload[$BotInfo[%aiName, BOT]] = %questReloadTime;
 
 							}
 						}
@@ -10958,7 +11351,7 @@ if(%w1 == "#spawntelemetry")
 						{
 							if(%initTalk)
 							{
-								AI::sayLater(%TrueClientId, %closestId, "Hello there adventurer, I'm the Colloseum administrator. Here you can fight monsters to gain rank and receive special bonuses. However, you cannot run from this and you must pay " @ %cost @ " coins to enter! Do you wish to ENTER?", True);
+								AI::sayLater(%TrueClientId, %closestId, "Hello there adventurer, I'm the Colloseum administrator. Here you can fight monsters to gain rank and receive special bonuses. However, you cannot run from this and you must pay " @ %cost @ " coins to enter! Do you wish to [ENTER]?", True);
 								$state[%closestId, %TrueClientId] = 1;
 							}
 						}
@@ -11014,7 +11407,7 @@ if(%w1 == "#spawntelemetry")
 						{
 							if(%initTalk)
 							{
-								AI::sayLater(%TrueClientId, %closestId, "Hello there adventurer, I'm the seal battle admin. Here you can fight monsters to raise the global seal value. However, you cannot run from this! Do you wish to ENTER?", True);
+								AI::sayLater(%TrueClientId, %closestId, "Hello there adventurer, I'm the seal battle admin. Here you can fight monsters to raise the global seal value. However, you cannot run from this! Do you wish to [ENTER]?", True);
 								$state[%closestId, %TrueClientId] = 1;
 							}
 						}
@@ -11062,6 +11455,15 @@ if(%w1 == "#spawntelemetry")
 					SetupAscensionShop(%TrueClientId, %closestId, 0);
 				}
 			}
+			else if(%botType == "sigilforge")
+			{
+				// SIGKILL Sigil vendor - hand sigils in for coins, or barter for weapons (see SigilForge.cs)
+				if(%initTalk)
+				{
+					AI::sayLater(%TrueClientId, %closestId, "The forge hungers for SIGKILL Sigils. What do you seek?", True);
+					SetupSigilForge(%TrueClientId, %closestId);
+				}
+			}
 			else if(%botType == "manager")
 			{
 				//process manager code
@@ -11071,7 +11473,7 @@ if(%w1 == "#spawntelemetry")
 				{
 					if(%initTalk)
 					{
-						AI::sayLater(%TrueClientId, %closestId, "Hail. Do you wish to FIGHT or LEAVE?", True);
+						AI::sayLater(%TrueClientId, %closestId, "Hail. Do you wish to [FIGHT] or [LEAVE]?", True);
 						$state[%closestId, %TrueClientId] = 1;
 					}
 				}
@@ -11135,7 +11537,7 @@ if(%w1 == "#spawntelemetry")
 						}
 						else
 						{
-							AI::sayLater(%TrueClientId, %closestId, "I have all sorts of helpers at my disposal. Tell me which class you are interested in.", True);
+							AI::sayLater(%TrueClientId, %closestId, "I have all sorts of helpers at my disposal. Tell me which class you are interested in. [mage] [fighter] [paladin] [ranger] [thief] [bard] [cleric] [druid]", True);
 							$state[%closestId, %TrueClientId] = 1;
 						}
 					}
@@ -11186,7 +11588,7 @@ if(%w1 == "#spawntelemetry")
 							$tmpdata[%TrueClientId, 2] = %gender;
 							$tmpdata[%TrueClientId, 3] = %nc;	//just so the equation is only in one place.
 
-							AI::sayLater(%TrueClientId, %closestId, "My " @ %class @ "s are Level " @ %lvl @ ", and will cost you " @ %nc @ " coins. [yes/no]", True);
+							AI::sayLater(%TrueClientId, %closestId, "My " @ %class @ "s are Level " @ %lvl @ ", and will cost you " @ %nc @ " coins. [yes] [no]", True);
 							$state[%closestId, %TrueClientId] = 2;
 						}
 						else
@@ -11291,7 +11693,7 @@ if(%w1 == "#spawntelemetry")
 				{
 					if(%initTalk)
 					{
-						AI::sayLater(%TrueClientId, %closestId, "Hail friend, are you here to have me SMITH an old weapon?", True);
+						AI::sayLater(%TrueClientId, %closestId, "Hail friend, are you here to have me [SMITH] an old weapon?", True);
 						$state[%closestId, %TrueClientId] = 1;
 					}
 				}
@@ -11374,25 +11776,25 @@ if(%w1 == "#spawntelemetry")
 								
 							}
 							if(%check != "")
-								%hlist = %hlist @ $HouseName[%i] @ ", ";
+								%hlist = %hlist @ "[" @ $HouseName[%i] @ "] ";
 							%check = "";
 						}
 						if(%hlist == "")
 							for(%i = 1; $HouseName[%i] != ""; %i++)
 								if($HouseName[%i] != %ch)
-									%hlist = %hlist @ $HouseName[%i] @ ", ";
-						%fhlist = String::NEWgetSubStr(%hlist, 0, String::len(%hlist)-2) @ ".";
+									%hlist = %hlist @ "[" @ $HouseName[%i] @ "] ";
+						%fhlist = String::NEWgetSubStr(%hlist, 0, String::len(%hlist)-1);
 
 						if($state[%closestId, %TrueClientId] == 1)
 						{
 							//join new house
-							AI::sayLater(%TrueClientId, %closestId, "Which house would you like to join? [" @ %fhlist @ "]", True);
+							AI::sayLater(%TrueClientId, %closestId, "Which house would you like to join? " @ %fhlist, True);
 							$state[%closestId, %TrueClientId] = 3;
 						}
 						else if($state[%closestId, %TrueClientId] == 2)
 						{
 							//change house
-							AI::sayLater(%TrueClientId, %closestId, "Which house would you like to change to? [" @ %fhlist @ "]", True);
+							AI::sayLater(%TrueClientId, %closestId, "Which house would you like to change to? " @ %fhlist, True);
 							$state[%closestId, %TrueClientId] = 4;
 						}
 					}

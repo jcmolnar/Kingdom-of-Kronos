@@ -176,7 +176,10 @@ function DTSViewer::listShapes(%clientId, %page)
 	}
 
 	%pageSize = 20;
-	%totalPages = mCeil($DTSFileCount / %pageSize);
+	%rawPages = $DTSFileCount / %pageSize;
+	%totalPages = floor(%rawPages);
+	if(%totalPages < %rawPages)
+		%totalPages++;
 	
 	if(%page == "" || %page < 1)
 		%page = 1;

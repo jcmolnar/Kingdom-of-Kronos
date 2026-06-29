@@ -471,6 +471,10 @@ function AddToGraveyard(%aiName, %clientId)
 		return;
 	
 	InitializeGraveyard();
+	if($SpellCastToken[%clientId] == "" || $SpellCastToken[%clientId] == -1)
+		$SpellCastToken[%clientId] = 0;
+	$SpellCastToken[%clientId]++;
+	$PowerCloudCacheToken[%clientId] = "";
 	
 	// Create dead name with timestamp
 	%deadName = "DEAD_" @ getSimTime() @ "_" @ %aiName;
@@ -1071,6 +1075,11 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 		echo("WARNING: ClearAllBotData - Attempted to clear data for ACTIVE PLAYER " @ Client::getName(%clientId) @ " (ID: " @ %clientId @ "). ABORTING.");
 		return;
 	}
+
+	if($SpellCastToken[%clientId] == "" || $SpellCastToken[%clientId] == -1)
+		$SpellCastToken[%clientId] = 0;
+	$SpellCastToken[%clientId]++;
+	$PowerCloudCacheToken[%clientId] = "";
 
 	// Performance: avoid repeated GetClientDataType/isFile resolution during bulk storeData clears.
 	// Only enable override when this client is already resolved as a bot type.
@@ -1677,6 +1686,7 @@ function IsRealPlayer(%clientId)
 		{
 			// Update cache for future checks
 			$PlayerHasSaveFile[%clientId] = true;
+			PlayerManager::reserveId(%clientId);   // native DLL: bots can't inherit this real player's id
 			if($Debug::SafeGuards) echo("[SAFEGUARD] IsRealPlayer: Client " @ %clientId @ " (" @ %playerName @ ") has save file = REAL PLAYER");
 			return true;
 		}
@@ -1827,6 +1837,7 @@ function IsSafeToModify(%clientId, %operation)
 		{
 			// Update cache
 			$PlayerHasSaveFile[%clientId] = true;
+			PlayerManager::reserveId(%clientId);   // native DLL: bots can't inherit this real player's id
 			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Client " @ %clientId @ " (" @ %playerName @ ") has save file - REAL PLAYER PROTECTED");
 			return false;
 		}
@@ -1983,6 +1994,7 @@ function IsSafeToDeletePlayerObject(%playerObj, %clientId, %operation)
 		{
 			if(%clientId != "" && %clientId != -1)
 				$PlayerHasSaveFile[%clientId] = true;
+				PlayerManager::reserveId(%clientId);   // native DLL: bots can't inherit this real player's id
 			echo("[CRITICAL] SAFEGUARD [" @ %operation @ "]: Player " @ %playerName @ " has save file - REAL PLAYER OBJECT PROTECTED");
 			return false;
 		}
@@ -2001,6 +2013,7 @@ function ClearPlayerSaveFileCache(%clientId)
 	if(%clientId != "" && %clientId != -1)
 	{
 		$PlayerHasSaveFile[%clientId] = "";
+		schedule("PlayerManager::releaseId(" @ %clientId @ ");", 30.0);   // native DLL: release 30s later, after the zombie object is torn down
 		if($Debug::SafeGuards)
 			echo("[SAFEGUARD] Cleared save file cache for clientId " @ %clientId);
 	}
@@ -2908,10 +2921,34 @@ function getAInumberFromName(%aiName)
 // This is set alongside storeData() for backward compatibility
 
 //---------------------------------
+// AI::detectSimRebase()
+// The kronosfix_server time-fix DLL periodically rebases the sim clock BACKWARDS to keep it inside the
+// high-precision float range. getSimTime() then jumps down, so any $ClientIdRecentlyFreed[] recorded
+// before the rebase reads as "in the future" -> (getSimTime() - freed) goes NEGATIVE -> every ID-reuse
+// guard thinks the id was "just freed" and aborts the spawn. Fix: when the clock jumps backwards, shift
+// every stored freed-timestamp down by the same amount so the real "freed N seconds ago" deltas stay
+// correct across the rebase (protection preserved, spawns continue). Call at each spawn entry point.
+//---------------------------------
+function AI::detectSimRebase()
+{
+	%now = getSimTime();
+	if($AI_LastSimTime != "" && %now < ($AI_LastSimTime - 1))   // clock jumped back >1s = a DLL rebase
+	{
+		%shift = $AI_LastSimTime - %now;                         // how far the clock jumped backwards
+		for(%i = 2048; %i <= 2175; %i++)                         // engine client id range = 0x800 + 0..127
+			if($ClientIdRecentlyFreed[%i] != "")
+				$ClientIdRecentlyFreed[%i] = $ClientIdRecentlyFreed[%i] - %shift;
+		echo("[SIM REBASE] Sim clock rebased by " @ %shift @ "s; adjusted ID-reuse timers (spawns continue).");
+	}
+	$AI_LastSimTime = %now;
+}
+
+//---------------------------------
 //createAI()
 //---------------------------------
 function createAI(%aiName, %markerGroup, %name, %skipPostSpawn, %bypassRaceCheck)
 {
+	AI::detectSimRebase();   // keep ID-reuse guards correct across the time-fix DLL's clock rebase
 	// CRITICAL INTEGRATION: Server capacity check at lowest level
 	// This provides defense-in-depth - even if higher-level callers skip the check
 	%predictedId = PlayerManager::getFreeId();
@@ -5763,6 +5800,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 {
 	// WATCHDOG: Track this function for freeze detection
 	Watchdog_Enter("SpawnAIGetClientId");
+	AI::detectSimRebase();   // keep ID-reuse guards correct across the time-fix DLL's clock rebase
 	
 	if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN DEBUG] SpawnAIGetClientId: ENTRY spawnPointId='" @ %spawnPointId @ "' for " @ %newName @ ", predictedId=" @ %predictedId);
 	
@@ -8022,6 +8060,11 @@ function Bot_DetermineType(%aiId, %spawnBotInfo, %botInfoAiName)
 // Helper: Clear all storeData fields for a bot
 function Bot_ClearStoreData(%aiId, %botType)
 {
+	if($SpellCastToken[%aiId] == "" || $SpellCastToken[%aiId] == -1)
+		$SpellCastToken[%aiId] = 0;
+	$SpellCastToken[%aiId]++;
+	$PowerCloudCacheToken[%aiId] = "";
+
 	// Common fields (all bot types)
 	storeData(%aiId, "SpawnBotInfo", "");
 	storeData(%aiId, "SpawnTime", "");
@@ -8588,6 +8631,19 @@ function AI::sayLater(%clientId, %guardId, %message, %look)
 		%guardName = "Banker"; // Fallback
 
 	Client::sendMessage(%clientId, $MsgBeige, %guardName @ " tells you, \"" @ %message @ "\"");
+
+	// Modern NPC dialogue window (KronosNPC): mirror the spoken line into
+	// the HUD client's window when a conversation is open there, plus the
+	// parsed [keyword]/CAPS options as clickable buttons. Captures EVERY
+	// bot's dialogue (quest/teleport/generic/...) without touching the
+	// per-bot handlers. Vanilla clients never set knpcWinOpen.
+	if(%clientId.knpcWinOpen != "" && %clientId.hasKronosHUD)
+	{
+		remoteEval(%clientId, "KNPCLine", %message);
+		%knpcOpts = KronosNPC_ExtractOpts(%message);
+		if(%knpcOpts != "")
+			remoteEval(%clientId, "KNPCOpts", %knpcOpts);
+	}
 
 	if(%look)
 		AI::lookAtPlayer(%clientId, %guardId);
@@ -11044,6 +11100,20 @@ function SpawnSingleZoneBot(%botName, %zoneIndex)
 			return;
 		}
 		
+		// RACE FIX (see SpawnZoneBots): a same-display-name AI lingering from a just-despawned town bot
+		// (DespawnZoneBots defers its player deleteObject 1s) makes AI::spawn() error "already exists".
+		// Tear it down first (engine truth via Player::isAiControlled, so a real player is never touched)
+		// and cancel its pending deferred despawn-delete, so the spawn below succeeds.
+		%existingSingleId = NEWgetClientByName(%displayName);
+		if(%existingSingleId != -1 && %existingSingleId != "" && Player::isAiControlled(%existingSingleId))
+		{
+			$DespawnValidationToken[%existingSingleId] = "";
+			%staleSingleObj = Client::getOwnedObject(%existingSingleId);
+			if(%staleSingleObj != "" && %staleSingleObj != -1 && isObject(%staleSingleObj))
+				deleteObject(%staleSingleObj);
+			echo("[ZONE SPAWN] Cleared stale TownBot_" @ %botName @ " (clientId=" @ %existingSingleId @ ") before single respawn");
+		}
+
 		if(AI::spawn(%aiName, %armor, %spawnPos, %spawnRot, %displayName, "male2") != "false")
 	{
 		// For town bots, AI::spawn() creates a Player object, not a Drone
@@ -11254,6 +11324,9 @@ function GetZoneShortName(%zoneDesc)
 	if(%zoneDesc == "" || %zoneDesc == -1)
 		return "";
 	
+	if(String::ICompare(%zoneDesc, "The Sandbox") == 0 || String::ICompare(%zoneDesc, "Sandbox") == 0)
+		return "";
+	
 	// Common patterns - use GetWord for reliable parsing:
 	// "Kingdom of Kronos" -> "Kronos" (take 3rd word)
 	%word0 = GetWord(%zoneDesc, 0);
@@ -11440,15 +11513,30 @@ function SpawnZoneBots(%zoneIndex)
 			%spawnRot = $BotInfo[%botName, SPAWN_ROT];
 			%baseDisplayName = $BotInfo[%botName, NAME];
 			
-			// Only prepend zone short name to merchants and bankers to make them unique
-			// This avoids issues like "Empress Empress Theodora" for quest NPCs
+			// Only prepend zone short name to generic merchants and bankers to make them unique
 			%displayName = %baseDisplayName;
 			%isMerchant = (String::findSubStr(%botName, "merchant") == 0);
 			%isBanker = (String::findSubStr(%botName, "banker") == 0);
 			
 			if((%isMerchant || %isBanker) && %zoneShortName != "" && %zoneShortName != -1)
 			{
-				%displayName = %zoneShortName @ " " @ %baseDisplayName;
+				// Only prepend to generic merchants/bankers (e.g. "Melee Merchant", "banker")
+				// Custom named merchants (e.g. "GodFather Gian", "Uncle Tony") remain unchanged
+				%isGeneric = false;
+				if(%baseDisplayName == "Melee Merchant" ||
+				   %baseDisplayName == "Armor Merchant" ||
+				   %baseDisplayName == "Miscellaneous Merchant" ||
+				   %baseDisplayName == "General Merchant" ||
+				   %baseDisplayName == "banker" ||
+				   %baseDisplayName == "Banker")
+				{
+					%isGeneric = true;
+				}
+
+				if(%isGeneric)
+				{
+					%displayName = %zoneShortName @ " " @ %baseDisplayName;
+				}
 			}
 			
 			// Check if we already have a stored ID for this bot
@@ -11646,8 +11734,23 @@ function SpawnZoneBots(%zoneIndex)
 				// Otherwise, it's an orphaned AI or unknown state - AI::spawn() will clean it up
 			}
 			
+			// RACE FIX (town bot respawn vs deferred despawn): if an AI with this display name still
+			// exists here, it is almost always a just-despawned town bot whose player deleteObject was
+			// deferred 1s by DespawnZoneBots (its $TownBotSpawned/$EnemyBotData were wiped, so it was not
+			// reclaimed above). AI::spawn() does NOT replace a same-named AI -- it errors "An AI named ...
+			// already exists!" and the respawn fails. Tear that stale AI down NOW (engine truth via
+			// Player::isAiControlled, so a real player is never touched) and cancel its pending deferred
+			// despawn-delete, so the fresh AI::spawn() below succeeds with a clean slot.
+			if(%existingId != -1 && %existingId != "" && Player::isAiControlled(%existingId))
+			{
+				$DespawnValidationToken[%existingId] = "";   // cancel DespawnZoneBots' scheduled deleteObject (Ai.cs-local)
+				%staleObj = Client::getOwnedObject(%existingId);
+				if(%staleObj != "" && %staleObj != -1 && isObject(%staleObj))
+					deleteObject(%staleObj);
+				echo("[ZONE SPAWN] Cleared stale TownBot_" @ %botName @ " (clientId=" @ %existingId @ ") before respawn");
+			}
+
 			// No stored ID means this is a fresh spawn - just proceed to spawn
-			// AI::spawn() will handle any orphaned AIs with this name
 			
 			if($TOWNBOT_RACE_DEBUG) echo("[TOWNBOT RACE DEBUG] SpawnZoneBots: CALLING AI::spawn() for " @ %botName @ " with armor='" @ %armor @ "'");
 			

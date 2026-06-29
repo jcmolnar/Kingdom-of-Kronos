@@ -1,0 +1,67 @@
+kronos_aiteardown.dll  —  SERVER-side engine fix (dedicated host only)
+=====================================================================
+
+What it fixes
+=============
+The Tribes engine has an asymmetry in how it tears down a client vs an AI bot. When a
+real player disconnects, the engine destroys their player entity INLINE with freeing
+their client id. When an AI bot is removed, the engine frees the bot's client id but
+leaves destroying the bot's entity to a separate step. If a bot is torn down by a path
+that doesn't run that separate step, the bot's player entity is ORPHANED — still alive,
+still tagged with a client id that is now free for reuse. A player who then connects (or
+a bot that spawns) and is handed that id can cross-wire with the orphan, producing the
+"a client joins and ends up assigned to an AI bot as well as their own player / the AI
+becomes a ghost" symptom.
+
+This plugin makes AI teardown SYMMETRIC: at the exact point the engine frees a client id
+(PlayerManager::clientDropped, just before removeClient), it does the same null-checked
+owned-entity delete the real-client path already does. So the bot's entity is always gone
+BEFORE its id is reusable — no orphan, no cross-wire.
+
+Why it is safe / cannot regress
+=============
+- It is a single null-checked insert at one site (0x40c464). For a real client the owned
+  entity was already deleted earlier in the same function, so the check is a no-op. For a
+  bot torn down normally (via removeThis) the entity is also already gone, so it is a
+  no-op. It only acts in the abnormal case (bot id freed with the entity still alive) —
+  exactly the bug. It cannot double-free (the AIObj destructor never deletes the player
+  itself).
+- It changes NO game scripts. Every existing script-side safeguard in Ai.cs (ghost/shell-
+  bot scans, orphan cleanup, etc.) keeps working unchanged — it simply stops finding
+  orphans to clean. Nothing that calls those script functions is affected.
+- It is standalone: it does not touch kronos_playermanager.dll or kronosfix_server.dll.
+- On load it byte-verifies the patch site against the running exe and ABORTS (logs, does
+  nothing) if the bytes don't match — it can never corrupt a different/updated binary.
+- Disable instantly by removing its PluginLoader line (below) and restarting.
+
+Install (dedicated server)
+=============
+1. Drop kronos_aiteardown.dll in this Plugins\ folder.
+2. In Plugins\Scripts\PluginLoader.cs, inside the `if($dedicated){ ... }` block (next to
+   $PluginLoader::kronos_playermanager = true;), add:
+
+       $PluginLoader::kronos_aiteardown = true;
+
+3. Restart the dedicated server.
+
+Verify
+=============
+- kronos_aiteardown.log shows:  --- kronos_aiteardown loaded (pinned=...) ---
+  and:  install OK AITeardownSymmetric @0x0040c464 -> ... (9 bytes)
+  (If it logs "install ABORT ... byte mismatch", the server exe is not the expected
+  T1Vista build — the plugin stays inert and safe; tell the maintainer.)
+- In play: the "client assigned to a bot / AI ghost" symptom should stop occurring even
+  when bots are killed/recycled aggressively.
+
+How it works
+=============
+DllMain VirtualProtects the 9 bytes at 0x40c464 and installs an E9 detour to a trampoline
+that does `if(rep->ownedObject) SimObject::deleteObject(rep->ownedObject)` then re-executes
+the original `removeClient(manager, rep)` and returns. Self-pinned (GetModuleHandleExW PIN)
+so the loader can't unload it and dangle the detour. getPlugin is a harmless stub (no
+console commands registered) — same machinery as kronosfix.dll.
+
+Engine ground truth: re/engine_clientid_reuse_bug.md, re/aics_clientid_audit.md in the
+Tribes Browser Based project. Binary: T1Vista.exe base 0x400000, sha1 3b6fa9b6;
+clientDropped=FUN_0040c3d8, removeClient=FUN_0040c314, SimObject::deleteObject=FUN_004fe858,
+rep->ownedObject @ rep+0x98.

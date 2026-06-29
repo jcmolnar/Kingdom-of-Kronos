@@ -1806,7 +1806,7 @@ function Belt::GiveThisStuff(%clientId, %item, %amnt, %echo)
 			}
 		}
 
-		if(%echo && !%isBot) Client::sendMessage(%clientId, 0, "You received " @ %amnt @ " " @ $BeltItem[%item, "Name"] @ ".");
+		if(%echo && !%isBot) Client::sendMessage(%clientId, 0, "You received " @ %amnt @ " " @ $BeltItem[%item, "Name"] @ ".~loot");
 
 		if(%count > 0)
 		{
@@ -1881,6 +1881,7 @@ function Belt::TakeThisStuff(%clientId, %item, %amnt)
 {
 	if(%amnt > 0)
 	{
+		%isBot = isRPGAI(%clientId);
 		%originalItem = %item;
 		%item = $BeltItem[%item, "Item"];
 		%type = $BeltItem[%item, "Type"];
@@ -1895,6 +1896,17 @@ function Belt::TakeThisStuff(%clientId, %item, %amnt)
 		
 		%list = fetchData(%clientId, %type);
 		
+		// Performance fast-path for bots:
+		// bots are server-controlled and already use streamlined add paths,
+		// so skip expensive corruption scanning and GetNS normalization here.
+		if(%isBot)
+		{
+			if(%list == "0")
+				%list = "";
+		}
+		else
+		{
+
 		// Clean up corrupted entries before processing (items starting with "0", empty, invalid counts, etc.)
 		// Check if list is severely corrupted (non-numeric counts indicate corruption)
 		// Scan entire list, not just first item, to catch corruption like "BlackStatue 3KronoStone 14"
@@ -2007,6 +2019,7 @@ function Belt::TakeThisStuff(%clientId, %item, %amnt)
 			}
 			
 			%list = %cleanedList;
+		}
 		}
 		
 		%count = Belt::ItemCount(%item, %list);
@@ -2608,7 +2621,7 @@ function Belt::WhatIs(%clientId, %item)
 	
 	
 	%msg = %msg @ "\n\n<f0>" @ %nfo;
-	bottomprint(%clientId, %msg, floor(String::len(%msg) / 20));
+	KronosExamineInfo(%clientId, %msg, floor(String::len(%msg) / 20));
 }
 
 function Belt::GetLastItem()
@@ -2949,7 +2962,12 @@ function Belt::GetDeathItems(%clientId)
 
 function BeltItem::Add(%name, %item, %type, %weight, %cost)
 {
-	%num = $Belt::Count[%type]++;
+	// CRITICAL: assign index BEFORE incrementing. "%num = $Belt::Count[%type]++;"
+	// returns the NEW value in this engine (see AssignOpExprNode::eval), which made
+	// indices 1-based while all iteration loops are 0-based - hiding the last item
+	// registered in every category from shop/belt menus.
+	%num = $Belt::Count[%type];
+	$Belt::Count[%type]++;
 	$BeltItem[%num, "Num", %type] = %item;
 	$BeltItem[%item, "Item"] = %item;
 	$BeltItem[%item, "Name"] = %name;
@@ -2972,6 +2990,7 @@ function BeltItem::Add(%name, %item, %type, %weight, %cost)
 //===================
 
 BeltItem::Add("Black Statue", "BlackStatue", "QuestItems", 1.0, 300);
+BeltItem::Add("Ruby Necklace", "RubyNecklace", "QuestItems", 2.5, 300);
 BeltItem::Add("Enchanted Stone", "EnchantedStone", "QuestItems", 5.0, 2450);
 BeltItem::Add("Skeleton Bone", "SkeletonBone", "QuestItems", 2.5, 5860);
 BeltItem::Add("Ogre Tooth", "OgreTooth", "QuestItems", 2.5, 6000);
@@ -2986,8 +3005,11 @@ BeltItem::Add("Bible", "Bible", "QuestItems", 5.0, 800000);
 BeltItem::Add("Virus Fragment", "VirusFragment", "QuestItems", 2.0, 850000);
 BeltItem::Add("Angel's Tear", "AngelsTear", "QuestItems", 2.5, 900000);
 BeltItem::Add("Void Stone", "VoidStone", "QuestItems", 5.0, 1000000);
+BeltItem::Add("SIGKILL Sigil", "SigkillSigil", "QuestItems", 5.0, 2000000);
+BeltItem::Add("NULL", "NullItem", "QuestItems", 1.0, 500000);
 
 $AccessoryVar[BlackStatue, $MiscInfo] = "A black statue";
+$AccessoryVar[RubyNecklace, $MiscInfo] = "A ruby necklace";
 $AccessoryVar[EnchantedStone, $MiscInfo] = "An enchanted stone";
 $AccessoryVar[SkeletonBone, $MiscInfo] = "A skeleton bone";
 $AccessoryVar[OgreTooth, $MiscInfo] = "An ogre tooth";
@@ -3002,6 +3024,9 @@ $AccessoryVar[Bible, $MiscInfo] = "Do you have time to talk about your lord and 
 $AccessoryVar[VirusFragment, $MiscInfo] = "A fragment of corrupted virus - be careful, it could be contagious!";
 $AccessoryVar[AngelsTear, $MiscInfo] = "A tear shed from an angel when it dies.";
 $AccessoryVar[VoidStone, $MiscInfo] = "A mysterious stone pulsing with void energy from beyond the realm.";
+$AccessoryVar[SigkillSigil, $MiscInfo] = "A powerful sigil carrying a SIGKILL command, pulsing with code-terminating energy.";
+$AccessoryVar[NullItem, $MiscInfo] = "NULL";
+
 
 //===================
 //  Key Items
@@ -4453,20 +4478,60 @@ function Belt::GetBuyCost(%clientId, %item)
 	return %cost;
 }
 
+// Count how many belt items in %category match the merchant's shop index list.
+// Used to hide empty Buy Accessories / Buy Consumables menu options.
+function Belt::CountShopItems(%shopIndices, %category)
+{
+	%count = 0;
+	%beltCount = $Belt::Count[%category];
+	for(%i = 0; %i < %beltCount; %i++)
+	{
+		%item = $BeltItem[%i, "Num", %category];
+		if(%item == "" || %item == -1)
+			continue;
+
+		%itemShopIndex = $AccessoryVar[%item, $ShopIndex];
+		if(%itemShopIndex == "" || %itemShopIndex == -1)
+			continue;
+
+		for(%j = 0; GetWord(%shopIndices, %j) != -1; %j++)
+		{
+			if(GetWord(%shopIndices, %j) == %itemShopIndex)
+			{
+				%count++;
+				break;
+			}
+		}
+	}
+	return %count;
+}
+
 function Belt::Shop(%clientId, %npc, %shopIndices)
 {
 	// Set flag to track that player is in belt shop menu
 	%clientId.currentBeltShop = %npc;
 	%clientId.beltShopIndices = %shopIndices;
-	
+
 	AI::sayLater(%clientId, %npc, "Welcome! What can I help you with?", true);
-	
+
+	// HUD clients: skip the multi-option menu entirely - the Kronos
+	// shop screen is all-in-one (standard items + belt accessories /
+	// consumables, buying AND selling). Vanilla menu flow unchanged.
+	if(%clientId.hasKronosHUD)
+	{
+		SetupShop(%clientId, %npc);
+		return;
+	}
+
 	// Build top-level menu
 	Client::buildMenu(%clientId, ".:( Shop ):.", "BeltShop", true);
 	%cnt = 1;
 	Client::addMenuItem(%clientId, %cnt++ @ ". Standard Shop", "standard");
-	Client::addMenuItem(%clientId, %cnt++ @ ". Buy Accessories", "buy");
-	Client::addMenuItem(%clientId, %cnt++ @ ". Buy Consumables", "buyconsumables");
+	// Only offer accessory/consumable submenus when this merchant actually stocks something there
+	if(Belt::CountShopItems(%shopIndices, "Accessories") > 0)
+		Client::addMenuItem(%clientId, %cnt++ @ ". Buy Accessories", "buy");
+	if(Belt::CountShopItems(%shopIndices, "Consumables") > 0)
+		Client::addMenuItem(%clientId, %cnt++ @ ". Buy Consumables", "buyconsumables");
 	Client::addMenuItem(%clientId, %cnt++ @ ". Sell Backpack Items", "sell");
 	Client::addMenuItem(%clientId, "xFinished", "done");
 }
@@ -4555,7 +4620,8 @@ function MenuBuyBeltAccessories(%clientId, %page)
 			%name = %item;
 		
 		%cost = Belt::GetBuyCost(%clientId, %item);
-		Client::addMenuItem(%clientId, %cnt++ @ ": " @ %name @ " ($" @ %cost @ ")", %item @ " " @ %page);
+		Client::addMenuItem(%clientId, %cnt @ ". " @ %name @ " ($" @ %cost @ ")", %item @ " " @ %page);
+		%cnt++;
 	}
 	
 	// If no items found, show message
@@ -4613,7 +4679,14 @@ function processMenuBuyBeltAccessories(%clientId, %opt)
 		MenuBuyBeltAccessories(%clientId, %p);
 		return;
 	}
-	
+
+	if(%o == "noitems" || %o == "cantafford")
+	{
+		// Ignore - stay on the same menu
+		MenuBuyBeltAccessories(%clientId, 1);
+		return;
+	}
+
 	// Player selected an item to buy - show buy confirmation menu
 	MenuBuyBeltItem(%clientId, %o, %p);
 }
@@ -4675,7 +4748,8 @@ function MenuBuyBeltConsumables(%clientId, %page)
 			%name = %item;
 		
 		%cost = Belt::GetBuyCost(%clientId, %item);
-		Client::addMenuItem(%clientId, %cnt++ @ ": " @ %name @ " ($" @ %cost @ ")", %item @ " " @ %page);
+		Client::addMenuItem(%clientId, %cnt @ ". " @ %name @ " ($" @ %cost @ ")", %item @ " " @ %page);
+		%cnt++;
 	}
 	
 	// If no items found, show message
@@ -4812,7 +4886,7 @@ function processMenuBuyBeltItemConsumable(%clientId, %opt)
 	{
 		// Display consumable info using the same function as #w command (Acessory logic)
 		%msg = WhatIs(%item);
-		bottomprint(%clientId, %msg, 5);
+		KronosExamineInfo(%clientId, %msg, 5);
 		
 		MenuBuyBeltItemConsumable(%clientId, %item, %fromPage);
 		return;
@@ -4923,7 +4997,7 @@ function processMenuBuyBeltItem(%clientId, %opt)
 	{
 		// Display accessory info using the same function as #w command
 		%msg = WhatIs(%item);
-		bottomprint(%clientId, %msg, 5);
+		KronosExamineInfo(%clientId, %msg, 5);
 		
 		// Return to the buy menu
 		MenuBuyBeltItem(%clientId, %item, %fromPage);

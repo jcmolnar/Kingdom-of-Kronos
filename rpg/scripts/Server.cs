@@ -323,9 +323,11 @@ function createServer(%mission, %dedicated)
 	exec(remortseal);
 	exec(DualWielding);
 	exec(Ascension);
+	exec(SigilForge);
 	exec(TransmogSystem);
 	exec(lasvegas);
 	exec(KronosHUD_Server);
+	exec(KronosNPC_Server);
 	//exec(DebugInit); only need if debugging
 	//exec(backpack); we implemented belt.cs instead of backpack.cs
 	

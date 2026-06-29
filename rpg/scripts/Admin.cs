@@ -321,6 +321,11 @@ function Game::menuRequest(%clientId)
 	}
 	else
 	{
+		// Clicking your own name on the player list has no self-targeted
+		// options - treat it as no selection so the main menu shows.
+		if(%clientId.selClient == %clientId)
+			%clientId.selClient = "";
+
 		if(%clientId.selClient)
 		{
 			%sel = %clientId.selClient;
@@ -365,6 +370,9 @@ function Game::menuRequest(%clientId)
 					Client::addMenuItem(%clientId, %curItem++ @ "Mute", "mute " @ %sel);
 
 			}
+
+			// Always offer a way back to the main menu
+			Client::addMenuItem(%clientId, %curItem++ @ "Back", "deselect");
 		}
 		else
 		{
@@ -827,6 +835,13 @@ function processMenuOptions(%clientId, %option)
 	      %clientId.muted[%cl] = True;
 	else if(%opt == "unmute")
 		%clientId.muted[%cl] = "";
+	else if(%opt == "deselect")
+	{
+		// "Back" from the selected-player menu - return to the main menu
+		%clientId.selClient = "";
+		Game::menuRequest(%clientId);
+		return;
+	}
 	else if(%opt == "gignoreon")
 	{
 		storeData(%clientId, "ignoreGlobal", True);
