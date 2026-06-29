@@ -95,7 +95,7 @@ AddAd("House Artifacts and Bases NOW SAVE",
       "They will restore if the server crashes or restarts.",
       "Let the battles begin!");
 
-AddAd("The server has been updated to v0.8.5",
+AddAd("The server has been updated to v0.9",
       "Please report any bugs to the TRPG Discord Server in the KoK mod channel, or use the #bugreport command",
 	 "Thank you to everyone who has contributed to bug finding!");
 

@@ -270,7 +270,7 @@ function Server::onClientConnect(%clientId)
 
 
 	##### MODIFY "CONNECTING" SCREEN GREETING:
-	$Taurik::ConnectScreenMessage1 = "Kingdom of Kronos V0.8.5";
+	$Taurik::ConnectScreenMessage1 = "Kingdom of Kronos V0.9";
 	$Taurik::ConnectScreenMessage2 = "Updates Every Friday!";
 
 
