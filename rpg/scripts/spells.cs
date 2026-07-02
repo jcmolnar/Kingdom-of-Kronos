@@ -3748,15 +3748,23 @@ function SpellDamage(%clientId, %targetId, %damageValue, %index)
 		}
 	}
 
-	// SEAL BATTLE: Spell damage multiplier system DISABLED
-	// Instead, relying on high OffensiveCasting skill (~14390) set by SetupBot
-	// to naturally produce high spell damage through the game's formulas
-	// %spellMult = $SealBattleSpellDmgMult[%clientId];
-	// if(%spellMult != "" && %spellMult > 0)
-	// {
-	// 	%originalDamage = %damageValue;
-	// 	%damageValue = floor(%damageValue * %spellMult);
-	// }
+	// SEAL BATTLE: apply the seal bot spell damage multiplier.
+	// Computed in SealBattle::SetupBot so hits land at the target fraction of
+	// reference-player HP at every seal value - OffensiveCasting alone scales
+	// linearly with the seal while player HP scales ~quadratically, so without
+	// this the mage's relative damage decays ~1/R (correct at R20, negligible
+	// at high seals).
+	// GUARD: gated on isAiControlled + the SealBattleBot flag so a stale entry
+	// on a reused clientId can never amplify a real player's spells
+	// (SealBattle::ClearBotData clears both the flag and the multiplier).
+	// GUARD 2: only amplify DAMAGE (positive values) - healing spells use negative
+	// damageValues and amplifying those would fight $SealBotHealingReduction.
+	%spellMult = $SealBattleSpellDmgMult[%clientId];
+	if(%spellMult != "" && %spellMult > 1 && %damageValue > 0)
+	{
+		if(Player::isAiControlled(%clientId) && fetchData(%clientId, "SealBattleBot"))
+			%damageValue = floor(%damageValue * %spellMult);
+	}
 
 	GameBase::virtual(%targetObj, "onDamage", $SpellDamageType, %damageValue, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, $Spell::keyword[%index]);
 }

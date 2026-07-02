@@ -4147,13 +4147,18 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 				%value = floor(%value * 0.85);
 			
 			// Dodge Mastery: 10% chance to completely avoid damage
+			// NOTE: this runs AFTER the standard miss-messaging block, so send our
+			// own feedback to BOTH sides here (the attacker previously got no
+			// message at all - their swing just silently did nothing)
 			if(Ascension::HasTalent(%damagedClient, "DodgeMastery"))
 			{
 				if(floor(getRandom() * 100) < 10)
 				{
 					%value = 0;
 					%isMiss = true;
-					Client::sendMessage(%damagedClient, 0, "Dodge Mastery!");
+					Client::sendMessage(%damagedClient, $MsgGreen, "Dodge Mastery!");
+					if(!isRPGAI(%shooterClient) && %shooterClient != %damagedClient)
+						Client::sendMessage(%shooterClient, $MsgRed, Client::getName(%damagedClient) @ " dodges your attack!");
 				}
 			}
 			

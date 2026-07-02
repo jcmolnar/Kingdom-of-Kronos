@@ -301,9 +301,12 @@ function Ascension::Purchase(%clientId, %talentName)
 		%currentRemort = fetchData(%clientId, "RemortStep");
 		%newRemort = %currentRemort - %cost;
 		storeData(%clientId, "RemortStep", %newRemort);
-		
-		// Update max level based on new remort
-		%maxLevel = 125 + (%newRemort * 8);
+
+		// DESIGN DECISION (intentional, do not "fix"): the player's current LVL is
+		// deliberately NOT clamped to the new remort's max level (125 + remort*8).
+		// They sacrificed a large amount of progression time for this talent - let
+		// them keep the level; they'll remort again soon anyway. Being over-level
+		// for the remort is an accepted transient state.
 		Client::sendMessage(%clientId, 0, "You sacrificed " @ %cost @ " remorts! (Now Remort " @ %newRemort @ ")");
 	}
 	else if(%costType == "sp")
@@ -935,6 +938,14 @@ function processMenuSelectAscension(%clientId, %code)
 	%desc = $AscensionTalent[%talent, Desc];
 	%requires = $AscensionTalent[%talent, Requires];
 	%minRemort = $AscensionTalent[%talent, MinRemort];
+
+	// DISPLAY FIX: robe talents gate on the DYNAMIC count-based minimum (first robe
+	// 125, second 110, third 105 - regardless of which robe), not the per-talent
+	// static value. CanAfford already used the dynamic value; the info screen didn't,
+	// so e.g. buying Void Robe first displayed "Requires Remort 105+" while the
+	// actual gate was 125.
+	if($AscensionTalent[%talent, DynamicCost] == "robe")
+		%minRemort = Ascension::GetRobeMinRemort(%clientId);
 	
 	// Build cost string
 	if(%costType == "remort")

@@ -1,5 +1,9 @@
 $INVISIBILITY_DEBUG = 0; // Toggle [INVISIBILITY DEBUG] messages - set to 1 to diagnose invisible bots
 $LOOTBAG_DEBUG = 0; // Toggle [LOOTBAG DEBUG] messages in this file
+$LOADCHAR_DEBUG = 0; // Toggle per-field RAW/FINAL echoes in LoadCharacter.
+                     // NOTE: the join-time INVENTORY SUMMARY block is deliberately
+                     // ALWAYS ON - it's the audit log of what a player had on join
+                     // (used to restore inventory after loss bugs). Do not gate it.
 
 // Safe skin setter - validates skin before applying and logs potential invisibility issues
 function Safe_SetSkin(%clientId, %skin, %callerContext)
@@ -285,34 +289,30 @@ function viewGroupList(%clientId)
 
 // Number formatting helper
 // Returns abbreviated format: 1.5k, 2.5m, 1.2b
+// BUGFIX: whole-number quotients (25000/1000 = "25", no decimal point) used to hit
+// findSubStr(".") == -1 and truncate to ONE character - the banker menu showed
+// 25,000 coins as "2k" and 150,000 as "1k". Handle the no-decimal case explicitly.
+function numFormat_trim(%val)
+{
+	%dotPos = String::findSubStr(%val, ".");
+	if(%dotPos == -1)
+		return %val; // Whole number - use as-is
+	%disp = String::getSubStr(%val, 0, %dotPos + 2);
+	if(String::getSubStr(%disp, String::len(%disp)-1, 1) == "0")
+		%disp = String::getSubStr(%disp, 0, String::len(%disp)-2); // Remove .0
+	return %disp;
+}
 function numFormat(%num)
 {
 	if(%num < 1000) return %num;
-	
+
 	if(%num < 1000000)
-	{
-		%k = %num / 1000;
-		// Keep 1 decimal place
-		%disp = String::getSubStr(%k, 0, String::findSubStr(%k, ".") + 2);
-		if(String::getSubStr(%disp, String::len(%disp)-1, 1) == "0")
-			%disp = String::getSubStr(%disp, 0, String::len(%disp)-2); // Remove .0
-		return %disp @ "k";
-	}
-	
+		return numFormat_trim(%num / 1000) @ "k";
+
 	if(%num < 1000000000)
-	{
-		%m = %num / 1000000;
-		%disp = String::getSubStr(%m, 0, String::findSubStr(%m, ".") + 2);
-		if(String::getSubStr(%disp, String::len(%disp)-1, 1) == "0")
-			%disp = String::getSubStr(%disp, 0, String::len(%disp)-2);
-		return %disp @ "m";
-	}
-	
-	%b = %num / 1000000000;
-	%disp = String::getSubStr(%b, 0, String::findSubStr(%b, ".") + 2);
-	if(String::getSubStr(%disp, String::len(%disp)-1, 1) == "0")
-		%disp = String::getSubStr(%disp, 0, String::len(%disp)-2);
-	return %disp @ "b";
+		return numFormat_trim(%num / 1000000) @ "m";
+
+	return numFormat_trim(%num / 1000000000) @ "b";
 }
 
 // Wrapper function for Player::getItemCount with debug logging
@@ -1707,7 +1707,7 @@ function LoadCharacter(%clientId)
 			{
 				// Remove leading "0" prefix
 				%grouplist = String::getSubStr(%grouplist, 1, 99999);
-				echo("DEBUG LoadCharacter: Cleaned grouplist - removed leading '0' prefix. Original: '" @ $funk::var[%name, 0, 8] @ "', Cleaned: '" @ %grouplist @ "'");
+				if($LOADCHAR_DEBUG) echo("DEBUG LoadCharacter: Cleaned grouplist - removed leading '0' prefix. Original: '" @ $funk::var[%name, 0, 8] @ "', Cleaned: '" @ %grouplist @ "'");
 			}
 		}
 		storeData(%clientId, "grouplist", %grouplist);
@@ -1903,10 +1903,10 @@ function LoadCharacter(%clientId)
 		storeData(%clientId, "TournyRank", $funk::var[%name, 0, 32]);
 		//echo("DEBUG: TournyRank = '" @ $funk::var[%name, 0, 32] @ "'");
 		
-		echo("DEBUG: Loading belt items (QuestItems/KeyItems)...");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Loading belt items (QuestItems/KeyItems)...");
 		// Normalize QuestItems and KeyItems - convert "0" to empty string
 		%questItems = $funk::var[%name, 0, 35];
-		echo("DEBUG: QuestItems RAW = '" @ %questItems @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: QuestItems RAW = '" @ %questItems @ "'");
 		
 		// BELT CORRUPTION CHECKS DISABLED - No validation or fixes
 		// CRITICAL: Validate QuestItems string after loading to detect corruption
@@ -1946,87 +1946,87 @@ function LoadCharacter(%clientId)
 		
 		if(%questItems == "" || %questItems == " " || %questItems == "0")
 		{
-			echo("DEBUG: QuestItems was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: QuestItems was empty/'0', normalizing to empty string");
 			%questItems = "";
 		}
 		storeData(%clientId, "QuestItems", %questItems);
-		echo("DEBUG: QuestItems FINAL = '" @ %questItems @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: QuestItems FINAL = '" @ %questItems @ "'");
 		
 		%keyItems = $funk::var[%name, 0, 36];
-		echo("DEBUG: KeyItems RAW = '" @ %keyItems @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: KeyItems RAW = '" @ %keyItems @ "'");
 		if(%keyItems == "" || %keyItems == " " || %keyItems == "0")
 		{
-			echo("DEBUG: KeyItems was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: KeyItems was empty/'0', normalizing to empty string");
 			%keyItems = "";
 		}
 		storeData(%clientId, "KeyItems", %keyItems);
-		echo("DEBUG: KeyItems FINAL = '" @ %keyItems @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: KeyItems FINAL = '" @ %keyItems @ "'");
 		
 		// Load Consumables from field 37 (new field for potions)
 		%consumables = $funk::var[%name, 0, 37];
-		echo("DEBUG: Consumables RAW (field 37) = '" @ %consumables @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Consumables RAW (field 37) = '" @ %consumables @ "'");
 		if(%consumables == "" || %consumables == " " || %consumables == "0" || %consumables == -1)
 		{
-			echo("DEBUG: Consumables was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: Consumables was empty/'0', normalizing to empty string");
 			%consumables = "";
 		}
 		storeData(%clientId, "Consumables", %consumables);
-		echo("DEBUG: Consumables FINAL = '" @ %consumables @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Consumables FINAL = '" @ %consumables @ "'");
 		
 		// Load Armor from field 48 (equipped category)
 		%armor = $funk::var[%name, 0, 48];
-		echo("DEBUG: Armor RAW (field 48) = '" @ %armor @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Armor RAW (field 48) = '" @ %armor @ "'");
 		if(%armor == "" || %armor == " " || %armor == "0" || %armor == -1)
 		{
-			echo("DEBUG: Armor was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: Armor was empty/'0', normalizing to empty string");
 			%armor = "";
 		}
 		storeData(%clientId, "Armor", %armor);
-		echo("DEBUG: Armor FINAL = '" @ %armor @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Armor FINAL = '" @ %armor @ "'");
 		
 		// Load Accessories from field 49 (equipped category)
 		%accessories = $funk::var[%name, 0, 49];
-		echo("DEBUG: Accessories RAW (field 49) = '" @ %accessories @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Accessories RAW (field 49) = '" @ %accessories @ "'");
 		if(%accessories == "" || %accessories == " " || %accessories == "0" || %accessories == -1)
 		{
-			echo("DEBUG: Accessories was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: Accessories was empty/'0', normalizing to empty string");
 			%accessories = "";
 		}
 		storeData(%clientId, "Accessories", %accessories);
-		echo("DEBUG: Accessories FINAL = '" @ %accessories @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Accessories FINAL = '" @ %accessories @ "'");
 		
 		// Load Other from field 50 (equipped category)
 		%other = $funk::var[%name, 0, 50];
-		echo("DEBUG: Other RAW (field 50) = '" @ %other @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Other RAW (field 50) = '" @ %other @ "'");
 		if(%other == "" || %other == " " || %other == "0" || %other == -1)
 		{
-			echo("DEBUG: Other was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: Other was empty/'0', normalizing to empty string");
 			%other = "";
 		}
 		storeData(%clientId, "Other", %other);
-		echo("DEBUG: Other FINAL = '" @ %other @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Other FINAL = '" @ %other @ "'");
 		
 		// Load Equipped Belt Armor from field 51
 		%equippedBeltArmor = $funk::var[%name, 0, 51];
-		echo("DEBUG: EquippedBeltArmor RAW (field 51) = '" @ %equippedBeltArmor @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: EquippedBeltArmor RAW (field 51) = '" @ %equippedBeltArmor @ "'");
 		if(%equippedBeltArmor == "" || %equippedBeltArmor == " " || %equippedBeltArmor == "0" || %equippedBeltArmor == -1)
 		{
-			echo("DEBUG: EquippedBeltArmor was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: EquippedBeltArmor was empty/'0', normalizing to empty string");
 			%equippedBeltArmor = "";
 		}
 		storeData(%clientId, "EquippedBeltArmor", %equippedBeltArmor);
-		echo("DEBUG: EquippedBeltArmor FINAL = '" @ %equippedBeltArmor @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: EquippedBeltArmor FINAL = '" @ %equippedBeltArmor @ "'");
 		
 		// Load Equipped Belt Accessories from field 52 (space-separated list)
 		%equippedBeltAccessories = $funk::var[%name, 0, 52];
-		echo("DEBUG: EquippedBeltAccessories RAW (field 52) = '" @ %equippedBeltAccessories @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: EquippedBeltAccessories RAW (field 52) = '" @ %equippedBeltAccessories @ "'");
 		if(%equippedBeltAccessories == "" || %equippedBeltAccessories == " " || %equippedBeltAccessories == "0" || %equippedBeltAccessories == -1)
 		{
-			echo("DEBUG: EquippedBeltAccessories was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: EquippedBeltAccessories was empty/'0', normalizing to empty string");
 			%equippedBeltAccessories = "";
 		}
 		storeData(%clientId, "EquippedBeltAccessories", %equippedBeltAccessories);
-		echo("DEBUG: EquippedBeltAccessories FINAL = '" @ %equippedBeltAccessories @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: EquippedBeltAccessories FINAL = '" @ %equippedBeltAccessories @ "'");
 		
 		// Load equipped off-hand weapon for dual wielding (field 53)
 		%offHandWeapon = $funk::var[%name, 0, 53];
@@ -2063,15 +2063,15 @@ function LoadCharacter(%clientId)
 		// Note: Visual re-mount happens in Game::playerSpawn via schedule
 
 		
-		echo("DEBUG: Loading stored belt items (StoredQuestItems/StoredKeyItems)...");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Loading stored belt items (StoredQuestItems/StoredKeyItems)...");
 		// Handle StoredQuestItems and StoredKeyItems - convert space or "0" to empty string if needed
 		// Also handle case where variable doesn't exist in old save files (defaults to empty)
 		// Validate and clean corrupted data like "0 -1" before storing
 		%storedQuest = $funk::var[%name, 0, 38];
-		echo("DEBUG: StoredQuestItems RAW (field 38) = '" @ %storedQuest @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredQuestItems RAW (field 38) = '" @ %storedQuest @ "'");
 		if(%storedQuest == "" || %storedQuest == " " || %storedQuest == "0")
 		{
-			echo("DEBUG: StoredQuestItems was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: StoredQuestItems was empty/'0', normalizing to empty string");
 			%storedQuest = "";
 		}
 		else
@@ -2106,14 +2106,14 @@ function LoadCharacter(%clientId)
 			%storedQuest = %cleanedQuest;
 		}
 		storeData(%clientId, "StoredQuestItems", %storedQuest);
-		echo("DEBUG: StoredQuestItems FINAL = '" @ %storedQuest @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredQuestItems FINAL = '" @ %storedQuest @ "'");
 		
 		// Load StoredKeyItems from field 39
 		%storedKey = $funk::var[%name, 0, 39];
-		echo("DEBUG: StoredKeyItems RAW (field 39) = '" @ %storedKey @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredKeyItems RAW (field 39) = '" @ %storedKey @ "'");
 		if(%storedKey == "" || %storedKey == " " || %storedKey == "0")
 		{
-			echo("DEBUG: StoredKeyItems was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: StoredKeyItems was empty/'0', normalizing to empty string");
 			%storedKey = "";
 		}
 		else
@@ -2148,7 +2148,7 @@ function LoadCharacter(%clientId)
 			%storedKey = %cleanedKey;
 		}
 		storeData(%clientId, "StoredKeyItems", %storedKey);
-		echo("DEBUG: StoredKeyItems FINAL = '" @ %storedKey @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredKeyItems FINAL = '" @ %storedKey @ "'");
 		
 		//echo("DEBUG: Loading bank items and inventory...");
 		// NOTE: BankGemItems, BankRareItems, BankKeysItems, and BankScrollsItems are no longer used
@@ -2159,16 +2159,8 @@ function LoadCharacter(%clientId)
 		storeData(%clientId, "BankRareItems", "");
 		storeData(%clientId, "BankKeysItems", "");
 		storeData(%clientId, "BankScrollsItems", "");
-		// Field 37 is now used for Consumables (belt items like potions)
-		%consumables = $funk::var[%name, 0, 37];
-		echo("DEBUG: Consumables RAW (field 37) = '" @ %consumables @ "'");
-		if(%consumables == "" || %consumables == " " || %consumables == "0")
-		{
-			echo("DEBUG: Consumables was empty/'0', normalizing to empty string");
-			%consumables = "";
-		}
-		storeData(%clientId, "Consumables", %consumables);
-		echo("DEBUG: Consumables FINAL = '" @ %consumables @ "'");
+		// (Duplicate Consumables load removed - field 37 is already loaded earlier
+		// in this function with the same normalization)
 		// BankUniqueItems is no longer used - keep empty for backward compatibility
 		storeData(%clientId, "BankUniqueItems", "");
 		// CRITICAL FIX: Position 38 is now used for StoredQuestItems (loaded above)
@@ -2176,14 +2168,14 @@ function LoadCharacter(%clientId)
 		// Position 39 is now used for StoredKeyItems (loaded above)
 		// Position 42 is now used for StoredConsumables (bank storage for consumables)
 		%storedConsumables = $funk::var[%name, 0, 42];
-		echo("DEBUG: StoredConsumables RAW (field 42) = '" @ %storedConsumables @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredConsumables RAW (field 42) = '" @ %storedConsumables @ "'");
 		if(%storedConsumables == "" || %storedConsumables == " " || %storedConsumables == "0")
 		{
-			echo("DEBUG: StoredConsumables was empty/'0', normalizing to empty string");
+			if($LOADCHAR_DEBUG) echo("DEBUG: StoredConsumables was empty/'0', normalizing to empty string");
 			%storedConsumables = "";
 		}
 		storeData(%clientId, "StoredConsumables", %storedConsumables);
-		echo("DEBUG: StoredConsumables FINAL = '" @ %storedConsumables @ "'");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredConsumables FINAL = '" @ %storedConsumables @ "'");
 		// Position 43 is now used for StoredArmor (bank storage for armor)
 		%storedArmor = $funk::var[%name, 0, 43];
 		//echo("DEBUG: StoredArmor RAW (field 43) = '" @ %storedArmor @ "'");
@@ -2511,17 +2503,17 @@ function LoadCharacter(%clientId)
 		//echo("DEBUG: Initializing belt storage fields for new character...");
 		// Initialize belt storage fields for new characters
 		storeData(%clientId, "QuestItems", "");
-		echo("DEBUG: QuestItems = ''");
+		if($LOADCHAR_DEBUG) echo("DEBUG: QuestItems = ''");
 		storeData(%clientId, "KeyItems", "");
-		echo("DEBUG: KeyItems = ''");
+		if($LOADCHAR_DEBUG) echo("DEBUG: KeyItems = ''");
 		storeData(%clientId, "Consumables", "");
-		echo("DEBUG: Consumables = ''");
+		if($LOADCHAR_DEBUG) echo("DEBUG: Consumables = ''");
 		storeData(%clientId, "StoredQuestItems", "");
-		echo("DEBUG: StoredQuestItems = ''");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredQuestItems = ''");
 		storeData(%clientId, "StoredKeyItems", "");
-		echo("DEBUG: StoredKeyItems = ''");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredKeyItems = ''");
 		storeData(%clientId, "StoredConsumables", "");
-		echo("DEBUG: StoredConsumables = ''");
+		if($LOADCHAR_DEBUG) echo("DEBUG: StoredConsumables = ''");
 		storeData(%clientId, "StoredArmor", "");
 		//echo("DEBUG: StoredArmor = ''");
 		storeData(%clientId, "StoredAccessories", "");
@@ -2630,6 +2622,15 @@ function OnOrOfflineGive(%name, %award)
 			//$funk::var["[\"" @ %name @ "\", 0, 29]"] = $funk::var[%name, 0, 29];
 			$funk::var["[\"" @ %name @ "\", 0, 30]"] = $funk::var[%name, 0, 30];
 			$funk::var["[\"" @ %name @ "\", 0, 31]"] = $funk::var[%name, 0, 31];
+
+			// BUGFIX (data-loss trap): this passthrough previously stopped at field 31,
+			// silently DROPPING fields 29 and 32-63 on offline awards - all belt
+			// categories, stored belt, BankStorage overflow (60-63), stance, damage
+			// prefs, Ascension talents, dual-wield off-hand, and AutoSkill config.
+			$funk::var["[\"" @ %name @ "\", 0, 29]"] = $funk::var[%name, 0, 29];
+			for(%f = 32; %f <= 63; %f++)
+				$funk::var["[\"" @ %name @ "\", 0, " @ %f @ "]"] = $funk::var[%name, 0, %f];
+
 			$funk::var["[\"" @ %name @ "\", 0, 666]"] = $funk::var[%name, 0, 666];
 
 			//skills
@@ -3939,6 +3940,10 @@ function NEWgetClientByName(%name)
 	{
 		%id = GetWord(%list, %i);
 		%displayName = Client::getName(%id);
+		// PERF: exact-match fast path first - String::ICompare lowercases both
+		// strings char-by-char, and this function runs in spawn-hot paths
+		if(%name == %displayName)
+			return %id;
 		if(String::ICompare(%name, %displayName) == 0)
 			return %id;
 	}
@@ -3999,13 +4004,10 @@ function UpdateAppearance(%clientId)
 	
 	%clientName = Client::getName(%clientId);
 	dbecho($dbechoMode, "UpdateAppearance(" @ %clientId @ ")");
-	
-	%clientName = Client::getName(%clientId);
-	dbecho($dbechoMode, "UpdateAppearance(" @ %clientId @ ")");
 
 	// CRITICAL: Validate player object exists before proceeding
+	// (merge-scar duplicated statements/conditions in this function cleaned up)
 	%player = Client::getOwnedObject(%clientId);
-	if(%player == -1 || %player == "")
 	if(%player == -1 || %player == "")
 	{
 		// Player object doesn't exist (player/bot was deleted)
@@ -4033,7 +4035,6 @@ function UpdateAppearance(%clientId)
 		
 		// If it's a town bot (BotInfoAiName but no SpawnBotInfo) - skip
 		if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0" && (%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1))
-		if(%botInfoAiName != "" && %botInfoAiName != -1 && %botInfoAiName != "0" && (%spawnBotInfo == "" || %spawnBotInfo == "0" || %spawnBotInfo == -1))
 		{
 			// This is a town bot - skip UpdateAppearance to prevent skin reset
 			$InUpdateAppearance[%clientId] = false;
@@ -4042,7 +4043,6 @@ function UpdateAppearance(%clientId)
 		
 		// If it's an enemy bot (has SpawnBotInfo) - skip
 		// Enemy bots have their armor/skin set from $BotInfo[botName, RACE] and equipment string in SpawnAI()
-		if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
 		if(%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1)
 		{
 			// Enemy bot - don't change their appearance (already set from $BotInfo and equipment string)
@@ -4057,7 +4057,6 @@ function UpdateAppearance(%clientId)
 	
 	// CRITICAL: Re-validate player object before calling GetAccessoryList (which calls Player::getItemCount)
 	%playerCheck = Client::getOwnedObject(%clientId);
-	if(%playerCheck == -1 || %playerCheck == "")
 	if(%playerCheck == -1 || %playerCheck == "")
 	{
 		// Player object was deleted between validation and this call
@@ -4083,7 +4082,6 @@ function UpdateAppearance(%clientId)
 	
 	// CRITICAL: Re-validate player object before using it
 	%player = Client::getOwnedObject(%clientId);
-	if(%player == -1 || %player == "")
 	if(%player == -1 || %player == "")
 	{
 		// Player object was deleted during GetAccessoryList
@@ -4778,28 +4776,51 @@ function Down(%t)
 		schedule("dmsg(" @ %i @ ", \"seconds\");", %a);
 	}
 	
-	// CRITICAL: Set shutdown flag BEFORE scheduling saves
-	// This prevents GUI functions (bottomprint, etc.) from being called during shutdown
-	$ServerShuttingDown = true;
-	
-	// Save all characters and world 10 seconds before shutdown
+	// BUGFIX: set $ServerShuttingDown at SAVE time (T-10s), not announce time.
+	// It previously flipped at countdown START, so a long countdown (e.g. d(30))
+	// disabled onClientDrop bot cleanup and GUI paths for the entire window,
+	// leaking bot counters while play continued.
 	if(%tinsec >= 10)
 	{
 		%saveTime = %tinsec - 10;
-		schedule("SaveAllCharacters(); SaveWorld();", %saveTime);
+		schedule("$ServerShuttingDown = true; SaveAllCharacters(); SaveWorld();", %saveTime);
 	}
 	else
 	{
 		// If shutdown time is less than 10 seconds, save immediately
+		$ServerShuttingDown = true;
 		SaveAllCharacters();
 		SaveWorld();
 	}
 	
 	// CRITICAL: Skip focusServer() during shutdown - it tries to load GUI elements
 	// On dedicated servers or when GUI is torn down, this causes the MainWindow error
-	// Just call quit() directly instead
 	// CRITICAL: Clear large in-memory strings before quit to prevent engine buffer issues
-	schedule("ClearLargePlayerDataBeforeQuit(); quit();", %tinsec);
+	schedule("FinalizeShutdownAndExit();", %tinsec);
+}
+
+// FinalizeShutdownAndExit - last step of Down(): clear large data, export server
+// state, then hard-exit the process via forceExit() (ForceExitPlugin.dll).
+// Why hard exit: mem.dll/hudbot can leave a background thread alive after quit()
+// (see Plugins\_newStuff.txt V0.12 note), so the process never exits and
+// InfiniteSpawn never restarts the server. TerminateProcess cannot be blocked
+// by a stuck thread. Since forceExit() skips the engine's onExit() script, the
+// exports normally done there (GUI.CS dedicated branch) are done here first.
+function FinalizeShutdownAndExit()
+{
+	ClearLargePlayerDataBeforeQuit();
+
+	export("Server::*", "config\\ServerPrefs.cs", False);
+	if($Server::LastMission != "")
+		export("Server::LastMission", "config\\ServerPrefs.cs", True);
+	BanList::export("config\\banlist.cs");
+
+	echo("[SHUTDOWN] Server state exported, forcing process exit...");
+	forceExit();
+
+	// Only reached if ForceExitPlugin.dll isn't loaded - fall back to graceful quit
+	echo("[SHUTDOWN] forceExit() unavailable, falling back to quit()...");
+	quit();
 }
 function d(%t)
 {
@@ -5070,6 +5091,22 @@ function CheckForReservedWords(%name)
 	%w[%c++] = "Elf";
 	%w[%c++] = "Undead";
 	%w[%c++] = "Minotaur";
+	// PROTECTION FIX: block ALL enemy-race name prefixes/substrings. The bot-detection
+	// fallbacks (HasEnemyBotNamePrefix, UpdateTeam's name check, isEnemyBot's display
+	// name check) classify names containing these as BOTS - a new player named
+	// "Godzilla"/"Demonic"/"Sealion" would be bot-classified before their first save
+	// exists, which is exactly when the save-file safeguard can't protect them.
+	%w[%c++] = "Demon";
+	%w[%c++] = "God";
+	%w[%c++] = "Angel";
+	%w[%c++] = "Alien";
+	%w[%c++] = "Zombie";
+	%w[%c++] = "Void";
+	%w[%c++] = "Pigman";
+	%w[%c++] = "Pigmen";
+	%w[%c++] = "Enemy";
+	%w[%c++] = "Seal";
+	%w[%c++] = "Admin";
 	// Colloseum bot display names (substring match to catch variations)
 	%w[%c++] = "RoundOne";
 	%w[%c++] = "RoundTwo";
@@ -5749,7 +5786,6 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 		// Re-check player object exists (it might have been deleted during RefreshAll)
 		%playerObj = Client::getOwnedObject(%clientId);
 		if(%playerObj == -1 || %playerObj == "")
-		if(%playerObj == -1 || %playerObj == "")
 		{
 			// Player object was deleted during RefreshAll - silently return
 			$InRefreshAll[%clientId] = false;
@@ -5758,7 +5794,6 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 		
 		// CRITICAL: Re-validate player object before calling Player::getItemCount
 		%playerCheck2 = Client::getOwnedObject(%clientId);
-		if(%playerCheck2 == -1 || %playerCheck2 == "")
 		if(%playerCheck2 == -1 || %playerCheck2 == "")
 		{
 			// Player object was deleted between check and this call
@@ -6698,8 +6733,10 @@ function SetStuffString(%stuff, %item, %amount)
 		if(%amt == "" || %amt == -1 || String::findSubStr(%amt, "False") != -1 || String::findSubStr(%amt, "Msg") != -1 || (%amtNum == 0 && %amt != "0"))
 		{
 			//echo("DEBUG SetStuffString: WARNING - Extracted count '" @ %amt @ "' is invalid! String may be corrupted. Trying to find actual count...");
-			// Try to get the next word as the count
-			%amt = GetWord(%a, 1);
+			// Try to get the NEXT word as the count
+			// BUGFIX: this retry previously re-read GetWord(%a, 1) - the same word it
+			// just rejected - so the advertised recovery could never succeed
+			%amt = GetWord(%a, 2);
 			%amtNum = %amt * 1;
 			if(%amt == "" || %amt == -1 || String::findSubStr(%amt, "False") != -1 || String::findSubStr(%amt, "Msg") != -1 || (%amtNum == 0 && %amt != "0"))
 			{
@@ -6974,7 +7011,7 @@ function IsDead(%id)
 	
 	%player = Client::getOwnedObject(%clientId);
 
-	if(%player == -1)
+	if(%player == -1 || %player == "")
 		return True;
 	else
 		return False;
@@ -7808,15 +7845,18 @@ function SaveHouseObjectives()
 	
 	// Save base control (towerswitch captures) for each house
 	// Export might have issues with array syntax, so save to temp variables first
-	%baseKronos = $BaseControl[HouseKronos];
-	%baseArbal = $BaseControl[HouseArbal];
-	%baseCurama = $BaseControl[HouseCurama];
-	%baseYuliple = $BaseControl[HouseYuliple];
-	
-	%flagKronos = $FlagCommand[HouseKronos];
-	%flagArbal = $FlagCommand[HouseArbal];
-	%flagCurama = $FlagCommand[HouseCurama];
-	%flagYuliple = $FlagCommand[HouseYuliple];
+	// BUGFIX: these were assigned to LOCALS (%baseKronos) while export() writes
+	// GLOBALS ($baseKronos) - the exported values were always empty, so the
+	// counter round-trip never worked (masked by RecalcHouseObjectives' 60s recompute)
+	$baseKronos = $BaseControl[HouseKronos];
+	$baseArbal = $BaseControl[HouseArbal];
+	$baseCurama = $BaseControl[HouseCurama];
+	$baseYuliple = $BaseControl[HouseYuliple];
+
+	$flagKronos = $FlagCommand[HouseKronos];
+	$flagArbal = $FlagCommand[HouseArbal];
+	$flagCurama = $FlagCommand[HouseCurama];
+	$flagYuliple = $FlagCommand[HouseYuliple];
 	
 	// Export as simple variables (no array syntax)
 	export("baseKronos", "temp\\HouseObjectives.cs", false);
@@ -7912,23 +7952,25 @@ function LoadHouseObjectives()
 	exec("HouseObjectives.cs");
 	
 	// Restore BaseControl and FlagCommand from temp variables (if they exist)
-	if(%baseKronos != "")
-		$BaseControl[HouseKronos] = %baseKronos;
-	if(%baseArbal != "")
-		$BaseControl[HouseArbal] = %baseArbal;
-	if(%baseCurama != "")
-		$BaseControl[HouseCurama] = %baseCurama;
-	if(%baseYuliple != "")
-		$BaseControl[HouseYuliple] = %baseYuliple;
-	
-	if(%flagKronos != "")
-		$FlagCommand[HouseKronos] = %flagKronos;
-	if(%flagArbal != "")
-		$FlagCommand[HouseArbal] = %flagArbal;
-	if(%flagCurama != "")
-		$FlagCommand[HouseCurama] = %flagCurama;
-	if(%flagYuliple != "")
-		$FlagCommand[HouseYuliple] = %flagYuliple;
+	// BUGFIX: these were read as LOCALS (%baseKronos) which the exec'd file can't
+	// set - the file sets GLOBALS ($baseKronos), so the restore never fired
+	if($baseKronos != "")
+		$BaseControl[HouseKronos] = $baseKronos;
+	if($baseArbal != "")
+		$BaseControl[HouseArbal] = $baseArbal;
+	if($baseCurama != "")
+		$BaseControl[HouseCurama] = $baseCurama;
+	if($baseYuliple != "")
+		$BaseControl[HouseYuliple] = $baseYuliple;
+
+	if($flagKronos != "")
+		$FlagCommand[HouseKronos] = $flagKronos;
+	if($flagArbal != "")
+		$FlagCommand[HouseArbal] = $flagArbal;
+	if($flagCurama != "")
+		$FlagCommand[HouseCurama] = $flagCurama;
+	if($flagYuliple != "")
+		$FlagCommand[HouseYuliple] = $flagYuliple;
 	
 	// Restore flag positions and team ownership using numeric indices
 	%tempSet = nameToID("MissionGroup");
@@ -8468,8 +8510,10 @@ function AFKZone_Tick()
 		if(%lastMove == "" || %lastMove == -1)
 			%lastMove = %now;
 		
-		%inactivityMs = %now - %lastMove;
-		%zoneTimeMs = %now - $AFKZoneEnterTime[%id];
+		// NOTE: getSimTime() is SECONDS - these were previously misnamed "Ms"
+		// (the math was correct against the seconds-based config; only the names lied)
+		%inactivitySec = %now - %lastMove;
+		%zoneTimeSec = %now - $AFKZoneEnterTime[%id];
 		
 		%lvl = fetchData(%id, "LVL");
 		if(%lvl == "" || %lvl == -1)
@@ -8486,7 +8530,7 @@ function AFKZone_Tick()
 		}
 		
 		// Debug overlevel status before warning triggers
-		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[AFKZONE DEBUG] id=" @ %id @ " zone='" @ %zoneDesc @ "' cap=" @ %cap @ " lvl=" @ %lvl @ " inactivity=" @ %inactivityMs @ "ms zonetime=" @ %zoneTimeMs @ "ms warnUntil=" @ $AFKZoneWarnUntil[%id] @ " lastMove=" @ %lastMove @ " lastPos=" @ $AFKZoneLastPos[%id]);
+		if($AI_DEBUG_ENABLED || $AI_PERIODIC_DEBUG) echo("[AFKZONE DEBUG] id=" @ %id @ " zone='" @ %zoneDesc @ "' cap=" @ %cap @ " lvl=" @ %lvl @ " inactivity=" @ %inactivitySec @ "s zonetime=" @ %zoneTimeSec @ "s warnUntil=" @ $AFKZoneWarnUntil[%id] @ " lastMove=" @ %lastMove @ " lastPos=" @ $AFKZoneLastPos[%id]);
 		
 		%warnUntil = $AFKZoneWarnUntil[%id];
 		if(%warnUntil != "")
@@ -8524,8 +8568,7 @@ function AFKZone_Tick()
 		}
 		
 		// Issue warning if overlevel, inactive, and in zone long enough
-		// Issue warning if overlevel, inactive, and in zone long enough
-		if(%zoneTimeMs >= $AFKOverLevelMinZoneTime && %inactivityMs >= $AFKOverLevelInactivity)
+		if(%zoneTimeSec >= $AFKOverLevelMinZoneTime && %inactivitySec >= $AFKOverLevelInactivity)
 		{
 			$AFKZoneWarnPos[%id] = %pos;
 			$AFKZoneWarnUntil[%id] = %now + $AFKOverLevelWarnWindow;
@@ -8536,7 +8579,7 @@ function AFKZone_Tick()
 			$AFKZoneCode[%id] = %code;
 			
 			Client::sendMessage(%id, $MsgRed, "WARNING: You are over level for " @ %zoneDesc @ ". Type #verify " @ %code @ " to stay.");
-			echo("[AFKZONE] Warn -> id=" @ %id @ " zone='" @ %zoneDesc @ "' cap=" @ %cap @ " lvl=" @ %lvl @ " inactivity=" @ %inactivityMs @ "ms zonetime=" @ %zoneTimeMs @ "ms code=" @ %code);
+			echo("[AFKZONE] Warn -> id=" @ %id @ " zone='" @ %zoneDesc @ "' cap=" @ %cap @ " lvl=" @ %lvl @ " inactivity=" @ %inactivitySec @ "s zonetime=" @ %zoneTimeSec @ "s code=" @ %code);
 		}
 	}
 	

@@ -14,7 +14,6 @@ $SealBattleCurrentRound = 0;  // Track the current active round loop (prevents o
 $SealBattleLoopScheduled = false;  // Track if a loop is currently scheduled (prevents duplicate schedules)
 $SealBattleCooldownEnd = 0;  // Time when cooldown ends (getSimTime() in seconds)
 $SealBattleCooldownDuration = 180;  // Cooldown duration in seconds (3 minutes)
-%i=0;
 
 // CRITICAL: Timing constants for seal battle system - all timings are calculated from these
 $SealBattleCountdownDuration = 30;  // Total countdown time before battle starts (seconds)
@@ -120,6 +119,22 @@ $SealBotHealingReduction = 0.1;  // Bots heal at 10% effectiveness
 $SealRoundHP[1]  = 1.0;   $SealRoundDmg[1]  = 1.0;   // Round 1: Base
 $SealRoundHP[2]  = 1.5;   $SealRoundDmg[2]  = 1.2;   // Round 2: +50% HP, +20% damage
 $SealRoundHP[3]  = 2.0;   $SealRoundDmg[3]  = 1.5;   // Round 3: +100% HP, +50% damage
+
+// =====================================================
+// LIVE PARTICIPANT SCALING (headcount + real gear)
+// =====================================================
+// 1) Reference HP: bots anchor to the ACTUAL top participant's MaxHP when it
+//    exceeds the theoretical reference player (self-balancing as the gear meta
+//    grows). The theoretical value stays as a FLOOR so undergeared/naked
+//    groups can never deflate the difficulty.
+// 2) Headcount: scales bot HP ONLY - never damage - sublinearly, with a hard
+//    cap. Guarantee: each extra player adds a full player of DPS but at most
+//    +15% bot HP (and 0% past the cap), so a bigger group is ALWAYS easier
+//    per player; the fight can never scale out of reach.
+$SealScaleBaselinePlayers = 4;   // Headcount the base tuning assumes (4-5 geared players)
+$SealScaleHPPerPlayer = 0.15;    // +/-15% bot HP per player above/below baseline
+$SealScaleHPMinMult = 0.55;      // Floor: solo/duo attempts fight ~55% HP bots
+$SealScaleHPMaxMult = 1.6;       // Hard cap: zergs never face more than 160% HP
 
 // Determine bot type (Fighter, Mage, Guardian) from display name
 // CRITICAL FIX: Check display name FIRST because internal names (RoundOneXXX, RoundTwoXXX, RoundThreeXXX) 
@@ -359,6 +374,31 @@ function SealBattle::MessageColloseumPlayers(%message)
 	}
 }
 
+// Sample the live battle inputs: headcount and top MaxHP of real players in the
+// Colloseum. Called at each wave spawn so every wave scales to who is actually
+// fighting (players who leave mid-battle soften the next wave; the min/max
+// clamps and the theoretical floor keep it inside safe bounds either way).
+function SealBattle::UpdateLiveScaling()
+{
+	%count = 0;
+	%topHP = 0;
+	for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
+	{
+		if(isRPGAI(%cl))
+			continue;
+		%clZoneDesc = Zone::getDesc(fetchData(%cl, "zone"));
+		if(%clZoneDesc != "Colloseum")
+			continue;
+		%count++;
+		%hp = fetchData(%cl, "MaxHP");
+		if(%hp != "" && %hp != -1 && %hp > %topHP)
+			%topHP = %hp;
+	}
+	$SealBattleLivePlayerCount = %count;
+	$SealBattleLiveRefHP = %topHP;
+	echo("[SEAL BATTLE] Live scaling sampled: " @ %count @ " player(s) in Colloseum, top MaxHP=" @ %topHP);
+}
+
 // Helper function to check if a seal battle can start
 // Returns true if ready, false if on cooldown or already active
 // Call this BEFORE teleporting players to check if they can actually start the battle
@@ -390,11 +430,12 @@ function SealBattle::CanStart(%clientId)
 function SealBattle::Begin(%clientId,%pos,%seal)
 {
 	// Check cooldown - 3 minutes must pass after a seal battle ends before starting another
+	// BUGFIX: getSimTime() is in SECONDS (Conclude sets the cooldown in seconds and
+	// CanStart reads it in seconds) - the old /1000 here always reported "0 minutes and 0 seconds"
 	%currentTime = getSimTime();
 	if(%currentTime < $SealBattleCooldownEnd)
 	{
-		%remainingMs = $SealBattleCooldownEnd - %currentTime;
-		%remainingSec = floor(%remainingMs / 1000);
+		%remainingSec = floor($SealBattleCooldownEnd - %currentTime);
 		%remainingMin = floor(%remainingSec / 60);
 		%remainingSecMod = %remainingSec - (%remainingMin * 60);
 		Client::sendMessage(%clientId, $MsgRed, "The seal is still recovering. Please wait " @ %remainingMin @ " minutes and " @ %remainingSecMod @ " seconds.");
@@ -709,7 +750,8 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 				%totalRound2Time = $SealBattleBotSpawnDelay + $SealBattleFreezeDuration;
 				%round2Message10Time = %totalRound2Time - 10;
 				%round2Message5Time = %totalRound2Time - 5;
-				SealBattle::MessageColloseumPlayers("Wave 2 bots are spawning! " @ $SealBattleFreezeDuration @ " seconds until they become active...");
+				// BUGFIX: was $SealBattleFreezeDuration (18) - actual time to active is spawn delay + freeze (33)
+				SealBattle::MessageColloseumPlayers("Wave 2 bots are spawning! " @ %totalRound2Time @ " seconds until they become active...");
 				schedule("SealBattle::MessageColloseumPlayers(\"10 seconds until Wave 2 begins...\");", %round2Message10Time);
 				schedule("SealBattle::MessageColloseumPlayers(\"5 seconds until Wave 2 begins...\");", %round2Message5Time);
 				
@@ -824,7 +866,8 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 				%totalRound3Time = $SealBattleBotSpawnDelay + $SealBattleFreezeDuration;
 				%round3Message10Time = %totalRound3Time - 10;
 				%round3Message5Time = %totalRound3Time - 5;
-				SealBattle::MessageColloseumPlayers("Wave 3 bots are spawning! " @ $SealBattleFreezeDuration @ " seconds until they become active...");
+				// BUGFIX: was $SealBattleFreezeDuration (18) - actual time to active is spawn delay + freeze (33)
+				SealBattle::MessageColloseumPlayers("Wave 3 bots are spawning! " @ %totalRound3Time @ " seconds until they become active...");
 				schedule("SealBattle::MessageColloseumPlayers(\"10 seconds until Wave 3 begins...\");", %round3Message10Time);
 				schedule("SealBattle::MessageColloseumPlayers(\"5 seconds until Wave 3 begins...\");", %round3Message5Time);
 				
@@ -943,70 +986,10 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 			// Don't spawn again, just let the loop continue
 		}
 	}
-	else if(%round == 4)
-	{
-		// FIRST check if all players are dead - if so, end battle immediately
-		SealBattle::LazyDeathCheck(%clientId);
-		if($SealFighterDied)
-		{
-			return;
-		}
-		
-		// Check if Round 3 bots are dead using internal names (reliable)
-		%fighter3Id = -1;
-		%mage3Id = -1;
-		%guardian3Id = -1;
-		if($SealBattle::FighterName != "" && $SealBattle::FighterName != -1)
-		{
-			%fighter3Id = AI::getClientIdFromName($SealBattle::FighterName);
-			if(%fighter3Id == "") %fighter3Id = -1; // Normalize empty string to -1
-		}
-		if($SealBattle::MageName != "" && $SealBattle::MageName != -1)
-		{
-			%mage3Id = AI::getClientIdFromName($SealBattle::MageName);
-			if(%mage3Id == "") %mage3Id = -1; // Normalize empty string to -1
-		}
-		if($SealBattle::GuardianName != "" && $SealBattle::GuardianName != -1)
-		{
-			%guardian3Id = AI::getClientIdFromName($SealBattle::GuardianName);
-			if(%guardian3Id == "") %guardian3Id = -1; // Normalize empty string to -1
-		}
-		// Fallback to display name lookup
-		if(%fighter3Id == -1)
-			%fighter3Id = NEWgetClientByName("SealFighter3");
-		if(%mage3Id == -1)
-			%mage3Id = NEWgetClientByName("SealMage3");
-		if(%guardian3Id == -1)
-			%guardian3Id = NEWgetClientByName("SealGuardian3");
-		
-		if(%fighter3Id == -1 && %mage3Id == -1 && %guardian3Id == -1)
-		{
-			// All rounds complete! Seal battle won!
-			%participantNames = SealBattle::GetParticipantNames();
-			
-			// Send success message with participant list - use correct grammar
-			if(%participantNames != "")
-			{
-				if($SealBattleParticipantCount == 1)
-					messageAll(2, "The final wave has been beaten! The brave soldier of Kronos-" @ %participantNames @ ", has shattered the seal! We can all rest and remort safely...for now. ~wflag_capture.wav");
-				else
-					messageAll(2, "The final wave has been beaten! The brave soldiers of Kronos-" @ %participantNames @ ", have shattered the seal! We can all rest and remort safely...for now. ~wflag_capture.wav");
-			}
-			else
-			{
-				messageAll(2, "The final wave has been beaten! The seal has been shattered...for now. ~wflag_capture.wav");
-			}
-			
-			// Increment and save seal value using centralized function
-			%newSealValue = IncrementTotalSealValue();
-			messageall(2,"The remort cap is now " @ %newSealValue @ "!");
-			
-			Saveworld();
-			SealBattle::Conclude(%clientId, true);  // true = success, don't teleport back
-			return;
-		}
-	}
-	
+	// (Round-4 branch removed - dead code: nothing ever schedules Loop with round 4,
+	// victory concludes inside the round-3 branch above. The removed branch was a
+	// near-duplicate of the round-3 victory logic.)
+
 	// Continue the loop - check for deaths and bot status
 	// CRITICAL: Only schedule the next iteration if we haven't already scheduled a round advance
 	// This prevents overlapping loops when a round completes and advances to the next round
@@ -1019,9 +1002,10 @@ function SealBattle::Loop(%clientId,%pos,%seal,%round)
 		if(%round >= 2)
 			%loopDelay = 5;
 		
-		// Schedule death checks periodically
-		for(%i=0;%i<5;%i++)
-			schedule("SealBattle::LazyDeathCheck("@%clientId@");", %loopDelay * %i, %player);
+		// One mid-interval death check between loop ticks
+		// (the old 5-check burst spanned 40s while the loop reruns every 5-10s,
+		// keeping ~4-8 redundant scheduled checks queued at all times)
+		schedule("SealBattle::LazyDeathCheck("@%clientId@");", %loopDelay / 2, %player);
 		
 		// Schedule the next loop iteration
 		$SealBattleLoopScheduled = true;  // Mark that we're scheduling a continuation
@@ -1103,6 +1087,9 @@ function SealBattle::SpawnRound(%clientId, %pos, %seal, %round)
 	// Only spawn if bots don't already exist
 	if(%fighterId == -1 && %mageId == -1 && %guardianId == -1)
 	{
+		// Refresh live scaling inputs (headcount + top participant HP) for this wave
+		SealBattle::UpdateLiveScaling();
+
 		// Send "round starting now" message to Colloseum players
 		SealBattle::MessageColloseumPlayers("Wave " @ %round @ " is starting now!");
 		
@@ -1594,6 +1581,10 @@ function SealBattle::Conclude(%clientId, %success)
 	$SealBattleZone = "";
 	$SealBattleHouse = "";
 	$SealBattleParticipants = "";
+
+	// Clear live scaling samples (recomputed at each wave of the next battle)
+	$SealBattleLiveRefHP = "";
+	$SealBattleLivePlayerCount = "";
 	
 	// Clear all round tracking flags
 	$SealBattleRound1Spawned = false;  // Reset Round 1 spawn flag
@@ -1654,6 +1645,16 @@ function SealBattle::TeleportOut(%clientId)
 
 function SealBattle::SetupBot(%botName, %pos, %round)
 {
+	// KILL SWITCH (BUGFIX): if the battle is over, stop retrying. The retry paths
+	// below used to reschedule every 1-2s FOREVER when a bot died/failed during
+	// spawn - each failed bot leaked a permanent scheduled loop until server restart.
+	if($SealBattleActive != true)
+	{
+		$SealSetupBotRetry[%botName] = "";
+		echo("[SEAL BATTLE] SealBattle::SetupBot: Battle no longer active - abandoning setup for " @ %botName);
+		return;
+	}
+
 	// CRITICAL: Try looking up by Internal Name first (Reliable - available immediately after spawn)
 	// %botName can now be either an internal name (e.g., "RoundTwo497") or a display name (e.g., "SealFighter2")
 	%aiId = AI::getClientIdFromName(%botName);
@@ -1666,9 +1667,18 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 	// If still not found, retry after 1 second - bot may still be initializing
 	if(%aiId == -1 || %aiId == "")
 	{
-		// Retry after 1 second - bot may still be initializing
+		// RETRY CAP: 20 attempts (~20s; spawn takes ~15s worst case) then give up
+		%retries = $SealSetupBotRetry[%botName];
+		if(%retries == "") %retries = 0;
+		if(%retries >= 20)
+		{
+			echo("ERROR SealBattle::SetupBot: Giving up on " @ %botName @ " after " @ %retries @ " retries (bot never appeared - likely died or failed to spawn)");
+			$SealSetupBotRetry[%botName] = "";
+			return;
+		}
+		$SealSetupBotRetry[%botName] = %retries + 1;
 		schedule("SealBattle::SetupBot(\"" @ %botName @ "\", \"" @ %pos @ "\", " @ %round @ ");", 1);
-		echo("WARNING SealBattle::SetupBot: Bot " @ %botName @ " not found yet (tried internal name and display name), retrying in 1 second...");
+		echo("WARNING SealBattle::SetupBot: Bot " @ %botName @ " not found yet (tried internal name and display name), retrying in 1 second (" @ (%retries + 1) @ "/20)...");
 		return;
 	}
 	
@@ -1685,8 +1695,18 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 	// If bot isn't fully initialized yet, retry after 1 second
 	if(%aiName == "" || %aiName == -1 || %aiName == "0" || %hasLoaded != "True" && %hasLoaded != "true" && %hasLoaded != "1")
 	{
+		// RETRY CAP: shared counter with the not-found path above
+		%retries = $SealSetupBotRetry[%botName];
+		if(%retries == "") %retries = 0;
+		if(%retries >= 20)
+		{
+			echo("ERROR SealBattle::SetupBot: Giving up on " @ %botName @ " after " @ %retries @ " retries (never finished initializing)");
+			$SealSetupBotRetry[%botName] = "";
+			return;
+		}
+		$SealSetupBotRetry[%botName] = %retries + 1;
 		schedule("SealBattle::SetupBot(\"" @ %botName @ "\", \"" @ %pos @ "\", " @ %round @ ");", 1);
-		echo("WARNING SealBattle::SetupBot: Bot " @ %botName @ " (clientId=" @ %aiId @ ") not fully initialized yet (BotInfoAiName=" @ %aiName @ ", HasLoadedAndSpawned=" @ %hasLoaded @ "), retrying in 1 second...");
+		echo("WARNING SealBattle::SetupBot: Bot " @ %botName @ " (clientId=" @ %aiId @ ") not fully initialized yet (BotInfoAiName=" @ %aiName @ ", HasLoadedAndSpawned=" @ %hasLoaded @ "), retrying in 1 second (" @ (%retries + 1) @ "/20)...");
 		return;
 	}
 	
@@ -1700,66 +1720,16 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 	if(%botName != "" && %botName != -1)
 	{
 		// Extract guardtype from internal name (e.g., "RoundTwo497" -> "RoundTwo")
-		// Extract guardtype by removing trailing digits (more reliable than clipTrailingNumbers)
-		// This works backwards from the end to find and remove only trailing digits
-		%guardtype = %botName;
-		%len = String::len(%botName);
-		%numStr = "";
-		%digitString = "0123456789";
-		
-		// Find trailing digits (working backwards)
-		for(%i = %len - 1; %i >= 0; %i--)
-		{
-			%char = String::getSubStr(%botName, %i, 1);
-			// Check if character is a digit (0-9 only) - use String::findSubStr to avoid TorqueScript == comparison bug ("E" == "0" evaluates to true)
-			if(String::findSubStr(%digitString, %char) != -1)
-			{
-				%numStr = %char @ %numStr;
-			}
-			else
-			{
-				break;
-			}
-		}
-		
-		// If we found trailing digits, remove them
-		if(%numStr != "")
-		{
-			%guardtype = String::getSubStr(%botName, 0, %len - String::len(%numStr));
-		}
+		// CONSOLIDATED: was an inline copy of the trailing-digit loop
+		%guardtype = StripTrailingDigits(%botName);
 	}
 	
 	// Fallback: Try to infer from AI name if internal name extraction failed
 	if((%guardtype == "" || %guardtype == -1) && %aiName != "" && %aiName != -1 && %aiName != "0")
 	{
 		// Extract guardtype from AI name (e.g., "RoundOne3" -> "RoundOne")
-		// Extract guardtype by removing trailing digits (more reliable than clipTrailingNumbers)
-		// This works backwards from the end to find and remove only trailing digits
-		%guardtype = %aiName;
-		%len = String::len(%aiName);
-		%numStr = "";
-		%digitString = "0123456789";
-		
-		// Find trailing digits (working backwards)
-		for(%i = %len - 1; %i >= 0; %i--)
-		{
-			%char = String::getSubStr(%aiName, %i, 1);
-			// Check if character is a digit (0-9 only) - use String::findSubStr to avoid TorqueScript == comparison bug ("E" == "0" evaluates to true)
-			if(String::findSubStr(%digitString, %char) != -1)
-			{
-				%numStr = %char @ %numStr;
-			}
-			else
-			{
-				break;
-			}
-		}
-		
-		// If we found trailing digits, remove them
-		if(%numStr != "")
-		{
-			%guardtype = String::getSubStr(%aiName, 0, %len - String::len(%numStr));
-		}
+		// CONSOLIDATED: was an inline copy of the trailing-digit loop
+		%guardtype = StripTrailingDigits(%aiName);
 	}
 	
 	// Legacy fallback: Try display name pattern matching (for edge cases where extraction failed)
@@ -1869,11 +1839,23 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 	if(!%hasSkills)
 	{
 		// Skills haven't been set yet by AI::setWeapons -> HardcodeAIskills
-		// Retry SetupBot after 2 seconds to allow HardcodeAIskills to complete
+		// RETRY CAP: shared counter with the paths above (2s interval here)
+		%retries = $SealSetupBotRetry[%botName];
+		if(%retries == "") %retries = 0;
+		if(%retries >= 20)
+		{
+			echo("ERROR SealBattle::SetupBot: Giving up on " @ %botName @ " after " @ %retries @ " retries (skills never initialized)");
+			$SealSetupBotRetry[%botName] = "";
+			return;
+		}
+		$SealSetupBotRetry[%botName] = %retries + 1;
 		schedule("SealBattle::SetupBot(\"" @ %botName @ "\", \"" @ %pos @ "\", " @ %round @ ");", 2);
-		echo("WARNING SealBattle::SetupBot: Bot " @ %botName @ " (clientId=" @ %aiId @ ") skills not set yet, waiting for HardcodeAIskills to complete, retrying in 2 seconds...");
+		echo("WARNING SealBattle::SetupBot: Bot " @ %botName @ " (clientId=" @ %aiId @ ") skills not set yet, waiting for HardcodeAIskills to complete, retrying in 2 seconds (" @ (%retries + 1) @ "/20)...");
 		return;
 	}
+
+	// All initialization gates passed - clear the retry counter for this bot name
+	$SealSetupBotRetry[%botName] = "";
 	
 	// CRITICAL: Check if stats have already been scaled for this round
 	// If they have, we need to use the original base values, not the scaled ones
@@ -2017,15 +1999,10 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		storeData(%aiId, "ExpDistributed", "");
 		
 		// Get the round-specific multiplier (kept for debug logging)
+		// (removed the old %roundMult debug that read the DEPRECATED commented-out
+		// $SealBattleRound1/2/3Multiplier globals - it always printed blank)
 		%mult = SealBattle::GetRoundMultiplier(%round);
-		// Calculate round multiplier for debug message (TorqueScript doesn't support ternary operators)
-		if(%round == 1)
-			%roundMult = $SealBattleRound1Multiplier;
-		else if(%round == 2)
-			%roundMult = $SealBattleRound2Multiplier;
-		else
-			%roundMult = $SealBattleRound3Multiplier;
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Base multiplier: " @ %mult @ " (baseMult=" @ SealBattle::GetBaseStrengthMultiplier() @ ", roundMult=" @ %roundMult @ ")");
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Round HP multiplier: " @ %mult);
 		
 		// CRITICAL: Determine bot type and get per-stat multipliers
 		%botType = SealBattle::GetBotType(%botName, %aiId);
@@ -2042,21 +2019,39 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		echo("[SEAL BATTLE] Stat multipliers for " @ %botType @ ": HP=" @ %multHP @ ", ATK=" @ %multATK @ ", DEF=" @ %multDEF @ ", MDEF=" @ %multMDEF @ ", WeaponDmg=" @ %multWeaponDmg @ ", SpellDmg=" @ %multSpellDmg);
 		
 		// Calculate spell damage multiplier based on player-relative target damage
-		// Target spell damage = playerHP * dmgRatio (same as physical)
-		// Base spell damage is typically ~100 (e.g., powercloud=70, freezerburn=200)
-		// SpellMult = targetDamage / baseSpellDamage
-		// CRITICAL: Use the actual dmgRatio from config, not the old multiplier
+		// Target spell damage = playerHP * dmgRatio * roundDmgMult (same design as physical)
+		//
+		// PIPELINE MATH (Player::onDamage, playerdamage.cs): applied spell damage is
+		//   baseSpell * OffensiveCasting/1000 - rand(MDEF/10)
+		// (the /$TribesDamageToNumericDamage and later * cancel out for HP purposes).
+		// OffensiveCasting scales LINEARLY with seal value while reference player HP
+		// scales ~QUADRATICALLY (remortStep * skillCap / 8 term), so skill-only scaling
+		// decays ~1/R: correct at R20, ~0.5% per hit by R300. This multiplier divides
+		// the skill factor back OUT so hits land at the target %% of player HP at
+		// EVERY seal value:  mult = targetDmg * 1000 / (baseSpell * OffCasting)
 		%spellDmgRatio = $SealBotDmg[%botType];
 		if(%spellDmgRatio == "" || %spellDmgRatio == 0) %spellDmgRatio = 0.06;  // Default 6% for mages
-		// Don't use $RefPlayer here - it's calculated later. We need to ensure it's set.
 		if($RefPlayer["MaxHP"] == "" || $RefPlayer["MaxHP"] == 0)
 			SealBattle::GetReferencePlayerStats();
-		%targetSpellDmg = floor($RefPlayer["MaxHP"] * %spellDmgRatio * %roundDmgMult);
-		%baseSpellDamage = 100;  // Average base spell damage
-		%spellDmgMult = floor(%targetSpellDmg / %baseSpellDamage);
+
+		// LIVE SCALING: effective reference HP = max(theoretical reference, actual top
+		// participant). Actual gear can raise it (self-balancing); never lower it.
+		%effRefHP = $RefPlayer["MaxHP"];
+		if($SealBattleLiveRefHP != "" && $SealBattleLiveRefHP > %effRefHP)
+			%effRefHP = $SealBattleLiveRefHP;
+
+		// BUGFIX: this block previously read %roundDmgMult ~190 lines before it was
+		// assigned (always ""), zeroing the whole product - resolve it locally
+		%spellRoundDmgMult = $SealRoundDmg[%round];
+		if(%spellRoundDmgMult == "" || %spellRoundDmgMult == 0) %spellRoundDmgMult = 1.0;
+		%targetSpellDmg = floor(%effRefHP * %spellDmgRatio * %spellRoundDmgMult);
+		%baseSpellDamage = 100;  // Average base spell damage (powercloud=70, freezerburn=200)
+		%offCastForMult = $RefPlayer["SkillCap"];  // SetupBot sets the bot's OffensiveCasting to this below
+		if(%offCastForMult == "" || %offCastForMult <= 0) %offCastForMult = 1000;
+		%spellDmgMult = floor((%targetSpellDmg * 1000) / (%baseSpellDamage * %offCastForMult));
 		if(%spellDmgMult < 1) %spellDmgMult = 1;
 		$SealBattleSpellDmgMult[%aiId] = %spellDmgMult;
-		echo("[SEAL BATTLE] Spell damage multiplier: ratio=" @ %spellDmgRatio @ ", targetDmg=" @ %targetSpellDmg @ " / base=" @ %baseSpellDamage @ " = " @ %spellDmgMult @ "x");
+		echo("[SEAL BATTLE] Spell damage multiplier: targetDmg=" @ %targetSpellDmg @ " (ratio " @ %spellDmgRatio @ " * roundDmg " @ %spellRoundDmgMult @ "), offCast=" @ %offCastForMult @ " -> mult=" @ %spellDmgMult @ "x");
 
 
 		// CRITICAL: Scale weapon damage BEFORE calculating/scaling ATK
@@ -2222,8 +2217,21 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		// This ensures consistent difficulty across all remort levels
 		
 		// Get player reference stats (calculated from TotalSealValue/RemortStep)
-		%playerHP = $RefPlayer["MaxHP"];
+		// LIVE SCALING: use the effective reference HP computed above (theoretical
+		// floor, raised by the actual top participant's MaxHP)
+		%playerHP = %effRefHP;
 		%playerSkillCap = $RefPlayer["SkillCap"];
+
+		// HEADCOUNT SCALING: HP-ONLY multiplier, sublinear and hard-capped.
+		// Each player above/below the baseline adjusts bot HP by $SealScaleHPPerPlayer,
+		// clamped to [$SealScaleHPMinMult, $SealScaleHPMaxMult]. Damage is NEVER
+		// headcount-scaled, so survivability can't degrade with group size and a
+		// bigger group is always easier per player.
+		%countN = $SealBattleLivePlayerCount;
+		if(%countN == "" || %countN < 1) %countN = 1;
+		%countMult = 1 + ($SealScaleHPPerPlayer * (%countN - $SealScaleBaselinePlayers));
+		if(%countMult < $SealScaleHPMinMult) %countMult = $SealScaleHPMinMult;
+		if(%countMult > $SealScaleHPMaxMult) %countMult = $SealScaleHPMaxMult;
 		
 		// Get ratios from configuration
 		%hpRatio = $SealBotHP[%botType];
@@ -2244,7 +2252,8 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		if(%roundDmgMult == "" || %roundDmgMult == 0) %roundDmgMult = 1.0;
 		
 		// Calculate ABSOLUTE bot stats from player stats
-		%maxHP = floor(%playerHP * %hpRatio * %roundHPMult);
+		// (HP gets the headcount multiplier; damage below deliberately does NOT)
+		%maxHP = floor(%playerHP * %hpRatio * %roundHPMult * %countMult);
 		
 		// Calculate desired damage per hit as percentage of player HP
 		// Combat formula has ~8x multiplier, so divide by 5 to get reasonable damage
@@ -2259,7 +2268,8 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		
 		// Log the new player-relative stats
 		echo("[SEAL BATTLE] PLAYER-RELATIVE STATS for " @ %botType @ " Round " @ %round @ ":");
-		echo("  PlayerHP: " @ %playerHP @ " | PlayerSkillCap: " @ %playerSkillCap);
+		echo("  EffRefHP: " @ %playerHP @ " (theoretical " @ $RefPlayer["MaxHP"] @ ", live top " @ $SealBattleLiveRefHP @ ") | PlayerSkillCap: " @ %playerSkillCap);
+		echo("  Headcount: " @ %countN @ " player(s) -> HP mult " @ %countMult);
 		echo("  Ratios - HP:" @ %hpRatio @ " Dmg:" @ %dmgRatio @ " DEF:" @ %defRatio @ " MDEF:" @ %mdefRatio);
 		echo("  RoundMults - HP:" @ %roundHPMult @ " Dmg:" @ %roundDmgMult);
 		echo("  FINAL: HP=" @ %maxHP @ " DamagePerHit=" @ %damagePerHit @ " DEF=" @ %scaledDEF @ " MDEF=" @ %scaledMDEF);
@@ -2268,7 +2278,7 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 		$SealBattleScaledStats[%aiId, "MaxHP"] = %maxHP;
 		setHP(%aiId, %maxHP);
 		storeData(%aiId, "HP", %maxHP);
-		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Set MaxHP to " @ %maxHP @ " (PlayerHP " @ %playerHP @ " * " @ %hpRatio @ " * " @ %roundHPMult @ ")");
+		echo("[SEAL BATTLE] SealBattle::SetupBot(): Round " @ %round @ " - Set MaxHP to " @ %maxHP @ " (PlayerHP " @ %playerHP @ " * " @ %hpRatio @ " * " @ %roundHPMult @ " * headcount " @ %countMult @ ")");
 		
 		// Keep MANA from RefreshAll calculation
 		%maxMANA = fetchData(%aiId, "MaxMANA");
@@ -2522,28 +2532,19 @@ function SealBattle::SetupBot(%botName, %pos, %round)
 	%overweightPenalty = (%overweightStep * 7.0);
 	%storedDMG = fetchData(%aiId, "DMG");
 	
+	// BUGFIX: this block previously printed never-set locals (%baseLVL, %baseRemortStep,
+	// %baseEndurance, %baseEnergy, %baseWeightCapacity, %scaledWeightCapacity) - blanks.
+	// Print current values with stored originals from the SealBattleOriginal* fields.
 	echo("=== SealBattle Bot Stats: " @ %botName @ " (ID: " @ %aiId @ ", Round: " @ %round @ ") ===");
-	echo("  Round Multiplier: " @ %mult);
-	echo("  Scaled Underlying Values:");
-	echo("    LVL: " @ %baseLVL @ " -> " @ %scaledLVL);
-	if(%baseRemortStep != "" && %baseRemortStep != -1 && %baseRemortStep != 0)
-		echo("    RemortStep: " @ %baseRemortStep @ " -> " @ %scaledRemortStep);
-	if(%baseEndurance != "" && %baseEndurance != -1 && %baseEndurance != 0)
-		echo("    Endurance: " @ %baseEndurance @ " -> " @ %scaledEndurance);
-	if(%baseEnergy != "" && %baseEnergy != -1 && %baseEnergy != 0)
-		echo("    Energy: " @ %baseEnergy @ " -> " @ %scaledEnergy);
-	if(%baseWeightCapacity != "" && %baseWeightCapacity != -1 && %baseWeightCapacity != 0)
-		echo("    WeightCapacity: " @ %baseWeightCapacity @ " -> " @ %scaledWeightCapacity);
+	echo("  Scaled Underlying Values (original -> current):");
+	echo("    LVL: " @ fetchData(%aiId, "SealBattleOriginalLVL") @ " -> " @ fetchData(%aiId, "LVL"));
+	echo("    RemortStep: " @ fetchData(%aiId, "SealBattleOriginalRemortStep") @ " -> " @ fetchData(%aiId, "RemortStep"));
+	echo("    Endurance: " @ fetchData(%aiId, "SealBattleOriginalEndurance") @ " -> " @ $PlayerSkill[%aiId, $SkillEndurance]);
+	echo("    Energy: " @ fetchData(%aiId, "SealBattleOriginalEnergy") @ " -> " @ $PlayerSkill[%aiId, $SkillEnergy]);
 	echo("  Calculated Stats (from RefreshAll):");
-	echo("    MaxHP: " @ %baseMaxHP @ " -> " @ %maxHP);
-	echo("    MaxMANA: " @ %baseMaxMANA @ " -> " @ %maxMANA);
-	echo("    MaxWeight: " @ %maxWeight);
+	echo("    MaxHP: " @ %maxHP @ "  MaxMANA: " @ %maxMANA @ "  MaxWeight: " @ %maxWeight);
 	echo("  Directly Scaled Stats:");
-	echo("    DEF: " @ %baseDEF @ " -> " @ %def);
-	echo("    MDEF: " @ %baseMDEF @ " -> " @ %mdef);
-	echo("    ATK: " @ %baseATK @ " -> " @ %atk);
-	echo("    DMG: " @ %baseDMG @ " -> " @ %storedDMG);
-	echo("    LCK: " @ %baseLCK @ " -> " @ %lck);
+	echo("    DEF: " @ %def @ "  MDEF: " @ %mdef @ "  ATK: " @ %atk @ "  DMG: " @ %storedDMG @ "  LCK: " @ %lck);
 	echo("  Current Stats:");
 	echo("    HP: " @ %hp @ " / " @ %maxHP @ "  MANA: " @ %mana @ " / " @ %maxMANA);
 	echo("    Weight: " @ %weight @ " / " @ %maxWeight @ "  LCK: " @ %lck);

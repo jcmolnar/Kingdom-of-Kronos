@@ -225,6 +225,7 @@ $WeaponShape[WhiteDiamondVoidCutter] = "elfinblade";
 $WeaponShape[WhiteDiamondVoidCrusher] = "hammer";
 $WeaponShape[WhiteDiamondVoidImpaler] = "trident";
 $WeaponShape[FinalVerdict] = "BattleAxe";
+$WeaponShape[Test] = "Test";
 $WeaponShape[StormCaller] = "trident";
 $WeaponShape[WorldSplitter] = "katana";
 $WeaponShape[SoulReaver] = "hammer";
@@ -538,6 +539,14 @@ function DualWield::RestoreOffHandVisual(%clientId)
         storeData(%clientId, "DualWield_OffHandWeapon", "");
         return;
     }
+
+    // EXPLOIT FIX: same-item-in-both-hands requires two copies (mirrors EquipOffHand)
+    %mountedMain = Player::getMountedItem(%playerObj, $WeaponSlot);
+    if(%mountedMain == %offHandWeapon && %count < 2)
+    {
+        storeData(%clientId, "DualWield_OffHandWeapon", "");
+        return;
+    }
     
     // Check if player still meets dual wield requirements
     if(!DualWield::CanDualWield(%clientId))
@@ -835,11 +844,22 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
     }
     
     %count = Player::getItemCount(%playerObj, %weaponItem);
-    
+
     // Option C: Weapons stay in inventory while equipped. Player just needs to own at least 1.
     if(%count < 1)
     {
         Client::sendMessage(%clientId, $MsgRed, "You don't have a " @ %weaponItem @ " to equip.");
+        return false;
+    }
+
+    // EXPLOIT FIX: dual-wielding the SAME item as the mounted main weapon requires
+    // owning TWO of it - one physical item can't be in both hands. The toggle-mode
+    // path already enforced this (count >= 2); the direct #dualwield <weapon> path
+    // didn't, allowing double attacks from a single item.
+    %mountedMain = Player::getMountedItem(%playerObj, $WeaponSlot);
+    if(%mountedMain == %weaponItem && %count < 2)
+    {
+        Client::sendMessage(%clientId, $MsgRed, "You need two of that weapon to wield one in each hand.");
         return false;
     }
     
@@ -913,24 +933,14 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
 
 // Refresh/re-mount the off-hand weapon visual (called after switching primary weapon)
 // This fixes the visual disappearing when using scroll wheel to switch weapons
+// BUGFIX: this used to read $DualWield::OffHandImage[%weapon] - an array nothing
+// ever writes (the real map is $DualWield::OffHandItem[shape]) - so the refresh
+// was a no-op and the off-hand visual vanished on every scroll-wheel weapon
+// switch while the damage kept firing invisibly. RestoreOffHandVisual does the
+// correct shape lookup (plus inventory/talent validation), so delegate to it.
 function DualWield::RefreshOffHandVisual(%clientId)
 {
-    // Check if player is dual wielding
-    %offHandWeapon = DualWield::GetOffHandWeapon(%clientId);
-    if(%offHandWeapon == "" || %offHandWeapon == -1)
-        return;  // Not dual wielding, nothing to refresh
-    
-    %playerObj = Client::getOwnedObject(%clientId);
-    if(%playerObj == "" || %playerObj == -1)
-        return;
-    
-    // Get the off-hand image data
-    %offHandImageData = $DualWield::OffHandImage[%offHandWeapon];
-    if(%offHandImageData == "" || %offHandImageData == -1)
-        return;  // No visual to mount
-    
-    // Re-mount the off-hand visual in slot 6
-    Player::mountItem(%playerObj, %offHandImageData, 6);
+    DualWield::RestoreOffHandVisual(%clientId);
 }
 
 // Unequip the off-hand weapon
@@ -1174,10 +1184,26 @@ function DualWield::FireOffHandMelee(%clientId, %player, %weaponType)
     %offHandWeapon = DualWield::GetOffHandWeapon(%clientId);
     if(%offHandWeapon == "" || %offHandWeapon == -1)
         %offHandWeapon = %weaponType;  // Fallback to passed weapon
-    
+
+    // BALANCE FIX: pace off-hand swings by the OFF-HAND weapon's own delay.
+    // Previously the off-hand fired once per PRIMARY swing with no own cooldown,
+    // so fast-main + heavy-offhand swung the heavy weapon at the fast weapon's
+    // rate - the optimal build was always fastest main + hardest off-hand.
+    %offDelay = GetDelay(%offHandWeapon);
+    if(%offDelay == "" || %offDelay <= 0)
+        %offDelay = 0.5;
+    %now = getSimTime();
+    %lastOff = $DualWield::LastOffHandFire[%clientId];
+    if(%lastOff != "" && %lastOff != -1 && (%now - %lastOff) < %offDelay)
+        return;
+    $DualWield::LastOffHandFire[%clientId] = %now;
+
     // Deal off-hand damage DIRECTLY (bypass MeleeAttack's anti-spam timer)
-    %range = $WeaponRange[%offHandWeapon];
-    if(%range == "" || %range == -1) %range = 4;
+    // BUGFIX: use GetRange() (minRange 2 + $WeaponRange) like every other melee
+    // path - raw $WeaponRange made the off-hand reach 2 units shorter than the
+    // same weapon in the main hand
+    %range = GetRange(%offHandWeapon);
+    if(%range == "" || %range == -1 || %range <= 0) %range = 4;
     
     // Direct LOS check and damage (same logic as MeleeAttack but without anti-spam)
     $los::object = "";
