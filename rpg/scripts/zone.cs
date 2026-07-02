@@ -33,7 +33,12 @@ function InitZones()
 			}
 			else if(GetWord(%system, 0) == "MUSIC")
 			{
-				$Zone::Music[0, %umusiccnt++] = GetWord(%system, 1);
+				// Pre-increment so entries are 1-based and Music/MusicTicks share an
+				// index - the old post-increment stored ticks one slot above the
+				// track, and the playback loop (which starts at index 1) never saw
+				// a zone's first/only MUSIC entry at all
+				%umusiccnt++;
+				$Zone::Music[0, %umusiccnt] = GetWord(%system, 1);
 				$Zone::MusicTicks[0, %umusiccnt] = GetWord(%system, 2);
 			}
 			//---------------------------------------------------------------
@@ -77,7 +82,9 @@ function InitZones()
 						}
 						else if(GetWord(%n, 0) == "MUSIC")
 						{
-							$Zone::Music[%zcnt, %musiccnt++] = GetWord(%n, 1);
+							// Pre-increment: 1-based, shared index (see unknown-zone MUSIC above)
+							%musiccnt++;
+							$Zone::Music[%zcnt, %musiccnt] = GetWord(%n, 1);
 							$Zone::MusicTicks[%zcnt, %musiccnt] = GetWord(%n, 2);
 						}
 					}
@@ -727,7 +734,11 @@ function UpdateZone(%object)
 						if(%playerRemort < %remortReq)
 						{
 							// Player doesn't meet REMORT requirement - kick them out
+							// LEAK FIX: undo the count increment done above - DoExit clears
+							// the stored zone, so the normal leave path can never decrement,
+							// leaving the zone permanently "occupied" (bots never despawn)
 							Zone::DoExit(%zoneflag, %clientId);
+							Zone::DecrementPlayerCount(%zoneflag);
 							FellOffMap(%clientId);
 							%msg = "<jc>You are not strong enough to be here. You need Remort " @ %remortReq @ "+ to enter this area.";
 							if(Client::getName(%clientId) != "")
@@ -747,7 +758,9 @@ function UpdateZone(%object)
 						if(%playerTourny < %tournyReq)
 						{
 							// Player doesn't meet TOURNYRANK requirement - kick them out
+							// LEAK FIX: undo the count increment (see remort branch above)
 							Zone::DoExit(%zoneflag, %clientId);
+							Zone::DecrementPlayerCount(%zoneflag);
 							FellOffMap(%clientId);
 							%msg = "<jc>You are not strong enough to be here. You need Tournament Rank " @ %tournyReq @ "+ to enter this area.";
 							if(Client::getName(%clientId) != "")

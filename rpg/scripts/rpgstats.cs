@@ -341,10 +341,13 @@ function fetchData(%clientId, %type)
 		%b = AddPoints(%clientId, 5);
 		%c = AddBonusStatePoints(%clientId, "MaxMANA");
 
+		// %c (bonus states) was computed but dropped from the returns - MaxMANA
+		// buffs silently did nothing. Docs (STAT_VARIABLES_REFERENCE.md) and the
+		// MaxHP formula both include the bonus-state term.
 		if(fetchData(%clientId, "Stance") == "Glass Cannon")
-			return round((%a + %b) * 0.5);
+			return round((%a + %b + %c) * 0.5);
 		else
-			return %a + %b;
+			return %a + %b + %c;
 	}
 	else if(%type == "MANA")
 	{
@@ -842,6 +845,11 @@ function DistributeExpForKilling(%damagedClient)
 		if(%finalDamagedBy[%i] != "")
 		{
 			%listClientId = NEWgetClientByName(%finalDamagedBy[%i]);
+
+			// Shooter disconnected (or a bot despawned) between damaging and the
+			// kill - skip them instead of storeData/fetchData against id -1
+			if(%listClientId == -1 || %listClientId == "")
+				continue;
 
 			%slvl = fetchData(%listClientId, "LVL");
 

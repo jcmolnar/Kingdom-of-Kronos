@@ -24,7 +24,9 @@ if($autoStartupSP == "") $autoStartupSP = 1;	//for each skill
 if($initbankcoins == "") $initbankcoins = 0;
 if($maxSAYdistVec == "") $maxSAYdistVec = 20;
 if($maxSHOUTdistVec == "") $maxSHOUTdistVec = 60;
-if($maxWHISPERdistVec == "") $maxSHOUTdistVec = 5;
+// BUGFIX: this line used to assign $maxSHOUTdistVec (clobbering the 60 above
+// to 5) and never set the whisper distance at all, so whispers reached nobody.
+if($maxWHISPERdistVec == "") $maxWHISPERdistVec = 5;
 
 if($joinHouseCost == "") $joinHouseCost = 2500;
 if($changeHouseCost == "") $changeHouseCost = 5000000;
