@@ -15,6 +15,9 @@ function Mission::init()
 	echo(".--==< RecursiveWorld STARTED >==--.");
 	RecursiveWorld(5);
 	RecursiveZone(2);
+	// Visibility safety net (playerspawn.cs) - must start here, not at exec time:
+	// schedules made before mission load are flushed by the engine
+	Game::StartVisibilitySafetyLoop();
 
 	$BlockOwnerAdminLevel[Server] = 5;
 	for(%i = 1; $ServerQuest[%i] != ""; %i++)

@@ -511,6 +511,12 @@ $VisibilitySafetyInterval = 30;  // Seconds between visibility checks
 
 function Game::StartVisibilitySafetyLoop()
 {
+	// Guard against double-start (Mission::init re-run or manual re-exec would
+	// otherwise stack a second self-rescheduling loop)
+	if($VisibilityLoopStarted)
+		return;
+	$VisibilityLoopStarted = true;
+
 	echo("[VISIBILITY] Starting periodic visibility safety net (every " @ $VisibilitySafetyInterval @ "s)");
 	schedule("Game::VisibilitySafetyCheck();", $VisibilitySafetyInterval);
 }
@@ -551,5 +557,8 @@ function Game::VisibilitySafetyCheck()
 	schedule("Game::VisibilitySafetyCheck();", $VisibilitySafetyInterval);
 }
 
-// Start the visibility safety loop after server initialization (60 second delay)
-schedule("Game::StartVisibilitySafetyLoop();", 60);
+// NOTE: the loop is started from Mission::init() in gameevents.cs (alongside
+// RecursiveWorld/RecursiveZone). It was previously scheduled HERE at exec time,
+// but this script execs before Server::loadMission and the engine flushes
+// pending schedules on mission load - so the loop never actually started on a
+// normal server boot (only on a manual re-exec of this file).

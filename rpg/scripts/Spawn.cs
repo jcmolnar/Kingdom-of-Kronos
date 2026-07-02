@@ -246,6 +246,7 @@ function SpawnLoop(%this)
 	{
 		if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] ABORT - Invalid spawn point info, scheduling next loop and returning");
 		schedule("SpawnLoop(" @ %this @ ");", 30);
+		Watchdog_Exit();
 		return;
 	}
 
@@ -312,6 +313,7 @@ if(%cooldownUntil != "" && %cooldownUntil > getSimTime())
 		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnLoop(" @ %this @ "): cooldown active until " @ floor(%cooldownUntil) @ " (now=" @ floor(getSimTime()) @ "), skipping");
 	// Schedule next loop and return
 	schedule("SpawnLoop(" @ %this @ ");", %delay + 1);
+	Watchdog_Exit();
 	return;
 }
 // Clear expired cooldown
@@ -326,50 +328,55 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 	else
 		%flagStr = "false";
 	
-	// Enhanced debug logging to show spawnpoint state
-	%registeredCount = GetRegisteredBotCount(%this);
-	%reservedStatus = $SpawnSlotReserved[%this];
-	if(%reservedStatus == "")
-		%reservedStatus = "none";
-	%reservedAge = "none";
-	if($SpawnSlotReservedTime[%this] != "" && $SpawnSlotReservedTime[%this] != -1)
+	// Spawnpoint state debug - the whole block is gated because it did REAL work
+	// (GetRegisteredBotCount walks the full bot registry, plus a second
+	// Zone::getNumPlayers client-walk) on every tick just to feed an echo that
+	// was commented out.
+	if($SPAWNLOOP_DEBUG)
 	{
-		%reservedAge = getSimTime() - $SpawnSlotReservedTime[%this];
-		%reservedAge = %reservedAge @ "s";
-	}
-	
-	// Fix inProgress display - show explicit true/false
-	%inProgressStr = "false";
-	if(%spawnInProgress == "true")
-		%inProgressStr = "true";
-	
-	// Get zone information for flag explanation
-	%zoneInfo = "";
-	if($SelectiveZoneBotSpawning)
-	{
-		%zoneId = $MarkerZone[%this];
-		%zonePlayerCount = Zone::getNumPlayers(%zoneId);
-		if(%zoneId != "" && %zoneId != -1)
-			%zoneInfo = ", zone=" @ %zoneId @ ", zonePlayers=" @ %zonePlayerCount;
+		%registeredCount = GetRegisteredBotCount(%this);
+		%reservedStatus = $SpawnSlotReserved[%this];
+		if(%reservedStatus == "")
+			%reservedStatus = "none";
+		%reservedAge = "none";
+		if($SpawnSlotReservedTime[%this] != "" && $SpawnSlotReservedTime[%this] != -1)
+		{
+			%reservedAge = getSimTime() - $SpawnSlotReservedTime[%this];
+			%reservedAge = %reservedAge @ "s";
+		}
+
+		// Fix inProgress display - show explicit true/false
+		%inProgressStr = "false";
+		if(%spawnInProgress == "true")
+			%inProgressStr = "true";
+
+		// Get zone information for flag explanation
+		%zoneInfo = "";
+		if($SelectiveZoneBotSpawning)
+		{
+			%zoneId = $MarkerZone[%this];
+			%zonePlayerCount = Zone::getNumPlayers(%zoneId);
+			if(%zoneId != "" && %zoneId != -1)
+				%zoneInfo = ", zone=" @ %zoneId @ ", zonePlayers=" @ %zonePlayerCount;
+			else
+				%zoneInfo = ", zone=unknown";
+		}
+
+		// Get cooldown information
+		%cooldownInfo = "";
+		if(%cooldownUntil != "" && %cooldownUntil != -1)
+		{
+			%cooldownRemaining = %cooldownUntil - getSimTime();
+			if(%cooldownRemaining > 0)
+				%cooldownInfo = ", cooldown=" @ floor(%cooldownRemaining) @ "s";
+			else
+				%cooldownInfo = ", cooldown=expired";
+		}
 		else
-			%zoneInfo = ", zone=unknown";
+			%cooldownInfo = ", cooldown=none";
+
+		echo("[SPAWN DEBUG] SpawnLoop(" @ %this @ "): counter=" @ %currentCounter @ "/" @ %maxs @ ", registered=" @ %registeredCount @ ", flag=" @ %flagStr @ %zoneInfo @ ", inProgress=" @ %inProgressStr @ ", reserved=" @ %reservedStatus @ ", reservedAge=" @ %reservedAge @ %cooldownInfo);
 	}
-	
-	// Get cooldown information
-	%cooldownInfo = "";
-	if(%cooldownUntil != "" && %cooldownUntil != -1)
-	{
-		%cooldownRemaining = %cooldownUntil - getSimTime();
-		if(%cooldownRemaining > 0)
-			%cooldownInfo = ", cooldown=" @ floor(%cooldownRemaining) @ "s";
-		else
-			%cooldownInfo = ", cooldown=expired";
-	}
-	else
-		%cooldownInfo = ", cooldown=none";
-	
-	// Debug logging removed to reduce console spam
-	//echo("[SPAWN DEBUG] SpawnLoop(" @ %this @ "): counter=" @ %currentCounter @ "/" @ %maxs @ ", registered=" @ %registeredCount @ ", flag=" @ %flagStr @ %zoneInfo @ ", inProgress=" @ %inProgressStr @ ", reserved=" @ %reservedStatus @ ", reservedAge=" @ %reservedAge @ %cooldownInfo);
 	
 	// CRITICAL FIX: Atomically reserve the slot. This increments the counter IMMEDIATELY.
 	if(%flag && %spawnInProgress != "true" && ReserveSpawnSlot(%this))
@@ -449,6 +456,7 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		%zoneIndex = Zone::getIndex(%zoneId);
 		if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 7 - SLEEPING (zone " @ %zoneIndex @ " has no players)");
 		if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 8 - EXIT (no reschedule - waiting for WakeZoneSpawnLoops)");
+		Watchdog_Exit();
 		return;
 	}
 	
@@ -461,4 +469,5 @@ if(%cooldownUntil != "" && %cooldownUntil <= getSimTime())
 		schedule("SpawnLoop(" @ %this @ ");", %delay + 1);
 	
 	if($SPAWNLOOP_DEBUG) echo("[SPAWNLOOP CHECKPOINT] Step 8 - EXIT (schedule called successfully)");
+	Watchdog_Exit();
 }
