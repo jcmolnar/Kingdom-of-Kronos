@@ -312,7 +312,18 @@ function Client::onKilled(%clientId, %killerId, %damageType)
 
 	//we can award the other players exp
 	if(!fetchData(%clientId, "noExperienceFlag"))
+	{
 		DistributeExpForKilling(%clientId);
+
+		// Daily cull credit for the killshot player (DailyQuest.cs). Same
+		// noExperienceFlag gate as exp: no-exp bots (quest/seal/etc.) never
+		// pay daily credit. Victim must be an enemy bot, killer a real player.
+		if(%killerId != "" && %killerId != -1 && %killerId != 0 && %killerId != %clientId)
+		{
+			if(!Player::isAiControlled(%killerId) && GetClientDataType(%clientId) == "enemybot")
+				Daily::OnKill(%killerId, %clientId);
+		}
+	}
 
 	//The player with the killshot gets the official "kill"
 	if(!IsInCommaList(fetchData(%killerId, "TempKillList"), Client::getName(%clientId)))

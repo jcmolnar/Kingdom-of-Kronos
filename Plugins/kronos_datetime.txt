@@ -1,0 +1,39 @@
+kronos_datetime.dll  —  SERVER-side plugin (real calendar date/time)
+=====================================================================
+
+What it does
+=============
+Exposes the OS clock to TorqueScript. The stock engine has NO calendar
+source: getIntegerTime() is the sim clock (resets on restart, and
+kronosfix_server.dll rebases it backwards), timeStamp() returns the
+engine BUILD date. The daily quest system needs a day stamp that
+survives crashes/restarts, hence this plugin.
+
+Commands
+=============
+    getRealDate()       -> "YYYYMMDD"   e.g. 20260702   (local time)
+    getRealTime()       -> "HHMMSS"     e.g. 143205     (24h, local)
+    getRealDayOfWeek()  -> "0".."6"     0 = Sunday
+
+Install
+=============
+Drop kronos_datetime.dll in this Plugins\ folder and add to
+Plugins\Scripts\PluginLoader.cs (dedicated block):
+
+    $PluginLoader::kronos_datetime = true;
+
+On load it logs to kronos_datetime.log ("registered getRealDate/...").
+Verify from console:  echo(getRealDate());
+
+Safety
+=============
+Pure command registration — patches NO engine code, hooks NO sites.
+Uses the same proven descriptor/registration pattern as
+kronos_playermanager.dll (loader calls descriptor vtable[0] after the
+console is ready; commands registered via engine addCommand 0x005f4138).
+Coexists with kronosfix_server / kronos_playermanager / kronos_aiteardown.
+
+Source + build
+=============
+Plugins\Source\kronos_datetime\kronos_datetime.cpp
+Plugins\Source\kronos_datetime\build_kronos_datetime.bat  (MSVC x86)

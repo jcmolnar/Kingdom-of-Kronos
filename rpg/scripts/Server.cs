@@ -328,6 +328,7 @@ function createServer(%mission, %dedicated)
 	exec(lasvegas);
 	exec(KronosHUD_Server);
 	exec(KronosNPC_Server);
+	exec(DailyQuest);
 	//exec(DebugInit); only need if debugging
 	//exec(backpack); we implemented belt.cs instead of backpack.cs
 	

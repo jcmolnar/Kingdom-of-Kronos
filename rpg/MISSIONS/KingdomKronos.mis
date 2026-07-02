@@ -4825,6 +4825,30 @@ instant SimGroup "MissionGroup" {
 				locked = "0";
 			};
 		};
+		instant SimGroup "dailyquest1" {
+			instant SimGroup "NAME Daily Herald";
+			instant SimGroup "RACE MaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 999 LCK 999 GoldenLongSword 1 IronScaleMail 1 Adminorb 1";
+			instant Marker "Yuliple daily herald" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-392.5 -2308 78";
+				rotation = "0 -0 -0.32291";
+				locked = "0";
+			};
+		};
+		instant SimGroup "dailyquest2" {
+			instant SimGroup "NAME Daily Herald";
+			instant SimGroup "RACE FemaleHuman";
+			instant SimGroup "ITEMS CLASS Thief LVL 999 LCK 999 GoldenLongSword 1 IronScaleMail 1 Adminorb 1";
+			instant Marker "Sanctuary daily herald" {
+				dataBlock = "PathMarker";
+				name = "";
+				position = "-2848 -1320 694";
+				rotation = "0 -0 0.559947";
+				locked = "0";
+			};
+		};
 		instant SimGroup "merchant4" {
 			instant Marker "Sanctuary weapon merchant" {
 				dataBlock = "PathMarker";

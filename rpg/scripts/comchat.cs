@@ -461,6 +461,18 @@ function remoteSay(%clientId, %team, %message, %senderName)
 			return;
 		}
 	
+		if(%w1 == "#daily")
+		{
+			// bots have no dailies
+			if(Player::isAiControlled(%TrueClientId) || isRPGAI(%TrueClientId))
+				return;
+			if(%cropped == "abandon")
+				Daily::Abandon(%TrueClientId);
+			else
+				Daily::Status(%TrueClientId);
+			return;
+		}
+
 		if(%w1 == "#fontcolors" || %w1 == "#testcolors")
 		{
 			%colorMsg = "<f0>Font Color 0 (Default): This is the default text color\n";
@@ -11360,6 +11372,45 @@ if(%w1 == "#spawntelemetry")
 							AI::sayLater(%TrueClientId, %closestId, "I have nothing to sell.", True);
 
 						$state[%closestId, %TrueClientId] = "";
+					}
+				}
+			}
+			else if(%botType == "dailyquest")
+			{
+				// Daily Herald (DailyQuest.cs). Unlike "quest"/"hunt" bots this is NOT
+				// $BotInfo NEED/GIVE-driven: contracts are per-player, resolved by
+				// Daily::Accept against the talker's benchmark and stored via storeData.
+				if(%initTalk || $state[%closestId, %TrueClientId] != "")
+				{
+					// completed contract? pay out on any interaction
+					if(Daily::TryTurnIn(%TrueClientId))
+					{
+						AI::sayLater(%TrueClientId, %closestId, "The kingdom thanks you. Until tomorrow!", True);
+						$state[%closestId, %TrueClientId] = "";
+					}
+					else if(%initTalk)
+					{
+						AI::sayLater(%TrueClientId, %closestId, "Greetings! I post the kingdom's daily bounties. Say [FETCH], [CULL] or [ELITE] to accept one. #daily shows your progress.", True);
+						Daily::Status(%TrueClientId);
+						$state[%closestId, %TrueClientId] = 1;
+					}
+					else if($state[%closestId, %TrueClientId] == 1)
+					{
+						if(String::findSubStr(%message, "fetch") != -1)
+						{
+							Daily::Accept(%TrueClientId, "Fetch");
+							$state[%closestId, %TrueClientId] = "";
+						}
+						else if(String::findSubStr(%message, "cull") != -1)
+						{
+							Daily::Accept(%TrueClientId, "Cull");
+							$state[%closestId, %TrueClientId] = "";
+						}
+						else if(String::findSubStr(%message, "elite") != -1)
+						{
+							Daily::Accept(%TrueClientId, "Elite");
+							$state[%closestId, %TrueClientId] = "";
+						}
 					}
 				}
 			}

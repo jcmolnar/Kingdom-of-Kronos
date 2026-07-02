@@ -15,6 +15,7 @@ if($dedicated) {
 	$PluginLoader::kronosfix_server = true;
 	$PluginLoader::kronos_playermanager = true;
 	$PluginLoader::kronos_aiteardown = true;
+	$PluginLoader::kronos_datetime = true;  // getRealDate()/getRealTime()/getRealDayOfWeek() - daily quest rotation day stamp
 }
 else {
 	$PluginLoader::DoSFix = false; //Because dosfix doesn't play nice with special chats

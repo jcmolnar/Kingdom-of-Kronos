@@ -18,6 +18,8 @@ function Mission::init()
 	// Visibility safety net (playerspawn.cs) - must start here, not at exec time:
 	// schedules made before mission load are flushed by the engine
 	Game::StartVisibilitySafetyLoop();
+	// Daily quest rotation loop (DailyQuest.cs) - same rule: must start here
+	Daily::Init();
 
 	$BlockOwnerAdminLevel[Server] = 5;
 	for(%i = 1; $ServerQuest[%i] != ""; %i++)
