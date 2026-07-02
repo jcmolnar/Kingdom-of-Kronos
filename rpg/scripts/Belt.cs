@@ -1,3 +1,5 @@
+$BELT_DEBUG = 0; // Toggle verbose belt menu/storage debug echoes (these spammed the console unconditionally on every menu open)
+
 $Belt::Count["QuestItems"] = 0;
 $Belt::Count["KeyItems"] = 0;
 $Belt::Count["Deployables"] = 0;
@@ -503,14 +505,14 @@ function MenuBeltDrop(%clientId, %item, %type)
 		%inventoryCount = Belt::HasThisStuff(%clientId, %item);
 		
 		// DEBUG: Log menu decision
-		echo("[BELT MENU DEBUG] Item: " @ %item @ ", AccessoryType: " @ %accessoryType @ ", ThisItemEquipped: " @ %thisItemEquippedCount @ ", InInventory: " @ %inventoryCount @ ", MaxSlots: " @ %maxSlots);
+		if($BELT_DEBUG) echo("[BELT MENU DEBUG] Item: " @ %item @ ", AccessoryType: " @ %accessoryType @ ", ThisItemEquipped: " @ %thisItemEquippedCount @ ", InInventory: " @ %inventoryCount @ ", MaxSlots: " @ %maxSlots);
 		
 		// Show Unequip if at least 1 of this item is equipped
 		// Show Equip if: (items in inventory > items equipped) AND (total equipped of this type < max slots)
 		if(%thisItemEquippedCount > 0)
 		{
 			// At least one is equipped - show Unequip
-			echo("[BELT MENU DEBUG] Showing Unequip (" @ %thisItemEquippedCount @ " equipped)");
+			if($BELT_DEBUG) echo("[BELT MENU DEBUG] Showing Unequip (" @ %thisItemEquippedCount @ " equipped)");
 			Client::addMenuItem(%clientId, %cnt++ @ "Unequip", %type @ " unequip " @ %item);
 		}
 		
@@ -519,13 +521,13 @@ function MenuBeltDrop(%clientId, %item, %type)
 		if(%inventoryCount > %thisItemEquippedCount && %currentTypeCount < %maxSlots)
 		{
 			// Have more in inventory and slots available - show Equip
-			echo("[BELT MENU DEBUG] Showing Equip (can equip more: inv=" @ %inventoryCount @ ", equipped=" @ %thisItemEquippedCount @ ", typeSlots=" @ %currentTypeCount @ "/" @ %maxSlots @ ")");
+			if($BELT_DEBUG) echo("[BELT MENU DEBUG] Showing Equip (can equip more: inv=" @ %inventoryCount @ ", equipped=" @ %thisItemEquippedCount @ ", typeSlots=" @ %currentTypeCount @ "/" @ %maxSlots @ ")");
 			Client::addMenuItem(%clientId, %cnt++ @ "Equip", %type @ " equip " @ %item);
 		}
 		else if(%currentTypeCount >= %maxSlots && %thisItemEquippedCount == 0)
 		{
 			// No slots available and this item not equipped - show message
-			echo("[BELT MENU DEBUG] Showing 'At max' message");
+			if($BELT_DEBUG) echo("[BELT MENU DEBUG] Showing 'At max' message");
 			%typeName = $LocationDesc[%accessoryType];
 			if(%typeName == "")
 				%typeName = "accessory";
@@ -965,21 +967,11 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 		%cmnt = Belt::HasThisStuff(%clientId, %item);
 		if(%cmnt >= %amnt)
 		{
-			// CRITICAL: Auto-unequip if storing equipped accessories
-			%category = $BeltItem[%item, "Type"];
-			if(%category == "Accessories")
-			{
-				for(%unequipCount = 0; %unequipCount < %amnt; %unequipCount++)
-				{
-					if(Belt::IsAccessoryEquipped(%clientId, %item))
-						Belt::UnequipAccessory(%clientId, %item);
-				}
-			}
-			else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
-			{
-				Belt::UnequipArmor(%clientId, %item);
-			}
-			
+			// NOTE: auto-unequip of equipped accessories/armor now happens INSIDE the
+			// success branches below, AFTER the 25-slot capacity check passes.
+			// Previously it ran here, so a full storage refused the deposit but the
+			// player's gear had already been silently unequipped.
+
 			// Check if storing to banker (BeltStorage) or to belt storage (old system)
 			if(%clientId.currentBeltBank != "")
 			{
@@ -1061,7 +1053,22 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 					
 					// Save cleaned stored category
 					storeData(%clientId, %storedCategory, %cleanedStored);
-					
+
+					// Auto-unequip equipped accessories/armor (capacity check passed)
+					%category = $BeltItem[%item, "Type"];
+					if(%category == "Accessories")
+					{
+						for(%unequipCount = 0; %unequipCount < %amnt; %unequipCount++)
+						{
+							if(Belt::IsAccessoryEquipped(%clientId, %item))
+								Belt::UnequipAccessory(%clientId, %item);
+						}
+					}
+					else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+					{
+						Belt::UnequipArmor(%clientId, %item);
+					}
+
 					// Remove from equipped belt
 					Belt::TakeThisStuff(%clientId, %item, %amnt);
 					
@@ -1094,7 +1101,22 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 			{
 				// Storing to belt storage (old system)
 				if(CountObjInList(fetchData(%clientId, "Stored" @ %type)) / 2 < 25)
-				{		
+				{
+					// Auto-unequip equipped accessories/armor (capacity check passed)
+					%category = $BeltItem[%item, "Type"];
+					if(%category == "Accessories")
+					{
+						for(%unequipCount = 0; %unequipCount < %amnt; %unequipCount++)
+						{
+							if(Belt::IsAccessoryEquipped(%clientId, %item))
+								Belt::UnequipAccessory(%clientId, %item);
+						}
+					}
+					else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
+					{
+						Belt::UnequipArmor(%clientId, %item);
+					}
+
 					storeData(%clientId, "Stored" @ %type, SetStuffString(fetchData(%clientId, "Stored" @ %type), %registeredItem, %amnt));
 					Belt::TakeThisStuff(%clientId, %item, %amnt);
 					%clientId.bulkNum = 1;
@@ -2915,6 +2937,8 @@ function Belt::RemoveFromList(%list, %item)
 	return %rebuiltList;
 }
 
+// DEAD CODE (no callers as of Jul 2026): kept for reference only. If resurrected,
+// beware: findSubStr is a substring match, so "PowerRing" matches "MajorPowerRing".
 function Belt::IsInList(%list, %item)
 {
 	if(String::findSubStr(%list, %item) != -1)
@@ -2939,6 +2963,11 @@ function Belt::GetStored(%clientId, %opt)
 	}
 }
 
+// DEAD CODE (no callers as of Jul 2026, and $Belt::Storage[...] is never set anywhere,
+// so the body is a no-op even if called). DO NOT resurrect as-is - it has two latent
+// bugs: "%b = getword(%tmploot, %i++)" reads the SAME word as %a (post-increment
+// returns the old index, so %b gets the item name, not the count), and the category
+// concat at the top joins lists without a space separator (merge corruption).
 function Belt::GetDeathItems(%clientId)
 {
 	%tmploot = "";
@@ -3147,18 +3176,18 @@ function Belt::GetEquippedAccessoryCountByType(%clientId, %accessoryType)
 	if(%equippedList == "" || %equippedList == "0")
 		return 0;
 	
-	echo("[COUNT DEBUG] Looking for type " @ %accessoryType @ " in equipped list: " @ %equippedList);
+	if($BELT_DEBUG) echo("[COUNT DEBUG] Looking for type " @ %accessoryType @ " in equipped list: " @ %equippedList);
 	
 	%count = 0;
 	for(%i = 0; GetWord(%equippedList, %i) != -1; %i++)
 	{
 		%equippedItem = GetWord(%equippedList, %i);
 		%itemType = $AccessoryVar[%equippedItem, $AccessoryType];
-		echo("[COUNT DEBUG] Item: " @ %equippedItem @ ", Type: " @ %itemType @ ", Target: " @ %accessoryType @ ", Match: " @ (%itemType == %accessoryType));
+		if($BELT_DEBUG) echo("[COUNT DEBUG] Item: " @ %equippedItem @ ", Type: " @ %itemType @ ", Target: " @ %accessoryType @ ", Match: " @ (%itemType == %accessoryType));
 		if(%itemType == %accessoryType)
 			%count++;
 	}
-	echo("[COUNT DEBUG] Final count for type " @ %accessoryType @ ": " @ %count);
+	if($BELT_DEBUG) echo("[COUNT DEBUG] Final count for type " @ %accessoryType @ ": " @ %count);
 	return %count;
 }
 
@@ -4166,11 +4195,11 @@ function Belt::ShowDepositMenu(%clientId)
 function processMenuBeltDeposit(%clientId, %option)
 {
 	%clientName = Client::getName(%clientId);
-	echo("DEBUG processMenuBeltDeposit: ENTER - clientId=" @ %clientId @ " (" @ %clientName @ "), option='" @ %option @ "'");
+	if($BELT_DEBUG) echo("DEBUG processMenuBeltDeposit: ENTER - clientId=" @ %clientId @ " (" @ %clientName @ "), option='" @ %option @ "'");
 	
 	if(%option == "back")
 	{
-		echo("DEBUG processMenuBeltDeposit: Back option selected");
+		if($BELT_DEBUG) echo("DEBUG processMenuBeltDeposit: Back option selected");
 		// Clear stored order when menu is closed
 		%clientId.beltDepositItemOrder = "";
 		Belt::Store(%clientId, %clientId.currentBeltBank);
@@ -4179,23 +4208,23 @@ function processMenuBeltDeposit(%clientId, %option)
 	
 	if(%option == "none")
 	{
-		echo("DEBUG processMenuBeltDeposit: No items to deposit");
+		if($BELT_DEBUG) echo("DEBUG processMenuBeltDeposit: No items to deposit");
 		return;
 	}
 	
 	%item = GetWord(%option, 0);
 	%category = GetWord(%option, 1);
-	echo("DEBUG processMenuBeltDeposit: Parsed - item='" @ %item @ "', category='" @ %category @ "'");
+	if($BELT_DEBUG) echo("DEBUG processMenuBeltDeposit: Parsed - item='" @ %item @ "', category='" @ %category @ "'");
 	
 	// Show the 5/10/All menu instead of directly depositing
-	echo("DEBUG processMenuBeltDeposit: Showing deposit menu for item");
+	if($BELT_DEBUG) echo("DEBUG processMenuBeltDeposit: Showing deposit menu for item");
 	MenuSellBeltItemFinal(%clientId, %item, %category, "store");
 }
 
 function Belt::ShowWithdrawMenu(%clientId, %page)
 {
 	%clientName = Client::getName(%clientId);
-	echo("DEBUG Belt::ShowWithdrawMenu: ENTER - clientId=" @ %clientId @ " (" @ %clientName @ "), page=" @ %page);
+	if($BELT_DEBUG) echo("DEBUG Belt::ShowWithdrawMenu: ENTER - clientId=" @ %clientId @ " (" @ %clientName @ "), page=" @ %page);
 	
 	// Default to page 1 if not specified
 	if(%page == "" || %page < 1)
@@ -4203,43 +4232,43 @@ function Belt::ShowWithdrawMenu(%clientId, %page)
 	
 	// Clean up BeltStorage first - remove any invalid entries (item "0", count 0, etc.)
 	%beltStorage = fetchData(%clientId, "BeltStorage");
-	echo("DEBUG Belt::ShowWithdrawMenu: BEFORE cleanup BeltStorage='" @ %beltStorage @ "'");
+	if($BELT_DEBUG) echo("DEBUG Belt::ShowWithdrawMenu: BEFORE cleanup BeltStorage='" @ %beltStorage @ "'");
 	%cleanedStorage = "";
 	%removedCount = 0;
 	for(%i = 0; GetWord(%beltStorage, %i) != -1; %i+=2)
 	{
 		%item = GetWord(%beltStorage, %i);
 		%count = GetWord(%beltStorage, %i+1);
-		echo("DEBUG Belt::ShowWithdrawMenu: Checking item[" @ %i @ "]='" @ %item @ "', count[" @ (%i+1) @ "]='" @ %count @ "'");
+		if($BELT_DEBUG) echo("DEBUG Belt::ShowWithdrawMenu: Checking item[" @ %i @ "]='" @ %item @ "', count[" @ (%i+1) @ "]='" @ %count @ "'");
 		// Convert count to numeric to properly handle negative values like "-1" or "-0"
 		%countNum = %count * 1;
 		// Only keep valid entries (item is not empty/"0", count is not -1 or "0", and count > 0)
 		if(%item != "" && %item != -1 && %item != "0" && %count != "" && %count != -1 && %count != "-1" && %count != "0" && %countNum > 0)
 		{
 			%cleanedStorage = %cleanedStorage @ %item @ " " @ %count @ " ";
-			echo("DEBUG Belt::ShowWithdrawMenu: Added valid entry - item='" @ %item @ "', count=" @ %count);
+			if($BELT_DEBUG) echo("DEBUG Belt::ShowWithdrawMenu: Added valid entry - item='" @ %item @ "', count=" @ %count);
 		}
 		else
 		{
-			echo("DEBUG Belt::ShowWithdrawMenu: Skipping invalid entry - item='" @ %item @ "', count='" @ %count @ "'");
+			if($BELT_DEBUG) echo("DEBUG Belt::ShowWithdrawMenu: Skipping invalid entry - item='" @ %item @ "', count='" @ %count @ "'");
 			%removedCount++;
 		}
 	}
 	// Update BeltStorage if it was cleaned (remove trailing space)
 	if(%cleanedStorage != %beltStorage)
 	{
-		echo("DEBUG Belt::ShowWithdrawMenu: Cleaned " @ %removedCount @ " invalid entries from BeltStorage");
+		if($BELT_DEBUG) echo("DEBUG Belt::ShowWithdrawMenu: Cleaned " @ %removedCount @ " invalid entries from BeltStorage");
 		// Remove trailing space if present
 		%len = String::len(%cleanedStorage);
 		if(%len > 0 && String::getSubStr(%cleanedStorage, %len-1, 1) == " ")
 			%cleanedStorage = String::getSubStr(%cleanedStorage, 0, %len-1);
-		echo("DEBUG Belt::ShowWithdrawMenu: AFTER cleanup BeltStorage='" @ %cleanedStorage @ "'");
+		if($BELT_DEBUG) echo("DEBUG Belt::ShowWithdrawMenu: AFTER cleanup BeltStorage='" @ %cleanedStorage @ "'");
 		storeData(%clientId, "BeltStorage", %cleanedStorage);
 		%beltStorage = %cleanedStorage;
 	}
 	else
 	{
-		echo("DEBUG Belt::ShowWithdrawMenu: No cleanup needed");
+		if($BELT_DEBUG) echo("DEBUG Belt::ShowWithdrawMenu: No cleanup needed");
 	}
 	
 	// Store the original order when first opening the menu (page 1)
@@ -4382,11 +4411,11 @@ function Belt::ShowWithdrawMenu(%clientId, %page)
 function processMenuBeltWithdraw(%clientId, %option)
 {
 	%clientName = Client::getName(%clientId);
-	echo("DEBUG processMenuBeltWithdraw: ENTER - clientId=" @ %clientId @ " (" @ %clientName @ "), option='" @ %option @ "'");
+	if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: ENTER - clientId=" @ %clientId @ " (" @ %clientName @ "), option='" @ %option @ "'");
 	
 	if(%option == "back")
 	{
-		echo("DEBUG processMenuBeltWithdraw: Back option selected");
+		if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: Back option selected");
 		// Clear stored order when menu is closed
 		%clientId.beltWithdrawItemOrder = "";
 		Belt::Store(%clientId, %clientId.currentBeltBank);
@@ -4395,7 +4424,7 @@ function processMenuBeltWithdraw(%clientId, %option)
 	
 	if(%option == "none")
 	{
-		echo("DEBUG processMenuBeltWithdraw: No items in storage");
+		if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: No items in storage");
 		return;
 	}
 	
@@ -4403,13 +4432,13 @@ function processMenuBeltWithdraw(%clientId, %option)
 	if(GetWord(%option, 0) == "page")
 	{
 		%newPage = GetWord(%option, 1);
-		echo("DEBUG processMenuBeltWithdraw: Navigating to page " @ %newPage);
+		if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: Navigating to page " @ %newPage);
 		Belt::ShowWithdrawMenu(%clientId, %newPage);
 		return;
 	}
 	
 	%item = %option;
-	echo("DEBUG processMenuBeltWithdraw: Item='" @ %item @ "'");
+	if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: Item='" @ %item @ "'");
 	
 	// Validate item is not empty
 	if(%item == "" || %item == -1)
@@ -4421,20 +4450,20 @@ function processMenuBeltWithdraw(%clientId, %option)
 	// Determine which category this item belongs to using BeltItem lookup
 	// First try the item as-is (it might already be the registered name from BeltStorage)
 	%category = $BeltItem[%item, "Type"];
-	echo("DEBUG processMenuBeltWithdraw: Lookup category='" @ %category @ "'");
+	if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: Lookup category='" @ %category @ "'");
 	
 	if(%category == "")
 	{
-		echo("DEBUG processMenuBeltWithdraw: Category not found, defaulting to QuestItems");
+		if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: Category not found, defaulting to QuestItems");
 		// Item might not be in BeltItem registry directly - try to find it by iterating
 		// This shouldn't happen if BeltStorage only contains registered item names, but handle it anyway
 		%category = "QuestItems"; // Default category
 		
 		// Try to find the item in BeltStorage to confirm it exists
 		%beltStorage = fetchData(%clientId, "BeltStorage");
-		echo("DEBUG processMenuBeltWithdraw: BeltStorage='" @ %beltStorage @ "'");
+		if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: BeltStorage='" @ %beltStorage @ "'");
 		%count = Belt::ItemCount(%item, %beltStorage);
-		echo("DEBUG processMenuBeltWithdraw: Item count in storage=" @ %count);
+		if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: Item count in storage=" @ %count);
 		
 		if(%count <= 0)
 		{
@@ -4444,7 +4473,7 @@ function processMenuBeltWithdraw(%clientId, %option)
 	}
 	
 	// Show the 5/10/All menu instead of directly withdrawing
-	echo("DEBUG processMenuBeltWithdraw: Showing withdraw menu for item '" @ %item @ "' category='" @ %category @ "'");
+	if($BELT_DEBUG) echo("DEBUG processMenuBeltWithdraw: Showing withdraw menu for item '" @ %item @ "' category='" @ %category @ "'");
 	MenuSellBeltItemFinal(%clientId, %item, %category, "withdraw");
 }
 
