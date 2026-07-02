@@ -23,9 +23,12 @@ $initSPcredits = 120;
 if($autoStartupSP == "") $autoStartupSP = 1;	//for each skill
 if($initbankcoins == "") $initbankcoins = 0;
 if($maxSAYdistVec == "") $maxSAYdistVec = 20;
-if($maxSHOUTdistVec == "") $maxSHOUTdistVec = 60;
-// BUGFIX: this line used to assign $maxSHOUTdistVec (clobbering the 60 above
-// to 5) and never set the whisper distance at all, so whispers reached nobody.
+// DESIGN DECISION (intentional, do not "fix" back to 60): shout range is
+// deliberately 5 - players were bypassing remort-gated zones by going out of
+// bounds and shouting at merchants through the blocked-off building walls.
+if($maxSHOUTdistVec == "") $maxSHOUTdistVec = 5;
+// BUGFIX: this line used to assign $maxSHOUTdistVec and never set the
+// whisper distance at all, so whispers reached nobody.
 if($maxWHISPERdistVec == "") $maxWHISPERdistVec = 5;
 
 if($joinHouseCost == "") $joinHouseCost = 2500;
