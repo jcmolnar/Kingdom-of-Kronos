@@ -39,7 +39,24 @@ $Daily::CullCreditFactor = 3.0;     // cull completes when total victim MaxHP ~=
 $Daily::CullMaxCreditPerKill = 34;  // hard cap: one kill pays at most 34% (so minimum 3 kills)
 $Daily::FetchCount = 5;             // default count when a pool entry has no count of its own
 $Daily::RingSlots = 1;              // ring slots assumed for the gear ceiling
-$Daily::EliteEnabled = 0;           // elite daily disabled until the scaled elite bot lands
+$Daily::EliteEnabled = 1;           // elite daily (summon via "#daily summon" outside town)
+
+// Elite tuning: HP/damage are BENCHMARK-relative so the fight length is roughly
+// constant at every remort (same philosophy as SealBattle::SetupBot, which the
+// stat override mechanism is borrowed from).
+$Daily::EliteHPRatio = 2.0;         // elite HP = 2x benchmark MaxHP
+$Daily::EliteDmgRatio = 0.05;       // target hit = 5% of benchmark MaxHP
+$Daily::EliteDmgComp = 5;           // combat pipeline ~5x multiplier compensation (seal SetupBot value)
+$Daily::EliteDEFRatio = 0.3;        // DEF/MDEF as fraction of skill cap at the player's remort
+$Daily::EliteMDEFRatio = 0.3;
+$Daily::EliteLifetime = 600;        // seconds before an unkilled elite flees (re-summon allowed)
+
+// bot template per tier (existing hunt-boss templates; stats are overridden)
+$Daily::EliteBot[0] = "Chief";
+$Daily::EliteBot[1] = "BattleOx";
+$Daily::EliteBot[2] = "Queen";
+$Daily::EliteBot[3] = "DeathKnight";
+$Daily::EliteBot[4] = "NullNull";
 
 // Fetch item pools per tier. Tier from remort: 0:<25  1:<50  2:<75  3:<100  4:>=100
 // Entries are "ItemName count" ("count" optional -> $Daily::FetchCount).
@@ -429,9 +446,9 @@ function Daily::Accept(%clientId, %theme)
 	}
 	else if(%theme == "Elite")
 	{
-		// Daily::SpawnElite(%clientId) - lands with the scaled elite bot
 		storeData(%clientId, "DailyProgress", 0);
-		Client::sendMessage(%clientId, $MsgGreen, "Daily accepted: slay the elite.");
+		storeData(%clientId, "DailyEliteName", "");
+		Client::sendMessage(%clientId, $MsgGreen, "Daily accepted: slay the elite. Venture outside town and use #daily summon to call it forth.");
 	}
 	else
 		return false;
@@ -452,6 +469,8 @@ function Daily::Abandon(%clientId)
 	storeData(%clientId, "DailyTheme", "");
 	storeData(%clientId, "DailyProgress", 0);
 	storeData(%clientId, "DailyTargetItem", "");
+	// a live summoned elite is left to its lifetime timeout (EliteTimeout kills it)
+	storeData(%clientId, "DailyEliteName", "");
 	Client::sendMessage(%clientId, $MsgBeige, "Daily abandoned. You can accept it again today.");
 }
 
@@ -461,6 +480,16 @@ function Daily::OnKill(%killer, %victim)
 {
 	if($Daily::CurrentDay == "")
 		return;
+
+	// daily elite death? credit its OWNER's contract (party-friendly: any real
+	// player's killshot completes it for the summoner)
+	%eliteOwner = fetchData(%victim, "DailyEliteOwner");
+	if(%eliteOwner != "" && %eliteOwner != -1)
+	{
+		Daily::OnEliteKilled(%eliteOwner, %victim, %killer);
+		return;
+	}
+
 	if(fetchData(%killer, "DailyDay") != $Daily::CurrentDay)
 		return;
 	if(fetchData(%killer, "DailyTheme") != "Cull")
@@ -495,6 +524,178 @@ function Daily::OnKill(%killer, %victim)
 		Client::sendMessage(%killer, $MsgGreen, "Daily cull COMPLETE! Return to a Daily Herald for your reward.");
 	else
 		Client::sendMessage(%killer, $MsgBeige, "Daily cull: " @ %p @ "% (+" @ %credit @ ")");
+}
+
+//------------------------------------------------------------------------------
+// Elite daily: TTK-normalized boss, summoned in the field, stats overridden via
+// the seal battle mechanism (SealBattleBot flag + $SealBattleScaledStats makes
+// fetchData return our values and survive RefreshAll; death cleanup in
+// playerdamage.cs already clears both for any flagged bot). Flagged bots are
+// also proc-immune (Final Verdict/Sky Render exclusion) - intended.
+//------------------------------------------------------------------------------
+function Daily::SummonElite(%clientId)
+{
+	if(!$Daily::EliteEnabled)
+	{
+		Client::sendMessage(%clientId, $MsgBeige, "The elite hunt is not available yet.");
+		return;
+	}
+	if(fetchData(%clientId, "DailyTheme") != "Elite" || fetchData(%clientId, "DailyDay") != $Daily::CurrentDay)
+	{
+		Client::sendMessage(%clientId, $MsgBeige, "You have no elite contract. Accept one from a Daily Herald first.");
+		return;
+	}
+	if(fetchData(%clientId, "DailyProgress") >= 100)
+	{
+		Client::sendMessage(%clientId, $MsgBeige, "Your elite is already slain - return to a Herald for your reward.");
+		return;
+	}
+
+	// one live elite per player
+	%existing = fetchData(%clientId, "DailyEliteName");
+	if(%existing != "" && %existing != -1)
+	{
+		%existingId = AI::getClientIdFromName(%existing);
+		if(%existingId != "" && %existingId != -1)
+		{
+			Client::sendMessage(%clientId, $MsgBeige, "Your elite already hunts you - find it and finish it!");
+			return;
+		}
+	}
+
+	// no summoning inside towns (PROTECTED) or water
+	%ztype = Zone::getType(fetchData(%clientId, "zone"));
+	if(%ztype == "PROTECTED" || %ztype == "WATER")
+	{
+		Client::sendMessage(%clientId, $MsgBeige, "The elite will not come here. Venture outside town and try again.");
+		return;
+	}
+
+	%r = fetchData(%clientId, "RemortStep");
+	if(%r == "" || %r == -1)
+		%r = 0;
+	%tpl = $Daily::EliteBot[Daily::TierForRemort(%r)];
+	if(%tpl == "")
+	{
+		Client::sendMessage(%clientId, $MsgBeige, "No elite is configured for your tier - tell an admin.");
+		return;
+	}
+
+	%pos = GameBase::getPosition(%clientId);
+	%spawnPos = (GetWord(%pos, 0) + 25) @ " " @ GetWord(%pos, 1) @ " " @ GetWord(%pos, 2);
+	%internalName = AI::helper(%tpl, "Daily Elite", "TempSpawn " @ %spawnPos @ " 1", default);
+	if(%internalName == -1 || %internalName == "")
+	{
+		Client::sendMessage(%clientId, $MsgRed, "The elite failed to answer the call - try again in a moment.");
+		return;
+	}
+
+	storeData(%clientId, "DailyEliteName", %internalName);
+	// 4.5s: after SpawnAIGetClientId (3.0s) registers the bot - same timing SealBattle uses
+	schedule("Daily::SetupElite(\"" @ %internalName @ "\", " @ %clientId @ ");", 4.5);
+	schedule("Daily::EliteTimeout(\"" @ %internalName @ "\", " @ %clientId @ ");", $Daily::EliteLifetime);
+	Client::sendMessage(%clientId, $MsgGreen, "The ground trembles... your elite approaches!");
+	echo("[DAILY ELITE] " @ Client::getName(%clientId) @ " (" @ %clientId @ ") summoned " @ %tpl @ " as " @ %internalName);
+}
+
+function Daily::SetupElite(%internalName, %owner)
+{
+	%aiId = AI::getClientIdFromName(%internalName);
+	if(%aiId == "" || %aiId == -1)
+	{
+		echo("[DAILY ELITE] SetupElite: " @ %internalName @ " not found (spawn failed?) - clearing summon for " @ %owner);
+		if(fetchData(%owner, "DailyEliteName") == %internalName)
+			storeData(%owner, "DailyEliteName", "");
+		Client::sendMessage(%owner, $MsgBeige, "The elite lost its way - summon it again.");
+		return;
+	}
+
+	// owner abandoned between summon and setup? put the bot down quietly
+	if(fetchData(%owner, "DailyTheme") != "Elite" || fetchData(%owner, "DailyEliteName") != %internalName)
+	{
+		storeData(%aiId, "noExperienceFlag", True);
+		Player::Kill(%aiId);
+		return;
+	}
+
+	%bench = Daily::BenchStats(%owner);
+	%benchHP = GetWord(%bench, 0);
+	%r = fetchData(%owner, "RemortStep");
+	if(%r == "" || %r == -1)
+		%r = 0;
+	%skillCap = Daily::SkillCapAtRemort(%r);
+
+	%hp = floor(%benchHP * $Daily::EliteHPRatio);
+	%atk = floor((%benchHP * $Daily::EliteDmgRatio) / $Daily::EliteDmgComp);
+	if(%atk < 1)
+		%atk = 1;
+	%def = floor(%skillCap * $Daily::EliteDEFRatio);
+	%mdef = floor(%skillCap * $Daily::EliteMDEFRatio);
+
+	// seal-style override: flag makes fetchData return the stored scaled values,
+	// so periodic RefreshAll sweeps can't revert them
+	storeData(%aiId, "SealBattleBot", true);
+	storeData(%aiId, "SealBattleScaledRound", 1);
+	$SealBattleScaledStats[%aiId, "round"] = 1;
+
+	$SealBattleScaledStats[%aiId, "MaxHP"] = %hp;
+	setHP(%aiId, %hp);
+	storeData(%aiId, "HP", %hp);
+
+	storeData(%aiId, "ATK", %atk);
+	$EnemyBotData[%aiId, "ATK"] = %atk;
+	$ClientData[%aiId, "ATK"] = %atk;
+	$SealBattleScaledStats[%aiId, "ATK"] = %atk;
+	storeData(%aiId, "DMG", %atk);
+	$EnemyBotData[%aiId, "DMG"] = %atk;
+	$ClientData[%aiId, "DMG"] = %atk;
+	$SealBattleScaledStats[%aiId, "DMG"] = %atk;
+	storeData(%aiId, "DEF", %def);
+	$EnemyBotData[%aiId, "DEF"] = %def;
+	$ClientData[%aiId, "DEF"] = %def;
+	$SealBattleScaledStats[%aiId, "DEF"] = %def;
+	storeData(%aiId, "MDEF", %mdef);
+	$EnemyBotData[%aiId, "MDEF"] = %mdef;
+	$ClientData[%aiId, "MDEF"] = %mdef;
+	$SealBattleScaledStats[%aiId, "MDEF"] = %mdef;
+
+	storeData(%aiId, "DailyEliteOwner", %owner);
+
+	echo("[DAILY ELITE] SetupElite " @ %internalName @ " (clientId " @ %aiId @ ") for " @ Client::getName(%owner) @ ": HP=" @ %hp @ " ATK=" @ %atk @ " DEF=" @ %def @ " MDEF=" @ %mdef @ " (benchHP " @ %benchHP @ ")");
+	Client::sendMessage(%owner, $MsgRed, "The elite has arrived. Slay it!");
+}
+
+function Daily::EliteTimeout(%internalName, %owner)
+{
+	%aiId = AI::getClientIdFromName(%internalName);
+	if(%aiId == "" || %aiId == -1)
+		return;   // already dead/cleaned up
+	// still alive past its lifetime (unkilled, or contract abandoned): it flees
+	storeData(%aiId, "noExperienceFlag", True);
+	Player::Kill(%aiId);
+	if(fetchData(%owner, "DailyEliteName") == %internalName)
+	{
+		storeData(%owner, "DailyEliteName", "");
+		if(fetchData(%owner, "DailyTheme") == "Elite" && fetchData(%owner, "DailyProgress") < 100)
+			Client::sendMessage(%owner, $MsgBeige, "The elite grew bored and fled. Use #daily summon to call it again.");
+	}
+	echo("[DAILY ELITE] " @ %internalName @ " timed out and was removed (owner " @ %owner @ ")");
+}
+
+function Daily::OnEliteKilled(%owner, %victim, %killer)
+{
+	// contract still valid?
+	if(fetchData(%owner, "DailyTheme") != "Elite" || fetchData(%owner, "DailyDay") != $Daily::CurrentDay)
+		return;
+	if(fetchData(%owner, "DailyProgress") >= 100)
+		return;
+
+	storeData(%owner, "DailyProgress", 100);
+	storeData(%owner, "DailyEliteName", "");
+	Client::sendMessage(%owner, $MsgGreen, "Daily elite SLAIN! Return to a Daily Herald for your reward.");
+	if(%killer != %owner && %killer != "" && %killer != -1)
+		Client::sendMessage(%killer, $MsgGreen, "You felled " @ Client::getName(%owner) @ "'s daily elite!");
+	echo("[DAILY ELITE] elite of " @ Client::getName(%owner) @ " slain by " @ Client::getName(%killer));
 }
 
 // turn-in at the Herald; returns true if a reward was paid
@@ -594,9 +795,16 @@ function Daily::Status(%clientId)
 	else if(fetchData(%clientId, "DailyDoneElite") == $Daily::CurrentDay)
 		Client::sendMessage(%clientId, 0, "Elite: COMPLETE");
 	else if(%activeTheme == "Elite")
-		Client::sendMessage(%clientId, 0, "Elite: ACTIVE");
+	{
+		if(fetchData(%clientId, "DailyProgress") >= 100)
+			Client::sendMessage(%clientId, 0, "Elite: SLAIN - return to a Herald for your reward");
+		else if(fetchData(%clientId, "DailyEliteName") != "" && fetchData(%clientId, "DailyEliteName") != -1)
+			Client::sendMessage(%clientId, 0, "Elite: ACTIVE - your elite is out there, find it!");
+		else
+			Client::sendMessage(%clientId, 0, "Elite: ACTIVE - use #daily summon outside town");
+	}
 	else
-		Client::sendMessage(%clientId, 0, "Elite: available");
+		Client::sendMessage(%clientId, 0, "Elite: available - a boss scaled to your strength");
 
 	Client::sendMessage(%clientId, $MsgBeige, "Visit a Daily Herald to accept or turn in. #daily abandon drops your active daily.");
 }

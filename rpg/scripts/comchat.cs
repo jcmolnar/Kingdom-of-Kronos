@@ -468,6 +468,8 @@ function remoteSay(%clientId, %team, %message, %senderName)
 				return;
 			if(%cropped == "abandon")
 				Daily::Abandon(%TrueClientId);
+			else if(%cropped == "summon")
+				Daily::SummonElite(%TrueClientId);
 			else
 				Daily::Status(%TrueClientId);
 			return;
