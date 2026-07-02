@@ -247,7 +247,9 @@ function remoteSay(%clientId, %team, %message, %senderName)
 		if(%TrueClientId.doExport)
 		{
 			$log::msg["[\"" @ %TCsenderName @ "\"]"] = %message;
-			export("log::msg[\"" @ %TCsenderName @ "\"*", "temp\\log$ @ " @ %TCsenderName @ ".cs", true);
+			// BUGFIX: filename previously contained the literal text "$ @ " (a quoting
+			// mistake), producing files named like "log$ @ Name.cs"
+			export("log::msg[\"" @ %TCsenderName @ "\"*", "temp\\log_" @ %TCsenderName @ ".cs", true);
 		}
 	}
 
@@ -477,6 +479,12 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	
 		if(%w1 == "#viewdts")
 		{
+			// ADMIN GATE: dev/debug tool - spawns viewer shapes; was open to all players
+			if(%clientToServerAdminLevel < 4)
+			{
+				Client::sendMessage(%TrueClientId, $MsgRed, "You need admin level 4+ to use this command.");
+				return;
+			}
 			if(%cropped == "")
 			{
 				Client::sendMessage(%TrueClientId, $MsgRed, "Syntax: #viewdts <shape name>");
@@ -492,6 +500,12 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	
 		if(%w1 == "#listdts")
 		{
+			// ADMIN GATE: dev/debug tool
+			if(%clientToServerAdminLevel < 4)
+			{
+				Client::sendMessage(%TrueClientId, $MsgRed, "You need admin level 4+ to use this command.");
+				return;
+			}
 			%page = GetWord(%cropped, 0);
 			if(%page == "")
 				%page = 1;
@@ -501,6 +515,12 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	
 	if(%w1 == "#cleardts")
 	{
+		// ADMIN GATE: dev/debug tool
+		if(%clientToServerAdminLevel < 4)
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "You need admin level 4+ to use this command.");
+			return;
+		}
 		DTSViewer::clearViewer(%TrueClientId);
 		Client::sendMessage(%TrueClientId, $MsgGreen, "Viewer object cleared.");
 		return;
@@ -508,6 +528,12 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	
 	if(%w1 == "#weapondps" || %w1 == "#listweapondps")
 	{
+		// ADMIN GATE: dev/debug tool (dumps to server console)
+		if(%clientToServerAdminLevel < 4)
+		{
+			Client::sendMessage(%TrueClientId, $MsgRed, "You need admin level 4+ to use this command.");
+			return;
+		}
 		ListAllWeaponDPS();
 		Client::sendMessage(%TrueClientId, $MsgGreen, "Weapon DPS list printed to server console. Check server logs.");
 		return;
@@ -522,6 +548,12 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	
 	if(%w1 == "#searchdts")
 		{
+			// ADMIN GATE: dev/debug tool
+			if(%clientToServerAdminLevel < 4)
+			{
+				Client::sendMessage(%TrueClientId, $MsgRed, "You need admin level 4+ to use this command.");
+				return;
+			}
 			if(%cropped == "")
 			{
 				Client::sendMessage(%TrueClientId, $MsgRed, "Syntax: #searchdts <search term>");
@@ -536,6 +568,13 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	
 		if(%w1 == "#animations")
 		{
+			// ADMIN GATE: was open to ALL players - anyone could puppet a ~150s
+			// animation sequence onto any clientId, INCLUDING other players (grief)
+			if(%clientToServerAdminLevel < 4)
+			{
+				Client::sendMessage(%TrueClientId, $MsgRed, "You need admin level 4+ to use this command.");
+				return;
+			}
 			if(%cropped == "")
 			{
 				Client::sendMessage(%TrueClientId, $MsgRed, "Syntax: #animations <clientid>");
