@@ -460,7 +460,8 @@ function remoteCycleMission(%clientId)
 
    if(%clientId.adminLevel >= 4)
    {
-      messageAll(0, Client::getName(%playerId) @ " cycled the mission.");
+      // BUGFIX: was Client::getName(%playerId) - undefined var, announced a blank name
+      messageAll(0, Client::getName(%clientId) @ " cycled the mission.");
       Server::nextMission();
    }
 }

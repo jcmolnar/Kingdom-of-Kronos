@@ -499,8 +499,12 @@ function sellItem(%clientId, %item)
 				%msg = WhatIs(%item);
 				KronosExamineInfo(%clientId, %msg, floor(String::len(%msg) / 20));
 
-				$LastClickItemS[%clientId, %nitem] = %nitem;
-				schedule("$LastClickItemS[" @ %clientId @ ", " @ %nitem @ "] = \"\";", 5);
+				// BUGFIX: token was stored under the CROPPED name (%nitem) but the
+				// confirm check above reads the RAW name (%item) - for Equipped-class
+				// items the keys never matched, so the second click re-showed the
+				// price forever instead of reaching the "cannot sell equipped" branch
+				$LastClickItemS[%clientId, %item] = %item;
+				schedule("$LastClickItemS[" @ %clientId @ ", " @ %item @ "] = \"\";", 5);
 				%clientId.bulkNum = 1;
 
 				return 0;
@@ -635,8 +639,27 @@ function CompleteSmith(%clientId, %cost, %sc, %tempsmith, %multiplier)
 
 	%clientId.IsSmithing = "";
 
+	// Player disconnected during the 5.5s smith delay - abort (never operate on
+	// a possibly-recycled clientId's bank)
+	if(Client::getName(%clientId) == "" || Client::getName(%clientId) == -1)
+		return;
+
 	if(fetchData(%clientId, "COINS") < %cost)
 		return;
+
+	// DUPE FIX: #smith deposits the ingredients into BankStorage and this
+	// function withdraws them 5.5s later. Verify they are STILL in the bank -
+	// otherwise a player could withdraw them at a banker during the delay and
+	// keep the ingredients while still receiving the smithed result.
+	for(%i = 0; (%w = GetWord(%tempsmith, %i)) != -1; %i+=2)
+	{
+		%need = GetWord(%tempsmith, %i+1) * %multiplier;
+		if(GetStuffStringCount(fetchData(%clientId, "BankStorage"), %w) < %need)
+		{
+			AI::sayLater(%clientId, %clientId.currentSmith, "Hey - where did the materials go? No deal.", True);
+			return;
+		}
+	}
 
 	storeData(%clientId, "COINS", %cost, "dec");
 	playSound(SoundMoney1, GameBase::getPosition(%clientId));
@@ -712,7 +735,9 @@ function GetStuffStringCost(%clientId, %itemlist)
 	dbecho($dbechoMode, "GetStuffStringCost(" @ %clientId @ ", " @ %itemlist @ ")");
 
 	%cost = 0;
-	for(%i = 0; (%w = GetWord(%itemlist, %i)) != -1; %i++)
+	// BUGFIX: was %i++ - the loop re-visited every COUNT word as if it were an
+	// item name (harmless only because numeric "items" cost 0, but wrong)
+	for(%i = 0; (%w = GetWord(%itemlist, %i)) != -1; %i += 2)
 	{
 		%w2 = GetWord(%itemlist, %i+1);
 		%c = getBuyCost(%clientId, %w) * %w2;
