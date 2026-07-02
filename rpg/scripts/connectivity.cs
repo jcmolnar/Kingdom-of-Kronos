@@ -99,7 +99,13 @@ function Game::initialMissionDrop(%clientId)
 
 	if(%clientId.IsInvalid)
 	{
-		schedule("Net::kick(" @ %clientId @ ", \"" @ %kickMsg @ "\");", 20);
+		// BUGFIX: the kick message was embedded directly into the schedule string -
+		// messages containing quote characters (the two password errors say "Other
+		// info") broke the scheduled eval, so password-failed players were NEVER
+		// kicked and sat in observer forever (hence the old "if not, disconnect
+		// manually" hedge). Store the message on the client and kick via helper.
+		%clientId.pendingKickMsg = %kickMsg;
+		schedule("KickInvalidClient(" @ %clientId @ ");", 20);
 		centerprint(%clientId, %kickMsg @ " You will automatically be kicked within 20 seconds.  If not, please disconnect manually.", 0);
 
 		Client::setControlObject(%clientId, Client::getObserverCamera(%clientId));
@@ -127,6 +133,22 @@ function Game::initialMissionDrop(%clientId)
 		RecalcHouseMemberCounts();
 		UpdateHouseObjectivesDisplay();
 	}
+}
+
+// Kick a client flagged invalid during initialMissionDrop. Reads the message
+// from the client field so quote characters in the message can't break the
+// scheduled eval (see BUGFIX in Game::initialMissionDrop).
+function KickInvalidClient(%clientId)
+{
+	// Client may have taken the hint and disconnected already
+	if(Client::getName(%clientId) == "" || Client::getName(%clientId) == -1)
+		return;
+
+	%msg = %clientId.pendingKickMsg;
+	if(%msg == "" || %msg == -1)
+		%msg = "Invalid connection.";
+	%clientId.pendingKickMsg = "";
+	Net::kick(%clientId, %msg);
 }
 
 function Server::onClientDisconnect(%clientId)
@@ -269,7 +291,8 @@ function Server::onClientConnect(%clientId)
 	// modified by Corona //
 
 
-	##### MODIFY "CONNECTING" SCREEN GREETING:
+	// MODIFY "CONNECTING" SCREEN GREETING:
+	// (normalized from legacy "#####" pseudo-comments - not valid script syntax)
 	$Taurik::ConnectScreenMessage1 = "Kingdom of Kronos V0.9";
 	$Taurik::ConnectScreenMessage2 = "Updates Every Friday!";
 
@@ -280,14 +303,14 @@ function Server::onClientConnect(%clientId)
 	export("$connectlog::*", "config\\Raw Log.txt", True);
 
 
-	##### IGNORE SECTION BELOW IF NOT USING TCTRPG BAN SYSTEM ADD-ON
+	// IGNORE SECTION BELOW IF NOT USING TCTRPG BAN SYSTEM ADD-ON
 	//%addr = String::replaceban(Client::getTransportAddress(%clientId), ":", " ");
 	//%addr = String::replaceban(%addr, ".", " ");
 	//%addr = getWord(%addr, 1) @ " " @ getWord(%addr, 2) @ " " @ getWord(%addr, 3) @ " " @ getWord(%addr, 4);
 	//	if (CocaineBanCheck(%clientId, %addr) == "ban") {
 	//	schedule("CocaineKick(" @ %clientId @ ");", 0.1, %clientId);
 	//	}
-	##### IGNORE SECTION ABOVE IF NOT USING TCTRPG BAN SYSTEM ADD-ON
+	// IGNORE SECTION ABOVE IF NOT USING TCTRPG BAN SYSTEM ADD-ON
 
 
 	dbecho($dbechoMode2, "Server::onClientConnect(" @ %clientId @ ")");

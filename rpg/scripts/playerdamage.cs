@@ -72,10 +72,11 @@ function GetClientIdFromPlayerObject(%playerObj)
 				}
 			}
 			
-			// Tier 2: Range loop fallback (2049-2200) - only if Tier 1 didn't find a match
+			// Tier 2: Range loop fallback over the real BaseRep id pool (2049-2175;
+			// 2048 is the server slot, ids above 2175 don't exist) - only if Tier 1 didn't find a match
 			if(%foundCorrectId == -1)
 			{
-				for(%checkId = 2049; %checkId <= 2200; %checkId++)
+				for(%checkId = $BaseRepClientIdMin + 1; %checkId <= $BaseRepClientIdMax; %checkId++)
 				{
 					%checkPlayerObj = Client::getOwnedObject(%checkId);
 					if(%checkPlayerObj == %playerObj)
@@ -231,10 +232,11 @@ function GetClientIdFromPlayerObject(%playerObj)
 		}
 	}
 	
-	// Tier 2: Range loop fallback (2049-2200) - only if Tier 1 didn't find a match
+	// Tier 2: Range loop fallback over the real BaseRep id pool (2049-2175;
+	// 2048 is the server slot, ids above 2175 don't exist) - only if Tier 1 didn't find a match
 	if(%foundClientId == -1)
 	{
-		for(%checkId = 2049; %checkId <= 2200; %checkId++)
+		for(%checkId = $BaseRepClientIdMin + 1; %checkId <= $BaseRepClientIdMax; %checkId++)
 		{
 			// PHASE 2 FIX: Skip client IDs that were recently freed
 			%recentlyFreed = $ClientIdRecentlyFreed[%checkId];
@@ -316,23 +318,26 @@ function Client::onKilled(%clientId, %killerId, %damageType)
 	if(!IsInCommaList(fetchData(%killerId, "TempKillList"), Client::getName(%clientId)))
 	storeData(%killerId, "TempKillList", AddToCommaList(fetchData(%killerId, "TempKillList"), Client::getName(%clientId)));
 
-	if(%killerId != %clientId)
+	// Environment/no-killer deaths (killerId 0/-1/"") must be checked FIRST:
+	// the old != / == pair was exhaustive, so the "You were killed!" branch was
+	// unreachable and environment kills printed "You were killed by !".
+	if(%killerId == "" || %killerId == 0 || %killerId == -1)
 	{
-		//a human player killed %clientId
+		Client::sendMessage(%clientId, 0, "You were killed!");
+	}
+	else if(%killerId == %clientId)
+	{
+		Client::sendMessage(%clientId, 0, "You killed yourself!");
+	}
+	else
+	{
+		//a human player (or bot) killed %clientId
 		%n = Client::getName(%killerId);
 
 		Client::sendMessage(%clientId, 0, "You were killed by " @ %n @ "!");
 
 		//if(fetchData(%killerId, "bounty") == Client::getName(%clientId))
 		//	storeData(%killerId, "bounty", fetchData(%clientId, "LVL") @ " !Q@W#E$R%T^Y&U*I(O)P");
-	}
-	else if(%killerId == %clientId)
-	{
-		Client::sendMessage(%clientId, 0, "You killed yourself!");
-	}
-	else if(%damageType == 11 || %damageType == 12 || %damageType == 2)
-	{
-		Client::sendMessage(%clientId, 0, "You were killed!");
 	}
 
 	//Check to see if the player was in a sanctioned battle
@@ -2488,6 +2493,11 @@ function Player::onKilled(%this)
 			{
 				storeData(%clientId, "LoadedProjectile " @ %weapon, "");
 			}
+			// Also clear the entry for the weapon that was actually mounted at death
+			// (%eitem, captured in the loot section above - the guess-list can't cover
+			// every custom weapon name). Empty when the no-drop path was taken.
+			if(%eitem != "" && %eitem != -1)
+				storeData(%clientId, "LoadedProjectile " @ %eitem, "");
 			
 			// CRITICAL: Clear all EventCommand entries (0-99) to prevent stale event commands
 			// EventCommand entries are set during bot lifetime for various events
@@ -2837,6 +2847,10 @@ function Player::onKilled(%this)
 			}
 		}
 		
+		// Drop the reverse-lookup cache entry for this player object - the object id
+		// will be recycled by the engine and must not resolve to the old clientId
+		$BotClientCache[%this] = "";
+
 		schedule("deleteObject(" @ %this @ ");", $CorpseTimeoutValue + 2.5, %this);
 		%clientId.observerMode = "dead";
 		%clientId.dieTime = getSimTime();
@@ -3432,32 +3446,26 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 			if(%skillValue == "" || %skillValue == -1)
 				%skillValue = 1000; // Default skill value if not set (for NPCs or edge cases)
 			
-			// Skip normal damage calculation if instant kill triggered (Final Verdict)
-			if(!%instantKill)
+			// NOTE: Final Verdict instant kills return early from the effect block above,
+			// so no skip-flag is needed here (the old %instantKill guards were dead code -
+			// the variable was never assigned anywhere).
+			%value = round((( (%weapondamage + (%playerattack + %rweapondamage)) / 1000) * %skillValue) * %multi);
+
+			%ab = (getRandom() * (fetchData(%damagedClient, "DEF") / 10)) + 1;
+
+			// World Splitter: Even hits use MDEF instead of DEF
+			if(%useMDEF)
 			{
-				%value = round((( (%weapondamage + (%playerattack + %rweapondamage)) / 1000) * %skillValue) * %multi);
+				%ab = (getRandom() * (fetchData(%damagedClient, "MDEF") / 10)) + 1;
 			}
 
+			%value = Cap(%value - %ab, 1, "inf");
 
-			// Skip DEF reduction and variance for instant kill (Final Verdict)
-			if(!%instantKill)
-			{
-				%ab = (getRandom() * (fetchData(%damagedClient, "DEF") / 10)) + 1;
-				
-				// World Splitter: Even hits use MDEF instead of DEF
-				if(%useMDEF)
-				{
-					%ab = (getRandom() * (fetchData(%damagedClient, "MDEF") / 10)) + 1;
-				}
-				
-				%value = Cap(%value - %ab, 1, "inf");
-
-				%a = (%value * 0.15);
-				%r = round((getRandom() * (%a*2)) - %a);
-				%value += %r;
-				if(%value < 1)
-					%value = 1;
-			}
+			%a = (%value * 0.15);
+			%r = round((getRandom() * (%a*2)) - %a);
+			%value += %r;
+			if(%value < 1)
+				%value = 1;
 
 			// Storm Caller lightning bonus (deferred from the effects block above so the
 			// damage formula recompute doesn't wipe it out)
@@ -5156,23 +5164,27 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					// death by design; also prevents stale data on recycled client IDs)
 					$SoulStacks[%damagedClient] = 0;
 					$EchoCombo[%damagedClient] = 0;
+					// Reset this shooter's per-target hit counter too, so a recycled
+					// clientId doesn't inherit the count and trigger every-Nth-hit
+					// effects (Sky Render / Storm Caller) off-schedule. Best-effort:
+					// other shooters' counters vs this target expire naturally.
+					if(%weapon != "")
+						$WeaponHitCount[%shooterClient, %weapon, %damagedClient] = "";
 
 					Client::onKilled(%damagedClient, %shooterClient, %type);
-				}  // line 1237 - closes else from line 1219
-			}  // line 1238 - closes if(!Player::IsDead(%this)) from line 1209
+				}  // closes else (player died)
+			}  // closes if(%value)
 
-			if(%isMiss)  // line 1240
+			if(%isMiss)
 			{
-				if(fetchData(%damagedClient, "isBonused"))  // line 1242
+				if(fetchData(%damagedClient, "isBonused"))
 				{
-					GameBase::activateShield(%this, "0 0 1.57", 1.47);  // line 1244
-					PlaySound(SoundHitShield, %damagedClientPos);  // line 1245
-				}  // closes if(fetchData(%damagedClient, "isBonused")) from line 1243
-			}  // closes if(%isMiss) from line 1241
-		}  // closes if(%value) from line 859
-	}  // closes if(!IsDead(%this)) from line 759
-
-  // closes function Player::onDamage from line 440
+					GameBase::activateShield(%this, "0 0 1.57", 1.47);
+					PlaySound(SoundHitShield, %damagedClientPos);
+				}
+			}  // closes if(%isMiss)
+		}  // closes if(!IsDead(%this))
+	}  // closes function Player::onDamage
 // =================================================================
 // MYTHIC WEAPON HELPERS (Remort 125 Tier)
 // =================================================================

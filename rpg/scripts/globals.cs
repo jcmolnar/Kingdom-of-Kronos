@@ -32,6 +32,9 @@ if($joinHouseRankPoints == "") $joinHouseRankPoints = 4;
 
 if($spawnMultiplier == "") $spawnMultiplier = "1.0";
 if($allowDuplicateIPs == "") $allowDuplicateIPs = True;
+// CONFIG BRIDGE: ServerPrefs exposes $Server::DuplicateIPs but nothing consumed it -
+// the actual knob connectivity.cs checks is $allowDuplicateIPs. Honor the pref.
+if($Server::DuplicateIPs != "") $allowDuplicateIPs = $Server::DuplicateIPs;
 if($recallDelay == "") $recallDelay = 10;
 
 if($hardcore == "") $hardcore = False;
