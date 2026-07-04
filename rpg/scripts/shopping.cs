@@ -18,7 +18,7 @@ function SetupShop(%clientId, %id)
 	if(!%clientId.hasKronosHUD)
 		Client::setGuiMode(%clientId, 4);
 
-	%txt = "<f1><jc>COINS: " @ fetchData(%clientId, "COINS");
+	%txt = "<f1><jc>COINS: " @ Number::Beautify(fetchData(%clientId, "COINS"), -3);
 	Client::setInventoryText(%clientId, %txt);
 
 	// Get bot name from stored data (town bots are now Player objects, not Item objects)
@@ -140,7 +140,7 @@ function SetupBank(%clientId, %id)
 	if(Client::getGuiMode(%clientId) != 4)
 		Client::setGuiMode(%clientId, 4);
 
-	%txt = "<f1><jc>COINS: " @ fetchData(%clientId, "COINS");
+	%txt = "<f1><jc>COINS: " @ Number::Beautify(fetchData(%clientId, "COINS"), -3);
 	Client::setInventoryText(%clientId, %txt);
 
 	%info = fetchData(%clientId, "BankStorage");
@@ -177,7 +177,7 @@ function SetupBlacksmith(%clientId, %id)
 		Client::setItemBuying(%clientId, %item);
 	}
 
-	%txt = "<f1><jc>COINS: " @ fetchData(%clientId, "COINS");
+	%txt = "<f1><jc>COINS: " @ Number::Beautify(fetchData(%clientId, "COINS"), -3);
 	Client::setInventoryText(%clientId, %txt);
 }
 

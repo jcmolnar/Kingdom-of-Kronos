@@ -753,7 +753,7 @@ function Daily::GrantReward(%clientId, %theme)
 
 	// always-on audit line (item/exp/coin grants are restore-from-console data)
 	echo("[DAILY REWARD] " @ Client::getName(%clientId) @ " (" @ %clientId @ ") completed " @ %theme @ " day " @ $Daily::CurrentDay @ ": +" @ %exp @ " exp, +" @ %coins @ " coins");
-	Client::sendMessage(%clientId, $MsgGreen, "Daily complete! Reward: " @ %exp @ " exp and " @ %coins @ " coins.");
+	Client::sendMessage(%clientId, $MsgGreen, "Daily complete! Reward: " @ Number::Beautify(%exp, -3) @ " exp and " @ Number::Beautify(%coins, -3) @ " coins.");
 }
 
 //------------------------------------------------------------------------------

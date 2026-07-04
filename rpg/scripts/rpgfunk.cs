@@ -1689,11 +1689,11 @@ function LoadCharacter(%clientId)
 				break;
 		}
 		storeData(%clientId, "RACE", $funk::var[%name, 0, 1]);
-		storeData(%clientId, "EXP", $funk::var[%name, 0, 2]);
+		storeData(%clientId, "EXP", floor($funk::var[%name, 0, 2]));    // floor on load: clean any legacy fractional EXP
 		storeData(%clientId, "campPos", $funk::var[%name, 0, 3]);
-		storeData(%clientId, "COINS", $funk::var[%name, 0, 4]);
+		storeData(%clientId, "COINS", floor($funk::var[%name, 0, 4]));  // floor on load: clean any legacy fractional coins
 		storeData(%clientId, "isMimic", $funk::var[%name, 0, 5]);
-		storeData(%clientId, "BANK", $funk::var[%name, 0, 6]);
+		storeData(%clientId, "BANK", floor($funk::var[%name, 0, 6]));   // floor on load: clean any legacy fractional bank
 		storeData(%clientId, "tmpname", $funk::var[%name, 0, 7]);
 		
 		// Load and clean grouplist - remove leading "0" prefix if present (corruption fix)
@@ -3328,7 +3328,7 @@ function DeployScoutVehicle(%ownerName, %team, %pos, %rot)
 //=============================================================================
 // LOOTBAG AGGREGATION SYSTEM
 // Periodically merges nearby lootbags to prevent lootbag spam from bot kills
-// This runs every 2 minutes and combines lootbags within 25 units of each other
+// This runs on $LootbagAggregateInterval (30s) and merges lootbags within $LootbagAggregateRadius (10 units)
 //=============================================================================
 
 $LootbagAggregateRadius = 10;      // Distance within which lootbags are merged
@@ -4216,7 +4216,7 @@ function UpdateAppearance(%clientId)
 	{
 		// Default Armor handling (Naked/No Body Accessory)
 		// For humans: Use %race @ %cw to preserve the current speed tier (set by RefreshWeight)
-		// %cw was already extracted from current armor at line 3819 and defaults to "Armor7" if invalid
+		// %cw was already extracted from current armor earlier in this function and defaults to "Armor7" if invalid
 		// This avoids both: the invisibility bug (Armor0 -> Armor7 double-switch) AND
 		// breaking speed boots (which set Armor8-11 via RefreshWeight)
 		if(%race == "MaleHuman" || %race == "FemaleHuman")
@@ -6410,9 +6410,10 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 			// ASCENSION: Gold Digger - +25% coin drops
 			if(Ascension::HasTalent(%clientId, "GoldDigger"))
 				%w2 = floor(%w2 * 1.25);
-			
+
+			%w2 = floor(%w2);  // clean integer coins (%multiplier drop scaling can be fractional)
 			storeData(%clientId, "COINS", %w2, "inc");
-			if(%echo) Client::sendMessage(%clientId, 0, "You received " @ %w2 @ " coins.~loot");
+			if(%echo) Client::sendMessage(%clientId, 0, "You received " @ Number::Beautify(%w2, -3) @ " coins.~loot");
 		}
 		else if(%w == "EXP")
 		{
@@ -6433,8 +6434,9 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 			else
 			{
 				// Player is below max level - grant EXP
+				%w2 = floor(%w2);  // clean integer exp (%multiplier drop scaling can be fractional)
 				storeData(%clientId, "EXP", %w2, "inc");
-				if(%echo) Client::sendMessage(%clientId, 0, "You received " @ %w2 @ " experience.");
+				if(%echo) Client::sendMessage(%clientId, 0, "You received " @ Number::Beautify(%w2, -3) @ " experience.");
 			}
 		}
 		else if(%w == "LCK")

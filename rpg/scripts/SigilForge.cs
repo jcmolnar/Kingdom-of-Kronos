@@ -155,7 +155,7 @@ function processMenuSigilConfirm(%clientId, %code)
 		{
 			TakeThisStuff(%clientId, "SigkillSigil " @ %need, true);
 			GiveThisStuff(%clientId, "COINS " @ $SigilForge::CoinReward @ " EXP " @ $SigilForge::ExpReward, true);
-			Client::sendMessage(%clientId, $MsgGreen, "You hand over " @ %need @ " Sigils for " @ $SigilForge::CoinReward @ " Coins.");
+			Client::sendMessage(%clientId, $MsgGreen, "You hand over " @ %need @ " Sigils for " @ Number::Beautify($SigilForge::CoinReward, -3) @ " Coins.");
 		}
 		else
 			Client::sendMessage(%clientId, $MsgRed, "You no longer have enough Sigils.");

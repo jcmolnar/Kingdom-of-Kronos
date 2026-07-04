@@ -941,7 +941,7 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 			}
 			
 			%cost = Belt::GetSellCost(%clientId, %item) * %amnt;
-			Client::sendMessage(%clientId, $MsgWhite, "You sold " @ %amnt @ " " @ %item @ " for " @ %cost @ " coins.");
+			Client::sendMessage(%clientId, $MsgWhite, "You sold " @ %amnt @ " " @ %item @ " for " @ Number::Beautify(%cost, -3) @ " coins.");
 			UseSkill(%clientId, $SkillHaggling, true, true);
 			storeData(%clientId, "COINS", %cost, "inc");
 			Belt::TakeThisStuff(%clientId, %item, %amnt);

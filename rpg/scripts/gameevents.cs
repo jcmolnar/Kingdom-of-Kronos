@@ -433,9 +433,9 @@ function HouseEarnings()
 			%sharePercent = floor(%controlShare * 100);
 			
 			if(%reward > 0)
-				Client::sendMessage(%cl, $MsgBeige, "You received " @ %reward @ " coins from your house. (" @ %sharePercent @ "% objective control)");
+				Client::sendMessage(%cl, $MsgBeige, "You received " @ Number::Beautify(%reward, -3) @ " coins from your house. (" @ %sharePercent @ "% objective control)");
 			if(%expReward > 0)
-				Client::sendMessage(%cl, $MsgBeige, "You received " @ %expReward @ " experience points for being loyal to your house.");
+				Client::sendMessage(%cl, $MsgBeige, "You received " @ Number::Beautify(%expReward, -3) @ " experience points for being loyal to your house.");
 			else if(!%shouldGiveExp)
 				Client::sendMessage(%cl, $MsgBeige, "You are currently able to remort, and your house's leadership has cut you off from this perk. They suggest either remorting, or finding someone else to freeload from.");
 			if(%rpreward > 0)

@@ -22,7 +22,7 @@ function ShowCoinsDisplay(%clientId, %token)
 	{
 		// Display current coins at bottom of screen
 		%coins = fetchData(%clientId, "COINS");
-		%msg = "<f1>Coins: <f2>" @ %coins;
+		%msg = "<f1>Coins: <f2>" @ Number::Beautify(%coins, -3);
 		bottomprint(%clientId, %msg, -1);
 
 		// Schedule next update in 1 second (same token keeps this chain valid)
@@ -163,7 +163,7 @@ function BuySell(%player, %item, %delta, %buyORsell)
 	UseSkill(%clientId, $SkillHaggling, True, True);
 	storeData(%clientId, "COINS", %cost, "inc");
 
-	%txt = "<f1><jc>COINS: " @ fetchData(%clientId, "COINS");
+	%txt = "<f1><jc>COINS: " @ Number::Beautify(fetchData(%clientId, "COINS"), -3);
 	Client::setInventoryText(%clientId, %txt);
 }
 
@@ -226,7 +226,7 @@ function buyItem(%clientId, %item)
 			%cost = getBuyCost(%clientId, %item);
 			if($LastClickItemB[%clientId, %item] != %item)
 			{
-				Client::sendMessage(%clientId, $MsgWhite, "The " @ %item.description @ " will cost you " @ %cost @ " coins.");
+				Client::sendMessage(%clientId, $MsgWhite, "The " @ %item.description @ " will cost you " @ Number::Beautify(%cost, -3) @ " coins.");
 				%msg = WhatIs(%item);
 				KronosExamineInfo(%clientId, %msg, floor(String::len(%msg) / 20));
 
@@ -495,7 +495,7 @@ function sellItem(%clientId, %item)
 			if($LastClickItemS[%clientId, %item] != %item)
 			{
 				%cost = getSellCost(%clientId, %item);
-				Client::sendMessage(%clientId, $MsgWhite, "This merchant will give you " @ %cost @ " coins for the " @ %nitem.description @ ".");
+				Client::sendMessage(%clientId, $MsgWhite, "This merchant will give you " @ Number::Beautify(%cost, -3) @ " coins for the " @ %nitem.description @ ".");
 				%msg = WhatIs(%item);
 				KronosExamineInfo(%clientId, %msg, floor(String::len(%msg) / 20));
 
@@ -694,7 +694,7 @@ function BlackSmithClick(%clientId, %item, %delta)
 			{
 				%cost = GetSmithComboCost(%clientId, %sc);
 
-				Client::sendMessage(%clientId, $MsgWhite, "It will cost you " @ %cost @ " coins to smith these items.~wcanSmith.wav");
+				Client::sendMessage(%clientId, $MsgWhite, "It will cost you " @ Number::Beautify(%cost, -3) @ " coins to smith these items.~wcanSmith.wav");
 				Client::sendMessage(%clientId, $MsgBeige, "(type #smith to accept the cost and start smithing)");
 
 				return 0;

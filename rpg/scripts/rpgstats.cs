@@ -945,7 +945,7 @@ function DistributeExpForKilling(%damagedClient)
 			%perc = %dCounter[%finalDamagedBy[%i]] / %total;
 			// Cap EXP per kill - multiplied by Ascension Affinity
 			%expCap = (1000 + (fetchData(%listclientId, "RemortStep") * 50)) * Ascension::GetExpMultiplier(%listClientId);
-			%final = Cap(round( %value * %perc ), "inf", %expCap);
+			%final = floor(Cap(round( %value * %perc ), "inf", %expCap));  // floor: %expCap is a float multiplier and can leak decimals through the cap
 
 			//determine party exp
 			%pf = %partyFactor[%finalDamagedBy[%i]];
@@ -956,16 +956,16 @@ function DistributeExpForKilling(%damagedClient)
 
 			storeData(%listClientId, "EXP", %final, "inc");
 			if(%final > 0)
-				Client::sendMessage(%listClientId, 0, %dname @ " has died and you gained " @ %final @ " experience!");
+				Client::sendMessage(%listClientId, 0, %dname @ " has died and you gained " @ Number::Beautify(%final, -3) @ " experience!");
 			else if(%final < 0)
-				Client::sendMessage(%listClientId, 0, %dname @ " has died and you lost " @ -%final @ " experience.");
+				Client::sendMessage(%listClientId, 0, %dname @ " has died and you lost " @ Number::Beautify(-%final, -3) @ " experience.");
 			else if(%final == 0)
 				Client::sendMessage(%listClientId, 0, %dname @ " has died.");
 
 			if(%pvalue != 0)
 			{
 				storeData(%listClientId, "EXP", %pvalue, "inc");
-				Client::sendMessage(%listClientId, $MsgWhite, "You have gained " @ %pvalue @ " party experience!");
+				Client::sendMessage(%listClientId, $MsgWhite, "You have gained " @ Number::Beautify(%pvalue, -3) @ " party experience!");
 			}
 
 			Game::refreshClientScore(%listClientId);

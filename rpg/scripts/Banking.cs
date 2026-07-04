@@ -132,7 +132,7 @@ function processMenuBankerCoins(%clientId, %opt)
 				storeData(%clientId, "BANK", %c, "inc");
 				storeData(%clientId, "COINS", %c, "dec");
 				RefreshAll(%clientId);
-				AI::sayLater(%clientId, %bankerId, "You have given me " @ %c @ " coins. You are now carrying " @ fetchData(%clientId, "COINS") @ " coins.", True);
+				AI::sayLater(%clientId, %bankerId, "You have given me " @ Number::Beautify(%c, -3) @ " coins. You are now carrying " @ Number::Beautify(fetchData(%clientId, "COINS"), -3) @ " coins.", True);
 				playSound(SoundMoney1, GameBase::getPosition(%bankerId));
 			}
 			else
@@ -145,7 +145,7 @@ function processMenuBankerCoins(%clientId, %opt)
 				storeData(%clientId, "COINS", %c, "inc");
 				storeData(%clientId, "BANK", %c, "dec");
 				RefreshAll(%clientId);
-				AI::sayLater(%clientId, %bankerId, "I have given you " @ %c @ " coins. I now have " @ fetchData(%clientId, "BANK") @ " of yours.", True);
+				AI::sayLater(%clientId, %bankerId, "I have given you " @ Number::Beautify(%c, -3) @ " coins. I now have " @ Number::Beautify(fetchData(%clientId, "BANK"), -3) @ " of yours.", True);
 				playSound(SoundMoney1, GameBase::getPosition(%clientId));
 			}
 			else

@@ -647,17 +647,17 @@ function processMenuOptions(%clientId, %option)
 			%a[%tmp++] = "RP: " @ fetchData(%clientId, "RankPoints") @ "\n";
 		}
 
-		%a[%tmp++] = "EXP: " @ fetchData(%clientId, "EXP") @ " Need: " @ (GetExp(GetLevel(fetchData(%clientId, "EXP"), %clientId)+1, %clientId) - fetchData(%clientId, "EXP")) @ "\n";
+		%a[%tmp++] = "EXP: " @ Number::Beautify(fetchData(%clientId, "EXP"), -3) @ " Need: " @ Number::Beautify((GetExp(GetLevel(fetchData(%clientId, "EXP"), %clientId)+1, %clientId) - fetchData(%clientId, "EXP")), -3) @ "\n";
 		%levelToRemort = (fetchData(%clientId, "RemortStep") * 4 + 100);
 		%a[%tmp++] = "Remort Lvl: " @ %levelToRemort @ "\n";
 
 		%coins = fetchData(%clientId, "COINS");
 		%bank = fetchData(%clientId, "BANK");
 		%total = %coins + %bank;
-		// Format large numbers in scientific notation (e.g., 1e+06 for 1 million)
-		%coinsFormatted = FormatLargeNumber(%coins);
-		%bankFormatted = FormatLargeNumber(%bank);
-		%totalFormatted = FormatLargeNumber(%total);
+		// Comma-format large numbers for readability (e.g. 1,000,000)
+		%coinsFormatted = Number::Beautify(%coins, -3);
+		%bankFormatted = Number::Beautify(%bank, -3);
+		%totalFormatted = Number::Beautify(%total, -3);
 		%a[%tmp++] = "Coins: " @ %coinsFormatted @ " Bank: " @ %bankFormatted @ " Total: " @ %totalFormatted @ "\n";
 		
 		%currentWeight = fetchData(%clientId, "Weight");

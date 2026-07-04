@@ -1072,7 +1072,7 @@ function remoteSay(%clientId, %team, %message, %senderName)
 					// Queue deployable-only world save after 3 seconds (preserves lootbag crash safety, avoids full-save storms)
 					RequestWorldSave("drop_coins", 3, "deployables");
 	
-	                        Client::sendMessage(%TrueClientId, 0, "You dropped " @ %cropped @ " coins.");
+	                        Client::sendMessage(%TrueClientId, 0, "You dropped " @ Number::Beautify(%cropped, -3) @ " coins.");
 	                        playSound(SoundMoney1, GameBase::getPosition(%TrueClientId));
 	                  }
 	            }
@@ -2321,7 +2321,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 										Client::sendMessage(%TrueClientId, $MsgWhite, "Hmmm... I guess there are people standing in the way of the teleport destinations.  Try again later.");
 								}
 								else
-									Client::sendMessage(%TrueClientId, 0, "You do not have the " @ %cost @ " coins needed to challenge this player.");	
+									Client::sendMessage(%TrueClientId, 0, "You do not have the " @ Number::Beautify(%cost, -3) @ " coins needed to challenge this player.");
 							}
 							else
 								Client::sendMessage(%TrueClientId, 0, "Opponent must be at least level 40.");
@@ -2816,7 +2816,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 					if(%id != -1)
 					{
 						AddBounty(%TrueClientId, %c2);
-						Client::sendMessage(%TrueClientId, $MsgWhite, %cropped @ "'s bounty has been set to " @ fetchData(%id, "bounty") @ " coins!");
+						Client::sendMessage(%TrueClientId, $MsgWhite, %cropped @ "'s bounty has been set to " @ Number::Beautify(fetchData(%id, "bounty"), -3) @ " coins!");
 						echo("[ADMIN]: " @ %TCsenderName @ " has added " @ %c2 @ " coins to " @ %c1 @ " bounty");
 					}
 					else
@@ -10777,7 +10777,7 @@ if(%w1 == "#spawntelemetry")
 						storeData(%TrueClientId, "BANK", %c, "inc");
 						storeData(%TrueClientId, "COINS", %c, "dec");
 						RefreshAll(%TrueClientId);
-						AI::sayLater(%TrueClientId, %closestId, "You have given me " @ %c @ " coins.  You are now carrying " @ fetchData(%TrueClientId, "COINS") @ " coins and I have " @ fetchData(%TrueClientId, "BANK") @ " of yours.  Have a nice day.", True);
+						AI::sayLater(%TrueClientId, %closestId, "You have given me " @ Number::Beautify(%c, -3) @ " coins.  You are now carrying " @ Number::Beautify(fetchData(%TrueClientId, "COINS"), -3) @ " coins and I have " @ Number::Beautify(fetchData(%TrueClientId, "BANK"), -3) @ " of yours.  Have a nice day.", True);
 
 						playSound(SoundMoney1, GameBase::getPosition(%closestId));
 					}
@@ -10803,7 +10803,7 @@ if(%w1 == "#spawntelemetry")
 						storeData(%TrueClientId, "COINS", %c, "inc");
 						storeData(%TrueClientId, "BANK", %c, "dec");
 						RefreshAll(%TrueClientId);
-						AI::sayLater(%TrueClientId, %closestId, "I have given you " @ %c @ " coins.  You are now carrying " @ fetchData(%TrueClientId, "COINS") @ " coins and I have " @ fetchData(%TrueClientId, "BANK") @ " of yours.  Have a nice day.", True);
+						AI::sayLater(%TrueClientId, %closestId, "I have given you " @ Number::Beautify(%c, -3) @ " coins.  You are now carrying " @ Number::Beautify(fetchData(%TrueClientId, "COINS"), -3) @ " coins and I have " @ Number::Beautify(fetchData(%TrueClientId, "BANK"), -3) @ " of yours.  Have a nice day.", True);
 
 						playSound(SoundMoney1, GameBase::getPosition(%TrueClientId));
 					}

@@ -322,7 +322,7 @@ function processMenuSellBackpackItemFinal(%clientId, %opt)
 			UseSkill(%clientId, $SkillHaggling, True, True);
 			storeData(%clientId, "COINS", %cost, "inc");
 			Backpack::TakeThisStuff(%clientid,%item,%amnt);
-			Client::SendMessage(%clientId, $MsgWhite, "You received "@%cost@" coins.~wbuysellsound.wav");
+			Client::SendMessage(%clientId, $MsgWhite, "You received "@Number::Beautify(%cost, -3)@" coins.~wbuysellsound.wav");
 			RefreshAll(%clientId);
 			%clientId.bulkNum = 1;
 		}
