@@ -338,9 +338,6 @@ $EXPmultiplier[Mage] = 3;
 //--------------
 // Red Flag
 //--------------
-// Clerics are good with Bludgeoning weapons but VERY good at healing spells.  They also
-// know the basics behind offensive spells.
-
 //For hacking set a player to this or anything that u dont like
 //that they do. or if u just dont like them period..this is a bad class lol
 

@@ -64,7 +64,7 @@
 //      Add: if(DualWield::HandleEquipInToggleMode(%clientId, %item)) return;
 //      Purpose: Allows GUI equipping to automatically set up dual wielding when toggle mode is active
 //
-//   6. rpgstats.cs - DoRemort() function (line ~1015):
+//   6. rpgstats.cs - DoRemort() function (~line 1048):
 //      Add: DualWield::UnequipOffHand(%clientId);
 //      Add: DualWield::SetToggleMode(%clientId, false);
 //      Purpose: Unequip off-hand and disable toggle mode when player remorts
@@ -864,7 +864,7 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
     }
     
     
-    // NOTE: Previous off-hand was already unequipped above (lines 795-800)
+    // NOTE: Previous off-hand was already unequipped earlier in this function
     
     // NOTE (Option C): Weapon stays in inventory while equipped as off-hand.
     // We just track it via DualWield_OffHandWeapon. This prevents item loss on reconnect

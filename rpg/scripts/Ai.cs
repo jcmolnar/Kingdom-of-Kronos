@@ -207,7 +207,7 @@ function StartWatchdog()
 
 // ============================================================================
 // PERIODIC AI NUMBER RECONCILIATION
-// Runs every 5 minutes to clean up orphaned AI numbers from $aiNumTable
+// Runs every 60 seconds (1 minute) to clean up orphaned AI numbers from $aiNumTable
 // ============================================================================
 $AINumberReconciliationEnabled = true;  // Set to false to disable
 
@@ -4772,7 +4772,7 @@ $numAI = 0;
 
 //------------------------------------------------------------------
 // Helper Functions for Bot Team Determination
-// NOTE: IsEnemyBot and IsTownBot are defined earlier in this file (around lines 2495, 2546)
+// NOTE: isTownBot() and isEnemyBot() are defined earlier in this file (the isTownBot/isEnemyBot helper functions)
 // to preserve comprehensive safeguards including save file checks and registry lookups
 //------------------------------------------------------------------
 
@@ -4970,7 +4970,7 @@ Telemetry_RecordSpawnAttempt();  // Track spawn attempt
 				echo("[SPAWN FLOW] AI::helper(): Spawn FAILED - rolling back reserved slot for spawnPoint " @ %spawnPointId);
 			RollbackSpawnSlot(%spawnPointId);
 		}
-		// CRITICAL FIX: ALWAYS record failure to decrement $numAI (balances increment at line 4392)
+		// CRITICAL FIX: ALWAYS record failure to decrement $numAI (balances the earlier $numAI increment for this spawn attempt)
 		// This was previously only called for spawnpoint spawns, causing $numAI leaks for TempSpawn/Town bots
 		Telemetry_RecordSpawnFailed("other");
 		return -1;
@@ -6507,7 +6507,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 					%escapedName = String::replace(%newName, "\"", "\\\"");
 					AI::delete(%escapedName);
 					// NOTE: Don't call Telemetry_RecordSpawnFailed here - retries will be scheduled
-					// Telemetry will be recorded when max retries is reached (line ~5971)
+					// Telemetry will be recorded when max retries is reached (the Telemetry_RecordSpawnFailed("other") "Max retries reached" call below)
 					// Reset aiId so we retry
 				}
 			}
@@ -6518,7 +6518,7 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				%escapedName = String::replace(%newName, "\"", "\\\"");
 				AI::delete(%escapedName);
 				// NOTE: Don't call Telemetry_RecordSpawnFailed here - retries will be scheduled
-				// Telemetry will be recorded when max retries is reached (line ~5971)
+				// Telemetry will be recorded when max retries is reached (the Telemetry_RecordSpawnFailed("other") "Max retries reached" call below)
 				// Reset aiId so we retry
 				%aiId = "";
 				// CRITICAL: Rollback spawn slot if this was a spawn point call
@@ -10125,7 +10125,7 @@ function InitTownBots()
 	schedule("PeriodicEmptyZoneCheck();", 60);  // Start after 60 seconds to let server fully initialize
 	
 	// Start periodic bot team check to fix bots that are on team -1
-	// This runs every 15 seconds to verify and fix bot teams (increased frequency for faster detection)
+	// This runs every 30 seconds to verify and fix bots that ended up on team -1
 	schedule("PeriodicBotTeamCheck();", 30);  // Start after 30 seconds to let server fully initialize
 }
 

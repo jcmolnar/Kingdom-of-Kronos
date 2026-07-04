@@ -211,7 +211,7 @@ function Game::playerSpawn(%clientId, %respawn)
 			Client::setControlObject(%clientId, %pl);
 			
 			// CRITICAL FIX: Call startFadeIn on the NEW player object AFTER setting ownership
-			// This was previously called on line 164 BEFORE setOwnedObject, fading in the wrong object
+			// This was previously called BEFORE setOwnedObject, fading in the wrong object
 			GameBase::startFadeIn(%pl);
 			
 			Game::playerSpawned(%pl, %clientId, %armor, %respawn);
@@ -381,7 +381,7 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 	
 	if(!%isBot)
 	{
-		// NOTE: RefreshAll() is already called by GiveThisStuff() (line 5619 in rpgfunk.cs)
+		// NOTE: RefreshAll() is already called by GiveThisStuff() in rpgfunk.cs
 		// No need to call it again here to avoid redundant network packets and state sync issues
 		// echo("[DOT_OP_DEBUG] Game::playerSpawned: RefreshAll already called by GiveThisStuff, skipping redundant call");
 		

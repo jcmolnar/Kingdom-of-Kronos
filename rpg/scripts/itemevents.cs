@@ -65,8 +65,9 @@
 //     - Example: storeData(%townbot, "MountWeaponOnSpawn", "true");  // Mount weapon on spawn
 //
 //   MountWeaponOnTalk:
-//     - If "true": Weapon will be mounted when player talks to bot (default: "true")
-//     - If "false" or not set: Weapon will NOT be mounted when talked to
+//     - NOTE: talk-mounting was REMOVED - weapons only mount on collision now, so this
+//       flag is effectively inert (kept for compatibility). Default is "false".
+//     - If "false" or not set (the default): Weapon will NOT be mounted when talked to
 //     - Example: storeData(%townbot, "MountWeaponOnTalk", "false");  // Don't mount on talk
 //
 //   Where to apply:
@@ -77,7 +78,7 @@
 //
 //   Default behavior:
 //     - MountWeaponOnSpawn: "false" (weapons not mounted on spawn)
-//     - MountWeaponOnTalk: "true" (weapons mounted when player talks to bot)
+//     - MountWeaponOnTalk: "false" (talk-mounting removed; weapons only mount on collision)
 //
 // TOWN BOT IDLE MESSAGE FLAG:
 //   Town bots have a flag to show an idle message if 30 minutes pass without interaction:
@@ -228,7 +229,7 @@ function Item::giveItem(%player, %item, %delta, %showmsg)
 			}
 			// Auto-equip armor if no armor is currently equipped
 			// Applies to town bots (always) OR enemy bots with "AutoEquipArmor" flag set
-			// Use $AccessoryVar to identify armor (same pattern as rpgfunk.cs line 1850)
+			// Use $AccessoryVar to identify armor (same $AccessoryVar[item, $AccessoryType] pattern used elsewhere)
 			// Enemy bots without the flag will drop armor but not equip it
 			if(!%isWeapon && $AccessoryVar[%item, $AccessoryType] == $BodyAccessoryType)
 			{
@@ -261,7 +262,7 @@ function Item::giveItem(%player, %item, %delta, %showmsg)
 			}
 			// Auto-mount shields if no shield is currently mounted
 			// Applies to town bots (always) OR enemy bots with "AutoEquipShield" flag set
-			// Use $AccessoryVar to identify shields (same pattern as rpgfunk.cs line 1852)
+			// Use $AccessoryVar to identify shields (same $AccessoryVar[item, $AccessoryType] pattern used elsewhere)
 			// Enemy bots without the flag will drop shields but not equip them
 			if(!%isWeapon && $AccessoryVar[%item, $AccessoryType] == $ShieldAccessoryType)
 			{

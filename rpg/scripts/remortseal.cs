@@ -299,17 +299,18 @@ function SealBattle::GetBotScaledStats(%botType, %round)
     return %botHP @ " " @ %botDamage @ " " @ %botDEF @ " " @ %botMDEF @ " " @ %botLevel;
 }
 
-// DEPRECATED: Old multiplier functions kept for backwards compatibility
-// These are no longer used by SetupBot but may be referenced elsewhere
+// DEPRECATED: GetBaseStrengthMultiplier is no longer used - stats are player-relative now.
+// (GetRoundMultiplier below is NOT deprecated - it is live and called by SetupBot for round HP scaling.)
 function SealBattle::GetBaseStrengthMultiplier()
 {
     // Return 1.0 - no longer used, stats are player-relative now
     return 1.0;
 }
 
+// ACTIVE: round HP multiplier lookup - called by SetupBot (see %mult = SealBattle::GetRoundMultiplier(%round))
 function SealBattle::GetRoundMultiplier(%round)
 {
-    // Return round HP multiplier for backwards compatibility
+    // Return round HP multiplier ($SealRoundHP table)
     if($SealRoundHP[%round] != "")
         return $SealRoundHP[%round];
     return 1.0;
