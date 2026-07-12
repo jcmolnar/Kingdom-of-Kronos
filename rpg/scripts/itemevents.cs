@@ -332,9 +332,19 @@ function Item::onCollision(%this,%object)
 		return;
 
 	%clientId = Player::getClient(%object);
-	
+
 	// Validate client ID before proceeding (player might be disconnecting)
 	if(%clientId == -1 || %clientId == "")
+		return;
+
+	// Town NPCs never pick up ANY dropped item (equipment, lootbags, projectiles):
+	// they wander through the town drop piles (merchant/bank areas) and would
+	// otherwise vacuum up player gear. $BotType cache is the O(1) fast path;
+	// the isTownBot() fallback only runs for AI clients the cache missed, so
+	// real players never pay for its isFile/registry checks.
+	if($BotType[%clientId] == "town")
+		return;
+	if($BotType[%clientId] == "" && Player::isAiControlled(%clientId) && isTownBot(%clientId))
 		return;
 
 	%armor = Player::getArmor(%clientId);

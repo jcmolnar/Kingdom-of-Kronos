@@ -1,5 +1,11 @@
 $fireTimeDelay = 0;
 
+// Bot melee diagnostics: set true (server console) to log bot swings, LOS
+// results, attack-loop ticks/exits, and bot->player damage arrivals.
+// Used to pin the July 2026 "bots stop attacking until player moves" bug
+// (zone-0 mismatch killing AI::ContinuousAttack).
+$MeleeDebug = false;
+
 $RustyDamageAmp = 0.7;
 $RustyWeightAmp = 1.5;
 $RustyCostAmp = 0.3;
@@ -426,27 +432,50 @@ function MeleeAttack(%player, %length, %weapon)
 	if(%clientId == "")
 		%clientId = 0;
 
+	// BELT WEAPON identity swap (BeltWeapons.cs): if the mounted weapon is the
+	// equipped belt weapon's SHELL, the swing counts as the belt weapon - the
+	// damage path reads every stat from name-keyed tables, so this one swap
+	// makes it a first-class weapon everywhere downstream.
+	%beltWeapon = fetchData(%clientId, "EquippedBeltWeapon");
+	if(%beltWeapon != "" && %beltWeapon != "0" && $BeltWeapon[%beltWeapon, "Shell"] == %weapon)
+	{
+		%weapon = %beltWeapon;
+		%length = GetRange(%weapon);
+	}
+
 	//==== ANTI-SPAM CHECK, CAUSE FOR SPAM UNKNOWN ==========
 	%time = getIntegerTime(true) >> 5;
 	if(%time - %clientId.lastFireTime < $fireTimeDelay)
+	{
+		if($MeleeDebug && Player::isAiControlled(%clientId))
+			echo("[MELEE DEBUG] " @ GetClientOrBotName(%clientId) @ " swing BLOCKED by anti-spam");
 		return;
+	}
 	%clientId.lastFireTime = %time;
 	//=======================================================
-	
+
 	// CRITICAL: Block attacks during skill upgrade RefreshAll to prevent attack spam exploit
 	// When upgrading skills while swinging, RefreshAll re-triggers onFire causing repeated attacks
 	if($SkillUpgradeRefreshScheduled[%clientId] == "true")
+	{
+		if($MeleeDebug && Player::isAiControlled(%clientId))
+			echo("[MELEE DEBUG] " @ GetClientOrBotName(%clientId) @ " swing BLOCKED by SkillUpgradeRefreshScheduled");
 		return;
-		
+	}
+
 	$los::object = "";
 	if(GameBase::getLOSinfo(%player, %length))
 	{
 		%obj = getObjectType($los::object);
+		if($MeleeDebug && Player::isAiControlled(%clientId))
+			echo("[MELEE DEBUG] " @ GetClientOrBotName(%clientId) @ " swing: LOS hit " @ %obj @ " (" @ $los::object @ ")");
 		if(%obj == "Player")
 		{
 			GameBase::virtual($los::object, "onDamage", $BulletDamageType, 1.0, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, %weapon);
 		}
 	}
+	else if($MeleeDebug && Player::isAiControlled(%clientId))
+		echo("[MELEE DEBUG] " @ GetClientOrBotName(%clientId) @ " swing: LOS MISS (nothing in " @ %length @ "u along view)");
 
 	PostAttack(%clientId, %weapon);
 	
@@ -477,17 +506,25 @@ function VoidWeaponAttack(%player, %length, %weapon)
 	if(%clientId == "")
 		%clientId = 0;
 
+	// BELT WEAPON identity swap (BeltWeapons.cs) - same as MeleeAttack above
+	%beltWeapon = fetchData(%clientId, "EquippedBeltWeapon");
+	if(%beltWeapon != "" && %beltWeapon != "0" && $BeltWeapon[%beltWeapon, "Shell"] == %weapon)
+	{
+		%weapon = %beltWeapon;
+		%length = GetRange(%weapon);
+	}
+
 	//==== ANTI-SPAM CHECK, CAUSE FOR SPAM UNKNOWN ==========
 	%time = getIntegerTime(true) >> 5;
 	if(%time - %clientId.lastFireTime < $fireTimeDelay)
 		return;
 	%clientId.lastFireTime = %time;
 	//=======================================================
-	
+
 	// CRITICAL: Block attacks during skill upgrade RefreshAll to prevent attack spam exploit
 	if($SkillUpgradeRefreshScheduled[%clientId] == "true")
 		return;
-		
+
 	// Perform damage check
 	$los::object = "";
 	if(GameBase::getLOSinfo(%player, %length))
@@ -2362,7 +2399,7 @@ function IronMaceImage::onFire(%player, %slot)
 
 function IronMace::onMount(%player,%item,$WeaponSlot) 
 {   %client = Player::getclient(%player); 
-   KronosWeaponInfo(%client, "<f1>Iron Mace: <f0>Attack: <f2>23    <f0>Skill Bludgeoning Req @ <f2>90    <f0>Speed: <f2>1.51 Seconds    <f0>Price: <f2>$1,704    <f0>Weight: <f2>5.5 Lbs");
+   KronosWeaponInfo(%client, "<f1>Iron Mace: <f0>Attack: <f2>36  <f0>Skill Bludgeoning Req @ <f2>90    <f0>Speed: <f2>1.51 Seconds    <f0>Price: <f2>$1,704    <f0>Weight: <f2>5.5 Lbs");
 }
 //****************************************************************************************************
 //   STEEL MACE

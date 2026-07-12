@@ -89,8 +89,13 @@ function AutoSkill_HasSkillId(%skillIds, %skillId)
 }
 
 // Safe network message sender to avoid Tribes 255-character crash
-function AutoSkill_SendSafeMessage(%clientId, %prefix, %list)
+// %tag: optional ~category suffix appended to every chunk (e.g. "~stats" so
+// the client chat filter can hide automatic level-up spend broadcasts; the
+// engine strips everything from "~" for clients without the filter)
+function AutoSkill_SendSafeMessage(%clientId, %prefix, %list, %tag)
 {
+	if(%tag == -1)
+		%tag = "";
 	%chunk = "";
 	%remaining = %list;
 	
@@ -121,7 +126,7 @@ function AutoSkill_SendSafeMessage(%clientId, %prefix, %list)
 			}
 			else
 			{
-				Client::sendMessage(%clientId, $MsgBeige, %prefix @ %chunk @ ",");
+				Client::sendMessage(%clientId, $MsgBeige, %prefix @ %chunk @ "," @ %tag);
 				%prefix = "  "; // Indent subsequent chunks
 				%chunk = %item;
 			}
@@ -130,7 +135,7 @@ function AutoSkill_SendSafeMessage(%clientId, %prefix, %list)
 	
 	if(%chunk != "")
 	{
-		Client::sendMessage(%clientId, $MsgBeige, %prefix @ %chunk);
+		Client::sendMessage(%clientId, $MsgBeige, %prefix @ %chunk @ %tag);
 	}
 }
 
@@ -531,7 +536,7 @@ function AutoSkill_Process(%clientId)
 	{
 		if(fetchData(%clientId, "AutoSkill_Mute") != "true")
 		{
-			AutoSkill_SendSafeMessage(%clientId, "[Auto-Skill] Spent " @ %totalSpent @ " SP: ", %skillsUpgraded);
+			AutoSkill_SendSafeMessage(%clientId, "[Auto-Skill] Spent " @ %totalSpent @ " SP: ", %skillsUpgraded, "~stats");
 		}
 		
 		// Schedule a single throttled RefreshAll (same pattern as UseSkill)

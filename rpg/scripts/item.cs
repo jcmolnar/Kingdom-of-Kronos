@@ -199,12 +199,15 @@ function checkDeployArea(%clientId, %pos)
 			Client::sendMessage(%clientId, 0, "Unable to deploy - Player in the way");
 	}
 	else
+	{
+		deleteObject(%set);	// review #36: this branch (multi-object, or a single non-Player object) returned WITHOUT freeing the temp SimSet - one leaked sim object per deploy attempt near clutter. The other two branches already free it.
 		return 1;
+	}
 
 	//	Client::sendMessage(%clientId, 0, "Unable to deploy - Item in the way");
 
 	deleteObject(%set);
-	return 0;	
+	return 0;
 		
 
 }

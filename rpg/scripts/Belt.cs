@@ -7,6 +7,7 @@ $Belt::Count["Consumables"] = 0;
 $Belt::Count["Armor"] = 0;
 $Belt::Count["Accessories"] = 0;
 $Belt::Count["Other"] = 0;
+$Belt::Count["Weapons"] = 0;
 
 $Belt::Categories[1] = "QuestItems";
 $Belt::Categories[2] = "KeyItems";
@@ -15,6 +16,12 @@ $Belt::Categories[4] = "Consumables";
 $Belt::Categories[5] = "Armor";
 $Belt::Categories[6] = "Accessories";
 $Belt::Categories[7] = "Other";
+// Weapons = datablock-less belt weapons (BeltWeapons.cs). Registering the
+// category here surfaces them in every generic belt path: view/sell/store
+// menus, KronosHUD inventory, weight totals, and the death-drop loop
+// (carried belt items dropping on death is standard belt behavior).
+// Persistence: "Weapons" = save field 58, "StoredWeapons" = field 59 (rpgfunk.cs).
+$Belt::Categories[8] = "Weapons";
 
 // Alias function for backward compatibility - code may still reference isBackpackItem
 function isBackpackItem(%item)
@@ -35,7 +42,8 @@ function Belt::BankStorageConversion(%clientId)
 	%storedArmor = fetchData(%clientId, "StoredArmor");
 	%storedAccessories = fetchData(%clientId, "StoredAccessories");
 	%storedOther = fetchData(%clientId, "StoredOther");
-	
+	%storedWeapons = fetchData(%clientId, "StoredWeapons");
+
 	//echo("DEBUG Belt::BankStorageConversion: Loaded categories - Quest='" @ %storedQuest @ "', Key='" @ %storedKey @ "', Consumables='" @ %storedConsumables @ "'");
 	
 	// Normalize "0" to empty string
@@ -51,7 +59,9 @@ function Belt::BankStorageConversion(%clientId)
 		%storedAccessories = "";
 	if(%storedOther == "0" || %storedOther == " ")
 		%storedOther = "";
-	
+	if(%storedWeapons == "0" || %storedWeapons == " ")
+		%storedWeapons = "";
+
 	// Clean and combine separate categories into BeltStorage
 	%cleanedQuest = "";
 	%removedQuest = 0;
@@ -207,7 +217,23 @@ function Belt::BankStorageConversion(%clientId)
 		storeData(%clientId, "StoredOther", %cleanedOther);
 		%storedOther = %cleanedOther;
 	}
-	
+
+	// Clean up invalid entries from StoredWeapons (belt weapons - BeltWeapons.cs)
+	%cleanedWeapons = "";
+	for(%i = 0; GetWord(%storedWeapons, %i) != -1; %i += 2)
+	{
+		%item = GetWord(%storedWeapons, %i);
+		%count = GetWord(%storedWeapons, %i + 1);
+		%countNum = %count * 1;
+		if(%item != "" && %item != -1 && %item != "0" && %count != "" && %count != -1 && %count != "-1" && %count != "0" && %countNum > 0)
+			%cleanedWeapons = Belt::AddToList(%cleanedWeapons, %item @ " " @ %count);
+	}
+	if(%cleanedWeapons != %storedWeapons)
+	{
+		storeData(%clientId, "StoredWeapons", %cleanedWeapons);
+		%storedWeapons = %cleanedWeapons;
+	}
+
 		// Combine StoredQuestItems, StoredKeyItems, StoredConsumables, StoredArmor, StoredAccessories, and StoredOther into BeltStorage
 		%beltStorage = "";
 		if(%storedQuest != "")
@@ -247,7 +273,14 @@ function Belt::BankStorageConversion(%clientId)
 			else
 				%beltStorage = %storedOther;
 		}
-		
+		if(%storedWeapons != "")
+		{
+			if(%beltStorage != "")
+				%beltStorage = %beltStorage @ " " @ %storedWeapons;
+			else
+				%beltStorage = %storedWeapons;
+		}
+
 		// Final cleanup pass on BeltStorage to remove any invalid entries (item "0", count 0, etc.)
 		// This prevents "0 0" entries from persisting in BeltStorage
 		%finalCleaned = "";
@@ -282,6 +315,7 @@ function Belt::BankStorageConversion(%clientId)
 	storeData(%clientId, "StoredArmor", %storedArmor);
 	storeData(%clientId, "StoredAccessories", %storedAccessories);
 	storeData(%clientId, "StoredOther", %storedOther);
+	storeData(%clientId, "StoredWeapons", %storedWeapons);
 	//echo("DEBUG Belt::BankStorageConversion: Updated StoredQuestItems='" @ %storedQuest @ "'");
 	
 	// Also clean up equipped categories (QuestItems, KeyItems) to remove corrupted entries
@@ -374,7 +408,7 @@ function MenuBeltGear(%clientId, %type, %page)
 	%nx = $Belt::Count[%type];
 	%nf = Belt::GetNS(%clientId, %type);
 	%ns = GetWord(%nf, 0);
-	%np = floor(%ns / %l);
+	%np = floor((%ns - 1) / %l);	// review #37: 0-indexed last page = ceil(count/pageSize)-1. floor(ns/l) was one too high when the count was an exact multiple of 6, rendering a phantom empty "Next" page.
 	%lb = (%page * %l) - (%l-1);
 	%ub = %lb + (%l-1);
 	if(%ub > %ns)
@@ -483,6 +517,15 @@ function MenuBeltDrop(%clientId, %item, %type)
 		}
 	}
 	
+	// Check if item is a belt weapon - show Equip/Unequip (BeltWeapons.cs)
+	if(%type == "Weapons")
+	{
+		if(fetchData(%clientId, "EquippedBeltWeapon") == %item)
+			Client::addMenuItem(%clientId, %cnt++ @ "Unequip", %type @ " unequip " @ %item);
+		else
+			Client::addMenuItem(%clientId, %cnt++ @ "Equip", %type @ " equip " @ %item);
+	}
+
 	// Check if item is Accessory - show Equip/Unequip based on slot availability
 	if(%type == "Accessories")
 	{
@@ -606,6 +649,10 @@ function processMenuBeltDrop(%clientId, %opt)
 		{
 			Belt::EquipAccessory(%clientId, %item);
 		}
+		else if(%type == "Weapons")
+		{
+			BeltWeapon::Equip(%clientId, %item);
+		}
 		// Refresh the menu to show updated equip status
 		MenuBeltDrop(%clientId, %item, %type);
 	}
@@ -619,6 +666,10 @@ function processMenuBeltDrop(%clientId, %opt)
 		else if(%type == "Accessories")
 		{
 			Belt::UnequipAccessory(%clientId, %item);
+		}
+		else if(%type == "Weapons")
+		{
+			BeltWeapon::Unequip(%clientId, false);
 		}
 		// Refresh the menu to show updated equip status
 		MenuBeltDrop(%clientId, %item, %type);
@@ -690,7 +741,7 @@ function MenuSellBeltItem(%clientId, %type, %page)
 	%nx = $Belt::Count[%type];
 	%nf = Belt::GetNS(%clientId, %type);
 	%ns = GetWord(%nf, 0);
-	%np = floor(%ns / %l);
+	%np = floor((%ns - 1) / %l);	// review #37: 0-indexed last page = ceil(count/pageSize)-1. floor(ns/l) was one too high when the count was an exact multiple of 6, rendering a phantom empty "Next" page.
 	%lb = (%page * %l) - (%l-1);
 	%ub = %lb + (%l-1);
 	if(%ub > %ns)
@@ -939,7 +990,11 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 			{
 				Belt::UnequipArmor(%clientId, %item);
 			}
-			
+			else if(%category == "Weapons" && fetchData(%clientId, "EquippedBeltWeapon") == %item)
+			{
+				BeltWeapon::Unequip(%clientId, true);
+			}
+
 			%cost = Belt::GetSellCost(%clientId, %item) * %amnt;
 			Client::sendMessage(%clientId, $MsgWhite, "You sold " @ %amnt @ " " @ %item @ " for " @ Number::Beautify(%cost, -3) @ " coins.");
 			UseSkill(%clientId, $SkillHaggling, true, true);
@@ -1068,6 +1123,10 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 					{
 						Belt::UnequipArmor(%clientId, %item);
 					}
+					else if(%category == "Weapons" && fetchData(%clientId, "EquippedBeltWeapon") == %item)
+					{
+						BeltWeapon::Unequip(%clientId, true);
+					}
 
 					// Remove from equipped belt
 					Belt::TakeThisStuff(%clientId, %item, %amnt);
@@ -1115,6 +1174,10 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 					else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
 					{
 						Belt::UnequipArmor(%clientId, %item);
+					}
+					else if(%category == "Weapons" && fetchData(%clientId, "EquippedBeltWeapon") == %item)
+					{
+						BeltWeapon::Unequip(%clientId, true);
 					}
 
 					storeData(%clientId, "Stored" @ %type, SetStuffString(fetchData(%clientId, "Stored" @ %type), %registeredItem, %amnt));
@@ -1896,6 +1959,12 @@ function Belt::GiveThisStuff(%clientId, %item, %amnt, %echo)
 			//echo("[LOOT DEBUG] Belt::GiveThisStuff: Successfully added " @ %amnt @ " " @ %item @ " to bot " @ %botName @ ". Final count in " @ %type @ ": " @ %finalCount);
 			//echo("[LOOT DEBUG]   Final list: '" @ %list @ "'");
 		}
+
+		// Phase D: a change to the belt-weapon list re-pushes this client's native
+		// inventory rows (VirtualSlots.cs). No-op unless $pref::VSlotsEnabled;
+		// Sync itself skips HUD clients and bots.
+		if(%type == "Weapons")
+			VSlot::Sync(%clientId);
 	}
 }
 
@@ -2133,6 +2202,12 @@ function Belt::TakeThisStuff(%clientId, %item, %amnt)
 		else
 			%allBelt = "";
 		storeData(%clientId, "AllBelt", %allBelt);
+
+		// Phase D: mirror GiveThisStuff - re-push native inventory rows when the
+		// belt-weapon list shrank (sell/drop/bank). No-op unless
+		// $pref::VSlotsEnabled; Sync skips HUD clients and bots.
+		if(%type == "Weapons")
+			VSlot::Sync(%clientId);
 	}
 }
 
@@ -2243,7 +2318,7 @@ function MenuBeltWithdrawThisItem(%clientId, %type, %page, %mode)
 		%ns = (CountObjInList(%nf) / 2) - 1;
 	}
 	
-	%np = floor(%ns / %l);
+	%np = floor((%ns - 1) / %l);	// review #37: 0-indexed last page = ceil(count/pageSize)-1. floor(ns/l) was one too high when the count was an exact multiple of 6, rendering a phantom empty "Next" page.
 	%lb = (%page * %l) - (%l-1);
 	%ub = %lb + (%l-1);
 	if(%ub > %ns)
@@ -2334,7 +2409,7 @@ function MenuBeltStoreThisItem(%clientId, %type, %page, %mode)
 	%nx = $Belt::Count[%type];
 	%nf = Belt::GetNS(%clientId, %type);
 	%ns = GetWord(%nf, 0);
-	%np = floor(%ns / %l);
+	%np = floor((%ns - 1) / %l);	// review #37: 0-indexed last page = ceil(count/pageSize)-1. floor(ns/l) was one too high when the count was an exact multiple of 6, rendering a phantom empty "Next" page.
 	%lb = (%page * %l) - (%l-1);
 	%ub = %lb + (%l-1);
 	if(%ub > %ns)
@@ -2442,7 +2517,7 @@ function processMenuBeltStoreThisItem(%clientId, %opt)
 //	%nx = $Belt::Count[%type];
 //	%nf = Belt::GetNS(%id, %type);
 //	%ns = GetWord(%nf, 0);
-//	%np = floor(%ns / %l);
+//	%np = floor((%ns - 1) / %l);	// review #37: 0-indexed last page = ceil(count/pageSize)-1. floor(ns/l) was one too high when the count was an exact multiple of 6, rendering a phantom empty "Next" page.
 //	%lb = (%page * %l) - (%l-1);
 //	%ub = %lb + (%l-1);
 //	if(%ub > %ns)
@@ -2663,6 +2738,7 @@ function Belt::Display(%type)
 	else if(%type == "Armor") %disp = "Armor";
 	else if(%type == "Accessories") %disp = "Accessories";
 	else if(%type == "Other") %disp = "Other";
+	else if(%type == "Weapons") %disp = "Weapons";
 	
 	// If no match, return the type name itself as fallback
 	if(%disp == "")
@@ -2729,7 +2805,20 @@ function Belt::DeployItem(%clientId, %item, %type)
 function Belt::UseItem(%clientId, %item, %type)
 {
 	dbecho($dbechoMode, "Belt::UseItem(" @ %clientId @ ", " @ %item @ ", " @ %type @ ")");
-	
+
+	// Belt weapons (BeltWeapons.cs): "use" = equip toggle. This is what the
+	// KronosHUD Use button reaches for Weapons-category rows.
+	if(%type == "Weapons")
+	{
+		if($BeltItem[%item, "Item"] != "")
+			%item = $BeltItem[%item, "Item"];	// accept display-name alias
+		if(fetchData(%clientId, "EquippedBeltWeapon") == %item)
+			BeltWeapon::Unequip(%clientId, false);
+		else
+			BeltWeapon::Equip(%clientId, %item);
+		return;
+	}
+
 	// Check if player has the item in Belt storage
 	if(!Belt::HasThisStuff(%clientId, %item))
 	{
@@ -2772,14 +2861,26 @@ function Belt::DropItem(%clientId, %item, %amnt, %type)
 		if(%type == "Accessories" && Belt::IsAccessoryEquipped(%clientId, %item))
 		{
 			echo("[BELT DROP] Auto-unequipping accessory before drop: " @ %item);
-			Belt::UnequipAccessory(%clientId, %item);
+			// review #15: unequip ONE instance per dropped unit (rings etc. can be
+			// worn in 2 slots). UnequipAccessory strips a single instance per call,
+			// so a single call while bulk-dropping %amnt left a phantom equipped
+			// entry - and its stat bonus, persisted and re-applied on every login -
+			// for an item the player no longer owns. The sell and both deposit
+			// paths already loop this; DropItem was the lone exception.
+			for(%unequipCount = 0; %unequipCount < %amnt; %unequipCount++)
+				Belt::UnequipAccessory(%clientId, %item);
 		}
 		else if(%type == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
 		{
 			echo("[BELT DROP] Auto-unequipping armor before drop: " @ %item);
 			Belt::UnequipArmor(%clientId, %item);
 		}
-		
+		else if(%type == "Weapons" && fetchData(%clientId, "EquippedBeltWeapon") == %item)
+		{
+			echo("[BELT DROP] Auto-unequipping belt weapon before drop: " @ %item);
+			BeltWeapon::Unequip(%clientId, true);
+		}
+
 		Belt::TakeThisStuff(%clientId, %item, %amnt);
 		TossLootbag(%clientId, %item @ " " @ %amnt, 8, "*", 0, 1);
 		SaveCharacter(%clientId);
@@ -3067,7 +3168,16 @@ $AccessoryVar[DuelCard, $MiscInfo] = "A special card that allows you to #challen
 //===================
 //  Deployables
 //===================
-BeltItem::Add("Deployable Base Pack", "DepBasePack", "Deployables", 0.0, 40000);
+// review #4: "Deployable Base Pack" (40,000 coins) is UNUSABLE - its datablock
+// script depbase.cs is never exec'd (Server.cs: //exec(depbase);), so
+// getItemData("DepBasePack") returns "" and Belt::DeployItem always fails with
+// "Invalid item data", permanently eating the player's 40k with no refund. Even
+// if depbase.cs were re-enabled, DepBasePack::deployShape never returns true
+// (its success path has no `return true;`), so deploy would still fail. Pulled
+// from sale so no one can lose coins on it. To restore the feature: uncomment
+// exec(depbase) in Server.cs, add the missing `return true;` in
+// depbase.cs::deployShape, then re-add this line.
+//BeltItem::Add("Deployable Base Pack", "DepBasePack", "Deployables", 0.0, 40000);
 
 //===================
 //  Consumables
@@ -4890,7 +5000,14 @@ function processMenuBuyBeltItemConsumable(%clientId, %opt)
 	%action = GetWord(%opt, 1);
 	%qty = GetWord(%opt, 2);
 	%fromPage = GetWord(%opt, 3);
-	
+
+	// review #16: %opt is client-supplied (menu.cs clientMenuSelect echoes the
+	// code back to the server), so %qty is untrusted. A negative qty makes %cost
+	// negative and CREDITS coins on "buy" (money dupe). Clamp to a positive int.
+	%qty = floor(%qty);
+	if(%qty < 1)
+		%qty = 1;
+
 	if(%item == "back")
 	{
 		MenuBuyBeltConsumables(%clientId, %action);
@@ -4928,7 +5045,10 @@ function processMenuBuyBeltItemConsumable(%clientId, %opt)
 		
 		if(%coins >= %cost)
 		{
-			storeData(%clientId, "COINS", -1 * %cost, "inc");
+			// review #20: pay via positive "dec", not "inc" of a negative amount -
+			// storeData treats a literal -1 as "unassigned" and zeroes it, so a
+			// heavily-discounted cost-1 item was previously free.
+			storeData(%clientId, "COINS", %cost, "dec");
 			Belt::GiveThisStuff(%clientId, %item, %qty, true);
 			
 			%name = $BeltItem[%item, "Name"];
@@ -4993,7 +5113,14 @@ function processMenuBuyBeltItem(%clientId, %opt)
 	%action = GetWord(%opt, 1);
 	%amount = GetWord(%opt, 2);
 	%fromPage = GetWord(%opt, 3);
-	
+
+	// review #16: %opt is client-supplied, so %amount is untrusted. A negative
+	// amount makes %cost negative; the affordability gate passes and "dec" of a
+	// negative amount CREDITS coins (money dupe). Clamp to a positive int.
+	%amount = floor(%amount);
+	if(%amount < 1)
+		%amount = 1;
+
 	if(%item == "done" || %action == "")
 	{
 		%clientId.currentBeltShop = "";

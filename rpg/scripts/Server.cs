@@ -316,7 +316,15 @@ function createServer(%mission, %dedicated)
 	exec(dtsviewer);
 	exec(plugs);
 	exec(version);
-	exec(hackfix);
+	// review #22: hackfix.cs is a vestigial fragment of remoteSay (bulknum/parse/
+	// exportChat) plus a chat escape-sequence ban filter, but its whole body is
+	// UNWRAPPED top-level code - it ran exactly once here at boot with every var
+	// (%message/%TrueClientId/%team) unassigned/empty, so it never inspected a
+	// single live chat line. The real chat path is comchat.cs::remoteSay +
+	// ChatFilter.cs. Disabled (was a boot-time no-op). Do NOT naively "fix" and
+	// re-wire the '~)'/escape filter into live chat - it would false-ban legit
+	// ~category-tag chat.
+	//exec(hackfix);
 	exec(newstuff);
 	exec(advertisements);
 	exec(TaurikAdmins);
@@ -329,9 +337,51 @@ function createServer(%mission, %dedicated)
 	exec(KronosHUD_Server);
 	exec(KronosNPC_Server);
 	exec(DailyQuest);
+	exec(WeeklyBoss);
+	exec(Estate);		// player housing/building; needs economy + rpgfunk deploy primitives (already exec'd)
+	exec(BeltWeapons);	// needs Belt.cs (BeltItem::Add) + weapons.cs (shell tables) already exec'd
+	exec(VirtualSlots);	// Phase D native-inventory view; inert unless $pref::VSlotsEnabled
 	//exec(DebugInit); only need if debugging
+
+	// Sanity check: player-facing coin/exp displays rely on MathPlugin's
+	// Number::Beautify - if the plugin is missing it returns "" and every
+	// converted message shows a blank where the number should be. Also echo a
+	// sample so comma formatting is verifiable at boot (MathPlugin.txt examples
+	// are ambiguous about commas when fixDrifting is set).
+	%beautifyTest = Number::Beautify(123456, -3);
+	if(%beautifyTest == "")
+		echo("*** WARNING: Number::Beautify unavailable (MathPlugin not loaded?) - player-facing coin/exp numbers will render BLANK! ***");
+	else
+		echo("Number::Beautify sanity: 123456 -> " @ %beautifyTest);
 	//exec(backpack); we implemented belt.cs instead of backpack.cs
-	
+
+	// NATIVE-PORT: test Car vehicle (CarData) DISABLED - the STOCK 1.30 client's
+	// DataBlockManager::createDataBlock has "case CarDataType" commented out
+	// (TribesSource dataBlockManager.cpp:264), so ghosting a Car datablock at
+	// connect returns NULL and CRASHES every non-native-rebuild client. To test
+	// the car, exec("test_car.cs"); manually on a NATIVE-build server + client.
+	//exec("test_car.cs");
+
+	// Slot audit (belt-items plan Phase 0): the engine caps ItemData at 256
+	// types (Player::MaxItemTypes) and the wall was hit adding new items - echo
+	// the real total (rpg scripts + stock vol) at boot so headroom is known.
+	%itemTotal = getNumItems();
+	echo("[SLOT AUDIT] ItemData types registered: " @ %itemTotal @ " / 256");
+	for(%i = %itemTotal - 5; %i < %itemTotal; %i++)
+		echo("[SLOT AUDIT]   slot " @ %i @ ": " @ getItemData(%i));
+
+	// PHASE D LIVE TEST (2026-07-11): Virtual Slots ENABLED - belt weapons appear
+	// in the STOCK inventory screen for vanilla (non-HUD) clients. Set here (after
+	// any prefs load, before VSlot::Init reads it) so nothing can clobber it.
+	// Requires kronos_virtualitems.dll (PluginLoader.cs $dedicated block) - if the
+	// DLL is absent, VSlot::Init logs "[VSLOT] ... not loaded" and self-disables.
+	// Flip to false (or comment out) to ship the native inventory view OFF.
+	$pref::VSlotsEnabled = true;
+
+	// Resolve the reserved VSlot ItemData indices (Phase D). No-op with
+	// $pref::VSlotsEnabled off; run here after ALL ItemData scripts have exec'd.
+	VSlot::Init();
+
 	$Server::Info = "Running RPG Mod ver " @ $rpgver @ "\nThis version of RPGMod created by Asnabel,\n Further development by Jobo & Superfat.";
 
 	// Save server data during initial server creation
@@ -365,6 +415,11 @@ function createServer(%mission, %dedicated)
 		// Start periodic AI cleanup systems
 		StartAINumberReconciliation();
 		StartGhostBotCleanup();
+		// review #26/#63: these two were previously started by TOP-LEVEL exec-time
+		// schedules in ai.cs, which loadMission flushes (so they never ran) and which
+		// duplicated on every live re-exec. Start them here (post-loadMission), guarded.
+		StartShellBotCheck();
+		StartGhostClientIdCleanup();
 	}
 
 	// Start periodic lootbag aggregation (merges nearby lootbags to reduce clutter)
@@ -595,7 +650,10 @@ function Server::finishMissionLoad()
    
    // Load world save data (deployables, etc.) AFTER mission file is loaded
    LoadWorld();
-   
+
+   // Re-spawn persistent player estates AFTER LoadWorld (MissionCleanup exists, mission loaded)
+   Estate::RehydrateAll();
+
    // Load house objectives AFTER LoadWorld (so MissionGroup exists and is populated)
    LoadHouseObjectives();
    
@@ -719,6 +777,12 @@ function persistentCenterprint(%clientId, %msg, %duration)
 	if(%duration == "" || %duration == 0)
 		%duration = 30;
 
+	// review #50: capture whether a refresh chain is already running BEFORE we set the
+	// flag - without this guard, rapidly repeating #getstats/#getinfo stacked N
+	// independent self-rescheduling chains (each firing a remoteEval + schedule every
+	// 1.5s) for the same client.
+	%alreadyActive = ($PersistentCenterprintActive[%clientId] == true);
+
 	// Store the message for this client so we can re-display it
 	$PersistentCenterprint[%clientId] = %msg;
 	$PersistentCenterprintDuration[%clientId] = %duration;
@@ -731,7 +795,10 @@ function persistentCenterprint(%clientId, %msg, %duration)
 	// Schedule periodic refresh every 1.5 seconds to ensure message stays visible
 	// This prevents it from being overwritten by bottomprint or other centerprint calls
 	// Note: We use a flag-based approach since Tribes doesn't have cancel() function
-	schedule("persistentCenterprintRefresh(" @ %clientId @ ");", 1.5);
+	// review #50: only start a new chain if one isn't already running; the globals above
+	// are updated in place, so an existing chain picks up the new message/duration.
+	if(!%alreadyActive)
+		schedule("persistentCenterprintRefresh(" @ %clientId @ ");", 1.5);
 }
 
 // Internal function to refresh persistent centerprint messages

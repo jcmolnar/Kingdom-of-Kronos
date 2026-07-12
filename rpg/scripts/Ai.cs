@@ -242,12 +242,23 @@ function PeriodicAINumberReconciliation()
 	}
 	
 	// Scan $aiNumTable for reserved numbers
-	for(%n = 0; %n <= 500; %n++)
+	// review #8: scan the FULL 0..5000 range getAInumber allocates over (was 0..500,
+	// so any leaked number above 500 was never reclaimed).
+	for(%n = 0; %n <= 5000; %n++)
 	{
 		if($aiNumTable[%n] != "" && $aiNumTable[%n] != -1)
 		{
 			%checkedCount++;
-			
+
+			// review #8: GRACE WINDOW. Skip numbers reserved within the last 10s - a
+			// bot reserves its number (setAInumber) up to ~3.5s before its
+			// BotInfoAiName is stored, during which it contributes an empty name to
+			// %liveBotNames and would be wrongly judged orphaned and freed (then
+			// re-issued to the next spawn -> name collision). getSimTime is SECONDS.
+			%reservedAt = $aiNumReservedTime[%n];
+			if(%reservedAt != "" && %reservedAt != -1 && (getSimTime() - %reservedAt) < 10)
+				continue;
+
 			// Check if any live bot uses this number
 			%isOrphaned = true;
 			for(%k = 0; (%liveName = GetWord(%liveBotNames, %k)) != -1; %k++)
@@ -258,10 +269,11 @@ function PeriodicAINumberReconciliation()
 					break;
 				}
 			}
-			
+
 			if(%isOrphaned)
 			{
 				$aiNumTable[%n] = "";
+				$aiNumReservedTime[%n] = "";
 				%freedCount++;
 			}
 		}
@@ -335,40 +347,48 @@ function PeriodicGhostBotScan()
 		%ghostCount++;
 		
 		// Check if it was already flagged in a previous scan
-		if($GhostBotSuspect[%clientId] != "")
+		// review #27: bind the suspect flag to the specific Player OBJECT, not just the
+		// clientId. The id pool (2049-2175) is recycled, so a flagged ghost's id can be
+		// reused by a brand-new bot still inside its ~1s registration window (no
+		// BotInfoAiName yet). Keyed only by clientId, the next scan would read the OLD
+		// flag's >25s timestamp and DELETE the legitimately-spawning new bot.
+		if($GhostBotSuspect[%clientId] != "" && $GhostBotSuspectObj[%clientId] == %obj)
 		{
 			%timeFlagged = $GhostBotSuspect[%clientId];
 			%currentTime = getSimTime();
 			%elapsed = %currentTime - %timeFlagged;
-			
+
 			// If flagged for more than 25 seconds (allows for normal 3s spawn delay + buffer)
 			if(%elapsed > 25)
 			{
 				// CONFIRMED GHOST - clean it up
 				echo("[GHOST BOT] Cleaning up confirmed ghost bot: clientId=" @ %clientId @ ", displayName='" @ %displayName @ "', SpawnBotInfo='" @ %spawnBotInfo @ "', flagged " @ %elapsed @ "s ago");
-				
+
 				// Mark as no-drop, no-exp to prevent side effects
 				storeData(%clientId, "noDropLootbagFlag", True);
 				storeData(%clientId, "noExperienceFlag", True);
-				
+
 				// Clean up data
 				ClearAllBotData(%clientId, false);
-				
+
 				// Try to delete the player object
 				if(isObject(%obj))
 					deleteObject(%obj);
-				
+
 				// Clear the suspect flag
 				$GhostBotSuspect[%clientId] = "";
+				$GhostBotSuspectObj[%clientId] = "";
 				%cleanedCount++;
 			}
 		}
 		else
 		{
-			// NEW SUSPECT - flag it with current time
+			// NEW SUSPECT (or the id was recycled onto a DIFFERENT object since we last
+			// flagged it) - (re)flag with the current time and remember WHICH object.
 			$GhostBotSuspect[%clientId] = getSimTime();
+			$GhostBotSuspectObj[%clientId] = %obj;
 			%newSuspects++;
-			
+
 			if($AI_DEBUG_ENABLED)
 				echo("[GHOST BOT] Flagged new suspect: clientId=" @ %clientId @ ", displayName='" @ %displayName @ "'");
 		}
@@ -398,6 +418,7 @@ function PeriodicGhostBotScan()
 			{
 				// Bot either got proper data or was cleaned up - clear the flag
 				$GhostBotSuspect[%checkId] = "";
+				$GhostBotSuspectObj[%checkId] = "";	// review #27: clear the companion object binding too
 			}
 		}
 	}
@@ -2755,14 +2776,23 @@ function CleanupBot(%clientId, %aiName)
 
 	
 	echo("[BOT CLEANUP] Starting cleanup for clientId=" @ %clientId @ ", aiName=" @ %aiName);
-	
-	// Step 1: Decrement spawn counter (uses centralized function with fallbacks)
-	DecrementSpawnCounter(%clientId);
-	
-	// Step 2: Decrement tracking counters
+
+	// review #7: capture the bot's classification AND its AI-name BEFORE Step 1 wipes
+	// the markers. DecrementSpawnCounter -> UnregisterBot -> ClearAllBotData clears
+	// SpawnBotInfo/BotInfoAiName/$BotType/$BotRegistry, after which isEnemyBot/isTownBot
+	// fall back to a race-name-prefix check that FAILS for non-prefixed bots (Colloseum
+	// "Round1", TempSpawn) - silently skipping the $numAI/$ActiveEnemyBots/
+	// Telemetry_RecordDeath decrements (counter leak) and the BotInfoAiName fallback
+	// used below to free the AI number.
 	%isEnemy = isEnemyBot(%clientId);
 	%isTown = isTownBot(%clientId);
-	
+	if(%aiName == "" || %aiName == -1)
+		%aiName = fetchData(%clientId, "BotInfoAiName");
+
+	// Step 1: Decrement spawn counter (uses centralized function with fallbacks)
+	DecrementSpawnCounter(%clientId);
+
+	// Step 2: Decrement tracking counters (classification captured above, pre-wipe)
 	if(%isEnemy)
 	{
 		$ActiveEnemyBots--;
@@ -3803,7 +3833,10 @@ function AI::setWeapons(%aiName, %loadout)
 function AI::ContinuousAttack(%aiName, %targetId)
 {
 	dbecho($dbechoMode, "AI::ContinuousAttack(" @ %aiName @ ", " @ %targetId @ ")");
-	
+
+	if($MeleeDebug)
+		echo("[MELEE DEBUG] ContinuousAttack ENTRY " @ %aiName @ " -> target " @ %targetId);
+
 	// Get bot info
 	%aiId = AI::getClientIdFromName(%aiName);
 	if(%aiId == -1 || %aiId == "")
@@ -3812,13 +3845,19 @@ function AI::ContinuousAttack(%aiName, %targetId)
 	// If bot is still spawn-invulnerable / not loaded, do not attack
 	if(fetchData(%aiId, "SpawnInvuln") || !fetchData(%aiId, "HasLoadedAndSpawned"))
 	{
+		if($MeleeDebug)
+			echo("[MELEE DEBUG] " @ %aiName @ " EXIT: SpawnInvuln=" @ fetchData(%aiId, "SpawnInvuln") @ " HasLoadedAndSpawned=" @ fetchData(%aiId, "HasLoadedAndSpawned"));
 		storeData(%aiId, "BotAttackLoopActive", "");
 		return;
 	}
 	
 	%playerObj = Client::getOwnedObject(%aiId);
 	if(%playerObj == -1 || %playerObj == "")
+	{
+		if($MeleeDebug)
+			echo("[MELEE DEBUG] " @ %aiName @ " EXIT: no player object (aiId " @ %aiId @ ")");
 		return; // No player object
+	}
 	
 	// Check if target is still valid
 	// TRIGGER MODEL: melee weapons here are repurposed gun images (reloadTime=0, infinite
@@ -3829,6 +3868,8 @@ function AI::ContinuousAttack(%aiName, %targetId)
 	%targetPlayerObj = Client::getOwnedObject(%targetId);
 	if(%targetPlayerObj == -1 || %targetPlayerObj == "")
 	{
+		if($MeleeDebug)
+			echo("[MELEE DEBUG] " @ %aiName @ " EXIT: target " @ %targetId @ " has no player object");
 		storeData(%aiId, "AITarget", "");
 		storeData(%aiId, "BotAttackLoopActive", "");
 		Player::trigger(%playerObj, $WeaponSlot, false);
@@ -3839,6 +3880,8 @@ function AI::ContinuousAttack(%aiName, %targetId)
 	%currentTarget = fetchData(%aiId, "AITarget");
 	if(%currentTarget != %targetId)
 	{
+		if($MeleeDebug)
+			echo("[MELEE DEBUG] " @ %aiName @ " EXIT: changed target (AITarget=" @ %currentTarget @ " loop target=" @ %targetId @ ")");
 		storeData(%aiId, "BotAttackLoopActive", "");
 		Player::trigger(%playerObj, $WeaponSlot, false);
 		return; // Changed target
@@ -3849,16 +3892,25 @@ function AI::ContinuousAttack(%aiName, %targetId)
 	%targetPos = GameBase::getPosition(%targetPlayerObj);
 	if(%aiPos == "" || %targetPos == "")
 	{
+		if($MeleeDebug)
+			echo("[MELEE DEBUG] " @ %aiName @ " EXIT: empty position (ai='" @ %aiPos @ "' target='" @ %targetPos @ "')");
 		storeData(%aiId, "BotAttackLoopActive", "");
 		Player::trigger(%playerObj, $WeaponSlot, false);
 		return;
 	}
 
 	// Drop target if zones differ or distance is excessively large (prevent cross-zone chasing)
+	// Zone values are $Zone::FolderID object ids (zone indexes are 1-based), so 0 is
+	// NOT a real zone - it means the zone was never stamped (seen on live: bots carried
+	// zone 0 vs players' folder ids, so this guard dropped EVERY target and the attack
+	// loop died instantly; bots only swung via the engine drone's short-lived auto-fire).
+	// Unknown zone on either side = skip the drop; the dist>150 cap below still bounds chasing.
 	%aiZone = fetchData(%aiId, "zone");
 	%targetZone = fetchData(%targetId, "zone");
-	if(%aiZone != "" && %aiZone != -1 && %targetZone != "" && %targetZone != -1 && %aiZone != %targetZone)
+	if(%aiZone != "" && %aiZone != -1 && %aiZone != 0 && %targetZone != "" && %targetZone != -1 && %targetZone != 0 && %aiZone != %targetZone)
 	{
+		if($MeleeDebug)
+			echo("[MELEE DEBUG] " @ %aiName @ " EXIT: zone mismatch (bot zone " @ %aiZone @ " vs target zone " @ %targetZone @ ")");
 		storeData(%aiId, "AITarget", "");
 		storeData(%aiId, "BotAttackLoopActive", "");
 		Player::trigger(%playerObj, $WeaponSlot, false);
@@ -3872,6 +3924,8 @@ function AI::ContinuousAttack(%aiName, %targetId)
 	// Hard cap: if target is extremely far, drop it to avoid global chasing
 	if(%dist > 150)
 	{
+		if($MeleeDebug)
+			echo("[MELEE DEBUG] " @ %aiName @ " EXIT: dist > 150 (" @ %dist @ ")");
 		storeData(%aiId, "AITarget", "");
 		storeData(%aiId, "BotAttackLoopActive", "");
 		storeData(%aiId, "LastLoggedDist", "");
@@ -3899,7 +3953,10 @@ function AI::ContinuousAttack(%aiName, %targetId)
 	%lastLoggedDist = fetchData(%aiId, "LastLoggedDist");
 	%distDiff = %dist - %lastLoggedDist;
 	if(%distDiff < 0) %distDiff = %distDiff * -1; // Absolute value
-	if(%lastLoggedDist == "" || %distDiff > 2) // Only log if distance changed by 2+ units
+	// review #61: gate on $MeleeDebug. This per-tick range echo was the ONLY diagnostic in
+	// AI::ContinuousAttack not gated on the debug flag - a chasing/kiting bot moves >2
+	// units almost every 0.5s tick, so it wrote ~2 console lines/sec per engaged bot.
+	if($MeleeDebug && (%lastLoggedDist == "" || %distDiff > 2)) // Only log if distance changed by 2+ units
 	{
 		if(%dist <= %attackRange)
 			%rangeStatus = "IN RANGE";
@@ -3926,10 +3983,17 @@ function AI::ContinuousAttack(%aiName, %targetId)
 		// Play idle/root animation (not running) when attacking
 		GameBase::playSequence(%playerObj, 0, "root");
 		
-		// Trigger attack: HOLD the trigger (player-style) - the weapon's fire animation
-		// paces the swings (reloadTime=0, infinite ammo). Release happens on the
-		// disengage paths above or the out-of-range branch below.
+		// Trigger attack: fresh RELEASE+PRESS edge every tick, not a bare hold.
+		// The engine drone also writes the trigger from its own moves (aiObj
+		// fireAtPlayerTarget -> serverUpdateMove edge logic), and its true->false
+		// edge can release a script-held trigger; a bare re-press while the image
+		// state machine is parked in Ready is a no-op, so the bot stopped swinging
+		// until a range change forced an edge. Mid-swing (Fire/Reload) both calls
+		// are no-ops, so swing pacing is still the weapon's fire animation.
+		Player::trigger(%playerObj, $WeaponSlot, false);
 		Player::trigger(%playerObj, $WeaponSlot, true);
+		if($MeleeDebug)
+			echo("[MELEE DEBUG] " @ %aiName @ " loop tick: IN RANGE (dist " @ %dist @ "), trigger re-pulled, energy=" @ GameBase::getEnergy(%playerObj));
 
 		// Schedule next loop tick (re-validates target; re-press while held is a no-op)
 		%weaponDelay = GetDelay(%equippedWeapon);
@@ -3942,6 +4006,8 @@ function AI::ContinuousAttack(%aiName, %targetId)
 		else
 		{
 			// Out of range - stop swinging and move directly toward the target's current position
+			if($MeleeDebug)
+				echo("[MELEE DEBUG] " @ %aiName @ " loop tick: OUT OF RANGE (dist " @ %dist @ " > tight " @ %attackRangeTight @ "), chasing");
 			Player::trigger(%playerObj, $WeaponSlot, false);
 			AI::directiveWaypoint(%aiName, %targetPos, 99);
 			
@@ -3953,6 +4019,25 @@ function AI::ContinuousAttack(%aiName, %targetId)
 function AI::Periodic(%aiName)
 {
 	dbecho($dbechoMode, "AI::Periodic(" @ %aiName @ ")");
+
+	// review #28: reject corpse objects BEFORE the expensive getClientIdFromName scan.
+	// A dead bot is renamed "Corpse<N> <name>", which is never in the $BotNameToClient/
+	// $TownBotSpawned fast path, so getClientIdFromName would fall through to a full
+	// BaseRep pool walk - pure waste for every lingering corpse tick, discarded by this
+	// same substring check moments later. Moved above the lookup.
+	if(String::findSubStr(%aiName, "Corpse") != -1)
+	{
+		// This is a corpse, not a bot - ignore it (throttle logging to once/30s per name)
+		%currentTime = getSimTime();
+		%lastCorpseLog = $AI_Periodic_CorpseLog[%aiName];
+		if(%lastCorpseLog == "" || %lastCorpseLog == -1 || (%currentTime - %lastCorpseLog) >= 30)
+		{
+			if($AI_PERIODIC_DEBUG)
+				echo("[INERT DEBUG] AI::Periodic: Ignoring corpse object " @ %aiName @ " - callbackPeriodic still running for dead bot");
+			$AI_Periodic_CorpseLog[%aiName] = %currentTime;
+		}
+		return;
+	}
 
 	// CRITICAL FIX: Early exit for bots in Graveyard (dead but not yet cleaned up)
 	// This prevents log spam and resource waste from dead bots continuing to run periodic logic
@@ -3970,23 +4055,8 @@ function AI::Periodic(%aiName)
 			return; // No player object - bot is effectively dead
 	}
 
-	// CRITICAL: Check if this is a corpse object - corpses can trigger callbackPeriodic
-	// after bot death. Corpse names typically start with "Corpse" followed by a number and bot name
-	// Example: "Corpse5 Liquifier6" - we need to reject these immediately to prevent "shellbot" errors
-	if(String::findSubStr(%aiName, "Corpse") != -1)
-	{
-		// This is a corpse, not a bot - ignore it
-		// Throttle logging to once per 30 seconds per corpse name to avoid spam
-		%currentTime = getSimTime();
-		%lastCorpseLog = $AI_Periodic_CorpseLog[%aiName];
-		if(%lastCorpseLog == "" || %lastCorpseLog == -1 || (%currentTime - %lastCorpseLog) >= 30)
-		{
-			if($AI_PERIODIC_DEBUG)
-				echo("[INERT DEBUG] AI::Periodic: Ignoring corpse object " @ %aiName @ " - callbackPeriodic still running for dead bot");
-			$AI_Periodic_CorpseLog[%aiName] = %currentTime;
-		}
-		return;
-	}
+	// review #28: corpse-object check moved ABOVE the getClientIdFromName call (top of
+	// this function) so a lingering corpse tick no longer pays for a full BaseRep scan.
 
 	// Throttle debug logging to once per bot per 10 seconds
 	%currentTime = getSimTime();
@@ -4109,36 +4179,47 @@ function AI::Periodic(%aiName)
 			// so filling from index 0 silently dropped the FIRST candidate found
 			// (and skipped the whole FOV branch when only one enemy was visible)
 			%c = 1; // Initialize counter for idList array (1-based to match consumer)
-			%list = GetEveryoneIdList();
-			// Ensure %list is initialized (should always be from GetEveryoneIdList, but be safe)
-			if(%list == "")
-				%list = "";
-			for(%i = 0; GetWord(%list, %i) != -1; %i++)
+
+			// review #9: gather FOV candidates from a SPATIALLY-BOUNDED containerBoxFillSet
+			// query (only objects within the bot's detection box), NOT GetEveryoneIdList(),
+			// which walked the ENTIRE BaseRep pool (every player + every bot) every 5s per
+			// bot - O(bots x everyone), plus an isFile disk probe per candidate via
+			// fetchData(...,"invisible"). The else/sniff branch below already used this exact
+			// bounded query; the FOV branch now does too, then applies the SAME FOV angle
+			// filter. Behaviour is unchanged: the box (%botMaxRange*2 half-extent) covers the
+			// full %botMaxRange distance the consumer requires, so no in-range target drops.
+			%botMaxRange = fetchData(%aiId, "AImaxRangeOverride");
+			if(%botMaxRange == "" || %botMaxRange == -1 || %botMaxRange == "0")
+				%botMaxRange = $AImaxRange;
+			%b = %botMaxRange * 2;
+			%fovSet = newObject("set", SimSet);
+			containerBoxFillSet(%fovSet, $SimPlayerObjectType, %aiPos, %b, %b, %b, 0);
+			for(%i = 0; %i < Group::objectCount(%fovSet); %i++)
 			{
-				%id = GetWord(%list, %i);
-				// CRITICAL: Get Player object for target to check team correctly
-				%targetPlayerObj = Client::getOwnedObject(%id);
-				%targetTeam = -1;
-				if(%targetPlayerObj != -1 && %targetPlayerObj != "")
-					%targetTeam = GameBase::getTeam(%targetPlayerObj);
-				else
-					%targetTeam = GameBase::getTeam(%id); // Fallback to client ID
-				
-				// Validate id is valid and not on same team
+				%targetPlayerObj = Group::getObject(%fovSet, %i);
+				if(%targetPlayerObj == -1 || %targetPlayerObj == "")
+					continue;
+				// Use helper to get client ID from Player object (handles enemy bots)
+				%id = GetClientIdFromPlayerObject(%targetPlayerObj);
+				if(%id == -1 || %id == "")
+					%id = %targetPlayerObj;
+				// CRITICAL: Use Player object for team check, not client ID
+				%targetTeam = GameBase::getTeam(%targetPlayerObj);
+
+				// Validate id is valid and not on same team (self is same-team -> filtered)
 				if(%id != -1 && %id != "" && %targetTeam != %aiTeam && !fetchData(%id, "invisible"))
 				{
 					%targetPos = GameBase::getPosition(%targetPlayerObj);
-					if(%targetPos == "" || %targetPos == -1)
-						%targetPos = GameBase::getPosition(%id); // Fallback
 					%vec = Vector::sub(%targetPos, %aiPos);
 					%vecRot = GetWord(Vector::getRotation(%vec), 2);
-		
+
 					if(%vecRot >= %aiRot - $AIFOVPan && %vecRot <= %aiRot + $AIFOVPan)
 					{
 						%idList[%c++] = %id;
 					}
 				}
 			}
+			deleteObject(%fovSet);
 		}
 
 		if(%idList[1] != "" && $AIsmartFOVbots)
@@ -4989,12 +5070,12 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 	if(%capacityCheck == -1)
 	{
 		echo("CRITICAL: SpawnAI - Server is FULL! Aborting spawn for " @ %newName @ " (displayName: " @ %displayName @ ")");
-		// Rollback spawn slot if this was a spawn point spawn
-		if(%spawnPointId != "" && %spawnPointId != -1)
-		{
-			RollbackSpawnSlot(%spawnPointId);
-		}
-		Telemetry_RecordSpawnFailed("serverfull");
+		// review #5: do NOT roll back or record failure here. This returns -1 to the
+		// sole caller AI::helper, which unconditionally does RollbackSpawnSlot +
+		// Telemetry_RecordSpawnFailed for EVERY -1 (using its own %spawnPointId, which
+		// owns the reservation). Doing it here too double-decremented
+		// $numAIperSpawnPoint (over-spawn) and $numAI. (Matches the already-correct
+		// "already scheduled" path below, which deliberately defers to AI::helper.)
 		return -1;
 	}
 	// Initialize %loadout to empty string if not provided
@@ -5204,23 +5285,16 @@ function SpawnAI(%newName, %displayName, %aiSpawnPos, %commandIssuer, %loadout, 
 			// createAI() failed - don't schedule lookup
 			if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG)
 				echo("[SPAWN FLOW] SpawnAI(): WARNING - createAI() failed for " @ %newName @ ", not scheduling client ID lookup");
-			// CRITICAL FIX #2: Rollback reserved slot if spawn failed
-			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
-			{
-				RollbackSpawnSlot(%spawnPointId);
-			}
+			// review #5: no rollback here - AI::helper rolls back this -1 (see the
+			// server-full note above). Double rollback over-decremented the counter.
 			return -1;
 		}
 	}
 	else
 	{
-		// createAI() failed - rollback reserved slot
-		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAI(): WARNING - createAI() failed for " @ %newName @ ", rolling back reserved slot");
-		// CRITICAL FIX #2: Rollback reserved slot if spawn failed
-		if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
-		{
-			RollbackSpawnSlot(%spawnPointId);
-		}
+		// createAI() failed
+		if($AI_DEBUG_ENABLED || $AI_SPAWN_DEBUG) echo("[SPAWN FLOW] SpawnAI(): WARNING - createAI() failed for " @ %newName);
+		// review #5: no rollback here - AI::helper rolls back this -1 (see above).
 		return -1;
 	}
 }
@@ -6816,11 +6890,12 @@ function SpawnAIGetClientId(%newName, %displayName, %aiSpawnPos, %commandIssuer,
 				}
 			}
 			
-			// CRITICAL FIX #2: Rollback reserved slot when max retries reached
-			if(%isSpawnPoint && %spawnPointId != "" && %spawnPointId != -1)
-			{
-				RollbackSpawnSlot(%spawnPointId);
-			}
+			// review #6: rollback removed here - the SAME reserved slot is already
+			// rolled back at the TOP of this max-retries branch ("Rolled back spawn
+			// slot ... max retries reached" above), which fires on every path into
+			// this branch (including the ghost-cleanup early returns). Rolling back a
+			// second time here double-decremented $numAIperSpawnPoint, letting the
+			// spawn loop over-spawn past the point's max until the 30s reconcile.
 			Telemetry_RecordSpawnFailed("other"); // Max retries reached
 			return -1;
 		}
@@ -7831,6 +7906,8 @@ function Bot_ClearStoreData(%aiId, %botType)
 		storeData(%aiId, "BotAttackLoopActive", "");
 		storeData(%aiId, "SealBattleBot", "");
 		storeData(%aiId, "SealBattleScaledRound", "");
+		storeData(%aiId, "DailyEliteOwner", "");	// daily elite tag (DailyQuest.cs) - stale value on a reused slot would credit the old owner for a random bot kill
+		storeData(%aiId, "WeeklyBossTag", "");	// weekly boss tag (WeeklyBoss.cs) - same stale-slot protection
 		storeData(%aiId, "SealBattleOriginalLVL", "");
 		storeData(%aiId, "SealBattleOriginalRemortStep", "");
 		storeData(%aiId, "SealBattleOriginalEndurance", "");
@@ -8054,8 +8131,14 @@ function AI::onDroneKilled(%aiName)
 			}
 			
 			// Unregister from bot registry
-			UnregisterBot(%aiId);
-			
+			// review #29: pass the dying bot's %playerObj (fetched above) as excludeObject
+			// so UnregisterBot routes the BotGroup + MissionCleanup orphan scans through
+			// the DEFERRED path instead of running them synchronously here. Without it,
+			// an AoE/zone despawn killing several bots in one tick ran multiple full
+			// MissionCleanup scans (hundreds-thousands of objects) back-to-back inside the
+			// death callbacks - a visible hitch, the exact burst the deferred path exists for.
+			UnregisterBot(%aiId, %playerObj);
+
 			// Mark as processed
 			storeData(%aiId, "DeathProcessed", "enemy");
 			
@@ -8493,6 +8576,12 @@ function setAInumber(%aiName, %n)
 
 	$aiNumTable[%n] = True;
 	$tmpbotn[%aiName] = %n;
+	// review #8: stamp the reservation time (getSimTime is SECONDS) so
+	// PeriodicAINumberReconciliation won't free a number that was JUST reserved but
+	// whose BotInfoAiName hasn't been stored yet (the ~0.5-3.5s spawn-registration
+	// window) - freeing it there let getAInumber hand the same number to the next
+	// spawn, producing duplicate names / delete of the live in-flight bot.
+	$aiNumReservedTime[%n] = getSimTime();
 }
 
 //=================================================
@@ -9655,16 +9744,28 @@ function PeriodicShellBotCheck()
 	schedule("PeriodicShellBotCheck();", 30);
 }
 
-// Start periodic shell bot check after 60 seconds
-schedule("PeriodicShellBotCheck();", 60);
+// review #26/#63: was a top-level EXEC-TIME schedule, which (a) is FLUSHED by the first
+// Server::loadMission (so the loop never actually started on a live server), and (b)
+// DUPLICATED a permanent scan chain on every live re-exec of ai.cs. Wrapped in a guarded
+// Start* called from Server.cs AFTER loadMission, matching StartWatchdog / StartGhostBotCleanup.
+function StartShellBotCheck()
+{
+	if($ShellBotCheckStarted)
+		return;
+	$ShellBotCheckStarted = true;
+	schedule("PeriodicShellBotCheck();", 60);
+}
 
 // PeriodicGhostClientIdCleanup: Scans for and cleans up ghost client IDs periodically
 function PeriodicGhostClientIdCleanup()
 {
 	Watchdog_Enter("PeriodicGhostClientIdCleanup");
 	// Scan a range of client IDs for ghost objects (empty name Player objects that are bots)
-	%startId = 2000;  // Adjust based on your server's client ID range
-	%endId = %startId + 300;  // Check up to 300 IDs ahead
+	// review #62: bound the scan to the ONLY possible BaseRep client-id range (2049-2175).
+	// The old 2000-2300 span wasted 173 of 301 iterations per 30s pass on ids that can
+	// never hold a client - the same stale hardcoded bound already fixed elsewhere in this file.
+	%startId = $BaseRepClientIdMin + 1;
+	%endId = $BaseRepClientIdMax;
 	
 	%ghostCount = 0;
 	for(%checkId = %startId; %checkId <= %endId; %checkId++)
@@ -9757,9 +9858,16 @@ function PeriodicGhostClientIdCleanup()
 	schedule("PeriodicGhostClientIdCleanup();", 30);
 }
 
-// Start periodic ghost client ID cleanup on server initialization
-// This will run every 30 seconds to catch any ghost client IDs that slip through
-schedule("PeriodicGhostClientIdCleanup();", 60);  // Start after 60 seconds to let server fully initialize
+// review #26/#63: was a top-level EXEC-TIME schedule (flushed by the first
+// Server::loadMission so it never ran on a live server; duplicated on every live
+// re-exec of ai.cs). Wrapped in a guarded Start* called from Server.cs after loadMission.
+function StartGhostClientIdCleanup()
+{
+	if($GhostClientIdCleanupStarted)
+		return;
+	$GhostClientIdCleanupStarted = true;
+	schedule("PeriodicGhostClientIdCleanup();", 60);  // first run after 60s to let the server fully initialize
+}
 
 //------- TownBot stuff ----------------------------------------
 

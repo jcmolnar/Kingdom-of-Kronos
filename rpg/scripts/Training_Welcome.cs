@@ -41,7 +41,7 @@ function TrainingWelcome::Start(%playerId)
    schedule("flashIcon(\"healthHud\", 20, 0.5);", 25);
    schedule("flashIcon(\"jetPackHud\", 20, 0.5);", 25);
    
-   schedule("bottomprint(" @ %playerId @ ", \"<f1><jc>The green meter displays the current status of your armor. When it falls to zero, you will die. The blue meter displays your current energy reserves. When it falls to zero, your jump jets and all equipment requiring energy will not function.\", y);", 45);
+   schedule("bottomprint(" @ %playerId @ ", \"<f1><jc>The green meter displays the current status of your armor. When it falls to zero, you will die. The blue meter displays your current energy reserves. When it falls to zero, your jump jets and all equipment requiring energy will not function.\", 20);", 45);	// review #59: was bareword y (compiled to the string "y", not a duration); 20 matches the sibling bottomprints
    schedule("messageAll(0, \"~wshell_click.wav\");", 45);
    schedule("flashIcon(\"healthHud\", 10, 0.5);", 45);
    schedule("flashIcon(\"jetPackHud\", 10, 0.5);", 55);

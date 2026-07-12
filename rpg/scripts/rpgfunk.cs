@@ -1034,7 +1034,15 @@ function SaveCharacter(%clientId)
 	if(%autoSkillMute == "" || %autoSkillMute == "0" || %autoSkillMute == -1)
 		%autoSkillMute = "";
 	$funk::var["[\"" @ %name @ "\", 0, 57]"] = %autoSkillMute;
-	
+
+	// Save belt Weapons list (field 58) - BeltWeapons.cs datablock-less weapons
+	%beltWeapons = fetchData(%clientId, "Weapons");
+	if(%beltWeapons == "" || %beltWeapons == " " || %beltWeapons == "0" || %beltWeapons == -1)
+		%beltWeapons = "";
+	$funk::var["[\"" @ %name @ "\", 0, 58]"] = %beltWeapons;
+	// StoredWeapons (bank storage) is saved as field 59 BELOW, after the
+	// BeltStorage->categories sync recomputes it alongside fields 38-46.
+
 
 	// Sync StoredQuestItems and StoredKeyItems from BeltStorage before saving
 	// This ensures saved data matches what's in bank storage
@@ -1186,7 +1194,8 @@ function SaveCharacter(%clientId)
 		%storedArmorCheck = fetchData(%clientId, "StoredArmor");
 		%storedAccessoriesCheck = fetchData(%clientId, "StoredAccessories");
 		%storedOtherCheck = fetchData(%clientId, "StoredOther");
-		
+		%storedWeaponsCheck = fetchData(%clientId, "StoredWeapons");
+
 		// Normalize "0" to empty string for checks
 		if(%storedQuestCheck == "0" || %storedQuestCheck == " ") %storedQuestCheck = "";
 		if(%storedKeyCheck == "0" || %storedKeyCheck == " ") %storedKeyCheck = "";
@@ -1194,14 +1203,16 @@ function SaveCharacter(%clientId)
 		if(%storedArmorCheck == "0" || %storedArmorCheck == " ") %storedArmorCheck = "";
 		if(%storedAccessoriesCheck == "0" || %storedAccessoriesCheck == " ") %storedAccessoriesCheck = "";
 		if(%storedOtherCheck == "0" || %storedOtherCheck == " ") %storedOtherCheck = "";
+		if(%storedWeaponsCheck == "0" || %storedWeaponsCheck == " ") %storedWeaponsCheck = "";
 		
 		// If any stored category has data, rebuild BeltStorage from them
 		// BUT: Only do this if we're NOT using the banker system (BeltStorage as single source of truth)
 		// If BeltStorage is empty and we're using banker system, it means items were intentionally withdrawn
 		// In that case, stored categories should also be empty (cleared during withdrawal)
 		// If stored categories still have data, it means they're stale and should be cleared, not used to rebuild BeltStorage
-		if(%storedQuestCheck != "" || %storedKeyCheck != "" || %storedConsumablesCheck != "" || 
-		   %storedArmorCheck != "" || %storedAccessoriesCheck != "" || %storedOtherCheck != "")
+		if(%storedQuestCheck != "" || %storedKeyCheck != "" || %storedConsumablesCheck != "" ||
+		   %storedArmorCheck != "" || %storedAccessoriesCheck != "" || %storedOtherCheck != "" ||
+		   %storedWeaponsCheck != "")
 		{
 			// Check if this is a banker system user (has used BeltStorage recently)
 			// If BeltStorage was intentionally emptied (via withdrawal), stored categories should be empty too
@@ -1214,6 +1225,7 @@ function SaveCharacter(%clientId)
 			storeData(%clientId, "StoredArmor", "");
 			storeData(%clientId, "StoredAccessories", "");
 			storeData(%clientId, "StoredOther", "");
+			storeData(%clientId, "StoredWeapons", "");
 			%beltStorage = "";
 			storeData(%clientId, "BeltStorage", "");
 			// Set local variables to empty so they're saved as "0" (empty) to persistence
@@ -1252,6 +1264,7 @@ function SaveCharacter(%clientId)
 		%storedArmor = "";
 		%storedAccessories = "";
 		%storedOther = "";
+		%storedWeapons = "";
 	}
 	
 	if(%beltStorage != "")
@@ -1306,6 +1319,10 @@ function SaveCharacter(%clientId)
 					%storedOther = Belt::AddToList(%storedOther, %item @ " " @ %count);
 					//echo("DEBUG SaveCharacter:     Added to StoredOther");
 				}
+				else if(%category == "Weapons")
+				{
+					%storedWeapons = Belt::AddToList(%storedWeapons, %item @ " " @ %count);
+				}
 				%processedCount++;
 			}
 			else
@@ -1356,6 +1373,13 @@ function SaveCharacter(%clientId)
 		else
 			%cleanedBeltStorage = %storedOther;
 	}
+	if(%storedWeapons != "")
+	{
+		if(%cleanedBeltStorage != "")
+			%cleanedBeltStorage = %cleanedBeltStorage @ " " @ %storedWeapons;
+		else
+			%cleanedBeltStorage = %storedWeapons;
+	}
 	// CRITICAL: BeltStorage is storage (like field 16 BankStorage) - should NOT have trailing space
 	// Storage items format: "item1 count1 item2 count2" (no trailing space, unlike equipped items)
 	// When empty, save as empty string (like field 16) - persistence system may remove column
@@ -1375,6 +1399,7 @@ function SaveCharacter(%clientId)
 	storeData(%clientId, "StoredArmor", %storedArmor);
 	storeData(%clientId, "StoredAccessories", %storedAccessories);
 	storeData(%clientId, "StoredOther", %storedOther);
+	storeData(%clientId, "StoredWeapons", %storedWeapons);
 	//echo("DEBUG SaveCharacter: StoredQuestItems = '" @ %storedQuest @ "'");
 	//echo("DEBUG SaveCharacter: StoredKeyItems = '" @ %storedKey @ "'");
 	//echo("DEBUG SaveCharacter: StoredConsumables = '" @ %storedConsumables @ "'");
@@ -1395,6 +1420,7 @@ function SaveCharacter(%clientId)
 	%storedArmorSave = %storedArmor;
 	%storedAccessoriesSave = %storedAccessories;
 	%storedOtherSave = %storedOther;
+	%storedWeaponsSave = %storedWeapons;
 	
 	// CRITICAL: Storage items should NOT have trailing spaces (unlike equipped items)
 	// Remove trailing spaces from all storage items before saving
@@ -1434,7 +1460,13 @@ function SaveCharacter(%clientId)
 		%storedOtherSave = String::getSubStr(%storedOtherSave, 0, %len-1);
 		%len = String::len(%storedOtherSave);
 	}
-	
+	%len = String::len(%storedWeaponsSave);
+	while(%len > 0 && String::getSubStr(%storedWeaponsSave, %len-1, 1) == " ")
+	{
+		%storedWeaponsSave = String::getSubStr(%storedWeaponsSave, 0, %len-1);
+		%len = String::len(%storedWeaponsSave);
+	}
+
 	// Normalize empty strings to "0" to match original inventory system behavior (fields 11-14 use "0" for empty)
 	if(%storedQuestSave == "" || %storedQuestSave == " " || %storedQuestSave == "0")
 		%storedQuestSave = "0";
@@ -1448,6 +1480,8 @@ function SaveCharacter(%clientId)
 		%storedAccessoriesSave = "0";
 	if(%storedOtherSave == "" || %storedOtherSave == " " || %storedOtherSave == "0")
 		%storedOtherSave = "0";
+	if(%storedWeaponsSave == "" || %storedWeaponsSave == " " || %storedWeaponsSave == "0")
+		%storedWeaponsSave = "0";
 	
 	//echo("DEBUG SaveCharacter: Saving to fields 38-39-42-43-45-46 (StoredQuestItems/StoredKeyItems/StoredConsumables/StoredArmor/StoredAccessories/StoredOther)...");
 	$funk::var["[\"" @ %name @ "\", 0, 38]"] = %storedQuestSave;
@@ -1462,6 +1496,7 @@ function SaveCharacter(%clientId)
 	//echo("DEBUG SaveCharacter: Field 45 (StoredAccessories) = '" @ %storedAccessoriesSave @ "'");
 	$funk::var["[\"" @ %name @ "\", 0, 46]"] = %storedOtherSave;
 	//echo("DEBUG SaveCharacter: Field 46 (StoredOther) = '" @ %storedOtherSave @ "'");
+	$funk::var["[\"" @ %name @ "\", 0, 59]"] = %storedWeaponsSave;	// bank-stored belt weapons
 	$funk::var["[\"" @ %name @ "\", 0, 44]"] = fetchData(%clientId, "Stance");
 	
 	// Combine all damage display preferences into a single string: "displayType:animationStyle:enabledFlag"
@@ -2059,6 +2094,22 @@ function LoadCharacter(%clientId)
 		if(%autoSkillMute == "" || %autoSkillMute == " " || %autoSkillMute == "0" || %autoSkillMute == -1)
 			%autoSkillMute = "";
 		storeData(%clientId, "AutoSkill_Mute", %autoSkillMute);
+
+		// Load belt Weapons list (field 58) - BeltWeapons.cs datablock-less weapons.
+		// Equip state deliberately does NOT persist (players re-equip after login);
+		// only the backpack contents do.
+		%beltWeapons = $funk::var[%name, 0, 58];
+		if(%beltWeapons == "" || %beltWeapons == " " || %beltWeapons == "0" || %beltWeapons == -1)
+			%beltWeapons = "";
+		storeData(%clientId, "Weapons", %beltWeapons);
+		storeData(%clientId, "EquippedBeltWeapon", "");
+		storeData(%clientId, "BeltWeaponShellLoaned", "");
+
+		// Load bank-stored belt Weapons (field 59)
+		%storedWeapons = $funk::var[%name, 0, 59];
+		if(%storedWeapons == "" || %storedWeapons == " " || %storedWeapons == "0" || %storedWeapons == -1)
+			%storedWeapons = "";
+		storeData(%clientId, "StoredWeapons", %storedWeapons);
 		
 		// Note: Visual re-mount happens in Game::playerSpawn via schedule
 
@@ -2520,6 +2571,10 @@ function LoadCharacter(%clientId)
 		//echo("DEBUG: StoredAccessories = ''");
 		storeData(%clientId, "StoredOther", "");
 		//echo("DEBUG: StoredOther = ''");
+		storeData(%clientId, "StoredWeapons", "");
+		storeData(%clientId, "Weapons", "");
+		storeData(%clientId, "EquippedBeltWeapon", "");
+		storeData(%clientId, "BeltWeaponShellLoaned", "");
 		storeData(%clientId, "AscensionTalents", "");
 		//echo("DEBUG: AscensionTalents = ''");
 		storeData(%clientId, "BeltStorage", "");
@@ -2607,8 +2662,10 @@ function OnOrOfflineGive(%name, %award)
 			$funk::var["[\"" @ %name @ "\", 0, 13]"] = $funk::var[%name, 0, 13];
 			$funk::var["[\"" @ %name @ "\", 0, 14]"] = $funk::var[%name, 0, 14];
 			$funk::var["[\"" @ %name @ "\", 0, 15]"] = $funk::var[%name, 0, 15];
-			for(%i = 0; GetWord(%award, %i) != -1; %i+=2)
-				$funk::var["[\"" @ %name @ "\", 0, 16]"] = SetStuffString($funk::var[%name, 0, 16], GetWord(%award, %i), GetWord(%award, %i+1));
+			// review #13: award moved below (after the 32-63 passthrough) so it
+			// operates on the FULL split BankStorage. Pass field 16 through here; the
+			// re-split below authoritatively overwrites it.
+			$funk::var["[\"" @ %name @ "\", 0, 16]"] = $funk::var[%name, 0, 16];
 			$funk::var["[\"" @ %name @ "\", 0, 17]"] = $funk::var[%name, 0, 17];
 			$funk::var["[\"" @ %name @ "\", 0, 18]"] = $funk::var[%name, 0, 18];
 			$funk::var["[\"" @ %name @ "\", 0, 19]"] = $funk::var[%name, 0, 19];
@@ -2630,6 +2687,19 @@ function OnOrOfflineGive(%name, %award)
 			$funk::var["[\"" @ %name @ "\", 0, 29]"] = $funk::var[%name, 0, 29];
 			for(%f = 32; %f <= 63; %f++)
 				$funk::var["[\"" @ %name @ "\", 0, " @ %f @ "]"] = $funk::var[%name, 0, %f];
+
+			// review #13: apply the offline award onto the FULL BankStorage. The old
+			// code did SetStuffString on field 16 ONLY - if the awarded item already
+			// lived in an overflow field (60-63), it wasn't found and a duplicate was
+			// appended to field 16, corrupting the stack on next login
+			// (JoinBankStorageFromLoad merges all 5 fields with no dedup). Join input
+			// fields 16+60-63, apply the award, then re-split into the OUTPUT fields.
+			// This runs AFTER the field-16 and 32-63 passthroughs above so it
+			// authoritatively overwrites the OUTPUT 16/60-63 they just wrote.
+			%fullBank = JoinBankStorageFromLoad(%name);
+			for(%i = 0; GetWord(%award, %i) != -1; %i += 2)
+				%fullBank = SetStuffString(%fullBank, GetWord(%award, %i), GetWord(%award, %i + 1));
+			SplitAndSaveBankStorage(-1, %name, %fullBank);
 
 			$funk::var["[\"" @ %name @ "\", 0, 666]"] = $funk::var[%name, 0, 666];
 
@@ -3212,8 +3282,14 @@ function LoadWorld() {
         for (%i = 1; $world::object[%i] != ""; %i++) {
             if ($world::object[%i] == "DepPlatSmallHorz" ||
                 $world::object[%i] == "DepPlatMediumHorz" ||
+                $world::object[%i] == "DepPlatLargeHorz" ||
                 $world::object[%i] == "DepPlatSmallVert" ||
-                $world::object[%i] == "DepPlatMediumVert") {
+                $world::object[%i] == "DepPlatMediumVert" ||
+                $world::object[%i] == "DepPlatLargeVert") {
+                // WORLD-SAVE FIX: LargeHorz/LargeVert are produced by DeployBase but were
+                // missing from this reload chain, so saved Large platforms never rehydrated.
+                // DeployPlatform spawns %plattype generically; Vert pos/rot offsets are already
+                // baked into the saved transform (applied in DeployBase), so no re-offset here.
                 DeployPlatform($world::owner[%i], $world::team[%i], $world::pos[%i], $world::rot[%i], $world::object[%i]);
             } else if ($world::object[%i] == "StaticDoorForceField") {
                 DeployForceField($world::owner[%i], $world::team[%i], $world::pos[%i], $world::rot[%i]);
@@ -3266,6 +3342,55 @@ function DeployPlatform(%name, %team, %pos, %rot, %plattype)
 	GameBase::startFadeIn(%platform);
 	playSound(SoundPickupBackpack, %pos);
 	playSound(ForceFieldOpen, %pos);
+}
+
+// WORLD-SAVE FIX: LoadWorld (above) calls DeployForceField for saved "StaticDoorForceField"
+// objects, but the function was never defined -- re-enabling force-field persistence would
+// have crashed the LoadWorld loop on an undefined-function call. Mirrors DeployPlatform /
+// RecreateForceField (staticshape.cs:795). $owner MUST be set: StaticDoorForceField::onCollision
+// (staticshape.cs:758) reads $owner[%this] for its owner+grouplist access gate.
+function DeployForceField(%name, %team, %pos, %rot)
+{
+	dbecho($dbechoMode, "DeployForceField(" @ %name @ ", " @ %team @ ", " @ %pos @ ", " @ %rot @ ")");
+
+	%fField = newObject("", "StaticShape", StaticDoorForceField, true);
+
+	$owner[%fField] = %name;
+
+	addToSet("MissionCleanup", %fField);
+	GameBase::setTeam(%fField, %team);
+	GameBase::setPosition(%fField, %pos);
+	GameBase::setRotation(%fField, %rot);
+	GameBase::setMapName(%fField, "StaticDoorForceField");
+	GameBase::startFadeIn(%fField);
+	playSound(ForceFieldOpen, %pos);
+
+	return %fField;
+}
+
+// WORLD-SAVE FIX: LoadWorld dispatches this for a saved datablock literally named
+// "DeployableTree", which is NOT a defined StaticShapeData (real tree shapes are
+// TreeShape/TreeShapeTwo/PhantomStrangerTree1-3, staticshape.cs:594+), and no code path
+// currently saves a tree -- so this branch is presently unreachable. The function was still
+// undefined, a latent crash if a real tree-deploy+save feature is ever added. Spawn a valid
+// default tree so this rehydrator can never fault the LoadWorld loop. When a real tree-build
+// feature lands (see HOUSING_SYSTEM_DESIGN.md), pass/store the actual datablock name instead.
+function DeployTree(%name, %team, %pos, %rot)
+{
+	dbecho($dbechoMode, "DeployTree(" @ %name @ ", " @ %team @ ", " @ %pos @ ", " @ %rot @ ")");
+
+	%tree = newObject("", "StaticShape", TreeShape, true);
+
+	$owner[%tree] = %name;
+
+	addToSet("MissionCleanup", %tree);
+	GameBase::setTeam(%tree, %team);
+	GameBase::setPosition(%tree, %pos);
+	GameBase::setRotation(%tree, %rot);
+	GameBase::setMapName(%tree, "TreeShape");
+	GameBase::startFadeIn(%tree);
+
+	return %tree;
 }
 
 function DeployLootbag(%pos, %rot, %special)
@@ -4072,7 +4197,22 @@ function UpdateAppearance(%clientId)
 		else if($AccessoryVar[%w, $AccessoryType] == $ShieldAccessoryType)
 			%shield = %w;
 	}
-	
+
+	// Belt shields (BeltWeapons.cs): shield-type belt accessories carry their
+	// visual ItemData name in $BeltAccessoryVisual. Feed it into the same
+	// slot-2 mount logic engine shields use below (the visual is a phantom
+	// mount - never in inventory). An explicitly equipped belt shield wins
+	// over an engine shield.
+	%beltAccList = fetchData(%clientId, "EquippedBeltAccessories");
+	if(%beltAccList != "" && %beltAccList != "0")
+	{
+		for(%i = 0; (%w = GetWord(%beltAccList, %i)) != -1; %i++)
+		{
+			if($AccessoryVar[%w, $AccessoryType] == $ShieldAccessoryType && $BeltAccessoryVisual[%w] != "")
+				%shield = $BeltAccessoryVisual[%w];
+		}
+	}
+
 	// Store armor name to player data so armor effects can be looked up (used by playerdamage.cs)
 	// This allows armor special effects (RETRIBUTION, STATIC_DISCHARGE, PHASE_SHIFT) to work
 	if(%armor != -1 && %armor != "")
@@ -4161,16 +4301,26 @@ function UpdateAppearance(%clientId)
 		{
 			// Regular gear visual
 			%skinbase = $ArmorSkin[%armor];
-			
-			// Transmog visual override
-			if(%personalSkin != "" && %personalSkin != "0")
-			{
-				%skinbase = %personalSkin;
-				%suffixPos = String::findSubStr(%skinbase, ".male");
-				if(%suffixPos != -1) %skinbase = String::getSubStr(%skinbase, 0, %suffixPos);
-				%suffixPos = String::findSubStr(%skinbase, ".female");
-				if(%suffixPos != -1) %skinbase = String::getSubStr(%skinbase, 0, %suffixPos);
-			}
+		}
+
+		// Belt armor visual (BeltWeapons plan): belt armors are datablock-less;
+		// their skins register in $ArmorSkin under the belt name. Equipped belt
+		// armor overrides the engine-armor skin - and must apply even with NO
+		// engine armor equipped (%armor == -1), where the skin would otherwise
+		// stay rpgbase. Transmog still wins below.
+		%beltArmor = fetchData(%clientId, "EquippedBeltArmor");
+		if(%beltArmor != "" && %beltArmor != "0" && $ArmorSkin[%beltArmor] != "")
+			%skinbase = $ArmorSkin[%beltArmor];
+
+		// Transmog visual override (re-applied here since the armor/belt skins
+		// above overwrite the earlier transmog pass; harmless no-op otherwise)
+		if(%personalSkin != "" && %personalSkin != "0")
+		{
+			%skinbase = %personalSkin;
+			%suffixPos = String::findSubStr(%skinbase, ".male");
+			if(%suffixPos != -1) %skinbase = String::getSubStr(%skinbase, 0, %suffixPos);
+			%suffixPos = String::findSubStr(%skinbase, ".female");
+			if(%suffixPos != -1) %skinbase = String::getSubStr(%skinbase, 0, %suffixPos);
 		}
 	}
 	else if(%race == "DeathKnight")
@@ -4596,9 +4746,12 @@ function ClearPlayerVariables(%clientId)
 			$QuestCounter[%name, %id.name] = "";
 	}
 
-	// Clear damage tracking
+	// Clear damage tracking (and the erase-schedule stamps - see DamagedByErase)
 	for(%i = 1; %i <= $maxDamagedBy; %i++)
+	{
 		$damagedBy[%name, %i] = "";
+		$damagedByStamp[%name, %i] = "";
+	}
 
 	// CRITICAL: Clear all skills before loading character data
 	// Skills will be reloaded from the character file after this
@@ -4701,7 +4854,10 @@ function ClearVariables(%clientId)
 	}
 
 	for(%i = 1; %i <= $maxDamagedBy; %i++)
+	{
 		$damagedBy[%name, %i] = "";
+		$damagedByStamp[%name, %i] = "";
+	}
 
 	SetAllSkills(%clientId, "");
 
@@ -6669,9 +6825,13 @@ function getSpawnIndex(%aiName)
 {
 	dbecho($dbechoMode, "getSpawnIndex(" @ %aiName @ ")");
 
-	for(%i = 1; $spawnIndex[%i] != ""; %i++)
+	// review #41: scan a FIXED range, not "until empty". $spawnIndex is SPARSE (gaps at
+	// 7, 9, 28, 114-119, 129...), so the old "while $spawnIndex[%i] != ''" loop stopped
+	// dead at the first gap (index 7) and could never find any of the ~115 real enemy
+	// types at index 8+. (Currently has no callers - this removes the latent landmine.)
+	for(%i = 1; %i <= 200; %i++)
 	{
-		if($spawnIndex[%i] == %aiName)
+		if($spawnIndex[%i] != "" && $spawnIndex[%i] == %aiName)
 			return %i;
 	}
 	return -1;
@@ -7363,7 +7523,7 @@ function WhatIs(%item)
 		%sd = "";
 
 	if($LocationDesc[%t] != "")
-		%loc = " - Location: " @ $LocationDesc[%t];
+		%loc = " - Type: " @ $LocationDesc[%t];
 	else
 		%loc = "";
 
@@ -7393,7 +7553,7 @@ function WhatIs(%item)
 	if(%w != "")
 		%msg = %msg @ "\nWeight: " @ %w;
 	if(%c != "")
-		%msg = %msg @ "\nPrice: $" @ %c;
+		%msg = %msg @ "\nPrice: $" @ Commafy(%c);
 	if(%sd != "")
 		%msg = %msg @ "\nDelay: " @ FixDecimals(%sd) @ " sec";
 	if(%sr != "")
@@ -7410,10 +7570,32 @@ function FixDecimals(%c)
 {
 	dbecho($dbechoMode, "FixDecimals(" @ %c @ ")");
 
+	// build the "N.d" string by hand - the old (round(x*10)/10)*1.000001
+	// trick reintroduced float noise (delays printed with ~20 decimals)
 	%d = round(%c * 10);
-	%m = (%d / 10) * 1.000001;
+	%i = floor(%d / 10);
+	%f = %d - (%i * 10);
+	return %i @ "." @ %f;
+}
 
-	return %m;
+// Thousands separators for display ("1234567" -> "1,234,567"). Integers only.
+function Commafy(%n)
+{
+	%n = floor(%n);
+	if(%n < 1000)
+		return %n;
+	%out = "";
+	while(%n >= 1000)
+	{
+		%r = %n - (floor(%n / 1000) * 1000);
+		%n = floor(%n / 1000);
+		if(%r < 10)
+			%r = "00" @ %r;
+		else if(%r < 100)
+			%r = "0" @ %r;
+		%out = "," @ %r @ %out;
+	}
+	return %n @ %out;
 }
 
 function AddToCommaList(%list, %item)

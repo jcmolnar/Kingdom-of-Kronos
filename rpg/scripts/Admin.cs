@@ -1011,7 +1011,10 @@ function processMenupartyopt(%clientId, %option)
 	dbecho($dbechoMode, "processMenupartyopt(" @ %clientId @ ", " @ %option @ ")");
 
 	%opt = getWord(%option, 0);
-	%cl = getWord(%option, 1);
+	// review #23: player names can contain spaces, so getWord(%option,1) truncated
+	// "remparty Iron Fist" to "Iron" and RemoveFromParty silently failed (no name
+	// match). Take the whole remainder after the "remparty " command word instead.
+	%cl = String::getSubStr(%option, String::len(%opt) + 1, 9999);
 
 	if(%opt == "disbandparty")
 	{

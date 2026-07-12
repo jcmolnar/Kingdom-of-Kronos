@@ -1,3 +1,10 @@
+// review #34: DEAD CODE - NOT loaded. This file redefines MaleHumanRobedArmor0-10 /
+// FemaleHumanRobedArmor0-10, but the LIVE copies come from HumanArmors.cs (exec'd via
+// exec(ArmorData) -> armordata.cs). There is no exec("RaceArmor") anywhere in the tree.
+// Worse, every datablock here uses shapeFile="skel" (skeleton) instead of the live
+// "magemale"/"femalemage" - so if this were ever exec'd AFTER HumanArmors, its skeleton
+// datablocks would silently override and every robed/mage player would render as a
+// skeleton. DO NOT exec it. Kept only as a tombstone.
 //----------------//
 //      MALE      //
 //----------------//

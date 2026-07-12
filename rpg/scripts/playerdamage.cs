@@ -325,6 +325,12 @@ function Client::onKilled(%clientId, %killerId, %damageType)
 		}
 	}
 
+	// Weekly boss death (WeeklyBoss.cs). OUTSIDE the noExperienceFlag gate on
+	// purpose: Weekly::Despawn strips the tag (and sets noExp) BEFORE its own
+	// teardown kill, so a surviving tag here always means a genuine kill.
+	if(fetchData(%clientId, "WeeklyBossTag") != "" && fetchData(%clientId, "WeeklyBossTag") != -1)
+		Weekly::OnBossKilled(%clientId, %killerId);
+
 	//The player with the killshot gets the official "kill"
 	if(!IsInCommaList(fetchData(%killerId, "TempKillList"), Client::getName(%clientId)))
 	storeData(%killerId, "TempKillList", AddToCommaList(fetchData(%killerId, "TempKillList"), Client::getName(%clientId)));
@@ -424,6 +430,24 @@ function GetClientOrBotName(%clientId)
 	return "";
 }
 
+// Erase a $damagedBy entry only if it hasn't been rewritten since the erase
+// was scheduled. schedule() events can't be cancelled, and AI names are
+// recycled within seconds of a bot dying (getAInumber hands out the lowest
+// free number), so a blind '$damagedBy[name,i]=""' firing $damagedByEraseDelay
+// later could wipe a DIFFERENT bot's live damage entry - and since the killing
+// blow itself is never tracked (target is already dead by the time the
+// tracking block runs), a wipe landing between the last hit and the kill paid
+// zero exp. Each write stamps the entry with a fresh token; an erase carrying
+// a stale token no-ops.
+function DamagedByErase(%dname, %i, %token)
+{
+	if($damagedByStamp[%dname, %i] == %token)
+	{
+		$damagedBy[%dname, %i] = "";
+		$damagedByStamp[%dname, %i] = "";
+	}
+}
+
 // Compact verbose damage sentences into short floating text for the "pop" style
 // "You hit X for 16364!" -> "16364"   "X's attack hit you for 16364!" -> "-16364"
 // Critical hits -> "Crit! 16364"   Misses -> "Miss!" / "Dodged!"
@@ -514,7 +538,11 @@ function DisplayDamageMessage(%clientId, %message, %msgColor, %viewType)
 			%cleanMsg = PopCompactDamageText(%cleanMsg, %viewType);
 			if(%viewType == "attacker" && %cleanMsg != "Miss!")
 				return;
-			remoteEval(%clientId, "ATKText", %cleanMsg, "pop", %viewType);
+			// send the REAL style so KronosHUD can render nameplate-mode
+			// taken damage differently (sinks downward vs pop's rise);
+			// stock ATKText treats "nameplate" identically to "pop", so
+			// clients without the HUD are unaffected
+			remoteEval(%clientId, "ATKText", %cleanMsg, "nameplate", %viewType);
 			return;
 		}
 
@@ -591,6 +619,12 @@ function Player::onKilled(%this)
 		%debugClientId = %clientIdFromGetClient;
 	%botInfoAiName = fetchData(%debugClientId, "BotInfoAiName");
 	%spawnBotInfo = fetchData(%debugClientId, "SpawnBotInfo");
+
+	// BELT WEAPON death cleanup (BeltWeapons.cs): clear the equip binding
+	// BEFORE the drop assembly below. The phantom shell mount has count 0,
+	// so the assembly never sees it regardless - this just keeps state clean.
+	// No-op for bots and players with no belt weapon equipped.
+	BeltWeapon::OnDeath(%debugClientId);
 	
 	if($ONKILLED_DEBUG)
 	{
@@ -965,8 +999,13 @@ function Player::onKilled(%this)
 								{
 									// Single fixed percentage or "1 in X" format
 									%percNum = %perc * 1;
-									
-									if(%percNum > 100)
+
+									// review #14: use >= 1000 to match the canonical "1 in X" cutoff
+									// (rpgfunk.cs GiveThisStuff, and the generic-item + belt drop copies
+									// below at the >= 1000 checks). This mounted-weapon copy alone used
+									// > 100, so an identical loot % in 101-999 dropped at a totally
+									// different rate for a weapon than for an item/belt entry.
+									if(%percNum >= 1000)
 									{
 										// "1 in X" format
 										%roll = floor(getRandom() * %percNum) + 1;
@@ -2887,6 +2926,9 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 {
 	dbecho($dbechoMode, "Player::onDamage(" @ %this @ ", " @ %type @ ", " @ %value @ ", " @ %pos @ ", " @ %vec @ ", " @ %mom @ ", " @ %vertPos @ ", " @ %rweapon @ ", " @ %object @ ", " @ %weapon @ ", " @ %preCalcMiss @ ")");
 	if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Player::onDamage ENTRY: Victim=" @ %this @ ", ShooterObj=" @ %object @ ", Damage=" @ %value @ ", Type=" @ %type @ ", PreCalcMiss=" @ %preCalcMiss);
+	// $MeleeDebug (weapons.cs): log bot-vs-player damage arrivals
+	if($MeleeDebug && Player::isAiControlled(%object) && !Player::isAiControlled(GetClientIdFromPlayerObject(%this)))
+		echo("[MELEE DEBUG] onDamage: bot " @ GetClientOrBotName(%object) @ " -> victim " @ %this @ " value=" @ %value @ " weapon=" @ %weapon);
 
 	%skilltype = $SkillType[%weapon];
 
@@ -2916,37 +2958,13 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 					return; // Reject damage to prevent routing to wrong entity
 				}
 				
-				// Entity type validation - verify client ID matches expected entity type
-				// PRIORITY: Check bot indicators FIRST (bots can have HasLoadedAndSpawned set, so don't use it for player detection)
-				%spawnBotInfo = fetchData(%damagedClient, "SpawnBotInfo");
-				%botInfoAiName = fetchData(%damagedClient, "BotInfoAiName");
-				%isBot = ((%spawnBotInfo != "" && %spawnBotInfo != "0" && %spawnBotInfo != -1) || 
-				          (%botInfoAiName != "" && %botInfoAiName != "0" && %botInfoAiName != -1) ||
-				          Player::isAiControlled(%damagedClient) || isRPGAI(%damagedClient));
-				
-				// Only check for player indicators if NOT a bot
-				%isPlayer = false;
-				if(!%isBot)
-				{
-					%playerName = Client::getName(%damagedClient);
-					if(%playerName != "" && %playerName != -1)
-					{
-						%characterFile = "temp\\" @ %playerName @ ".cs";
-						if(isFile(%characterFile))
-						{
-							%isPlayer = true;
-						}
-					}
-					// HasLoadedAndSpawned is NOT a reliable player indicator (bots set it too)
-				}
-				
-				// If entity type indicators conflict, reject damage to prevent routing to wrong entity
-				// This should rarely trigger now since we prioritize bot detection
-				if(%isPlayer && %isBot)
-				{
-					echo("ERROR: Player::onDamage - Client ID " @ %damagedClient @ " has conflicting entity type indicators (both player and bot). Rejecting damage to prevent collision.");
-					return; // Reject damage
-				}
+				// review #64: removed the "entity type validation" that was here. It computed
+				// %isBot (via isRPGAI -> isFile("temp\\<name>.cs")) and %isPlayer (a SECOND
+				// isFile on the same path), then checked `if(%isPlayer && %isBot)` - but
+				// %isPlayer is only ever set true inside `if(!%isBot)`, so that branch is
+				// UNREACHABLE. It cost TWO disk stats per hit on every real player in the
+				// hottest per-hit path, all to feed a dead check. The collision check above
+				// (does %damagedClient actually own %this) is the real validation and stays.
 			}
 		}
 		
@@ -4234,6 +4252,12 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 
 				%rhp = refreshHP(%damagedClient, %value);
 
+				// Weekly boss contribution (WeeklyBoss.cs): credit real landed
+				// damage in NUMERIC hp units (refreshHP subtracts value x
+				// $TribesDamageToNumericDamage; -1 return = LCK miss, no credit)
+				if($Weekly::BossClient != "" && %damagedClient == $Weekly::BossClient && %rhp != -1 && %value > 0)
+					Weekly::OnDamage(%shooterClient, round(%value * $TribesDamageToNumericDamage));
+
 				%lckMiss = false;
 				if(%rhp == -1)
 				{
@@ -4823,94 +4847,61 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							%radiusMsg = %sname @ " hits " @ %dname @ " for " @ %convValue @ " points of damage!";
 					}
 					
-					// Send chat messages only to players without floating damage enabled
-					for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
-					{
-						// Skip attacker, defender, and AI
-						if(%cl == %shooterClient || %cl == %damagedClient || Player::isAiControlled(%cl))
-							continue;
-						
-						// Skip if client is invalid or dead
-						if(%cl == "" || %cl == -1 || %cl == 0 || IsDead(%cl))
-							continue;
-						
-						// Check if within radius
-						%clPos = GameBase::getPosition(%cl);
-						%dist1 = Vector::getDistance(%clPos, %damagedPos);
-						%dist2 = Vector::getDistance(%clPos, %shooterPos);
-						if(%dist1 > $maxSAYdistVec && %dist2 > $maxSAYdistVec)
-							continue; // Too far away
-						
-						// Check if this player has floating damage enabled - if so, skip chat message
-						%displayType = fetchData(%cl, "damageDisplayType");
-						%floatingEnabled = fetchData(%cl, "floatingDamageNumbers");
-						if(%displayType == "floating" || %floatingEnabled == "" || %floatingEnabled == "1" || %floatingEnabled == "true")
-							continue; // Skip chat message, they'll get floating text instead
-						
-						// Send chat message to players without floating damage
-						Client::sendMessage(%cl, $MsgBeige, %radiusMsg);
-					}
-					
-					// Send ATKText to nearby players (spectators) if they have floating damage enabled
-					// Build spectator message: "[attacker] hit [defender] for [damage]!"
-					// Check if LCK hit (initialize if not already set)
+					// review #65: merged the two full Client::getFirst rescans (radius chat +
+					// spectator ATKText) into ONE pass - they iterated every connected client
+					// with identical attacker/defender/AI + radius skips and are mutually
+					// exclusive (non-floating gets chat, floating gets ATKText), so this halves
+					// the per-hit getPosition/getDistance work. Build the spectator message
+					// up-front so the single loop can emit either. Per-branch checks are
+					// preserved exactly: the chat branch keeps the dead-skip, the ATKText branch
+					// keeps the name check and does NOT skip dead.
 					if(%isLCKHit == "")
 						%isLCKHit = false;
 					if(%isLCKHit)
-					{
 						%spectatorMsg = %sname @ " hit " @ %dname @ " for LCK!";
-					}
 					else
-					{
 						%spectatorMsg = %sname @ " hit " @ %dname @ " for " @ %convValue @ "!";
-					}
 					if(%criticalAttack)
 						%spectatorMsg = "<f2>Critical hit! <f0>" @ %spectatorMsg;
-					
-					// Reuse positions from earlier (already validated)
-					
-					// Send to all nearby players (except attacker and defender)
+
 					for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
 					{
-						// Skip attacker, defender, and AI
+						// Common skips (both original loops): attacker/defender/AI, invalid, no position
 						if(%cl == %shooterClient || %cl == %damagedClient || Player::isAiControlled(%cl))
 							continue;
-						
-						// Skip if client is invalid
 						if(%cl == "" || %cl == -1 || %cl == 0)
 							continue;
-						
-						// Check if within radius
 						%clPos = GameBase::getPosition(%cl);
 						if(%clPos == "")
-							continue; // Invalid position
+							continue;
 						%dist1 = Vector::getDistance(%clPos, %damagedPos);
 						%dist2 = Vector::getDistance(%clPos, %shooterPos);
 						if(%dist1 > $maxSAYdistVec && %dist2 > $maxSAYdistVec)
 							continue; // Too far away
-						
-						// Validate client is connected
-						%clientName = Client::getName(%cl);
-						if(%clientName == "" || %clientName == -1)
-							continue;
-						
-						// Check if floating numbers are enabled
+
 						%displayType = fetchData(%cl, "damageDisplayType");
 						%floatingEnabled = fetchData(%cl, "floatingDamageNumbers");
 						if(%displayType == "floating" || %floatingEnabled == "" || %floatingEnabled == "1" || %floatingEnabled == "true")
 						{
-							// Get animation style preference
+							// floating-damage users: spectator ATKText (old 2nd loop - name check, no dead skip)
+							%clientName = Client::getName(%cl);
+							if(%clientName == "" || %clientName == -1)
+								continue;
 							%animationStyle = fetchData(%cl, "floatingAnimationStyle");
 							if(%animationStyle == "")
 								%animationStyle = "float"; // Default style
-							// Convert old styles to new ones
 							if(%animationStyle == "redmoon" || %animationStyle == "wow")
 								%animationStyle = "float";
-							// Nameplate users see spectator damage as pop floats
 							if(%animationStyle == "nameplate")
 								%animationStyle = "pop";
-							// Send as spectator view (different position, white color)
 							remoteEval(%cl, "ATKText", %spectatorMsg, %animationStyle, "spectator");
+						}
+						else
+						{
+							// everyone else: radius chat (old 1st loop - skip dead)
+							if(IsDead(%cl))
+								continue;
+							Client::sendMessage(%cl, $MsgBeige, %radiusMsg);
 						}
 					}
 				}
@@ -5086,11 +5077,12 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							
 							if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Updated " @ %sname @ " damage on " @ %dname @ " to " @ %newDamage @ " (Index: " @ %existingIndex @ ")");
 
-							// CRITICAL: Reschedule the erase timer when updating existing entry
-							// This ensures the entry doesn't get erased too early, especially for rapid attacks
-							// Note: We can't cancel the old schedule, but scheduling a new one will extend the timer
-							// The old schedule will try to clear an entry that may have been updated, which is harmless
-							schedule("$damagedBy[\"" @ %dname @ "\", " @ %existingIndex @ "] = \"\";", $damagedByEraseDelay);
+							// Token-gated erase (see DamagedByErase): old schedules can't be
+							// cancelled, so each write stamps the entry and stale erases no-op.
+							// A blind clear here was wiping entries for recycled bot names.
+							$DamagedBySeq++;
+							$damagedByStamp[%dname, %existingIndex] = $DamagedBySeq;
+							schedule("DamagedByErase(\"" @ %dname @ "\", " @ %existingIndex @ ", " @ $DamagedBySeq @ ");", $damagedByEraseDelay);
 						}
 						else
 						{
@@ -5105,7 +5097,10 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							{
 								$damagedBy[%dname, %index] = %sname @ " " @ %backupValue;
 								if($DamageDebugEnabled) echo("[DAMAGE DEBUG] Added " @ %sname @ " damage on " @ %dname @ ": " @ %backupValue @ " (Index: " @ %index @ ")");
-								schedule("$damagedBy[\"" @ %dname @ "\", " @ %index @ "] = \"\";", $damagedByEraseDelay);
+								// Token-gated erase (see DamagedByErase) - stale schedules no-op
+								$DamagedBySeq++;
+								$damagedByStamp[%dname, %index] = $DamagedBySeq;
+								schedule("DamagedByErase(\"" @ %dname @ "\", " @ %index @ ", " @ $DamagedBySeq @ ");", $damagedByEraseDelay);
 							}
 							else
 							{

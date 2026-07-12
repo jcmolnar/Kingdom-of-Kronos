@@ -815,17 +815,23 @@ function Daily::Status(%clientId)
 //------------------------------------------------------------------------------
 function Daily::Init()
 {
-	if($Daily::LoopStarted)
-		return;
-	$Daily::LoopStarted = true;
-
-	Daily::ProbeRealDate();
-	if(!$Daily::HasRealDate)
+	// review #49: the loop schedule must re-arm on EVERY mission load (Server::loadMission
+	// flushes all pending schedules, killing the previous CheckRotateLoop). The
+	// $Daily::LoopStarted guard used to skip this WHOLE function on the 2nd+ mission load,
+	// so the flushed loop never restarted and daily quests stopped advancing. One-time
+	// setup stays guarded; the loop is always re-scheduled (mirrors RecursiveWorld).
+	if(!$Daily::LoopStarted)
 	{
-		$Daily::FallbackDay = 1;
-		$Daily::FallbackTicks = 0;
+		$Daily::LoopStarted = true;
+
+		Daily::ProbeRealDate();
+		if(!$Daily::HasRealDate)
+		{
+			$Daily::FallbackDay = 1;
+			$Daily::FallbackTicks = 0;
+		}
+		Daily::Rotate();
 	}
-	Daily::Rotate();
 	schedule("Daily::CheckRotateLoop();", 300);
 }
 

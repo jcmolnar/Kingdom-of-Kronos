@@ -452,7 +452,12 @@ function TowerSwitch::onCollision(%this, %object)
       }
    }
 
-   if(%lastTeam == "")
+   // review #47: was %lastTeam, which is only assigned LATER (line ~478) and so was
+   // always "" here - every capture reported "claimed ... for House" even when taken
+   // from another house. %oldTeam (captured before %this.team was overwritten) is the
+   // intended discriminator: neutral -> "claimed", otherwise the else branch's
+   // "captured ... from <oldHouse>".
+   if(%oldTeam == "")
    {
       MessageAllExcept(%playerClient, 0, %touchClientName @ " claimed " @ %this.objectiveName @ " for " @ fetchData(%playerClient, "MyHouse") @ "!");
       Client::sendMessage(%playerClient, 0, "You claimed " @ %this.objectiveName @ " for " @ fetchData(%playerClient, "MyHouse") @ "!");
@@ -463,8 +468,13 @@ function TowerSwitch::onCollision(%this, %object)
       {
          MessageAllExcept(%playerClient, 0, %touchClientName @ " captured " @ %this.objectiveName @ " from " @ %oldTeam @ "!");
          Client::sendMessage(%playerClient, 0, "You captured " @ %this.objectiveName @ " from " @ %oldTeam @ "!");
-			%this.numSwitchTeams++;	
-			schedule("TowerSwitch::timeLimitCheckPoints(" @ %this @ "," @ %playerClient @ "," @ %this.numSwitchTeams @ ");",60);
+			%this.numSwitchTeams++;
+			// review #47 (follow-up): TowerSwitch::timeLimitCheckPoints exists ONLY as a
+			// commented-out definition (never implemented). This else branch was dead
+			// until the %oldTeam fix above made it reachable, so scheduling the undefined
+			// function would throw a recurring console error ~60s after every
+			// house-to-house objective capture. Disabled until/unless it's implemented.
+			//schedule("TowerSwitch::timeLimitCheckPoints(" @ %this @ "," @ %playerClient @ "," @ %this.numSwitchTeams @ ");",60);
       }
    }
    if(%this.objectiveLine)
@@ -776,7 +786,7 @@ function Flag::onCollision(%this, %object)
    %touchClientName = Client::getName(%playerClient);
 							 
 
-   if(%flagTeam == %playerTeam && %skip == 5)
+   if(%flagTeam == %playerTeam)	// review #48: dropped "&& %skip == 5" - %skip is never defined (always ""), so this own-flag branch (touch-to-return your own artifact) was dead. Stock objectives.cs has no %skip clause.
    {
       // player is touching his own flag...
       if(!%this.atHome)

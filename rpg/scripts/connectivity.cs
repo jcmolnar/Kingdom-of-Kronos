@@ -154,10 +154,15 @@ function KickInvalidClient(%clientId)
 function Server::onClientDisconnect(%clientId)
 {
 	dbecho($dbechoMode2, "Server::onClientDisconnect(" @ %clientId @ ")");
-	
+
 	// SAFEGUARD: Clear the player's save file cache when they disconnect
 	// This ensures the next client using this ID doesn't inherit a stale cache status
 	ClearPlayerSaveFileCache(%clientId);
+
+	// Phase D: drop this client's VSlot mapping (the id pool 2049-2175 is reused,
+	// so a stale map would mis-route the next occupant's clicks). No-op with the
+	// feature off.
+	VSlot::Clear(%clientId);
 	
 	// Handle zone player count for dynamic bot loading (skip AI bots)
 	if(!Player::isAiControlled(%clientId))
@@ -335,7 +340,9 @@ function Server::onClientConnect(%clientId)
 	{
 		%currentTime = getSimTime();
 		%timeSinceFreed = %currentTime - %recentlyFreed;
-		if(%timeSinceFreed < 30)  // Extended from 10s to 30s to catch more contaminated IDs
+		// REBASE GUARD: a negative delta means the stored timestamp predates a
+		// kronosfix_server clock rebase (stale, not "just freed") - never treat it as recent
+		if(%timeSinceFreed >= 0 && %timeSinceFreed < 30)  // Extended from 10s to 30s to catch more contaminated IDs
 		{
 			// Client ID was recently freed - FORCE DEEP CLEANUP and wait for state to clear
 			echo("WARNING: Server::onClientConnect - Client ID " @ %clientId @ " was recently freed " @ %timeSinceFreed @ "s ago. Forcing deep cleanup and delaying player spawn...");

@@ -832,7 +832,7 @@ $Spell::manaCost[39] =30;
 $Spell::startSound[39] = LaunchLS;
 $Spell::endSound[39] = Explode3FW;
 $Spell::groupListCheck[39] = False;
-$Spell::refVal[19] = 140;
+$Spell::refVal[39] = 140;	//was [19] - clobbered Dimension Rift's entry (refVal is display/reference data, no runtime consumer)
 $Spell::graceDistance[39] = 2;
 $SkillType[boom] = $SkillOffensiveCasting;
 
@@ -979,7 +979,7 @@ $Spell::index[godlyshield] = 49;
 $Spell::name[49] = "Shield Self Or Other (Godly)";
 $Spell::description[49] = "A magical shield that adds 220 DEF and 300 MDEF to the caster or target in LOS.";
 $Spell::delay[49] = 2.0;
-$Spell::recoveryTime[30] = 20;
+$Spell::recoveryTime[49] = 20;	//was [30] - Godly Shield's help page showed no recovery time (table is display-only; cooldowns come from weapon fire delay)
 $Spell::damageValue[49] = "DEF 220 MDEF 300";
 $Spell::ticks[49] = 300;	//10 minutes
 $Spell::LOSrange[49] = 80;
@@ -1584,8 +1584,12 @@ function DoCastSpell(%clientId, %index, %oldpos, %castPos, %castObj, %w2, %expec
 	//==================================================================
 
 	// Early target guard: neutral/defensive spells cannot be cast on bots (enemy or town)
+	// review #17: EXCEPT Mimic (index 32), whose entire purpose is to target a
+	// creature in LOS and copy its RACE - it is registered $SkillNeutralCasting, so
+	// this guard was blocking it before its own index==32 logic (~line 2401) could
+	// ever run, making the spell non-functional for its documented use.
 	%skilltype = $SkillType[$Spell::keyword[%index]];
-	if(%skilltype == $SkillNeutralCasting || %skilltype == $SkillDefensiveCasting)
+	if((%skilltype == $SkillNeutralCasting || %skilltype == $SkillDefensiveCasting) && %index != 32)
 	{
 		if(isObject(%castObj) && getObjectType(%castObj) == "Player")
 		{
@@ -2513,7 +2517,7 @@ if (%index == 21)
 			// Enemy bots have BOTH BotInfoAiName AND SpawnBotInfo
 			%isTownBot = isTownBot(%id);
 			
-			if(%id != -1 && !(Player::isAiControlled(%id) && GameBase::getTeam(%id) == GameBase::getTeam(%TrueClientId)) && !%isTownBot)
+			if(%id != -1 && !(Player::isAiControlled(%id) && GameBase::getTeam(%id) == GameBase::getTeam(%clientId)) && !%isTownBot)
 			{
             		%b = GameBase::getRotation(%clientId);
 				%c1 = Cap($PlayerSkill[%clientId, $SkillType[advshove]]/4 + 30,30,500);
@@ -2609,7 +2613,7 @@ if (%index == 21)
 			// Enemy bots have BOTH BotInfoAiName AND SpawnBotInfo
 			%isTownBot = isTownBot(%id);
 			
-			if(%id != -1 && !(Player::isAiControlled(%id) && GameBase::getTeam(%id) == GameBase::getTeam(%TrueClientId)) && !%isTownBot)
+			if(%id != -1 && !(Player::isAiControlled(%id) && GameBase::getTeam(%id) == GameBase::getTeam(%clientId)) && !%isTownBot)
 			{
             		%b = GameBase::getRotation(%clientId);
 				%c1 = Cap($PlayerSkill[%clientId, $SkillType[advshove]]/3 + 70,70,850);
@@ -2921,9 +2925,20 @@ function Turret::objectiveDestroyed() {}
 			%id = Player::getClient(%castObj);
 		else
 		{
-			Client::sendMessage(%TrueClientId, $MsgWhite, "Unable to find target.");
-			%returnFlag = False;
-			return;
+			// review #18: %TrueClientId is never bound in DoCastSpell (it exists only
+			// in comchat.cs's remoteSay), so all three reads here silently resolved to
+			// "" - the airfist/advshove same-team guards above were dead, and this
+			// failure message went to client "" instead of the caster. Use %clientId.
+			Client::sendMessage(%clientId, $MsgWhite, "Unable to find target.");
+			// review #38: replicate the shared failure tail inline instead of a bare
+			// return - every other spell failure path falls through to it and grants
+			// partial (+0.3) skill-training credit + the SpellCastStep bookkeeping.
+			// (TorqueScript has no goto, so the common tail's %returnFlag==False block
+			// is duplicated here.)
+			storeData(%clientId, "SpellCastStep", 2);
+			UseSkill(%clientId, %skilltype, False, True);
+			UseSkill(%clientId, $SkillEnergy, False, True);
+			return False;
 		}
 
 		// Cache name lookups

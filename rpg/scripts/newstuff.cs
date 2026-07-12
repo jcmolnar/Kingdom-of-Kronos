@@ -895,7 +895,7 @@ function Test::onMount(%player,%item,$WeaponSlot)
 // ===== BEGIN KOKBATCH (auto-generated) =====
 //=== Crimson Thorn (sword) ===
 $AccessoryVar[CrimsonThorn, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[CrimsonThorn, $SpecialVar] = "600 600";
+$AccessoryVar[CrimsonThorn, $SpecialVar] = "6 600";
 $AccessoryVar[CrimsonThorn, $Weight] = 10;
 $AccessoryVar[CrimsonThorn, $MiscInfo] = "Crimson Thorn";
 $SkillType[CrimsonThorn] = $SkillSlashing;
@@ -938,7 +938,7 @@ function CrimsonThorn::onMount(%player,%item,$WeaponSlot)
 
 //=== Devil's Ruin (sword) ===
 $AccessoryVar[DevilsRuin, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[DevilsRuin, $SpecialVar] = "600 600";
+$AccessoryVar[DevilsRuin, $SpecialVar] = "6 600";
 $AccessoryVar[DevilsRuin, $Weight] = 10;
 $AccessoryVar[DevilsRuin, $MiscInfo] = "Devil's Ruin";
 $SkillType[DevilsRuin] = $SkillSlashing;
@@ -981,7 +981,7 @@ function DevilsRuin::onMount(%player,%item,$WeaponSlot)
 
 //=== Tusker's Cleaver (axe) ===
 $AccessoryVar[TuskerCleaver, $AccessoryType] = $AxeAccessoryType;
-$AccessoryVar[TuskerCleaver, $SpecialVar] = "600 600";
+$AccessoryVar[TuskerCleaver, $SpecialVar] = "6 600";
 $AccessoryVar[TuskerCleaver, $Weight] = 10;
 $AccessoryVar[TuskerCleaver, $MiscInfo] = "Tusker's Cleaver";
 $SkillType[TuskerCleaver] = $SkillSlashing;
@@ -1024,7 +1024,7 @@ function TuskerCleaver::onMount(%player,%item,$WeaponSlot)
 
 //=== Ember of Solitude (axe) ===
 $AccessoryVar[EmberSolitude, $AccessoryType] = $AxeAccessoryType;
-$AccessoryVar[EmberSolitude, $SpecialVar] = "600 600";
+$AccessoryVar[EmberSolitude, $SpecialVar] = "6 600";
 $AccessoryVar[EmberSolitude, $Weight] = 10;
 $AccessoryVar[EmberSolitude, $MiscInfo] = "Ember of Solitude";
 $SkillType[EmberSolitude] = $SkillSlashing;
@@ -1067,7 +1067,7 @@ function EmberSolitude::onMount(%player,%item,$WeaponSlot)
 
 //=== Wyrmpoint (spear) ===
 $AccessoryVar[Wyrmpoint, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[Wyrmpoint, $SpecialVar] = "600 600";
+$AccessoryVar[Wyrmpoint, $SpecialVar] = "6 600";
 $AccessoryVar[Wyrmpoint, $Weight] = 10;
 $AccessoryVar[Wyrmpoint, $MiscInfo] = "Wyrmpoint";
 $SkillType[Wyrmpoint] = $SkillPiercing;
@@ -1110,7 +1110,7 @@ function Wyrmpoint::onMount(%player,%item,$WeaponSlot)
 
 //=== Sanctified Arc (spear) ===
 $AccessoryVar[SanctifiedArc, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[SanctifiedArc, $SpecialVar] = "600 600";
+$AccessoryVar[SanctifiedArc, $SpecialVar] = "6 600";
 $AccessoryVar[SanctifiedArc, $Weight] = 10;
 $AccessoryVar[SanctifiedArc, $MiscInfo] = "Sanctified Arc";
 $SkillType[SanctifiedArc] = $SkillPiercing;
@@ -1153,7 +1153,7 @@ function SanctifiedArc::onMount(%player,%item,$WeaponSlot)
 
 //=== Skullcrusher (mace) ===
 $AccessoryVar[Skullcrusher, $AccessoryType] = $BludgeonAccessoryType;
-$AccessoryVar[Skullcrusher, $SpecialVar] = "600 600";
+$AccessoryVar[Skullcrusher, $SpecialVar] = "6 600";
 $AccessoryVar[Skullcrusher, $Weight] = 10;
 $AccessoryVar[Skullcrusher, $MiscInfo] = "Skullcrusher";
 $SkillType[Skullcrusher] = $SkillBludgeoning;
@@ -1196,7 +1196,7 @@ function Skullcrusher::onMount(%player,%item,$WeaponSlot)
 
 //=== Ameno's Wrath (staff) ===
 $AccessoryVar[AmenoWrath, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[AmenoWrath, $SpecialVar] = "600 600";
+$AccessoryVar[AmenoWrath, $SpecialVar] = "6 600";
 $AccessoryVar[AmenoWrath, $Weight] = 10;
 $AccessoryVar[AmenoWrath, $MiscInfo] = "Ameno's Wrath";
 $SkillType[AmenoWrath] = $SkillPiercing;
@@ -1239,7 +1239,7 @@ function AmenoWrath::onMount(%player,%item,$WeaponSlot)
 
 //=== Shadowfang (dagger) ===
 $AccessoryVar[Shadowfang, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[Shadowfang, $SpecialVar] = "600 600";
+$AccessoryVar[Shadowfang, $SpecialVar] = "6 600";
 $AccessoryVar[Shadowfang, $Weight] = 10;
 $AccessoryVar[Shadowfang, $MiscInfo] = "Shadowfang";
 $SkillType[Shadowfang] = $SkillPiercing;
@@ -1282,7 +1282,7 @@ function Shadowfang::onMount(%player,%item,$WeaponSlot)
 
 //=== Abyssal Heart (sword) ===
 $AccessoryVar[AbyssalHeart, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[AbyssalHeart, $SpecialVar] = "600 600";
+$AccessoryVar[AbyssalHeart, $SpecialVar] = "6 600";
 $AccessoryVar[AbyssalHeart, $Weight] = 10;
 $AccessoryVar[AbyssalHeart, $MiscInfo] = "Abyssal Heart";
 $SkillType[AbyssalHeart] = $SkillSlashing;
@@ -1325,7 +1325,7 @@ function AbyssalHeart::onMount(%player,%item,$WeaponSlot)
 
 //=== Aetheris Edge (sword) ===
 $AccessoryVar[AetherisEdge, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[AetherisEdge, $SpecialVar] = "600 600";
+$AccessoryVar[AetherisEdge, $SpecialVar] = "6 600";
 $AccessoryVar[AetherisEdge, $Weight] = 10;
 $AccessoryVar[AetherisEdge, $MiscInfo] = "Aetheris Edge";
 $SkillType[AetherisEdge] = $SkillSlashing;
@@ -1368,7 +1368,7 @@ function AetherisEdge::onMount(%player,%item,$WeaponSlot)
 
 //=== Astral Edge (sword) ===
 $AccessoryVar[AstralEdge, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[AstralEdge, $SpecialVar] = "600 600";
+$AccessoryVar[AstralEdge, $SpecialVar] = "6 600";
 $AccessoryVar[AstralEdge, $Weight] = 10;
 $AccessoryVar[AstralEdge, $MiscInfo] = "Astral Edge";
 $SkillType[AstralEdge] = $SkillSlashing;
@@ -1411,7 +1411,7 @@ function AstralEdge::onMount(%player,%item,$WeaponSlot)
 
 //=== Dragonslayer (sword) ===
 $AccessoryVar[Dragonslayer, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[Dragonslayer, $SpecialVar] = "600 600";
+$AccessoryVar[Dragonslayer, $SpecialVar] = "6 600";
 $AccessoryVar[Dragonslayer, $Weight] = 10;
 $AccessoryVar[Dragonslayer, $MiscInfo] = "Dragonslayer";
 $SkillType[Dragonslayer] = $SkillSlashing;
@@ -1454,7 +1454,7 @@ function Dragonslayer::onMount(%player,%item,$WeaponSlot)
 
 //=== Frostbite (sword) ===
 $AccessoryVar[Frostbite, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[Frostbite, $SpecialVar] = "600 600";
+$AccessoryVar[Frostbite, $SpecialVar] = "6 600";
 $AccessoryVar[Frostbite, $Weight] = 10;
 $AccessoryVar[Frostbite, $MiscInfo] = "Frostbite";
 $SkillType[Frostbite] = $SkillSlashing;
@@ -1497,7 +1497,7 @@ function Frostbite::onMount(%player,%item,$WeaponSlot)
 
 //=== Valor's Edge (sword) ===
 $AccessoryVar[ValorsEdge, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[ValorsEdge, $SpecialVar] = "600 600";
+$AccessoryVar[ValorsEdge, $SpecialVar] = "6 600";
 $AccessoryVar[ValorsEdge, $Weight] = 10;
 $AccessoryVar[ValorsEdge, $MiscInfo] = "Valor's Edge";
 $SkillType[ValorsEdge] = $SkillSlashing;
@@ -1540,7 +1540,7 @@ function ValorsEdge::onMount(%player,%item,$WeaponSlot)
 
 //=== Void Reaver (sword) ===
 $AccessoryVar[VoidReaver, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[VoidReaver, $SpecialVar] = "600 600";
+$AccessoryVar[VoidReaver, $SpecialVar] = "6 600";
 $AccessoryVar[VoidReaver, $Weight] = 10;
 $AccessoryVar[VoidReaver, $MiscInfo] = "Void Reaver";
 $SkillType[VoidReaver] = $SkillSlashing;
@@ -1583,7 +1583,7 @@ function VoidReaver::onMount(%player,%item,$WeaponSlot)
 
 //=== Crimson Fiend (sword) ===
 $AccessoryVar[CrimsonFiend, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[CrimsonFiend, $SpecialVar] = "600 600";
+$AccessoryVar[CrimsonFiend, $SpecialVar] = "6 600";
 $AccessoryVar[CrimsonFiend, $Weight] = 10;
 $AccessoryVar[CrimsonFiend, $MiscInfo] = "Crimson Fiend";
 $SkillType[CrimsonFiend] = $SkillSlashing;
@@ -1626,7 +1626,7 @@ function CrimsonFiend::onMount(%player,%item,$WeaponSlot)
 
 //=== Magma Hook (sword) ===
 $AccessoryVar[MagmaHook, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[MagmaHook, $SpecialVar] = "600 600";
+$AccessoryVar[MagmaHook, $SpecialVar] = "6 600";
 $AccessoryVar[MagmaHook, $Weight] = 10;
 $AccessoryVar[MagmaHook, $MiscInfo] = "Magma Hook";
 $SkillType[MagmaHook] = $SkillSlashing;
@@ -1669,7 +1669,7 @@ function MagmaHook::onMount(%player,%item,$WeaponSlot)
 
 //=== Glavenus Edge (sword) ===
 $AccessoryVar[Glavenus, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[Glavenus, $SpecialVar] = "600 600";
+$AccessoryVar[Glavenus, $SpecialVar] = "6 600";
 $AccessoryVar[Glavenus, $Weight] = 10;
 $AccessoryVar[Glavenus, $MiscInfo] = "Glavenus Edge";
 $SkillType[Glavenus] = $SkillSlashing;
@@ -1712,7 +1712,7 @@ function Glavenus::onMount(%player,%item,$WeaponSlot)
 
 //=== Mythic Dragonblade (sword) ===
 $AccessoryVar[MythicDragon, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[MythicDragon, $SpecialVar] = "600 600";
+$AccessoryVar[MythicDragon, $SpecialVar] = "6 600";
 $AccessoryVar[MythicDragon, $Weight] = 10;
 $AccessoryVar[MythicDragon, $MiscInfo] = "Mythic Dragonblade";
 $SkillType[MythicDragon] = $SkillSlashing;
@@ -1755,7 +1755,7 @@ function MythicDragon::onMount(%player,%item,$WeaponSlot)
 
 //=== Schiavona (sword) ===
 $AccessoryVar[Schiavona, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[Schiavona, $SpecialVar] = "600 600";
+$AccessoryVar[Schiavona, $SpecialVar] = "6 600";
 $AccessoryVar[Schiavona, $Weight] = 10;
 $AccessoryVar[Schiavona, $MiscInfo] = "Schiavona";
 $SkillType[Schiavona] = $SkillSlashing;
@@ -1798,7 +1798,7 @@ function Schiavona::onMount(%player,%item,$WeaponSlot)
 
 //=== Spectral Edge (sword) ===
 $AccessoryVar[SpectralEdge, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[SpectralEdge, $SpecialVar] = "600 600";
+$AccessoryVar[SpectralEdge, $SpecialVar] = "6 600";
 $AccessoryVar[SpectralEdge, $Weight] = 10;
 $AccessoryVar[SpectralEdge, $MiscInfo] = "Spectral Edge";
 $SkillType[SpectralEdge] = $SkillSlashing;
@@ -1841,7 +1841,7 @@ function SpectralEdge::onMount(%player,%item,$WeaponSlot)
 
 //=== Demon's Edge (sword) ===
 $AccessoryVar[DemonsEdge, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[DemonsEdge, $SpecialVar] = "600 600";
+$AccessoryVar[DemonsEdge, $SpecialVar] = "6 600";
 $AccessoryVar[DemonsEdge, $Weight] = 10;
 $AccessoryVar[DemonsEdge, $MiscInfo] = "Demon's Edge";
 $SkillType[DemonsEdge] = $SkillSlashing;
@@ -1884,7 +1884,7 @@ function DemonsEdge::onMount(%player,%item,$WeaponSlot)
 
 //=== Blade of Gainu (sword) ===
 $AccessoryVar[GainuBlade, $AccessoryType] = $SwordAccessoryType;
-$AccessoryVar[GainuBlade, $SpecialVar] = "600 600";
+$AccessoryVar[GainuBlade, $SpecialVar] = "6 600";
 $AccessoryVar[GainuBlade, $Weight] = 10;
 $AccessoryVar[GainuBlade, $MiscInfo] = "Blade of Gainu";
 $SkillType[GainuBlade] = $SkillSlashing;
@@ -1927,7 +1927,7 @@ function GainuBlade::onMount(%player,%item,$WeaponSlot)
 
 //=== Devil's Scythe (axe) ===
 $AccessoryVar[DevilScythe, $AccessoryType] = $AxeAccessoryType;
-$AccessoryVar[DevilScythe, $SpecialVar] = "600 600";
+$AccessoryVar[DevilScythe, $SpecialVar] = "6 600";
 $AccessoryVar[DevilScythe, $Weight] = 10;
 $AccessoryVar[DevilScythe, $MiscInfo] = "Devil's Scythe";
 $SkillType[DevilScythe] = $SkillSlashing;
@@ -1970,7 +1970,7 @@ function DevilScythe::onMount(%player,%item,$WeaponSlot)
 
 //=== Twin Cleaver (axe) ===
 $AccessoryVar[TwinCleaver, $AccessoryType] = $AxeAccessoryType;
-$AccessoryVar[TwinCleaver, $SpecialVar] = "600 600";
+$AccessoryVar[TwinCleaver, $SpecialVar] = "6 600";
 $AccessoryVar[TwinCleaver, $Weight] = 10;
 $AccessoryVar[TwinCleaver, $MiscInfo] = "Twin Cleaver";
 $SkillType[TwinCleaver] = $SkillSlashing;
@@ -2013,7 +2013,7 @@ function TwinCleaver::onMount(%player,%item,$WeaponSlot)
 
 //=== Runic Reaver (axe) ===
 $AccessoryVar[RunicReaver, $AccessoryType] = $AxeAccessoryType;
-$AccessoryVar[RunicReaver, $SpecialVar] = "600 600";
+$AccessoryVar[RunicReaver, $SpecialVar] = "6 600";
 $AccessoryVar[RunicReaver, $Weight] = 10;
 $AccessoryVar[RunicReaver, $MiscInfo] = "Runic Reaver";
 $SkillType[RunicReaver] = $SkillSlashing;
@@ -2056,7 +2056,7 @@ function RunicReaver::onMount(%player,%item,$WeaponSlot)
 
 //=== Ancient Lance (spear) ===
 $AccessoryVar[AncientLance, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[AncientLance, $SpecialVar] = "600 600";
+$AccessoryVar[AncientLance, $SpecialVar] = "6 600";
 $AccessoryVar[AncientLance, $Weight] = 10;
 $AccessoryVar[AncientLance, $MiscInfo] = "Ancient Lance";
 $SkillType[AncientLance] = $SkillPiercing;
@@ -2099,7 +2099,7 @@ function AncientLance::onMount(%player,%item,$WeaponSlot)
 
 //=== Fangtian Ji (spear) ===
 $AccessoryVar[FangtianJi, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[FangtianJi, $SpecialVar] = "600 600";
+$AccessoryVar[FangtianJi, $SpecialVar] = "6 600";
 $AccessoryVar[FangtianJi, $Weight] = 10;
 $AccessoryVar[FangtianJi, $MiscInfo] = "Fangtian Ji";
 $SkillType[FangtianJi] = $SkillPiercing;
@@ -2142,7 +2142,7 @@ function FangtianJi::onMount(%player,%item,$WeaponSlot)
 
 //=== Mogura Trident (spear) ===
 $AccessoryVar[Mogura, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[Mogura, $SpecialVar] = "600 600";
+$AccessoryVar[Mogura, $SpecialVar] = "6 600";
 $AccessoryVar[Mogura, $Weight] = 10;
 $AccessoryVar[Mogura, $MiscInfo] = "Mogura Trident";
 $SkillType[Mogura] = $SkillPiercing;
@@ -2185,7 +2185,7 @@ function Mogura::onMount(%player,%item,$WeaponSlot)
 
 //=== Pikestaff (spear) ===
 $AccessoryVar[Pikestaff, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[Pikestaff, $SpecialVar] = "600 600";
+$AccessoryVar[Pikestaff, $SpecialVar] = "6 600";
 $AccessoryVar[Pikestaff, $Weight] = 10;
 $AccessoryVar[Pikestaff, $MiscInfo] = "Pikestaff";
 $SkillType[Pikestaff] = $SkillPiercing;
@@ -2228,7 +2228,7 @@ function Pikestaff::onMount(%player,%item,$WeaponSlot)
 
 //=== War Hammer (hammer) ===
 $AccessoryVar[WarHammer, $AccessoryType] = $BludgeonAccessoryType;
-$AccessoryVar[WarHammer, $SpecialVar] = "600 600";
+$AccessoryVar[WarHammer, $SpecialVar] = "6 600";
 $AccessoryVar[WarHammer, $Weight] = 10;
 $AccessoryVar[WarHammer, $MiscInfo] = "War Hammer";
 $SkillType[WarHammer] = $SkillBludgeoning;
@@ -2271,7 +2271,7 @@ function WarHammer::onMount(%player,%item,$WeaponSlot)
 
 //=== Dwarven Maul (hammer) ===
 $AccessoryVar[DwarvenMaul, $AccessoryType] = $BludgeonAccessoryType;
-$AccessoryVar[DwarvenMaul, $SpecialVar] = "600 600";
+$AccessoryVar[DwarvenMaul, $SpecialVar] = "6 600";
 $AccessoryVar[DwarvenMaul, $Weight] = 10;
 $AccessoryVar[DwarvenMaul, $MiscInfo] = "Dwarven Maul";
 $SkillType[DwarvenMaul] = $SkillBludgeoning;
@@ -2314,7 +2314,7 @@ function DwarvenMaul::onMount(%player,%item,$WeaponSlot)
 
 //=== Rune Hammer (hammer) ===
 $AccessoryVar[RuneHammer, $AccessoryType] = $BludgeonAccessoryType;
-$AccessoryVar[RuneHammer, $SpecialVar] = "600 600";
+$AccessoryVar[RuneHammer, $SpecialVar] = "6 600";
 $AccessoryVar[RuneHammer, $Weight] = 10;
 $AccessoryVar[RuneHammer, $MiscInfo] = "Rune Hammer";
 $SkillType[RuneHammer] = $SkillBludgeoning;
@@ -2357,7 +2357,7 @@ function RuneHammer::onMount(%player,%item,$WeaponSlot)
 
 //=== Paladin's Mace (mace) ===
 $AccessoryVar[PaladinMace, $AccessoryType] = $BludgeonAccessoryType;
-$AccessoryVar[PaladinMace, $SpecialVar] = "600 600";
+$AccessoryVar[PaladinMace, $SpecialVar] = "6 600";
 $AccessoryVar[PaladinMace, $Weight] = 10;
 $AccessoryVar[PaladinMace, $MiscInfo] = "Paladin's Mace";
 $SkillType[PaladinMace] = $SkillBludgeoning;
@@ -2400,7 +2400,7 @@ function PaladinMace::onMount(%player,%item,$WeaponSlot)
 
 //=== Glacial Staff (staff) ===
 $AccessoryVar[GlacialStaff, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[GlacialStaff, $SpecialVar] = "600 600";
+$AccessoryVar[GlacialStaff, $SpecialVar] = "6 600";
 $AccessoryVar[GlacialStaff, $Weight] = 10;
 $AccessoryVar[GlacialStaff, $MiscInfo] = "Glacial Staff";
 $SkillType[GlacialStaff] = $SkillPiercing;
@@ -2443,7 +2443,7 @@ function GlacialStaff::onMount(%player,%item,$WeaponSlot)
 
 //=== Staff of Midas (staff) ===
 $AccessoryVar[MidasStaff, $AccessoryType] = $PolearmAccessoryType;
-$AccessoryVar[MidasStaff, $SpecialVar] = "600 600";
+$AccessoryVar[MidasStaff, $SpecialVar] = "6 600";
 $AccessoryVar[MidasStaff, $Weight] = 10;
 $AccessoryVar[MidasStaff, $MiscInfo] = "Staff of Midas";
 $SkillType[MidasStaff] = $SkillPiercing;

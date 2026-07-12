@@ -89,6 +89,18 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 			}
 			else if($state[%closestId,%TrueClientId] == 5)
 			{
+				// review #44: re-check funds at DEDUCTION time. The affordability check ran
+				// at state 4 (bet entry); between then and this TWO/FOUR answer the player
+				// can spend coins elsewhere (dialogue state isn't distance/time gated) and
+				// the deductions below never re-checked - COINS could go negative.
+				if((String::findSubStr(%message,%trigger[6]) != -1 || String::findSubStr(%message,%trigger[7]) != -1)
+				   && fetchData(%TrueClientId, "COINS") < $GambleAmount[%TrueClientId])
+				{
+					AI::sayLater(%TrueClientId,%closestId,"You don't have the coins anymore! No deal.",true);
+					$state[%closestId,%TrueClientId] = "";
+					$GambleAmount[%TrueClientId] = "";
+					return true;
+				}
 				if(String::findSubStr(%message,%trigger[6]) != -1)
 				{
 					// Deduct bet upfront
@@ -119,6 +131,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 					$GamblePackList = $GamblePackList@" "@%lootbag;
 					$GambleAmount[%TrueClientId] = "";
 					$GambleBot = %TrueClientId@" "@%closestId;
+					schedule("Gambler_ReleaseLock(" @ %TrueClientId @ ");", 11);	// review #21: release the lock if the bags are never picked up
 				}
 				if(String::findSubStr(%message,%trigger[7]) != -1)
 				{
@@ -168,6 +181,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 					$GamblePackList = $GamblePackList@" "@%lootbag;
 					$GambleAmount[%TrueClientId] = "";
 					$GambleBot = %TrueClientId@" "@%closestId;
+					schedule("Gambler_ReleaseLock(" @ %TrueClientId @ ");", 11);	// review #21: release the lock if the bags are never picked up
 				}
 			}
 		}
@@ -208,7 +222,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 				%amt = floor(%cropped);
 				if(%amt > 0 && fetchData(%TrueClientId, "COINS") >= %amt)
 				{
-					$GambleBet[%TrueClientId] = %amt;
+					$GambleBet[%closestId, %TrueClientId] = %amt;
 					%game = $CardDealerGame[%TrueClientId];
 					if(%game == "blackjack")
 					{
@@ -237,7 +251,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 						storeData(%TrueClientId, "COINS", -%amt, "inc");
 						%rnd = getRandom();
 						$HighLowNumber[%TrueClientId] = floor(%rnd * 9) + 2; // Range 2-10, not 1-10 (so there's always room for higher/lower)
-						AI::sayLater(%TrueClientId,%closestId,"Number is: " @ $HighLowNumber[%TrueClientId] @ "! Will next be HIGHER or LOWER? (1-11 range)",true);
+						AI::sayLater(%TrueClientId,%closestId,"Number is: " @ $HighLowNumber[%TrueClientId] @ "! Will next be HIGHER or LOWER? (1-10 range)",true);
 						$state[%closestId,%TrueClientId] = "hl_play";
 					}
 					else if(%game == "dice")
@@ -270,7 +284,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 			}
 			else if($state[%closestId,%TrueClientId] == "bj_play")
 			{
-				%amt = $GambleBet[%TrueClientId];
+				%amt = $GambleBet[%closestId, %TrueClientId];
 				if(String::findSubStr(%message,"hit") != -1)
 				{
 					%newCard = CardDealer_DrawCard();
@@ -297,11 +311,13 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 				{
 					%first = $HighLowNumber[%TrueClientId];
 					%second = 1 + floor(getRandom() * 10);
-					%amt = $GambleBet[%TrueClientId];
+					%amt = $GambleBet[%closestId, %TrueClientId];
 					%win = (%higher && %second > %first) || (%lower && %second < %first);
 					if(%win)
 					{
-						%winnings = floor(%amt * 1.8);
+						// 1.4x: optimal play (number shown BEFORE the pick) wins ~67.8%,
+						// so 1.8x paid +22%/round - 1.4x = 0.95 return (5% house edge)
+						%winnings = floor(%amt * 1.4);
 						storeData(%TrueClientId, "COINS", %winnings, "inc");
 						%newBal = fetchData(%TrueClientId, "COINS");
 						AI::sayLater(%TrueClientId,%closestId,"It was " @ %second @ "! WIN! +" @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
@@ -319,7 +335,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 			{
 				if(String::findSubStr(%message,"roll") != -1)
 				{
-					%amt = $GambleBet[%TrueClientId];
+					%amt = $GambleBet[%closestId, %TrueClientId];
 					storeData(%TrueClientId, "COINS", -%amt, "inc");
 					%player = GetRoll("2d6");
 					%house = GetRoll("2d6");
@@ -342,7 +358,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 			}
 			else if($state[%closestId,%TrueClientId] == "streak_play")
 			{
-				%amt = $GambleBet[%TrueClientId];
+				%amt = $GambleBet[%closestId, %TrueClientId];
 				if(String::findSubStr(%message,"cash") != -1)
 				{
 					%winnings = $StreakCurrent[%TrueClientId];
@@ -406,7 +422,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 				%amt = floor(%cropped);
 				if(%amt > 0 && fetchData(%TrueClientId, "COINS") >= %amt)
 				{
-					$GambleBet[%TrueClientId] = %amt;
+					$GambleBet[%closestId, %TrueClientId] = %amt;
 					%game = $WheelGame[%TrueClientId];
 					if(%game == "wheel")
 					{
@@ -429,14 +445,18 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 			{
 				if(String::findSubStr(%message,"spin") != -1)
 				{
-					%amt = $GambleBet[%TrueClientId];
+					%amt = $GambleBet[%closestId, %TrueClientId];
 					storeData(%TrueClientId, "COINS", -%amt, "inc");
 					Client::sendMessage(%TrueClientId, $MsgYellow, "*** Wheel Master Wendy spins the wheel! ***");
-					%roll = floor(getRandom() * 20);
-					if(%roll < 10) { %prize = "LOSE"; %mult = 0; }
-					else if(%roll < 15) { %prize = "1.5x"; %mult = 1.5; }
-					else if(%roll < 18) { %prize = "2x"; %mult = 2; }
-					else if(%roll == 18) { %prize = "5x"; %mult = 5; }
+					// Payout table sums to 0.95 return (5% house edge). The old
+					// 20-slot table returned 1.925/spin - its 5% 20x jackpot
+					// alone repaid the whole stake on average.
+					%roll = floor(getRandom() * 100);
+					if(%roll < 62) { %prize = "LOSE"; %mult = 0; }
+					else if(%roll < 82) { %prize = "1.5x"; %mult = 1.5; }
+					else if(%roll < 92) { %prize = "2x"; %mult = 2; }
+					else if(%roll < 97) { %prize = "3x"; %mult = 3; }
+					else if(%roll < 99) { %prize = "5x"; %mult = 5; }
 					else { %prize = "JACKPOT 20x"; %mult = 20; }
 					Client::sendMessage(%TrueClientId, $MsgBeige, "The wheel slows down...");
 					if(%mult > 0)
@@ -457,7 +477,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 			}
 			else if($state[%closestId,%TrueClientId] == "roulette_play")
 			{
-				%amt = $GambleBet[%TrueClientId];
+				%amt = $GambleBet[%closestId, %TrueClientId];
 				%betType = "";
 				if(String::findSubStr(%message,"red") != -1) %betType = "red";
 				else if(String::findSubStr(%message,"black") != -1) %betType = "black";
@@ -515,7 +535,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 		{
 			if(String::findSubStr(%message,"spin") != -1)
 			{
-				%amt = $GambleBet[%TrueClientId];
+				%amt = $GambleBet[%closestId, %TrueClientId];
 				storeData(%TrueClientId, "COINS", -%amt, "inc");
 				%syms = "Crown Crown Diamond Diamond Diamond Sword Sword Sword Sword Shield Shield Shield Shield Shield Skull Skull Skull Skull Skull Skull";
 				
@@ -544,60 +564,60 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 			// Row 1 (top)
 			if(%r1s1 == %r1s2 && %r1s2 == %r1s3)
 			{
-				if(%r1s1 == "Crown") %mult = 50;
-				else if(%r1s1 == "Diamond") %mult = 20;
-				else if(%r1s1 == "Sword") %mult = 10;
-				else if(%r1s1 == "Shield") %mult = 5;
-				else %mult = 3;
-				%winnings = %winnings + (%amt * %mult);
+				if(%r1s1 == "Crown") %mult = 25;
+				else if(%r1s1 == "Diamond") %mult = 10;
+				else if(%r1s1 == "Sword") %mult = 5;
+				else if(%r1s1 == "Shield") %mult = 3;
+				else %mult = 1.5;
+				%winnings = %winnings + floor(%amt * %mult);
 				%winSymbol = %r1s1;
 				%lineCount = %lineCount + 1;
 			}
 			// Row 2 (middle)
 			if(%r2s1 == %r2s2 && %r2s2 == %r2s3)
 			{
-				if(%r2s1 == "Crown") %mult = 50;
-				else if(%r2s1 == "Diamond") %mult = 20;
-				else if(%r2s1 == "Sword") %mult = 10;
-				else if(%r2s1 == "Shield") %mult = 5;
-				else %mult = 3;
-				%winnings = %winnings + (%amt * %mult);
+				if(%r2s1 == "Crown") %mult = 25;
+				else if(%r2s1 == "Diamond") %mult = 10;
+				else if(%r2s1 == "Sword") %mult = 5;
+				else if(%r2s1 == "Shield") %mult = 3;
+				else %mult = 1.5;
+				%winnings = %winnings + floor(%amt * %mult);
 				%winSymbol = %r2s1;
 				%lineCount = %lineCount + 1;
 			}
 			// Row 3 (bottom)
 			if(%r3s1 == %r3s2 && %r3s2 == %r3s3)
 			{
-				if(%r3s1 == "Crown") %mult = 50;
-				else if(%r3s1 == "Diamond") %mult = 20;
-				else if(%r3s1 == "Sword") %mult = 10;
-				else if(%r3s1 == "Shield") %mult = 5;
-				else %mult = 3;
-				%winnings = %winnings + (%amt * %mult);
+				if(%r3s1 == "Crown") %mult = 25;
+				else if(%r3s1 == "Diamond") %mult = 10;
+				else if(%r3s1 == "Sword") %mult = 5;
+				else if(%r3s1 == "Shield") %mult = 3;
+				else %mult = 1.5;
+				%winnings = %winnings + floor(%amt * %mult);
 				%winSymbol = %r3s1;
 				%lineCount = %lineCount + 1;
 			}
 			// Diagonal top-left to bottom-right
 			if(%r1s1 == %r2s2 && %r2s2 == %r3s3)
 			{
-				if(%r1s1 == "Crown") %mult = 50;
-				else if(%r1s1 == "Diamond") %mult = 20;
-				else if(%r1s1 == "Sword") %mult = 10;
-				else if(%r1s1 == "Shield") %mult = 5;
-				else %mult = 3;
-				%winnings = %winnings + (%amt * %mult);
+				if(%r1s1 == "Crown") %mult = 25;
+				else if(%r1s1 == "Diamond") %mult = 10;
+				else if(%r1s1 == "Sword") %mult = 5;
+				else if(%r1s1 == "Shield") %mult = 3;
+				else %mult = 1.5;
+				%winnings = %winnings + floor(%amt * %mult);
 				%winSymbol = %r1s1;
 				%lineCount = %lineCount + 1;
 			}
 			// Diagonal bottom-left to top-right
 			if(%r3s1 == %r2s2 && %r2s2 == %r1s3)
 			{
-				if(%r3s1 == "Crown") %mult = 50;
-				else if(%r3s1 == "Diamond") %mult = 20;
-				else if(%r3s1 == "Sword") %mult = 10;
-				else if(%r3s1 == "Shield") %mult = 5;
-				else %mult = 3;
-				%winnings = %winnings + (%amt * %mult);
+				if(%r3s1 == "Crown") %mult = 25;
+				else if(%r3s1 == "Diamond") %mult = 10;
+				else if(%r3s1 == "Sword") %mult = 5;
+				else if(%r3s1 == "Shield") %mult = 3;
+				else %mult = 1.5;
+				%winnings = %winnings + floor(%amt * %mult);
 				%winSymbol = %r3s1;
 				%lineCount = %lineCount + 1;
 			}
@@ -656,7 +676,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 				%amt = floor(%cropped);
 				if(%amt > 0 && fetchData(%TrueClientId, "COINS") >= %amt)
 				{
-					$GambleBet[%TrueClientId] = %amt;
+					$GambleBet[%closestId, %TrueClientId] = %amt;
 					%game = $QuickGame[%TrueClientId];
 					if(%game == "coin")
 					{
@@ -695,7 +715,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 				%tails = (String::findSubStr(%message,"tails") != -1);
 				if(%heads || %tails)
 				{
-					%amt = $GambleBet[%TrueClientId];
+					%amt = $GambleBet[%closestId, %TrueClientId];
 					storeData(%TrueClientId, "COINS", -%amt, "inc");
 					%isHeads = (getRandom() < 0.5);
 					%win = (%heads && %isHeads) || (%tails && !%isHeads);
@@ -723,7 +743,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 				%scissors = (String::findSubStr(%message,"scissors") != -1);
 				if(%rock || %paper || %scissors)
 				{
-					%amt = $GambleBet[%TrueClientId];
+					%amt = $GambleBet[%closestId, %TrueClientId];
 					storeData(%TrueClientId, "COINS", -%amt, "inc");
 					if(%rock) %pChoice = "ROCK";
 					else if(%paper) %pChoice = "PAPER";
@@ -763,7 +783,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 					%target = $NumGuessTarget[%TrueClientId];
 					$NumGuessAttempts[%TrueClientId]--;
 					%left = $NumGuessAttempts[%TrueClientId];
-					%amt = $GambleBet[%TrueClientId];
+					%amt = $GambleBet[%closestId, %TrueClientId];
 					if(%guess == %target)
 					{
 						%winnings = %amt * 3;
@@ -792,7 +812,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 		// {
 		// 	%answer = String::Replace(%cropped, " ", "");
 		// 	%correct = $MemorySeq[%TrueClientId];
-		// 	%amt = $GambleBet[%TrueClientId];
+		// 	%amt = $GambleBet[%closestId, %TrueClientId];
 		// 	if(%answer == %correct)
 		// 	{
 		// 		%winnings = %amt * 3;
@@ -855,7 +875,12 @@ function CardDealer_DealerPlay(%clientId, %botId)
 		%dTotal = CardDealer_GetHandValue(%dCards);
 	}
 	%pTotal = CardDealer_GetHandValue($BJPlayerCards[%clientId]);
-	%amt = $GambleBet[%clientId];
+	// review #2: $GambleBet must be keyed by BOTH the NPC (%botId == %closestId)
+	// and the client, exactly like $state - otherwise a bet placed at a different
+	// gambling NPC (wheelmaster/quickgames, which don't deduct until SPIN) would
+	// overwrite this shared bet, and STAND here would pay out 2x on the larger
+	// unstaked amount. %botId is passed in from the bj_play STAND handler.
+	%amt = $GambleBet[%botId, %clientId];
 	if(%dTotal > 21)
 	{
 		%winnings = %amt * 2;
@@ -877,4 +902,17 @@ function CardDealer_DealerPlay(%clientId, %botId)
 	}
 	$state[%botId, %clientId] = "";
 	SaveCharacter(%clientId);
+}
+
+// review #21: release the gambler minigame lock ($GambleBot) iff this client still
+// holds it. Scheduled ~11s after the lootbags spawn (bags auto-delete at 10s) so an
+// abandoned or expired round no longer locks the minigame for everyone forever. The
+// lock was previously cleared ONLY on lootbag pickup (itemevents.cs GamblePack
+// branch), so a player who never reached a bag (missed it, died, disconnected, or
+// walked off) left $GambleBot set permanently. No-op if the player already picked up
+// a bag (lock cleared) or a different player legitimately holds the lock now.
+function Gambler_ReleaseLock(%clientId)
+{
+	if($GambleBot != "" && getWord($GambleBot, 0) == %clientId)
+		$GambleBot = "";
 }

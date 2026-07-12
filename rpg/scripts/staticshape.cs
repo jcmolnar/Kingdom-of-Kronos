@@ -760,8 +760,14 @@ function StaticDoorForceField::onCollision(%this, %object)
 	%owner = $owner[%this];
 	%clientId = Player::getClient(%object);
 	%name = Client::getName(%clientId);
-		
-        if(IsInCommaList($grouplist[%owner], %name) || %name == %owner)
+
+	// review #24: $grouplist[%owner] is NEVER populated anywhere (only ever read -
+	// here and in the dead Vehicle.cs copy), so the group check always failed and
+	// ONLY the owner themselves (%name == %owner) could pass their own field. Use
+	// the real per-player grouplist (fetchData, keyed by the owner's clientId),
+	// matching every other group feature (Admin.cs/comchat.cs/spells.cs/sleep.cs).
+	%ownerCl = NEWgetClientByName(%owner);
+        if(%name == %owner || (%ownerCl != -1 && IsInCommaList(fetchData(%ownerCl, "grouplist"), %name)))
 	{
 		echo(%this);
 		if($recreatingfField[%this] == "")

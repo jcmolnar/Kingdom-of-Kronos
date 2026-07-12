@@ -227,7 +227,7 @@ function Vehicle::passengerJump(%this,%passenger,%mom)
 		Player::applyImpulse(%passenger,%jumpDir);
 	}
 	else
-		Client::sendMessage(Player::getClient(%passanger),0,"Can not dismount - Obstacle in the way.~wError_Message.wav");
+		Client::sendMessage(Player::getClient(%passenger),0,"Can not dismount - Obstacle in the way.~wError_Message.wav");	// review #52: was %passanger (undefined -> "" -> message never reached the passenger)
 }
 
 function Vehicle::jump(%this,%mom)
@@ -523,6 +523,25 @@ function Vehicle::onCollision (%this, %object)
                
 				%armor = Player::getArmor(%object);
 		      %client = Player::getClient(%object);
+
+				// Ownership gate (review #3): this live onCollision dropped the
+				// owner/group check the dead first copy (lines 89-140) had, so ANY
+				// player could pilot ANY player's deployed vehicle. Restore it -
+				// only the owner, a member of the owner's group, or anyone for an
+				// un-owned vehicle ($owner unset) may mount. Group membership uses
+				// the real per-player grouplist (fetchData), NOT the never-populated
+				// $grouplist[] global the old copy read (review #24).
+				%vOwner = $owner[%this];
+				if(%vOwner != "" && Client::getName(%client) != %vOwner)
+				{
+					%ownerCl = NEWgetClientByName(%vOwner);
+					if(%ownerCl == -1 || !IsInCommaList(fetchData(%ownerCl, "grouplist"), Client::getName(%client)))
+					{
+						Client::sendMessage(%client, 0, "You are not allowed to operate nor ride this vehicle.~wError_Message.wav");
+						return;
+					}
+				}
+
 				if (Vehicle::canMount (%this, %object))
 					{
 						%weapon = Player::getMountedItem(%object,$WeaponSlot);
@@ -628,7 +647,7 @@ function Vehicle::passengerJump(%this,%passenger,%mom)
 		Player::applyImpulse(%passenger,%jumpDir);
 	}
 	else
-		Client::sendMessage(Player::getClient(%passanger),0,"Can not dismount - Obstacle in the way.~wError_Message.wav");
+		Client::sendMessage(Player::getClient(%passenger),0,"Can not dismount - Obstacle in the way.~wError_Message.wav");	// review #52: was %passanger (undefined -> "" -> message never reached the passenger)
 }
 
 function Vehicle::jump(%this,%mom)

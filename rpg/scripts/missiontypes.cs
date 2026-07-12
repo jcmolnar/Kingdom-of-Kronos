@@ -180,14 +180,21 @@ function Mission::FandR::create(%numTeams)
 // -------------------------------------------------
 // KoK-RPG mission type
 // -------------------------------------------------
-$missionTypes[5, type]        = "KoK-RPG";
-$missionTypes[5, description] = "Kingdom of Kronos RPG";
-$missionTypes[5, minTeams]    = 1;
-$missionTypes[5, maxTeams]    = 13;
-$missionTypes[5, varName, 0]  = cdTrack;
-$missionTypes[5, varDesc, 0]  = "CD Track";
-$missionTypes[5, varVal, 0]   = 2;
-$missionTypes[5, varName, 1]  = cdMode;
-$missionTypes[5, varDesc, 1]  = "CD Play Mode";
-$missionTypes[5, varVal, 1]   = 1;
+// review #57: DISABLED. This type was selectable in the New Mission wizard but had NO
+// matching Mission::KoK-RPG::create() (and the hyphen in "KoK-RPG" is TorqueScript's
+// minus operator, so the eval'd namespace call couldn't even parse), and its cdTrack/
+// cdMode vars were never initialized by the missiontypes init loop (it ran before this
+// block was appended) - selecting it produced a broken/incomplete .mis. Commented out so
+// the wizard no longer offers it. (Editor-tool-only; the live KingdomKronos mission is
+// unaffected.) To restore: rename to a non-hyphenated type and add its ::create().
+//$missionTypes[5, type]        = "KoK-RPG";
+//$missionTypes[5, description] = "Kingdom of Kronos RPG";
+//$missionTypes[5, minTeams]    = 1;
+//$missionTypes[5, maxTeams]    = 13;
+//$missionTypes[5, varName, 0]  = cdTrack;
+//$missionTypes[5, varDesc, 0]  = "CD Track";
+//$missionTypes[5, varVal, 0]   = 2;
+//$missionTypes[5, varName, 1]  = cdMode;
+//$missionTypes[5, varDesc, 1]  = "CD Play Mode";
+//$missionTypes[5, varVal, 1]   = 1;
 

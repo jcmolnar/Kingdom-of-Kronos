@@ -462,7 +462,12 @@ function storeData(%clientId, %type, %amt, %special)
 	// Initialize parameters using safe concatenation to handle unassigned variables
 	// This prevents warnings when parameters aren't passed
 	%tempAmt = %amt @ "";  // If unassigned, becomes empty string; if assigned, stays same
-	if(%tempAmt == "" || %tempAmt == -1)
+	// review #20: dropped the "|| %tempAmt == -1" clause. == is numeric, so it
+	// caught a LEGITIMATE amount of exactly -1 (a stat penalty, refund, or any
+	// expression evaluating to -1) and silently zeroed it. Only a missing arg
+	// (which concatenates to the empty string) should default to 0; a real -1
+	// stringifies to "-1", which "== \"\"" (-1 == 0) correctly rejects.
+	if(%tempAmt == "")
 		%amt = 0;
 	else
 		%amt = %tempAmt;
@@ -827,9 +832,12 @@ function DistributeExpForKilling(%damagedClient)
 		}
 	}
 
-	//clear $damagedBy
+	//clear $damagedBy (and the erase-schedule stamps - see DamagedByErase in playerdamage.cs)
 	for(%i = 1; %i <= $maxDamagedBy; %i++)
+	{
 		$damagedBy[%dname, %i] = "";
+		$damagedByStamp[%dname, %i] = "";
+	}
 
 	//parse thru all tmppartylists and determine the number of same party members involved in exp split
 	for(%w = 0; (%a = GetWord(%tmpl, %w)) != -1; %w++)
@@ -927,7 +935,7 @@ function DistributeExpForKilling(%damagedClient)
 			if(fetchData(%listClientId, "MyHouse") == "" && fetchData(%listClientId, "LVL") >= 60)
 			{
 				%value = 0;
-				Client::sendMessage(%listClientId, 0, "You have gained no experience! You must join a house to continue growing stronger!");
+				Client::sendMessage(%listClientId, 0, "You have gained no experience! You must join a house to continue growing stronger!~house");
 			}
 			if(fetchData(%listClientId, "LVL") >= 125+(fetchData(%listClientId,"RemortStep")*8))
 			{

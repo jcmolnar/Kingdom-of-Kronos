@@ -281,7 +281,7 @@ function Game::playerSpawn(%clientId, %respawn)
 	}
 }
 
-function Game::playerSpawned(%pl, %clientId, %armor)
+function Game::playerSpawned(%pl, %clientId, %armor, %respawn)	// review #51: added %respawn - the caller (Game::playerSpawn) passes it as a 4th arg, which was silently dropped (no param to receive it)
 {
 	dbecho($dbechoMode2, "Game::playerSpawned(" @ %pl @ ", " @ %clientId @ ", " @ %armor @ ")");
 
@@ -474,7 +474,13 @@ function Game::playerSpawned(%pl, %clientId, %armor)
 	{
 		GameBase::startFadeIn(%finalPlayerObj);
 	}
-} 
+
+	// Phase D: publish this client's belt weapons into the STOCK inventory screen
+	// (VirtualSlots.cs). Scheduled a beat after spawn so RefreshAll and count
+	// replication have settled (mirrors the DualWield restore above). No-op unless
+	// $pref::VSlotsEnabled; Sync skips HUD clients and bots internally.
+	schedule("VSlot::Sync(" @ %clientId @ ");", 0.5);
+}
 
 function Game::autoRespawn(%clientId)
 {
@@ -506,11 +512,28 @@ function Game::ClearSpawnProtection(%clientId)
 
 //============================================================================
 // VISIBILITY SAFETY NET - Periodic loop to fix random invisibility
+//
+// DISABLED BY DEFAULT (Jul 4 2026): this loop calls GameBase::startFadeIn on
+// EVERY living player each sweep, which RESTARTS the fade cycle - players
+// visibly blink invisible and fade back in over and over. It was authored as
+// a net for the random-invisibility bug but never actually ran (exec-time
+// schedule, flushed on mission load) until the v0.9 sweep fixed its startup;
+// enabling it surfaced the flicker. The underlying invisibility bug has the
+// real deterministic fix in the spawn path (startFadeIn AFTER
+// Client::setOwnedObject, plus the end-of-spawn defensive call above).
+// Set $VisibilitySafetyEnabled = true; to re-arm it for diagnosis only.
 //============================================================================
+$VisibilitySafetyEnabled = false;
 $VisibilitySafetyInterval = 30;  // Seconds between visibility checks
 
 function Game::StartVisibilitySafetyLoop()
 {
+	if(!$VisibilitySafetyEnabled)
+	{
+		echo("[VISIBILITY] Periodic visibility safety net DISABLED (spawn-path fadeIn fix is the real cure; loop re-fades everyone = visible flicker)");
+		return;
+	}
+
 	// Guard against double-start (Mission::init re-run or manual re-exec would
 	// otherwise stack a second self-rescheduling loop)
 	if($VisibilityLoopStarted)

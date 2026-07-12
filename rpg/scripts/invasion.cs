@@ -1,3 +1,8 @@
+// review #43: DEAD CODE - Invasion() is never exec'd or called anywhere (it is not in
+// Server.cs's exec list and nothing invokes Invasion()). It was superseded by the
+// correctly-spelled UndeadInvasion() in rpgarena.cs. It also contains a "MazeYetiShama"(n)
+// name-lookup typo (missing trailing 'n') that would break those bots' freeze/attack if
+// this were ever revived. Kept only as a tombstone.
 function Invasion()
 {
 	if($InvasionTimer == "")

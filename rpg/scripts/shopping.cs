@@ -434,13 +434,17 @@ $AccessoryVar[RuneHammer, $ShopIndex] = 279;
 $AccessoryVar[PaladinMace, $ShopIndex] = 280;
 $AccessoryVar[GlacialStaff, $ShopIndex] = 281;
 $AccessoryVar[MidasStaff, $ShopIndex] = 282;
-$AccessoryVar[CathedralAegis, $ShopIndex] = 283;
-$AccessoryVar[WardenBulwark, $ShopIndex] = 284;
-$AccessoryVar[CrimsonRose, $ShopIndex] = 285;
-$AccessoryVar[MarauderGuard, $ShopIndex] = 286;
-$AccessoryVar[TowerAegis, $ShopIndex] = 287;
-$AccessoryVar[KrakenEye, $ShopIndex] = 288;
-$AccessoryVar[DragonEye, $ShopIndex] = 289;
-$AccessoryVar[EyeOfHatred, $ShopIndex] = 290;
-$AccessoryVar[StarlightEye, $ShopIndex] = 291;
+// BELT CONVERSION (BeltWeapons.cs): the KOKBATCH shields are belt accessories
+// now - selling their ItemData through a stock shop index would hand out an
+// engine item with no equip path (the X0 tokens are gone). Merchants sell
+// them through their BELT stock lists instead.
+//$AccessoryVar[CathedralAegis, $ShopIndex] = 283;
+//$AccessoryVar[WardenBulwark, $ShopIndex] = 284;
+//$AccessoryVar[CrimsonRose, $ShopIndex] = 285;
+//$AccessoryVar[MarauderGuard, $ShopIndex] = 286;
+//$AccessoryVar[TowerAegis, $ShopIndex] = 287;
+//$AccessoryVar[KrakenEye, $ShopIndex] = 288;
+//$AccessoryVar[DragonEye, $ShopIndex] = 289;
+//$AccessoryVar[EyeOfHatred, $ShopIndex] = 290;
+//$AccessoryVar[StarlightEye, $ShopIndex] = 291;
 // ===== END KOKBATCH =====

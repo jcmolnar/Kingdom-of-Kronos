@@ -1,3 +1,11 @@
+// review #22: DEAD CODE. Everything below (down to the itendsnowban function) is
+// UNWRAPPED top-level statements - not a function body - copied from an old version
+// of comchat.cs::remoteSay. exec(hackfix) ran it ONCE at server boot with %message,
+// %TrueClientId and %team all unassigned (empty), so the escape-sequence ban filter
+// never saw a live chat line. It has been disabled in Server.cs (the exec is
+// commented out). Kept only as a tombstone. The live chat path is
+// comchat.cs::remoteSay + ChatFilter.cs; do NOT re-wire this filter into live chat -
+// it would false-ban legitimate ~category-tag messages.
 %nameomg = escapeString(Client::getName(%TrueClientId));
 	%msgesc = escapeString(%message);
 	%w1omg = GetWord(%message, 0);

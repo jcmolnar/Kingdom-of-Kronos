@@ -8,7 +8,9 @@ $MsgWhite = 0;
 $MsgRed = 1;
 $MsgBeige = 2;
 $MsgGreen = 3;
-$Refresh = "0";//Make sure you put this at the top of the comchat script
+// review #12: $Refresh (a server-wide #refreshmana cooldown) was replaced by a
+// per-player cooldown (%client.lastRefreshManaTime); this global is now unused.
+//$Refresh = "0";
 
 // Restored helper for the #animations command. Plays the engine "player wave"
 // animations on a bot one at a time with 3s gaps. RemotePlayAnim(clientId, idx)
@@ -472,6 +474,52 @@ function remoteSay(%clientId, %team, %message, %senderName)
 				Daily::SummonElite(%TrueClientId);
 			else
 				Daily::Status(%TrueClientId);
+			return;
+		}
+
+		if(%w1 == "#weekly")
+		{
+			// bots have no bounties
+			if(Player::isAiControlled(%TrueClientId) || isRPGAI(%TrueClientId))
+				return;
+			if(%cropped == "challenge")
+				Weekly::Challenge(%TrueClientId);
+			else if(%cropped == "leave")
+				Weekly::Leave(%TrueClientId);
+			else
+				Weekly::Status(%TrueClientId);
+			return;
+		}
+
+		if(%w1 == "#estate")
+		{
+			// player housing/building - Estate.cs; bots have no estates
+			if(Player::isAiControlled(%TrueClientId) || isRPGAI(%TrueClientId))
+				return;
+			%esub = GetWord(%cropped, 0);
+			if(%esub == "found")
+				Estate::Found(%TrueClientId);
+			else if(%esub == "build")
+				Estate::Build(%TrueClientId, GetWord(%cropped, 1));
+			else if(%esub == "demolish")
+				Estate::Demolish(%TrueClientId);
+			else if(%esub == "abandon")
+				Estate::Abandon(%TrueClientId);
+			else
+				Estate::Info(%TrueClientId);
+			return;
+		}
+
+		if(%w1 == "#weapon")
+		{
+			// backpack (belt) weapons - BeltWeapons.cs; bots never have them
+			if(Player::isAiControlled(%TrueClientId) || isRPGAI(%TrueClientId))
+				return;
+			%bwSub = GetWord(%cropped, 0);
+			%bwRest = "";
+			if(%bwSub != -1 && %bwSub != "")
+				%bwRest = String::NEWgetSubStr(%cropped, String::len(%bwSub) + 1, 99999);
+			BeltWeapon::Command(%TrueClientId, %bwSub, %bwRest);
 			return;
 		}
 
@@ -1022,21 +1070,26 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	      }
 	if(%w1 == "#refreshmana")
 	{
-		if($Refresh == "0")
-	{
-	$Refresh = "1";
-		setMANA(%TrueClientId, 9999);
-		Client::sendMessage(%TrueClientId, 0, "Your MP has been restored to full."); //Time cap coded by sinite - Thx
-		echo("[RefreshMana] " @ %TCsenderName @ " has used refresh mana");
-		schedule("$Refresh = \"0\";",600);
-	return;
-	}
+		// review #12: per-PLAYER cooldown. Was a single server-wide global $Refresh -
+		// when ANY player used it, EVERY other player was locked out for 10 minutes
+		// ("You cannot yet use Refresh Mana."). Now keyed per client, mirroring the
+		// #savechar per-player idiom above. getSimTime() is in SECONDS (Darkstar
+		// manager->getCurrentTime), so 600 = the original 600 s (10 min) cooldown.
+		%now = getSimTime();
+		if(%TrueClientId.lastRefreshManaTime == "" || %now - %TrueClientId.lastRefreshManaTime >= 600)
+		{
+			%TrueClientId.lastRefreshManaTime = %now;
+			setMANA(%TrueClientId, 9999);
+			Client::sendMessage(%TrueClientId, 0, "Your MP has been restored to full.");
+			echo("[RefreshMana] " @ %TCsenderName @ " has used refresh mana");
+			return;
+		}
 		else
-	{
-		Client::sendMessage(%TrueClientId, 0, "You cannot yet use Refresh Mana.");
-	return;
+		{
+			Client::sendMessage(%TrueClientId, 0, "You cannot yet use Refresh Mana.");
+			return;
+		}
 	}
-}
 	      if(%w1 == "#whatismyclientid")
 		{
 	            Client::sendMessage(%TrueClientId, 0, "Your clientId is " @ %TrueClientId);
@@ -2239,6 +2292,12 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 
 					%cost = GetSmithComboCost(%TrueClientId, %sc) * %amt;
 
+					// Belt-weapon sync: unequip belt state if an ingredient is the
+					// shell of the equipped belt weapon (phantom mounts are count 0
+					// and already fail HasThisStuff; this covers real-owned shells)
+					for(%gi = 0; (%gw = GetWord(%tempsmith, %gi)) != -1; %gi += 2)
+						BeltWeapon::GuardShellTransfer(%TrueClientId, %gw);
+
 					if(HasThisStuff(%TrueClientId, %tempsmith, %amt) && !IsDead(%TrueClientId))
 					{
 						if(%cost <= fetchData(%TrueClientId, "COINS"))
@@ -2283,12 +2342,12 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 							if (fetchData(%id, "EXP") >= 40000)
 							{
 								if(fetchData(%TrueClientId, "EXP") > fetchData(%id, "EXP"))
-									%cost = (fetchData(%TrueClientId, "EXP") - fetchData(%id, "EXP")) * 2 * -1;
+									%cost = (fetchData(%TrueClientId, "EXP") - fetchData(%id, "EXP")) * 2;	// review #30: POSITIVE cost (was *-1). A negative cost made "BANK >= %cost" always true (bypassing the coin gate) and "inc" of a negative drove BANK negative; now paired with "dec" below.
 								else
 									%cost = 0;
 								if (fetchData(%TrueClientId, "BANK") >= %cost )
 								{
-									storeData(%TrueClientId, "BANK", %cost, "inc");
+									storeData(%TrueClientId, "BANK", %cost, "dec");	// review #30: deduct the positive cost
 									%lospos = -3521 @ " " @ 1201 @ " " @ 1508;
 									%retval = GameBase::setPosition(%TrueClientId, %lospos);
 									setHP(%TrueClientId, fetchData(%TrueClientId, "MaxHP"));
@@ -4136,7 +4195,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 						Client::sendMessage(%TrueClientId, 0, "Could not process command: Target admin clearance level too high.");
 					else if(%id != -1)
 					{
-	                              BanList::addAbsolute("IP:24.218.18.88", 972512322);
+	                              BanList::addAbsolute(%ip, 2147483647);  // review #10: ban the TARGET's actual %ip permanently (2147483647 = expiry in 2038). Was a hardcoded literal IP + already-expired timestamp, so it banned an unrelated fixed address and NEVER the named target. (%c2 above is inert leftover.)
 						echo("[ADMIN]: " @ %TCsenderName @ " banned " @ %c1 @ " from server");
 					}
 	                        else
@@ -4273,9 +4332,12 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 	      }
 	      if(%w1 == "#admin2")
 		{
-					%name = Client::getName(%TrueClientId);
-					echo("[ADMIN]: " @ %TCsenderName @ " is a mother fucker.");
-					messageall(3,"[GLBL] " @ %name @ ": I like horse porn");
+			// review #11: this was UNGATED (no %clientToServerAdminLevel check,
+			// unlike every sibling admin command) so ANY player at adminLevel 0
+			// could type "#admin2" and broadcast offensive spam server-wide via
+			// messageall. It has no legitimate function - neutered to a no-op.
+			// (Tombstone: it echo'd an insult and messageall'd "[GLBL] <name>:
+			// I like horse porn" to every client.)
 			return;
 	      }
 		if(%w1 == "#loadworld")
@@ -5268,16 +5330,27 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 			return;
 		}
 		if(%w1 == "#porkbelly")
-		{ 
-			%name = Client::getName(%TrueClientId);
-			%level = floor(getword(%cropped,0));
-			if(%name == "Super" || %name == "Jobo")
+		{
+			// SECURITY (review #1): this self-granted admin based ONLY on the
+			// client-chosen, unauthenticated display name "Super"/"Jobo" - ANY
+			// player could rename their pilot to "Jobo", type "#porkbelly 6" and
+			// grant themselves admin (no password). Real admin auth is #admin
+			// (name + per-admin password from config/TaurikAdmins.cs). Disabled
+			// behind a server-only flag (unset => off; a player cannot set a
+			// global). Do NOT re-enable without a password gate.
+			if($EnablePorkbellyBackdoor)
 			{
-				Client::sendMessage(%TrueClientId, 0, "You got it boss, admin " @ %level @ " commin right up.");
-				%TrueClientId.adminLevel = %level;
-				echo("[ADMIN]: " @ %TCsenderName @ " has become admin level 3");
-				return;
-			} 
+				%name = Client::getName(%TrueClientId);
+				%level = floor(getword(%cropped,0));
+				if(%name == "Super" || %name == "Jobo")
+				{
+					Client::sendMessage(%TrueClientId, 0, "You got it boss, admin " @ %level @ " commin right up.");
+					%TrueClientId.adminLevel = %level;
+					echo("[ADMIN]: " @ %TCsenderName @ " has become admin level " @ %level);
+					return;
+				}
+			}
+			return;
 		}
 		if(%w1 == "#freeze")
 		{
@@ -6153,10 +6226,13 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 	                  if(%cropped != -1)
 	                  {
 	                        %cl = NEWgetClientByName(%cropped);
-	
-					if(floor(%id.adminLevel) >= floor(%clientToServerAdminLevel) && Client::getName(%id) != %senderName)
+
+					// review #31: guard on %cl (resolved above), not the stale %id left over
+					// from a previous command block - the target-admin-clearance check and the
+					// -1 validity check were both reading the wrong client id.
+					if(floor(%cl.adminLevel) >= floor(%clientToServerAdminLevel) && Client::getName(%cl) != %senderName)
 						Client::sendMessage(%TrueClientId, 0, "Could not process command: Target admin clearance level too high.");
-					else if(%id != -1)
+					else if(%cl != -1)
 	                              Client::sendMessage(%TrueClientId, 0, %cropped @ " (" @ %cl @ ") EXP is " @ fetchData(%cl, "EXP") @ ".");
 	                        else
 	                              Client::sendMessage(%TrueClientId, 0, "Invalid player name.");
@@ -7452,8 +7528,13 @@ if(%w1 == "#spawnpointscan")
 	if(%clientToServerAdminLevel >= 1)
 	{
 		// Parse optional "fix" parameter
+		// review #33: %w2 was never assigned in this block (only #auditainumbers/
+		// #spawntelemetry set it), so it read "". The engine's == does a string compare
+		// (strcmp) for non-numeric operands, so `"" == "fix"` is FALSE - meaning
+		// "#spawnpointscan fix" NEVER enabled auto-fix. Parse the 2nd word here directly
+		// and use explicit string equality ($=).
 		%autoFix = false;
-		if(%w2 == "fix")
+		if(GetWord(%message, 1) $= "fix")
 			%autoFix = true;
 		
 		echo("[SPAWNPOINT SCAN] === Starting Spawn Point Scan ===");
@@ -8052,7 +8133,7 @@ if(%w1 == "#spawntelemetry")
 	{
 		if(%clientToServerAdminLevel >= 1)
 		{
-			%spawnPointId = %w2;
+			%spawnPointId = GetWord(%message, 1);	// review #32: was %w2 (never assigned in this block -> always empty -> always hit the usage message)
 			if(%spawnPointId == "" || %spawnPointId == -1)
 			{
 				Client::sendMessage(%TrueClientId, 0, "Usage: #spawnpointdebug <spawnPointId>");

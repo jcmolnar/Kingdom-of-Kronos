@@ -772,7 +772,7 @@ function UndeadInvasion()
 		{ 
 			%lospos = -2337 + (%x * 3) @ " " @ -2416 + (%x * 3) @ " " @ 67;
 			%n = AI::helper(Guard, Guard @ %x, "TempSpawn " @ %lospos @ " " @ 4, default);
-			%id = NEWgetClientByName("EliteGuard" @ %x );
+			%id = NEWgetClientByName("Guard" @ %x );	// review #46: was "EliteGuard" (copy-paste from the loop above) - the Guard0-4 bots were never frozen and acted during the staging phase
 			storeData(%id, "frozen", True);
 		}
 		for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))

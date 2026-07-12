@@ -85,6 +85,7 @@ function KronosShop_Open(%clientId, %mode, %shopName)
 function KronosShop_BeltHeading(%cat)
 {
 	if(%cat == "Armor")        return "aArmor";
+	if(%cat == "Weapons")      return "bWeapons";	// merge with ItemData weapons
 	if(%cat == "Consumables")  return "cConsumables";
 	if(%cat == "Deployables")  return "dDeployables";
 	if(%cat == "Accessories")  return "eAccessories";
@@ -250,6 +251,8 @@ function remoteKShopBeltSell(%clientId, %item)
 	}
 	else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
 		Belt::UnequipArmor(%clientId, %item);
+	else if(%category == "Weapons" && fetchData(%clientId, "EquippedBeltWeapon") == %item)
+		BeltWeapon::Unequip(%clientId, true);
 
 	%cost = Belt::GetSellCost(%clientId, %item);
 	%name = $BeltItem[%item, "Name"];
@@ -369,6 +372,37 @@ function remoteKShopSync(%clientId)
 // ============================================
 // Item tooltip (hover in the client shop/bank/inventory panes)
 // ============================================
+
+// One-decimal display string ("12.3") built by hand - float division would
+// stringify with binary noise. Local name so a stale rpgfunk.cs can't shadow it.
+function KHud_FixDec(%c)
+{
+	%d = round(%c * 10);
+	%i = floor(%d / 10);
+	%f = %d - (%i * 10);
+	return %i @ "." @ %f;
+}
+
+// Thousands separators for display ("1234567" -> "1,234,567"). Also defined
+// in the Kronos rpgfunk.cs; duplicated here so this file works standalone.
+function Commafy(%n)
+{
+	%n = floor(%n);
+	if(%n < 1000)
+		return %n;
+	%out = "";
+	while(%n >= 1000)
+	{
+		%r = %n - (floor(%n / 1000) * 1000);
+		%n = floor(%n / 1000);
+		if(%r < 10)
+			%r = "00" @ %r;
+		else if(%r < 100)
+			%r = "0" @ %r;
+		%out = "," @ %r @ %out;
+	}
+	return %n @ %out;
+}
 // The client asks for ONE item's examine text after hovering a row; we answer
 // with the same WhatIs text the two-click buy flow / #examine shows. %kind and
 // %ref use the row scheme of the pushes: "d" = ItemData index, "b" = belt item
@@ -403,7 +437,7 @@ function remoteKShopTip(%clientId, %kind, %ref)
 		if(%t != "")
 			%msg = %msg @ "\nType: " @ %t;
 		if(%c != "")
-			%msg = %msg @ "\nPrice: $" @ %c;
+			%msg = %msg @ "\nPrice: $" @ Commafy(%c);
 		%msg = %msg @ "\n<f0>" @ %nfo;
 	}
 	else
@@ -416,7 +450,14 @@ function remoteKShopTip(%clientId, %kind, %ref)
 
 	if(%msg == "")
 		return;
-	remoteEval(%clientId, "KShopTipText", %msg);
+	// The engine caps ONE remoteEval string arg at 255 bytes on the wire, so
+	// long examine texts arrived truncated. Chunk it; the client reassembles
+	// (KShopTipBegin/Part/Done in KronosShop.cs).
+	remoteEval(%clientId, "KShopTipBegin");
+	%len = String::len(%msg);
+	for(%p = 0; %p < %len; %p = %p + 150)
+		remoteEval(%clientId, "KShopTipPart", String::getSubStr(%msg, %p, 150));
+	remoteEval(%clientId, "KShopTipDone");
 }
 
 // ============================================
@@ -728,6 +769,9 @@ function remoteKBankDeposit(%clientId, %type, %amt)
 		Client::sendMessage(%clientId, $MsgRed, "You can only store 50 different types of items.~wC_BuySell.wav");
 		return;
 	}
+	// Belt-weapon sync: unequip belt state if this banks the shell of the
+	// equipped belt weapon (phantom mounts are count 0 and can't be banked)
+	BeltWeapon::GuardShellTransfer(%clientId, %item);
 	%cnt = Player::getItemCount(%clientId, %item);
 	if(%cnt < 1)
 		return;
@@ -966,8 +1010,10 @@ function KronosMenu_SendOwnInfo(%clientId)
 	%coins = fetchData(%clientId, "COINS");
 	%bank = fetchData(%clientId, "BANK");
 
-	%weight = round(fetchData(%clientId, "Weight") * 10) / 10;
-	%maxWeight = round(fetchData(%clientId, "MaxWeight") * 10) / 10;
+	// KHud_FixDec builds the "N.d" string by hand - round(x*10)/10 stringifies
+	// with binary-float noise (weight showed 12 decimals on the TAB menu)
+	%weight = KHud_FixDec(fetchData(%clientId, "Weight"));
+	%maxWeight = KHud_FixDec(fetchData(%clientId, "MaxWeight"));
 
 	remoteEval(%clientId, "setInfoLine", 1, Client::getName(%clientId) @ " - Lv " @ fetchData(%clientId, "LVL") @ " " @ getFinalCLASS(%clientId) @ " RL" @ %remort);
 	remoteEval(%clientId, "setInfoLine", 2, "ATK " @ fetchData(%clientId, "ATK") @ "   DEF " @ fetchData(%clientId, "DEF") @ "   MDEF " @ fetchData(%clientId, "MDEF") @ "   LCK " @ fetchData(%clientId, "LCK"));
@@ -1011,8 +1057,12 @@ function remoteKMGetPlayers(%clientId)
 		if(%remort == "" || %remort == -1)
 			%remort = 0;
 
-		// name last - it may contain spaces
-		remoteEval(%clientId, "KMPlayer", %sent, %cl, fetchData(%cl, "LVL"), %remort, getFinalCLASS(%cl), Client::getName(%cl));
+		// location (zone) for the list's location column
+		%zone = Zone::getDesc(fetchData(%cl, "zone"));
+		if(%zone == "" || %zone == -1)
+			%zone = "Unknown";
+
+		remoteEval(%clientId, "KMPlayer", %sent, %cl, fetchData(%cl, "LVL"), %remort, getFinalCLASS(%cl), Client::getName(%cl), %zone);
 		%sent++;
 	}
 	remoteEval(%clientId, "KMPlayerCount", %sent, %total);
@@ -1082,6 +1132,20 @@ function KronosHUD_LOSScan(%gen)
 		%pobj = Client::getOwnedObject(%cl);
 		if(%pobj == "" || %pobj == -1 || %pobj == 0)
 			continue;
+
+		// Vitals freshness: the HP/MP NUMBERS are only pushed on stat-refresh
+		// events (RefreshAll / refreshClientScore), so plain damage, heals and
+		// mana drain moved the engine-driven bars but left the numeric readout
+		// stale. Piggyback a change-gated push on this 0.5s loop - it only
+		// sends when HP or MANA actually changed, so idle players cost nothing.
+		%vhp = fetchData(%cl, "HP");
+		%vmana = fetchData(%cl, "MANA");
+		if(%vhp != %cl.khudLastHP || %vmana != %cl.khudLastMana)
+		{
+			%cl.khudLastHP = %vhp;
+			%cl.khudLastMana = %vmana;
+			KronosHUD_Push(%cl);
+		}
 
 		// Raycast down the player's view
 		if(!GameBase::getLOSInfo(%pobj, $KronosHUD::LOSRange))

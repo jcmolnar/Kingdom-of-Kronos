@@ -106,7 +106,7 @@ function Defend::setWayPoint(%cl)
       %delay = 5;
    
    schedule("bottomprint(" @ %cl @ ", \"<jc><f1>Waypoint set to " @ %target.objective @ "\", 5);", %delay);
-   schedule("messageAll(0, \"~wshell_click.wav\");", %deley);
+   schedule("messageAll(0, \"~wshell_click.wav\");", %delay);	// review #58: was %deley (undefined -> 0), firing the click sound at t=0 instead of syncing with the waypoint message's %delay
    issueCommand(%cl, %cl, 0, "Waypoint set to next objective", %x, %y);
    $init = false;
 }

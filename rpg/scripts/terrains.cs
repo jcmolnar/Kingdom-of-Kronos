@@ -204,13 +204,14 @@ function Terrain::rughills::create(%size, %seed)
 {
    if(%seed == "")
       %seed = 0;
+   LS::addCommand("seed " @ %seed);	// review #56: rughills never issued the seed command (all 5 sibling terrain types do), so its %seed argument was silently ignored
    LS::addCommand("terrain " @ %size @ " .95");
 
    if(%size == 64)
    {
       LS::addCommand("normalize 0 99");
       LS::addCommand("smooth .3 .4");
-      LS::addCommand("terrain 32.7");
+      LS::addCommand("terrain 32 .7");	// review #55: missing space concatenated size+roughness into the single malformed token "32.7"
       LS::addCommand("tile");
       LS::addCommand("normalize  0 13");
       LS::addCommand("add_stack 1");

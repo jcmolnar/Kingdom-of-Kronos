@@ -169,7 +169,17 @@ function remoteUseItem(%clientId, %type)
 
 		%item = getItemData(%type);
 
-		if(%item == Backpack) 
+		// Virtual belt slots (VirtualSlots.cs, Phase D): a click on a VSlot row
+		// equips the mapped belt weapon instead of engine-using the inert
+		// placeholder ItemData. IsSlotItem is false unless $pref::VSlotsEnabled,
+		// so this is a no-op with the feature off.
+		if(VSlot::IsSlotItem(%item))
+		{
+			VSlot::OnUseClick(%clientId, %item);
+			return;
+		}
+
+		if(%item == Backpack)
 		{
 			%item = -1;
 			remoteConsider(Player::getClient(%clientId));
@@ -216,11 +226,23 @@ function remoteDropItem(%clientId,%type)
 			if((Client::getOwnedObject(%clientId)).driver != 1) {
 				//echo("Drop item: ",%type);
 				%clientId.throwStrength = 1;
-	
+
 				%item = getItemData(%type);
+				// Phase D: a VSlot placeholder row is a per-client display proxy,
+				// not a real carried item - it can't be dropped. No-op with the
+				// feature off (VSlot::IsSlotItem is false).
+				if(VSlot::IsSlotItem(%item))
+				{
+					Client::sendMessage(%clientId, $MsgWhite, "You can't drop a backpack slot.");
+					return;
+				}
 				if(%item == Weapon)
 				{
 					%item = Player::getMountedItem(%clientId,$WeaponSlot);
+					// Belt-weapon sync: unequip belt state if this drops the
+					// shell of the equipped belt weapon (phantom mounts are
+					// count 0 - the engine drops nothing for those)
+					BeltWeapon::GuardShellTransfer(%clientId, %item);
 					Player::dropItem(%clientId,%item);
 				}
 				else if(%item == Ammo)
@@ -240,8 +262,11 @@ function remoteDropItem(%clientId,%type)
 				{
 					Client::sendMessage(%clientId, $MsgRed, "You can't drop a lore item!~wC_BuySell.wav");
 				}
-				else 
+				else
+				{
+					BeltWeapon::GuardShellTransfer(%clientId, %item);
 					Player::dropItem(%clientId,%item);
+				}
 			}
 		}
 	}

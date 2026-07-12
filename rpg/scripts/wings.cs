@@ -1,3 +1,8 @@
+// review #53: DEAD CODE - NOT loaded (no exec(wings) anywhere in the tree). This file
+// redefines WindPaws and AdminBoots with DIFFERENT values than the LIVE copies in
+// Accessory.cs (e.g. AdminBoots "8 4.4" + $ItemCost here vs "8 5" + jet stats live).
+// Editing this file changes NOTHING in game - the live definitions are in Accessory.cs.
+// Kept only as a tombstone.
 $AccessoryVar[WindPaws, $AccessoryType] = $BootsAccessoryType;
 $AccessoryVar[WindPaws, $SpecialVar] = "8 4";
 $AccessoryVar[WindPaws, $Weight] = 1;

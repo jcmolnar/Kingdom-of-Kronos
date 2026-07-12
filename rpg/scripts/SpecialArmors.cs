@@ -3,7 +3,7 @@ $TeamForRace[DeathKnight] = 0;
 $RaceToArmorType[DeathKnight] = DeathKnightArmor22;
 $ArmorTypeToRace[DeathKnightArmor22] = DeathKnight;
 
-$ArmorForSpeed[0, DeathKnight] = DeathKnightArmor22;
+$ArmorForSpeed[DeathKnight, 0] = DeathKnightArmor22;	// review #35: subscripts were transposed [speedIndex, race]; every other entry (and the sole reader RefreshWeight) uses [race, speedIndex]
 
 //------------------------------------------------------------------
 // DeathKnightArmor22 data:

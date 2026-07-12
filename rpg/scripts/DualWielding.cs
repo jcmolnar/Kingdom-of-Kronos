@@ -714,7 +714,11 @@ function DualWield::HandleEquipInToggleMode(%clientId, %weaponItem)
     // Move current main weapon to off-hand
     // The current main weapon is already in inventory (mounted items are still in inventory)
     // We need to equip it as off-hand
-    DualWield::EquipOffHand(%clientId, %currentMain);
+    // review #19: pass %fromToggleSwap=true - %currentMain is still the mounted main
+    // at this point, so EquipOffHand's same-weapon exploit check would otherwise
+    // false-fire for the common single-copy case and the auto-cycle would silently
+    // fail. The new main (a different owned weapon) mounts via the normal path below.
+    DualWield::EquipOffHand(%clientId, %currentMain, true);
     
     // Let normal equip proceed to mount the new weapon as main
     return false;
@@ -792,7 +796,14 @@ function DualWield::CheckWeaponRestriction(%clientId, %weaponItem)
 }
 
 // Equip a weapon in the off-hand slot
-function DualWield::EquipOffHand(%clientId, %weaponItem)
+// %fromToggleSwap (review #19): set true ONLY by HandleEquipInToggleMode Case 3,
+// which pushes the OUTGOING main weapon into the off-hand while a DIFFERENT weapon
+// becomes the new main. In that path the mounted main still equals %weaponItem at
+// call time (the new weapon isn't mounted yet), so the same-weapon exploit check
+// below would always false-trigger for the common single-copy case. The resulting
+// state is two DIFFERENT owned weapons, so skipping the check there is safe; the
+// direct #dualwield <weapon> path leaves it unset and keeps the check.
+function DualWield::EquipOffHand(%clientId, %weaponItem, %fromToggleSwap)
 {
     if(!$DualWield::Enabled)
     {
@@ -857,7 +868,7 @@ function DualWield::EquipOffHand(%clientId, %weaponItem)
     // path already enforced this (count >= 2); the direct #dualwield <weapon> path
     // didn't, allowing double attacks from a single item.
     %mountedMain = Player::getMountedItem(%playerObj, $WeaponSlot);
-    if(%mountedMain == %weaponItem && %count < 2)
+    if(%mountedMain == %weaponItem && %count < 2 && !%fromToggleSwap)
     {
         Client::sendMessage(%clientId, $MsgRed, "You need two of that weapon to wield one in each hand.");
         return false;
@@ -1204,7 +1215,19 @@ function DualWield::FireOffHandMelee(%clientId, %player, %weaponType)
     // same weapon in the main hand
     %range = GetRange(%offHandWeapon);
     if(%range == "" || %range == -1 || %range <= 0) %range = 4;
-    
+
+    // review #39: apply the DOCUMENTED off-hand damage multiplier (was hardcoded 1.0 in
+    // the onDamage call below, so $DualWield::DamageMultiplier[weapon] and
+    // DefaultDamageMultiplier were never read - off-hand always dealt full damage).
+    // Default is 1.0 (no balance change); this makes the per-weapon override actually
+    // work. (The documented SPEED multiplier is already superseded by the GetDelay-based
+    // off-hand pacing above.)
+    %dmgMult = $DualWield::DamageMultiplier[%offHandWeapon];
+    if(%dmgMult == "" || %dmgMult == -1)
+        %dmgMult = $DualWield::DefaultDamageMultiplier;
+    if(%dmgMult == "" || %dmgMult == -1)
+        %dmgMult = 1.0;
+
     // Direct LOS check and damage (same logic as MeleeAttack but without anti-spam)
     $los::object = "";
     if(GameBase::getLOSinfo(%playerObj, %range))
@@ -1212,8 +1235,8 @@ function DualWield::FireOffHandMelee(%clientId, %player, %weaponType)
         %obj = getObjectType($los::object);
         if(%obj == "Player")
         {
-            // Deal damage with the off-hand weapon
-            GameBase::virtual($los::object, "onDamage", $BulletDamageType, 1.0, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, %offHandWeapon);
+            // Deal damage with the off-hand weapon (review #39: %dmgMult was 1.0)
+            GameBase::virtual($los::object, "onDamage", $BulletDamageType, %dmgMult, "0 0 0", "0 0 0", "0 0 0", "torso", "front_right", %clientId, %offHandWeapon);
         }
     }
     

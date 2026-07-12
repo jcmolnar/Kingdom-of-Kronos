@@ -447,6 +447,10 @@ function sellItem(%clientId, %item)
 	if(IsDead(%clientId))
 		return;
 
+	// Belt-weapon sync: unequip belt state if this transfers the shell of
+	// the equipped belt weapon (phantom mounts are count 0 and can't sell)
+	BeltWeapon::GuardShellTransfer(%clientId, %item);
+
 	%player = Client::getOwnedObject(%clientId);
 
 	if(%clientId.currentShop != "" || %clientId.currentBank != "" || %clientId.currentSmith != "")
@@ -613,6 +617,16 @@ function remoteSellItem(%clientId, %type)
 		%clientId.lastWaitActionTime = %time;
 
 		%item = getItemData(%type);
+		// Phase D: on a vanilla client, DOUBLE-CLICKING an inventory row sends
+		// "sellItem" (stock GUI.CS InventoryList::onDoubleClick). A VSlot row is a
+		// display proxy for a belt weapon, not a sellable ItemData - selling the
+		// placeholder would hand out coins for nothing. Block it and point the
+		// player at the real path. No-op with the feature off.
+		if(VSlot::IsSlotItem(%item))
+		{
+			Client::sendMessage(%clientId, $MsgWhite, "That's a backpack weapon - select it and press Use to equip it, or sell it at a merchant.");
+			return;
+		}
 		sellItem(%clientId, %item);
 	}
 }

@@ -20,6 +20,8 @@ function Mission::init()
 	Game::StartVisibilitySafetyLoop();
 	// Daily quest rotation loop (DailyQuest.cs) - same rule: must start here
 	Daily::Init();
+	// Weekly boss (WeeklyBoss.cs) - AFTER Daily::Init (uses its date probe)
+	Weekly::Init();
 
 	$BlockOwnerAdminLevel[Server] = 5;
 	for(%i = 1; $ServerQuest[%i] != ""; %i++)
@@ -433,15 +435,15 @@ function HouseEarnings()
 			%sharePercent = floor(%controlShare * 100);
 			
 			if(%reward > 0)
-				Client::sendMessage(%cl, $MsgBeige, "You received " @ Number::Beautify(%reward, -3) @ " coins from your house. (" @ %sharePercent @ "% objective control)");
+				Client::sendMessage(%cl, $MsgBeige, "You received " @ Number::Beautify(%reward, -3) @ " coins from your house. (" @ %sharePercent @ "% objective control)~house");
 			if(%expReward > 0)
-				Client::sendMessage(%cl, $MsgBeige, "You received " @ Number::Beautify(%expReward, -3) @ " experience points for being loyal to your house.");
+				Client::sendMessage(%cl, $MsgBeige, "You received " @ Number::Beautify(%expReward, -3) @ " experience points for being loyal to your house.~house");
 			else if(!%shouldGiveExp)
-				Client::sendMessage(%cl, $MsgBeige, "You are currently able to remort, and your house's leadership has cut you off from this perk. They suggest either remorting, or finding someone else to freeload from.");
+				Client::sendMessage(%cl, $MsgBeige, "You are currently able to remort, and your house's leadership has cut you off from this perk. They suggest either remorting, or finding someone else to freeload from.~house");
 			if(%rpreward > 0)
-				Client::sendMessage(%cl, $MsgBeige, "You received " @ %rpreward @ " rank points for being loyal to your house.");
+				Client::sendMessage(%cl, $MsgBeige, "You received " @ %rpreward @ " rank points for being loyal to your house.~house");
 			if(%spreward > 0)
-				Client::sendMessage(%cl, $MsgBeige, "You received " @ %spreward @ " skill points for being loyal to your house.");
+				Client::sendMessage(%cl, $MsgBeige, "You received " @ %spreward @ " skill points for being loyal to your house.~house");
 			RefreshAll(%cl);
 		}
 	}

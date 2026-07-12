@@ -953,8 +953,14 @@ function UseSkill(%clientId, %skilltype, %successful, %showmsg, %base, %refresha
 		else
 			$SkillCounter[%clientId, %skilltype] += 0.3;
 
-		%p = 1 - ($PlayerSkill[%clientId, %skilltype] / 1150);
+		// Throttle scales with the REAL cap (%ub), not a constant: the old
+		// hardcoded /1150 went NEGATIVE once a skill passed 1150 (high
+		// level/remort caps reach thousands), making %e <= 0 - every action,
+		// even a failed one (+0.3), granted a free skill point.
+		%p = 1 - ($PlayerSkill[%clientId, %skilltype] / %ub);
 		%e = round( (%base / GetSkillMultiplier(%clientId, %skilltype)) * %p );
+		if(%e < 1)
+			%e = 1;	//floor: never more than one point per successful use, even at the cap edge
 
 		if($SkillCounter[%clientId, %skilltype] >= %e)
 		{
@@ -964,7 +970,7 @@ function UseSkill(%clientId, %skilltype, %successful, %showmsg, %base, %refresha
 			if(%retval)
 			{
 				if(%showmsg)
-					Client::sendMessage(%clientId, $MsgBeige, "You have increased your skill in " @ $SkillDesc[%skilltype] @ " (" @ FormatSkillDisplay(%clientId, %skilltype) @ ")");
+					Client::sendMessage(%clientId, $MsgBeige, "You have increased your skill in " @ $SkillDesc[%skilltype] @ " (" @ FormatSkillDisplay(%clientId, %skilltype) @ ")~stats");
 				if(%refreshall)
 				{
 					// THROTTLE: Instead of calling RefreshAll immediately for each skill gain,
