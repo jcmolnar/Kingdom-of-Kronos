@@ -229,10 +229,23 @@ function VSlot::IsSlotItem(%item)
 	return $VSlot::IsSlot[%idx];
 }
 
+//------------------------------------------------------------------------------
+// Resolve the belt weapon currently mapped to a VSlot row for this client. %item is
+// the VSlot datablock NAME (getItemData result). Returns "" if the slot is empty or
+// %item isn't a VSlot. Used by the stock-GUI action dispatch (use/drop/sell/bank) to
+// act on the real belt weapon behind the placeholder row.
+//------------------------------------------------------------------------------
+function VSlot::MappedItem(%clientId, %item)
+{
+	%idx = $VSlot::NameToIdx[%item];
+	if(%idx == "")
+		return "";
+	return $VSlot::Map[%clientId, %idx];
+}
+
 function VSlot::OnUseClick(%clientId, %item)
 {
-	%idx     = $VSlot::NameToIdx[%item];	// server-safe; getItemType() would deref the CLIENT dbm (null on a dedicated host)
-	%beltItem = $VSlot::Map[%clientId, %idx];
+	%beltItem = VSlot::MappedItem(%clientId, %item);
 	if(%beltItem == "" || %beltItem == -1)
 	{
 		Client::sendMessage(%clientId, $MsgWhite, "That backpack slot is empty.");

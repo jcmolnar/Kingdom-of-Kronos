@@ -233,7 +233,17 @@ function remoteDropItem(%clientId,%type)
 				// feature off (VSlot::IsSlotItem is false).
 				if(VSlot::IsSlotItem(%item))
 				{
-					Client::sendMessage(%clientId, $MsgWhite, "You can't drop a backpack slot.");
+					// Phase D: dropping a VSlot row drops the belt weapon it proxies
+					// (Belt::DropItem auto-unequips, tosses a lootbag, saves). Re-sync
+					// the rows after so the emptied slot updates.
+					%item = VSlot::MappedItem(%clientId, %item);
+					if(%item == "" || %item == -1)
+						Client::sendMessage(%clientId, $MsgWhite, "That backpack slot is empty.");
+					else
+					{
+						Belt::DropItem(%clientId, %item, 1, "Weapons");
+						VSlot::Sync(%clientId);
+					}
 					return;
 				}
 				if(%item == Weapon)

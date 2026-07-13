@@ -499,7 +499,12 @@ function sellItem(%clientId, %item)
 			if($LastClickItemS[%clientId, %item] != %item)
 			{
 				%cost = getSellCost(%clientId, %item);
-				Client::sendMessage(%clientId, $MsgWhite, "This merchant will give you " @ Number::Beautify(%cost, -3) @ " coins for the " @ %nitem.description @ ".");
+				// belt items aren't datablocks, so %nitem.description reads "False" - use the belt display name
+				if(isBeltItem(%item))
+					%sellName = $BeltItem[%item, "Name"];
+				else
+					%sellName = %nitem.description;
+				Client::sendMessage(%clientId, $MsgWhite, "This merchant will give you " @ Number::Beautify(%cost, -3) @ " coins for the " @ %sellName @ ".");
 				%msg = WhatIs(%item);
 				KronosExamineInfo(%clientId, %msg, floor(String::len(%msg) / 20));
 
@@ -560,6 +565,10 @@ function sellItem(%clientId, %item)
 						else if(%category == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %item)
 						{
 							Belt::UnequipArmor(%clientId, %item);
+						}
+						else if(%category == "Weapons" && fetchData(%clientId, "EquippedBeltWeapon") == %item)
+						{
+							BeltWeapon::Unequip(%clientId, true);
 						}
 					}
 					
@@ -624,7 +633,19 @@ function remoteSellItem(%clientId, %type)
 		// player at the real path. No-op with the feature off.
 		if(VSlot::IsSlotItem(%item))
 		{
-			Client::sendMessage(%clientId, $MsgWhite, "That's a backpack weapon - select it and press Use to equip it, or sell it at a merchant.");
+			// Phase D: selling a VSlot row sells the belt weapon it proxies. sellItem's
+			// merchant branch is already belt-aware (isBeltItem -> Belt::HasThisStuff /
+			// TakeThisStuff), so redirect to the mapped weapon, then re-sync the rows.
+			// (Bank-deposit of a belt weapon is a separate follow-up - at a bank this
+			// currently reports "you only have 0" until that path is wired.)
+			%bw = VSlot::MappedItem(%clientId, %item);
+			if(%bw == "" || %bw == -1)
+			{
+				Client::sendMessage(%clientId, $MsgWhite, "That backpack slot is empty.");
+				return;
+			}
+			sellItem(%clientId, %bw);
+			VSlot::Sync(%clientId);
 			return;
 		}
 		sellItem(%clientId, %item);
