@@ -293,15 +293,3 @@ function BeltWeapon::Command(%clientId, %sub, %rest)
 BeltWeapon::Register(TestBeltBlade, "Test Belt Blade", SteelBroadSword, 40, 0, 5.0, 1000, "A conjured blade that lives in your backpack");
 BeltArmor::Register(TestBeltMail, "Test Belt Mail", "rpgscalemail", "7 25 4 100", 10.0, 1000, "Conjured scale mail that lives in your backpack");
 
-// KOKBATCH shields (converted from Accessory.cs ItemData pairs - the X0
-// 'Equipped' tokens were dropped, freeing 9 of the 256 ItemData slots; each
-// X ItemData remains ONLY as the slot-2 mounted visual).
-BeltAccessory::Register(CathedralAegis, "Cathedral Aegis",   $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Cathedral Aegis",   CathedralAegis);
-BeltAccessory::Register(WardenBulwark,  "Warden's Bulwark",  $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Warden's Bulwark",  WardenBulwark);
-BeltAccessory::Register(CrimsonRose,    "Crimson Rose",      $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Crimson Rose",      CrimsonRose);
-BeltAccessory::Register(MarauderGuard,  "Marauder's Guard",  $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Marauder's Guard",  MarauderGuard);
-BeltAccessory::Register(TowerAegis,     "Tower Aegis",       $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Tower Aegis",       TowerAegis);
-BeltAccessory::Register(KrakenEye,      "Kraken Eye",        $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Kraken Eye",        KrakenEye);
-BeltAccessory::Register(DragonEye,      "Dragon Eye",        $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Dragon Eye",        DragonEye);
-BeltAccessory::Register(EyeOfHatred,    "Eye of Hatred",     $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Eye of Hatred",     EyeOfHatred);
-BeltAccessory::Register(StarlightEye,   "Starlight Eye",     $ShieldAccessoryType, "7 320 4 170", 80, 50000000, "Starlight Eye",     StarlightEye);

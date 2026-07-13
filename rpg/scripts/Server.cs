@@ -279,6 +279,10 @@ function createServer(%mission, %dedicated)
 	exec(MonsterAdminArmors);
 	exec(Mission);
 	exec(Item);
+	// Phase D: exec'd right after item.cs (whose 5 items Tool/Ammo/Backpack/RepairPatch/Flag
+	// take indices 0-4) so the 8 VSlot ItemData land at 5-12 - low enough to be under the 200
+	// per-player item-count cap, without displacing the engine-standard core items.
+	exec(VirtualSlots);
 	exec(Accessory);
 	exec(weapons);
 	exec(armors);
@@ -340,7 +344,6 @@ function createServer(%mission, %dedicated)
 	exec(WeeklyBoss);
 	exec(Estate);		// player housing/building; needs economy + rpgfunk deploy primitives (already exec'd)
 	exec(BeltWeapons);	// needs Belt.cs (BeltItem::Add) + weapons.cs (shell tables) already exec'd
-	exec(VirtualSlots);	// Phase D native-inventory view; inert unless $pref::VSlotsEnabled
 	//exec(DebugInit); only need if debugging
 
 	// Sanity check: player-facing coin/exp displays rely on MathPlugin's
@@ -378,8 +381,9 @@ function createServer(%mission, %dedicated)
 	// Flip to false (or comment out) to ship the native inventory view OFF.
 	$pref::VSlotsEnabled = true;
 
-	// Resolve the reserved VSlot ItemData indices (Phase D). No-op with
-	// $pref::VSlotsEnabled off; run here after ALL ItemData scripts have exec'd.
+	// Resolve the VSlot ItemData indices (Phase D). The VSlots are declared early (right after
+	// item.cs, so indices 5-12) - well under the 200 per-player item-count cap - so this works
+	// on every binary; no $pref::VSlotsForce gate is needed anymore.
 	VSlot::Init();
 
 	$Server::Info = "Running RPG Mod ver " @ $rpgver @ "\nThis version of RPGMod created by Asnabel,\n Further development by Jobo & Superfat.";

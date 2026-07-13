@@ -59,6 +59,25 @@ $VSlot::Count = 8;			// K reserved ItemData slots (fund from Phase B savings)
 // boot (from Server.cs, after all ItemData scripts have exec'd). Disables the
 // whole feature if any placeholder is missing, so a half-set never half-works.
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Server-safe "datablock NAME -> ItemData type index". getItemType() (the stock
+// console fn) resolves a name via cg.dbm - the CLIENT datablock manager - which is
+// NULL on a dedicated / native host (no client game), so calling it server-side
+// crashed at boot: 0xC0000005 in getItemDescriptionType (FearPlugin.cpp:1425).
+// getNumItems()/getItemData() read the SERVER dbm (wg->dbm, bounds-guarded - the
+// same path the boot [SLOT AUDIT] uses), so they are safe here. getItemData also
+// returns the NAME, which is what we want (getItemType matched on .description, and
+// all placeholders share "Backpack Slot", so it could never tell them apart).
+//------------------------------------------------------------------------------
+function VSlot::NameToType(%name)
+{
+	%count = getNumItems();
+	for(%i = 0; %i < %count; %i++)
+		if(getItemData(%i) == %name)		// == strcmps non-numeric operands; $= is a syntax error on this engine
+			return %i;
+	return -1;
+}
+
 function VSlot::Init()
 {
 	if(!$pref::VSlotsEnabled)
@@ -66,7 +85,7 @@ function VSlot::Init()
 
 	for(%i = 0; %i < $VSlot::Count; %i++)
 	{
-		%idx = getItemType("VSlot" @ %i);	// -1 if the ItemData isn't registered
+		%idx = VSlot::NameToType("VSlot" @ %i);	// server-safe; getItemType() derefs the CLIENT dbm -> boot crash on a dedicated host
 		if(%idx == -1)
 		{
 			echo("[VSLOT] VSlot" @ %i @ " ItemData not registered - disabling Virtual Slots");
@@ -75,12 +94,17 @@ function VSlot::Init()
 		}
 		$VSlot::Index[%i] = %idx;
 		$VSlot::IsSlot[%idx] = true;		// reverse map for the click dispatch
+		$VSlot::NameToIdx["VSlot" @ %i] = %idx;	// name->idx for the click dispatch (runtime getItemType would crash too)
 	}
 
-	// The per-client push is a DLL command (kronos_virtualitems.dll). If the
-	// plugin isn't loaded, vslotDbm() returns "Unknown command" and every Sync
-	// would spam the console - so require it here. vslotDbm() reports the resolved
-	// DataBlockManager; a healthy load contains "dbm=".
+	// VSlots are declared FIRST (Server.cs execs VirtualSlots before every other ItemData
+	// script), so they land at LOW indices - well under the 200 per-player item-count cap
+	// (retail Tribes 1.40 MaxItemTypes). Player::setItemCount writes them in-bounds on every
+	// binary, so no per-binary gate is needed. (Above the cap, setItemCount has NO bounds
+	// check and OOB-corrupts memory - which is exactly what blocked the old 233..240 spot.)
+
+	// The per-client push is a DLL command (kronos_virtualitems.dll). vslotDbm()
+	// reports the resolved DataBlockManager; a healthy load contains "dbm=".
 	%probe = vslotDbm();
 	if(String::findSubStr(%probe, "dbm=") == -1)
 	{
@@ -143,10 +167,8 @@ function VSlot::Sync(%clientId)
 
 	for(%i = 0; %i < $VSlot::Count; %i++)
 	{
-		%idx      = $VSlot::Index[%i];	// engine index (DLL push arg)
-		%slotName = "VSlot" @ %i;		// datablock name (setItemCount arg - the
-										// engine resolves the item by NAME, not idx:
-										// getPlayerAndItem->getItemType, decomp 0x420728)
+		%idx  = $VSlot::Index[%i];	// numeric engine index (DLL push + setItemCount; the NAME
+									// path misses sg.dbm's name->index map, playerInventory.cpp:513)
 		%item = "";
 		if(%i < %n)
 			%item = GetWord(%nf, %i + 1);		// words 1..n
@@ -161,12 +183,12 @@ function VSlot::Sync(%clientId)
 				%name = %item;
 			VSlot::SetRow(%idx, %name, $ItemCost[%item]);
 			vslotPushItem(%clientId, %idx);				// DLL: per-client row rewrite (by index)
-			Player::setItemCount(%clientId, %slotName, 1);	// make the row appear
+			Player::setItemCount(%clientId, %idx, 1);	// make the row appear
 		}
 		else
 		{
 			$VSlot::Map[%clientId, %idx] = "";
-			Player::setItemCount(%clientId, %slotName, 0);	// hide the row
+			Player::setItemCount(%clientId, %idx, 0);	// hide the row
 		}
 	}
 }
@@ -203,13 +225,13 @@ function VSlot::IsSlotItem(%item)
 {
 	if(!$pref::VSlotsEnabled)
 		return false;
-	%idx = getItemType(%item);
+	%idx = $VSlot::NameToIdx[%item];	// server-safe; getItemType() would deref the CLIENT dbm (null on a dedicated host)
 	return $VSlot::IsSlot[%idx];
 }
 
 function VSlot::OnUseClick(%clientId, %item)
 {
-	%idx     = getItemType(%item);
+	%idx     = $VSlot::NameToIdx[%item];	// server-safe; getItemType() would deref the CLIENT dbm (null on a dedicated host)
 	%beltItem = $VSlot::Map[%clientId, %idx];
 	if(%beltItem == "" || %beltItem == -1)
 	{
