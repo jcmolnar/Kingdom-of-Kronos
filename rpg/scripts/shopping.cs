@@ -396,46 +396,4 @@ $AccessoryVar[Test, $ShopIndex] = 245;
 // Merchants are defined in the "TownBots" SimGroup with their SHOP field containing shop indices
 // This prevents conflicts and keeps all merchant data in one place
 
-// ===== BEGIN KOKBATCH (auto-generated) =====
-$AccessoryVar[CrimsonThorn, $ShopIndex] = 246;
-$AccessoryVar[DevilsRuin, $ShopIndex] = 247;
-$AccessoryVar[TuskerCleaver, $ShopIndex] = 248;
-$AccessoryVar[EmberSolitude, $ShopIndex] = 249;
-$AccessoryVar[Wyrmpoint, $ShopIndex] = 250;
-$AccessoryVar[SanctifiedArc, $ShopIndex] = 251;
-$AccessoryVar[Skullcrusher, $ShopIndex] = 252;
-$AccessoryVar[AmenoWrath, $ShopIndex] = 253;
-$AccessoryVar[Shadowfang, $ShopIndex] = 254;
-$AccessoryVar[AbyssalHeart, $ShopIndex] = 255;
-$AccessoryVar[AetherisEdge, $ShopIndex] = 256;
-$AccessoryVar[AstralEdge, $ShopIndex] = 257;
-$AccessoryVar[Dragonslayer, $ShopIndex] = 258;
-$AccessoryVar[Frostbite, $ShopIndex] = 259;
-$AccessoryVar[ValorsEdge, $ShopIndex] = 260;
-$AccessoryVar[VoidReaver, $ShopIndex] = 261;
-$AccessoryVar[CrimsonFiend, $ShopIndex] = 262;
-$AccessoryVar[MagmaHook, $ShopIndex] = 263;
-$AccessoryVar[Glavenus, $ShopIndex] = 264;
-$AccessoryVar[MythicDragon, $ShopIndex] = 265;
-$AccessoryVar[Schiavona, $ShopIndex] = 266;
-$AccessoryVar[SpectralEdge, $ShopIndex] = 267;
-$AccessoryVar[DemonsEdge, $ShopIndex] = 268;
-$AccessoryVar[GainuBlade, $ShopIndex] = 269;
-$AccessoryVar[DevilScythe, $ShopIndex] = 270;
-$AccessoryVar[TwinCleaver, $ShopIndex] = 271;
-$AccessoryVar[RunicReaver, $ShopIndex] = 272;
-$AccessoryVar[AncientLance, $ShopIndex] = 273;
-$AccessoryVar[FangtianJi, $ShopIndex] = 274;
-$AccessoryVar[Mogura, $ShopIndex] = 275;
-$AccessoryVar[Pikestaff, $ShopIndex] = 276;
-$AccessoryVar[WarHammer, $ShopIndex] = 277;
-$AccessoryVar[DwarvenMaul, $ShopIndex] = 278;
-$AccessoryVar[RuneHammer, $ShopIndex] = 279;
-$AccessoryVar[PaladinMace, $ShopIndex] = 280;
-$AccessoryVar[GlacialStaff, $ShopIndex] = 281;
-$AccessoryVar[MidasStaff, $ShopIndex] = 282;
-// BELT CONVERSION (BeltWeapons.cs): the KOKBATCH shields are belt accessories
-// now - selling their ItemData through a stock shop index would hand out an
-// engine item with no equip path (the X0 tokens are gone). Merchants sell
-// them through their BELT stock lists instead.
-// ===== END KOKBATCH =====
+// ===== KOKBATCH REMOVED 2026-07-14 ===== (shop entries for the stripped weapons; see newstuff.cs)

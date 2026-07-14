@@ -1,10 +1,10 @@
 //----------------------------------------------------------------------------
 
-$ItemFavoritesKey = "KronosRPG_V2";  // Change this if you add new items
+$ItemFavoritesKey = "KronosRPG_V3";  // Change this if you add new items
                          	// and don't want to mess up everyone's
                          	// favorites - just put in something
                          	// that uniquely describes your new stuff.
-                         	// SLOT PURGE 2026-07-13: bumped KronosRPG -> KronosRPG_V2. Clients
+                         	// V2: slot purge 2026-07-13. V3: KOKBATCH strip 2026-07-14 (37 items). Clients
                          	// store buy-menu favorites BY ITEM INDEX under this key; the purge
                          	// shifted every index, so stale favorites loaded at join point at
                          	// wrong datablocks (client crash). New key = clean favorites.
