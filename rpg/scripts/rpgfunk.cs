@@ -4342,7 +4342,15 @@ function UpdateAppearance(%clientId)
 		// stay rpgbase. Transmog still wins below.
 		%beltArmor = fetchData(%clientId, "EquippedBeltArmor");
 		if(%beltArmor != "" && %beltArmor != "0" && $ArmorSkin[%beltArmor] != "")
+		{
 			%skinbase = $ArmorSkin[%beltArmor];
+			// VOID CONVERSION 2026-07-14: belt armor also carries the player-model
+			// override (robes -> "Robed") - %apm was only derived from the mounted
+			// ENGINE armor above, so a belt-equipped robe would keep the plate model.
+			// %apm is consumed by the player-model selection further down.
+			if($ArmorPlayerModel[%beltArmor] != "")
+				%apm = $ArmorPlayerModel[%beltArmor];
+		}
 
 		// Transmog visual override (re-applied here since the armor/belt skins
 		// above overwrite the earlier transmog pass; harmless no-op otherwise)

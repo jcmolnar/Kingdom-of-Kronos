@@ -317,6 +317,20 @@ function VoidArmor::RegisterAll()
 		BeltArmor::Register(%a, %a.description, $ArmorSkin[%a], $AccessoryVar[%a, $SpecialVar], $AccessoryVar[%a, $Weight], $ItemCost[%a], $AccessoryVar[%a, $MiscInfo]);
 		%n++;
 	}
+	// newstuff.cs extends $ArmorList OUT-OF-BAND for special/endgame armors:
+	// [19]=RedDiamondPlate is contiguous (caught above), but 987-990
+	// (WhiteDiamondPlate, JudgementRobe, StormRobe, VoidRobe) are not - the
+	// sequential loop stops at the [20] gap, so register them explicitly.
+	// Their "Robed" $ArmorPlayerModel carries over via UpdateAppearance's
+	// belt-armor branch (rpgfunk.cs).
+	for(%i = 987; %i <= 990; %i++)
+	{
+		if($ArmorList[%i] == "")
+			continue;
+		%a = $ArmorList[%i];
+		BeltArmor::Register(%a, %a.description, $ArmorSkin[%a], $AccessoryVar[%a, $SpecialVar], $AccessoryVar[%a, $Weight], $ItemCost[%a], $AccessoryVar[%a, $MiscInfo]);
+		%n++;
+	}
 	echo("[VOID] Registered " @ %n @ " armors as belt items (engine datablocks remain during the transition).");
 }
 VoidArmor::RegisterAll();
