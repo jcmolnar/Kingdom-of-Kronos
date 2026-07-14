@@ -1,4 +1,10 @@
 // Loaded Classic base game weapons and ammo datablocks
+//
+// SLOT PURGE 2026-07-13: THIS FILE IS NO LONGER EXEC'D (exec commented out in weapons.cs).
+// None of its 12 ItemData were ever given, sold, or placed in KOK; un-registering them
+// reclaims 12 ItemData indices for the RPG item table. Kept on disk for reference - the
+// .dts shapes (chaingun, plasma, disc...) remain in the vols and stay usable as Void-item
+// visuals. Re-add the exec in weapons.cs to restore.
 
 ItemData BulletAmmo
 {

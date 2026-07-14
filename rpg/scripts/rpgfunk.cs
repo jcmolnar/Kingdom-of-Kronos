@@ -664,10 +664,13 @@ function SaveCharacter(%clientId)
 		
 		// Atomic inventory sanity check - use Player::getItemCount directly (not SafeGetItemCount)
 		// SafeGetItemCount has an isObject() check that fails for items retrieved by index
-		Player::incItemCount(%clientId, Tool);
-		%x = Player::getItemCount(%clientId, Tool);
-		Player::decItemCount(%clientId, Tool);
-		%y = Player::getItemCount(%clientId, Tool);
+		// SLOT PURGE 2026-07-13: probe repointed Tool->Backpack (Tool ItemData removed).
+		// Any registered item works: the inc/dec runs back-to-back in single-threaded script,
+		// nets to zero at any starting count, and only the x!=y delta is checked.
+		Player::incItemCount(%clientId, Backpack);
+		%x = Player::getItemCount(%clientId, Backpack);
+		Player::decItemCount(%clientId, Backpack);
+		%y = Player::getItemCount(%clientId, Backpack);
 		
 		if(%x == %y)
 			return False;
@@ -6759,6 +6762,16 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 				}
 			}
 			//echo("[SPAWN DEBUG] GiveThisStuff(): clientId=" @ %clientId @ ", player=" @ %player @ ", item=" @ %w @ ", count=" @ %w2);
+			// SLOT PURGE 2026-07-13: defensive skip for names that no longer resolve to a
+			// registered ItemData (codebase convention: .description reads False for
+			// non-datablocks, see WhatIs/Belt::WhatIs). Protects old saves that still hold a
+			// since-removed item (e.g. Grenade/RepairPatch) - degrades to a console line
+			// instead of handing a dead name to Item::giveItem. Covers all future removals.
+			if(%w.description == False)
+			{
+				echo("GiveThisStuff: skipping unknown item '" @ %w @ "' x" @ %w2 @ " for " @ %name @ " (datablock no longer registered)");
+				continue;
+			}
 			if(%player != "" && %player != -1)
 			{
 				%result = Item::giveItem(%player, %w, %w2, %echo);

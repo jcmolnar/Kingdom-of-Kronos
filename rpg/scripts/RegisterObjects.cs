@@ -96,22 +96,25 @@ MissionRegObject( Panels, "DisplayV2", MissionCreateObject, "DisplayV2", StaticS
 //
 //
 
-MissionRegItem( Weapons, "Chaingun", Chaingun, 1);
-MissionRegItem( Weapons, "Plasma Gun", PlasmaGun, 1);
-MissionRegItem( Weapons, "Grenade Launcher", GrenadeLauncher, 1);
-MissionRegItem( Weapons, "Disc Launcher", DiscLauncher, 1);
-MissionRegItem( Weapons, "Laser Rifle", LaserRifle, 1);
-MissionRegItem( Weapons, "Energy Rifle", EnergyRifle, 1);
+// SLOT PURGE 2026-07-13: stock gun + ammo palette entries removed - their ItemData no
+// longer register (base_weapons.cs un-exec'd in weapons.cs), so placing one from the
+// editor would create an item with a dead datablock.
+//MissionRegItem( Weapons, "Chaingun", Chaingun, 1);
+//MissionRegItem( Weapons, "Plasma Gun", PlasmaGun, 1);
+//MissionRegItem( Weapons, "Grenade Launcher", GrenadeLauncher, 1);
+//MissionRegItem( Weapons, "Disc Launcher", DiscLauncher, 1);
+//MissionRegItem( Weapons, "Laser Rifle", LaserRifle, 1);
+//MissionRegItem( Weapons, "Energy Rifle", EnergyRifle, 1);
 
 //
 //
 //
-MissionRegItem( Ammo, "Bullets", BulletAmmo, 30);
-MissionRegItem( Ammo, "Plasma Bolts", PlasmaAmmo, 10);
-MissionRegItem( Ammo, "Grenades", GrenadeAmmo, 5);
-MissionRegItem( Ammo, "Discs", DiscAmmo, 5);
-MissionRegItem( Ammo, "Anti-personnel Mines", MineAmmo, 2 );
-MissionRegItem( Ammo, "Hand Grenades", Grenade, 5);
+//MissionRegItem( Ammo, "Bullets", BulletAmmo, 30);
+//MissionRegItem( Ammo, "Plasma Bolts", PlasmaAmmo, 10);
+//MissionRegItem( Ammo, "Grenades", GrenadeAmmo, 5);
+//MissionRegItem( Ammo, "Discs", DiscAmmo, 5);
+//MissionRegItem( Ammo, "Anti-personnel Mines", MineAmmo, 2 );
+//MissionRegItem( Ammo, "Hand Grenades", Grenade, 5);
 
 //
 //
@@ -123,7 +126,8 @@ MissionRegItem( Packs, "Shield Pack", ShieldPack, 1);
 MissionRegItem( Packs, "Sensor Jammer Pack", SensorJammerPack, 1);
 MissionRegItem( Packs, "Ammo Pack", AmmoPack, 1);
 MissionRegItem( Packs, "Repair Kit (inventory)", RepairKit, 1);
-MissionRegItem( Packs, "Repair Patch (instant)", RepairPatch, 1);
+// SLOT PURGE 2026-07-13: RepairPatch ItemData removed (item.cs) - see note above.
+//MissionRegItem( Packs, "Repair Patch (instant)", RepairPatch, 1);
 
 
 //

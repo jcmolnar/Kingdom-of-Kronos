@@ -85,9 +85,23 @@ function Item::onAdd(%this)
 // Default Inventory methods
 
 
-function Item::pop(%item)
+function Item::pop(%item, %token)
 {
 	dbecho($dbechoMode, "Item::pop(" @ %item @ ")");
+
+	if(!isObject(%item))
+		return;
+
+	// CRITICAL: scheduled pops (dropped items 30s, arrows 30s) carry the popToken stamped at
+	// schedule time. If the object at this ID no longer carries that token, the original item
+	// is gone and the ID was recycled (possibly to a player's death lootbag) - do NOT pop it.
+	// The SafeDeleteItem token below only guards the 2.5s delete tail; this guards the 30s head.
+	// (%token=="" => direct/legacy caller popping a live object it holds, e.g. rpgfunk 15-bag cap.)
+	if(%token != "" && %item.popToken != %token)
+	{
+		echo("CRITICAL SAFEGUARD: Item::pop - object " @ %item @ " no longer matches its pop token (ID recycled, type=" @ getObjectType(%item) @ "). Aborting pop.");
+		return;
+	}
 
  	GameBase::startFadeOut(%item);
 	// CRITICAL: stamp a per-pop token so the deferred delete can confirm this is still the SAME item.
@@ -137,27 +151,11 @@ function SafeDeleteItem(%obj, %token)
 // Tools, Weapons & ammo
 //----------------------------------------------------------------------------
 
-ItemData Tool
-{
-	description = "Tool";
-	showInventory = false;
-};
-
-function Tool::onUse(%player,%item)
-{
-	dbecho($dbechoMode, "Tool::onUse(" @ %player @ ", " @ %item @ ")");
-
-	Player::mountItem(%player,%item,$ToolSlot);
-}
-
-
-//----------------------------------------------------------------------------
-
-ItemData Ammo
-{
-	description = "Ammo";
-	showInventory = false;
-};
+// SLOT PURGE 2026-07-13: ItemData Tool + Tool::onUse and ItemData Ammo removed - neither
+// is ever given, sold, or placed in KOK. Tool's only live use was the inventory sanity
+// probe in rpgfunk.cs (repointed to Backpack); the "Tool" string compares in
+// DualWielding.cs go harmlessly inert. Reclaims 2 ItemData indices. $ToolSlot stays
+// (it's a mount-slot number, unrelated to the datablock).
 
 //----------------------------------------------------------------------------
 // Backpacks
@@ -261,37 +259,10 @@ function Item::deployShape(%player,%name,%shape,%item)
 
 //----------------------------------------------------------------------------
 
-ItemData RepairPatch
-{
-	description = "Repair Patch";
-	className = "Repair";
-	shapeFile = "armorPatch";
-	heading = "eMiscellany";
-	shadowDetailMask = 4;
-  	price = 1;
-};
-
-function RepairPatch::onCollision(%this,%object)
-{
-	dbecho($dbechoMode, "RepairPatch::onCollision(" @ %this @ ", " @ %object @ ")");
-
-	if (getObjectType(%object) == "Player") {
-		if(GameBase::getDamageLevel(%object)) {
-			refreshHP(Player::getClient(%object), -0.125);
-			%item = Item::getItemData(%this);
-			Item::playPickupSound(%this);
-			Item::respawn(%this);
-		}
-	}
-}
-
-function RepairPatch::onUse(%player,%item)
-{
-	dbecho($dbechoMode, "RepairPatch::onUse(" @ %player @ ", " @ %item @ ")");
-
-	Player::decItemCount(%player,%item);
-	refreshHP(Player::getClient(%player), -0.1);
-}
+// SLOT PURGE 2026-07-13: ItemData RepairPatch + its onCollision/onUse handlers removed -
+// never given or sold; no stations are placed in KingdomKronos.mis (its only spawn path,
+// Station.cs resupply, is unreachable). The Station.cs "%item == RepairPatch" compare goes
+// harmlessly inert. Reclaims 1 ItemData index.
 
 ItemImageData FlagImage
 {

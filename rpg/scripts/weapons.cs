@@ -666,7 +666,9 @@ function ProjectileAttack(%clientId, %weapon, %vel)
 	%arrow.weapon = %weapon;
 
 	addToSet("MissionCleanup", %arrow);
-  	schedule("Item::Pop(" @ %arrow @ ");", 30, %arrow);
+	// CRITICAL: stamp a pop token so the 30s deferred pop can't hit a recycled ID (item.cs Item::pop)
+	%arrow.popToken = %arrow @ "_pop_" @ getSimTime();
+  	schedule("Item::Pop(" @ %arrow @ ", \"" @ %arrow.popToken @ "\");", 30, %arrow);
 
 	//double-check stuff
 	$ProjectileDoubleCheck[%arrow] = True;
@@ -3217,4 +3219,9 @@ function ListAllWeaponDPS()
 	}
 }
 
-exec("base_weapons.cs");
+// SLOT PURGE 2026-07-13: base_weapons.cs no longer exec'd - its 12 ItemData (5 stock ammo
+// types, Grenade, and the 6 stock guns Chaingun..EnergyRifle) were never given, sold, or
+// placed anywhere in KOK (only referenced by the un-exec'd Training_*.cs scripts and dead
+// string/sound tables). Not registering them reclaims 12 of the ~256 ItemData indices.
+// The file is kept on disk for reference; re-add this exec to restore stock weapons.
+//exec("base_weapons.cs");
