@@ -6385,6 +6385,35 @@ function TakeThisStuff(%clientId, %list, %multiplier)
 	return True;
 }
 
+// VOID MIGRATION 2026-07-14: dedup the SPAWN RESTORE against the belt. Belt
+// saves (field 48) fire mid-session (every equip calls SaveCharacter) but
+// spawnStuff (field 15) only rewrites on a clean logout - so a server killed
+// mid-session leaves BOTH a belt save AND the stale pre-conversion armor
+// tokens in field 15, and the next spawn double-gives every migrated armor.
+// Rule: a spawnStuff token (base or worn-"0" twin) that resolves to a belt-
+// registered item the belt ALREADY holds is stale - field 48 is authoritative.
+// ONLY for the spawn restore: normal gives (lootbag pickups etc) must still
+// stack, and belt buys go through Belt::GiveThisStuff directly anyway.
+function VoidMigrate::FilterSpawnStuff(%clientId, %list)
+{
+	%out = "";
+	for(%i = 0; GetWord(%list, %i) != -1; %i += 2)
+	{
+		%w  = GetWord(%list, %i);
+		%w2 = GetWord(%list, %i + 1);
+		%chk = %w;
+		if(!isBeltItem(%chk) && String::len(%chk) > 1 && String::getSubStr(%chk, String::len(%chk)-1, 1) == "0" && isBeltItem(String::getSubStr(%chk, 0, String::len(%chk)-1)))
+			%chk = String::getSubStr(%chk, 0, String::len(%chk)-1);	// worn twin -> base
+		if(isBeltItem(%chk) && Belt::HasThisStuff(%clientId, %chk))
+		{
+			echo("[VOID MIGRATE] " @ Client::getName(%clientId) @ ": stale spawnStuff token '" @ %w @ " " @ %w2 @ "' dropped - belt already holds '" @ %chk @ "'.");
+			continue;
+		}
+		%out = %out @ %w @ " " @ %w2 @ " ";
+	}
+	return %out;
+}
+
 function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 {
 	// Initialize %list to empty string if not provided

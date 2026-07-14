@@ -332,6 +332,10 @@ function Game::playerSpawned(%pl, %clientId, %armor, %respawn)	// review #51: ad
 	else
 	{
 		%spawnStuff = fetchData(%clientId, "spawnStuff");
+		// VOID MIGRATION 2026-07-14: drop stale pre-conversion tokens the belt
+		// already holds (server-kill saves leave field 15 out of date; the belt
+		// save in field 48 is authoritative). See VoidMigrate::FilterSpawnStuff.
+		%spawnStuff = VoidMigrate::FilterSpawnStuff(%clientId, %spawnStuff);
 		GiveThisStuff(%clientId, %spawnStuff, False);
 		
 		// Save weapon name for remount after RefreshAll
