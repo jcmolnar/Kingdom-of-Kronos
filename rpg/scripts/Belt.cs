@@ -1963,7 +1963,8 @@ function Belt::GiveThisStuff(%clientId, %item, %amnt, %echo)
 		// Phase D: a change to the belt-weapon list re-pushes this client's native
 		// inventory rows (VirtualSlots.cs). No-op unless $pref::VSlotsEnabled;
 		// Sync itself skips HUD clients and bots.
-		if(%type == "Weapons")
+		// VOID Phase 1b: the Armor window syncs off the "Armor" list the same way.
+		if(%type == "Weapons" || %type == "Armor")
 			VSlot::Sync(%clientId);
 	}
 }
@@ -2206,7 +2207,8 @@ function Belt::TakeThisStuff(%clientId, %item, %amnt)
 		// Phase D: mirror GiveThisStuff - re-push native inventory rows when the
 		// belt-weapon list shrank (sell/drop/bank). No-op unless
 		// $pref::VSlotsEnabled; Sync skips HUD clients and bots.
-		if(%type == "Weapons")
+		// VOID Phase 1b: the Armor window syncs off the "Armor" list the same way.
+		if(%type == "Weapons" || %type == "Armor")
 			VSlot::Sync(%clientId);
 	}
 }
@@ -3350,10 +3352,13 @@ function Belt::EquipArmor(%clientId, %item)
 	
 	Client::sendMessage(%clientId, $MsgGreen, "You equipped " @ %itemName @ ".");
 	echo("[BELT EQUIP] " @ Client::getName(%clientId) @ " equipped armor: " @ %item);
-	
+
 	// Refresh player stats
 	RefreshAll(%clientId);
 	SaveCharacter(%clientId);
+	// VOID Phase 1b: the "(worn)" tag on the stock-GUI armor rows follows the
+	// equip state, which this changed without touching the list.
+	VSlot::Sync(%clientId);
 }
 
 // Unequip armor
@@ -3381,10 +3386,12 @@ function Belt::UnequipArmor(%clientId, %item)
 	
 	Client::sendMessage(%clientId, $MsgYellow, "You unequipped " @ %itemName @ ".");
 	echo("[BELT UNEQUIP] " @ Client::getName(%clientId) @ " unequipped armor: " @ %item);
-	
+
 	// Refresh player stats
 	RefreshAll(%clientId);
 	SaveCharacter(%clientId);
+	// VOID Phase 1b: refresh the "(worn)" tag on the stock-GUI armor rows.
+	VSlot::Sync(%clientId);
 }
 
 

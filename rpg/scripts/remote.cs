@@ -241,7 +241,9 @@ function remoteDropItem(%clientId,%type)
 						Client::sendMessage(%clientId, $MsgWhite, "That backpack slot is empty.");
 					else
 					{
-						Belt::DropItem(%clientId, %item, 1, "Weapons");
+						// VOID Phase 1b: rows can proxy any belt category now (armor
+						// window) - drop in the item's OWN category, not just Weapons.
+						Belt::DropItem(%clientId, %item, 1, $BeltItem[%item, "Type"]);
 						VSlot::Sync(%clientId);
 					}
 					return;

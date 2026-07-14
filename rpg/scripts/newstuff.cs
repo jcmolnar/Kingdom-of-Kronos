@@ -184,15 +184,7 @@ ItemData RedDiamondPlate
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData RedDiamondPlate0
-{
-	description = "Red Diamond Plate";
-	className = "Equipped";
-	shapeFile = "discammo";
-	imageType = RedDiamondPlateImage;
-
-	heading = "aArmor";
-};
+// VOID Phase 1b 2026-07-14: the 5 "Equipped"-class X0 datablocks (RedDiamondPlate0..VoidRobe0) moved to VoidLegacyEquipped.cs - see armors.cs note.
 $ItemCost[WhiteDiamondPlate] = 1000000000;
 $AccessoryVar[WhiteDiamondPlate, $AccessoryType] = $BodyAccessoryType;
 $AccessoryVar[WhiteDiamondPlate, $SpecialVar] = "7 2000 4 1000 3 500 10 4.0";
@@ -225,15 +217,6 @@ ItemData WhiteDiamondPlate
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData WhiteDiamondPlate0
-{
-	description = "White Diamond Plate";
-	className = "Equipped";
-	shapeFile = "discammo";
-	imageType = WhiteDiamondPlateImage;
-
-	heading = "aArmor";
 };
 //============================================================================
 
@@ -738,15 +721,6 @@ ItemData JudgementRobe
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData JudgementRobe0
-{
-	description = "Judgement Robe";
-	className = "Equipped";
-	shapeFile = "discammo";
-	imageType = JudgementRobeImage;
-
-	heading = "aArmor";
-};
 
 // Storm Robe - 25% chance to zap attacker for 500 damage
 $ItemCost[StormRobe] = 1000000000;
@@ -784,15 +758,6 @@ ItemData StormRobe
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData StormRobe0
-{
-	description = "Storm Robe";
-	className = "Equipped";
-	shapeFile = "discammo";
-	imageType = StormRobeImage;
-
-	heading = "aArmor";
-};
 
 // Void Robe - 5% chance to completely dodge an attack
 $ItemCost[VoidRobe] = 1000000000;
@@ -829,15 +794,6 @@ ItemData VoidRobe
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData VoidRobe0
-{
-	description = "Void Robe";
-	className = "Equipped";
-	shapeFile = "discammo";
-	imageType = VoidRobeImage;
-
-	heading = "aArmor";
 };
 //============================================================================
 //TEST WEAPONS 

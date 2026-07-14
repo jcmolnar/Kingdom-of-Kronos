@@ -220,14 +220,7 @@ ItemData RatSkinShirt
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData RatSkinShirt0
-{
-	description = "Rat Skin Shirt";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
+// VOID Phase 1b 2026-07-14: the 18 "Equipped"-class X0 datablocks moved to VoidLegacyEquipped.cs (exec'd LAST from BeltWeapons.cs) so they register above the 200 count-cap, funding the 40 new VSlot rows. All 18 base ItemData + every $Armor* table stay here.
 //============================================================================
 ItemData StuddedLeatherSuit
 {
@@ -237,14 +230,6 @@ ItemData StuddedLeatherSuit
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData StuddedLeatherSuit0
-{
-	description = "Studded Leather Suit";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };
 
 //============================================================================
@@ -257,14 +242,6 @@ ItemData ToughHideSuit
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData ToughHideSuit0
-{
-	description = "Tough Hide Suit";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
 
 //============================================================================
 ItemData IronScaleMail
@@ -275,14 +252,6 @@ ItemData IronScaleMail
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData IronScaleMail0
-{
-	description = "Iron Scale Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };
 
 //============================================================================
@@ -295,14 +264,6 @@ ItemData SteelScaleMail
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData SteelScaleMail0
-{
-	description = "Steel Scale Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
 
 //============================================================================
 ItemData SteelBrigandineMail
@@ -313,14 +274,6 @@ ItemData SteelBrigandineMail
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData SteelBrigandineMail0
-{
-	description = "Steel Brigandine Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };
 
 //============================================================================
@@ -333,14 +286,6 @@ ItemData GoldenBrigandineMail
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData GoldenBrigandineMail0
-{
-	description = "Golden Brigandine Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
 
 //============================================================================
 ItemData GoldenChainMail
@@ -351,14 +296,6 @@ ItemData GoldenChainMail
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData GoldenChainMail0
-{
-	description = "Golden Chain Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };
 
 //============================================================================
@@ -371,14 +308,6 @@ ItemData CrystalChainMail
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData CrystalChainMail0
-{
-	description = "Crystal Chain Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
 
 //============================================================================
 ItemData CrystalRingMail
@@ -389,14 +318,6 @@ ItemData CrystalRingMail
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData CrystalRingMail0
-{
-	description = "Crystal Ring Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };
 
 //============================================================================
@@ -409,14 +330,6 @@ ItemData CrystalBandedMail
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData CrystalBandedMail0
-{
-	description = "Crystal Banded Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
 
 //============================================================================
 ItemData CrystalSplintMail
@@ -427,14 +340,6 @@ ItemData CrystalSplintMail
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData CrystalSplintMail0
-{
-	description = "Crystal Splint Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };
 
 //============================================================================
@@ -447,14 +352,6 @@ ItemData TungstenSplintMail
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData TungstenSplintMail0
-{
-	description = "Tungsten Splint Mail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
 
 //============================================================================
 ItemData TungstenPlateMail
@@ -465,14 +362,6 @@ ItemData TungstenPlateMail
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData TungstenPlateMail0
-{
-	description = "Tungsten Platemail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };
 
 //============================================================================
@@ -485,14 +374,6 @@ ItemData DiamondPlateMail
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData DiamondPlateMail0
-{
-	description = "Diamond Platemail";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
 
 //============================================================================
 ItemData DiamondFieldPlate
@@ -503,14 +384,6 @@ ItemData DiamondFieldPlate
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData DiamondFieldPlate0
-{
-	description = "Diamond Field Plate";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };
 
 //============================================================================
@@ -523,14 +396,6 @@ ItemData DiamondFullPlate
 	heading = "eMiscellany";
 	price = 0;
 };
-ItemData DiamondFullPlate0
-{
-	description = "Diamond Full Plate";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
-};
 
 //============================================================================
 ItemData BlackDiamondFullPlate
@@ -541,12 +406,4 @@ ItemData BlackDiamondFullPlate
 
 	heading = "eMiscellany";
 	price = 0;
-};
-ItemData BlackDiamondFullPlate0
-{
-	description = "Black Diamond Full Plate";
-	className = "Equipped";
-	shapeFile = "discammo";
-
-	heading = "aArmor";
 };

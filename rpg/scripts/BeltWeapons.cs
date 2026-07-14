@@ -335,3 +335,9 @@ function VoidArmor::RegisterAll()
 }
 VoidArmor::RegisterAll();
 
+
+// VOID Phase 1b 2026-07-14: register the legacy "Equipped"-class X0 armor
+// datablocks LAST so they land above the 200 count-cap (they no longer receive
+// counts - see VoidLegacyEquipped.cs header). BeltWeapons.cs is the final exec
+// in Server.cs, and this is its final line, so nothing registers after them.
+exec("VoidLegacyEquipped.cs");

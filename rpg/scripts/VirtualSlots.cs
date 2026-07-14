@@ -52,7 +52,65 @@ ItemData VSlot5 { heading = "bWeapons"; description = "Backpack Slot"; showInven
 ItemData VSlot6 { heading = "bWeapons"; description = "Backpack Slot"; showInventory = true; showWeaponBar = false; price = 0; };
 ItemData VSlot7 { heading = "bWeapons"; description = "Backpack Slot"; showInventory = true; showWeaponBar = false; price = 0; };
 
-$VSlot::Count = 8;			// K reserved ItemData slots (fund from Phase B savings)
+//------------------------------------------------------------------------------
+// VOID Phase 1b (2026-07-14): ARMOR window (20 rows) - the stock-GUI view of the
+// belt "Armor" carried list (armor converted to belt in Phase 1a). heading
+// "aArmor" groups them under the same header engine armor used. Same inert-
+// until-synced contract as the weapon rows above.
+//------------------------------------------------------------------------------
+ItemData VSlotArmor0  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor1  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor2  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor3  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor4  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor5  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor6  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor7  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor8  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor9  { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor10 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor11 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor12 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor13 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor14 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor15 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor16 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor17 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor18 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotArmor19 { heading = "aArmor"; description = "Armor Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+
+//------------------------------------------------------------------------------
+// VOID Phase 1b: STORAGE window (20 rows) - reserved for the banker deposit/
+// withdraw view (wired in the bank feature pass). Declared NOW to lock their
+// low indices (< 128, the shop/bank bitfield-safe region). Never synced yet:
+// count stays 0 on every player, so they are invisible everywhere.
+//------------------------------------------------------------------------------
+ItemData VSlotBank0  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank1  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank2  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank3  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank4  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank5  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank6  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank7  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank8  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank9  { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank10 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank11 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank12 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank13 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank14 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank15 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank16 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank17 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank18 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+ItemData VSlotBank19 { heading = "eMiscellany"; description = "Storage Slot"; showInventory = true; showWeaponBar = false; price = 0; };
+
+$VSlot::Count  = 8;			// WEAPONS window rows (stays 8: with the 40 new rows the
+							// count-bearing region tops out at index ~197 of the 200
+							// cap - weapon rows grow when the accessory pass frees room)
+$VSlot::ACount = 20;		// ARMOR window rows (stock-GUI view of belt "Armor" list)
+$VSlot::SCount = 20;		// STORAGE window rows (bank view; declared, not yet wired)
 
 //------------------------------------------------------------------------------
 // Resolve the K placeholder ItemData to their engine indices. Called once at
@@ -97,6 +155,37 @@ function VSlot::Init()
 		$VSlot::NameToIdx["VSlot" @ %i] = %idx;	// name->idx for the click dispatch (runtime getItemType would crash too)
 	}
 
+	// VOID Phase 1b: ARMOR window (VSlotArmor0..{ACount-1})
+	for(%i = 0; %i < $VSlot::ACount; %i++)
+	{
+		%idx = VSlot::NameToType("VSlotArmor" @ %i);
+		if(%idx == -1)
+		{
+			echo("[VSLOT] VSlotArmor" @ %i @ " ItemData not registered - disabling Virtual Slots");
+			$pref::VSlotsEnabled = false;
+			return;
+		}
+		$VSlot::AIndex[%i] = %idx;
+		$VSlot::IsSlot[%idx] = true;
+		$VSlot::NameToIdx["VSlotArmor" @ %i] = %idx;
+	}
+
+	// VOID Phase 1b: STORAGE window (VSlotBank0..{SCount-1}) - indices locked now,
+	// rows stay count-0 until the bank feature wires them.
+	for(%i = 0; %i < $VSlot::SCount; %i++)
+	{
+		%idx = VSlot::NameToType("VSlotBank" @ %i);
+		if(%idx == -1)
+		{
+			echo("[VSLOT] VSlotBank" @ %i @ " ItemData not registered - disabling Virtual Slots");
+			$pref::VSlotsEnabled = false;
+			return;
+		}
+		$VSlot::BIndex[%i] = %idx;
+		$VSlot::IsSlot[%idx] = true;
+		$VSlot::NameToIdx["VSlotBank" @ %i] = %idx;
+	}
+
 	// VSlots are declared FIRST (Server.cs execs VirtualSlots before every other ItemData
 	// script), so they land at LOW indices - well under the 200 per-player item-count cap
 	// (retail Tribes 1.40 MaxItemTypes). Player::setItemCount writes them in-bounds on every
@@ -113,7 +202,7 @@ function VSlot::Init()
 		return;
 	}
 
-	echo("[VSLOT] " @ $VSlot::Count @ " virtual inventory slots ready (indices " @ $VSlot::Index[0] @ ".." @ $VSlot::Index[$VSlot::Count - 1] @ "); DLL ok: " @ %probe);
+	echo("[VSLOT] windows ready: weapons " @ $VSlot::Count @ " (" @ $VSlot::Index[0] @ ".." @ $VSlot::Index[$VSlot::Count - 1] @ "), armor " @ $VSlot::ACount @ " (" @ $VSlot::AIndex[0] @ ".." @ $VSlot::AIndex[$VSlot::ACount - 1] @ "), storage " @ $VSlot::SCount @ " (" @ $VSlot::BIndex[0] @ ".." @ $VSlot::BIndex[$VSlot::SCount - 1] @ "); DLL ok: " @ %probe);
 }
 
 //------------------------------------------------------------------------------
@@ -191,6 +280,40 @@ function VSlot::Sync(%clientId)
 			Player::setItemCount(%clientId, %idx, 0);	// hide the row
 		}
 	}
+
+	// VOID Phase 1b: ARMOR window - same contract, driven by the belt "Armor"
+	// carried list. The equipped piece is tagged "(worn)" in its row label.
+	%nf = Belt::GetNS(%clientId, "Armor");
+	%n  = GetWord(%nf, 0);
+	%worn = fetchData(%clientId, "EquippedBeltArmor");
+
+	for(%i = 0; %i < $VSlot::ACount; %i++)
+	{
+		%idx  = $VSlot::AIndex[%i];
+		%item = "";
+		if(%i < %n)
+			%item = GetWord(%nf, %i + 1);
+		if($BeltItem[%item, "Item"] != "")
+			%item = $BeltItem[%item, "Item"];
+
+		if(%item != "" && %item != -1 && $BeltItem[%item, "Type"] == "Armor")
+		{
+			$VSlot::Map[%clientId, %idx] = %item;
+			%name = $BeltItem[%item, "Name"];
+			if(%name == "")
+				%name = %item;
+			if(%item == %worn)
+				%name = %name @ " (worn)";
+			VSlot::SetRow(%idx, %name, $ItemCost[%item]);
+			vslotPushItem(%clientId, %idx);
+			Player::setItemCount(%clientId, %idx, 1);
+		}
+		else
+		{
+			$VSlot::Map[%clientId, %idx] = "";
+			Player::setItemCount(%clientId, %idx, 0);
+		}
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -214,6 +337,10 @@ function VSlot::Clear(%clientId)
 		return;
 	for(%i = 0; %i < $VSlot::Count; %i++)
 		$VSlot::Map[%clientId, $VSlot::Index[%i]] = "";
+	for(%i = 0; %i < $VSlot::ACount; %i++)
+		$VSlot::Map[%clientId, $VSlot::AIndex[%i]] = "";
+	for(%i = 0; %i < $VSlot::SCount; %i++)
+		$VSlot::Map[%clientId, $VSlot::BIndex[%i]] = "";
 }
 
 //------------------------------------------------------------------------------
@@ -251,7 +378,20 @@ function VSlot::OnUseClick(%clientId, %item)
 		Client::sendMessage(%clientId, $MsgWhite, "That backpack slot is empty.");
 		return;
 	}
-	// Toggle, mirroring Belt::UseItem's Weapons branch.
+
+	// VOID Phase 1b: dispatch by belt category. Armor rows toggle equip via the
+	// belt armor path (Phase 1a; SkillCanUse-gated in Belt::EquipArmor). Equip/
+	// UnequipArmor re-sync the rows themselves, so the "(worn)" tag follows.
+	if($BeltItem[%beltItem, "Type"] == "Armor")
+	{
+		if(fetchData(%clientId, "EquippedBeltArmor") == %beltItem)
+			Belt::UnequipArmor(%clientId, %beltItem);
+		else
+			Belt::EquipArmor(%clientId, %beltItem);
+		return;
+	}
+
+	// Weapons: toggle, mirroring Belt::UseItem's Weapons branch.
 	if(fetchData(%clientId, "EquippedBeltWeapon") == %beltItem)
 		BeltWeapon::Unequip(%clientId, false);
 	else
