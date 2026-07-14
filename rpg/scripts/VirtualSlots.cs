@@ -272,7 +272,10 @@ function VSlot::Sync(%clientId)
 				%name = %item;
 			VSlot::SetRow(%idx, %name, $ItemCost[%item]);
 			vslotPushItem(%clientId, %idx);				// DLL: per-client row rewrite (by index)
-			Player::setItemCount(%clientId, %idx, 1);	// make the row appear
+			// VOID 1b: row count mirrors the real belt count (stacks show as x2 etc)
+			%cnt = Belt::ItemCount(%item, fetchData(%clientId, "Weapons"));
+			if(%cnt < 1) %cnt = 1;
+			Player::setItemCount(%clientId, %idx, %cnt);	// make the row appear
 		}
 		else
 		{
@@ -306,7 +309,10 @@ function VSlot::Sync(%clientId)
 				%name = %name @ " (worn)";
 			VSlot::SetRow(%idx, %name, $ItemCost[%item]);
 			vslotPushItem(%clientId, %idx);
-			Player::setItemCount(%clientId, %idx, 1);
+			// VOID 1b: row count mirrors the real belt count (stacks show as x2 etc)
+			%cnt = Belt::ItemCount(%item, fetchData(%clientId, "Armor"));
+			if(%cnt < 1) %cnt = 1;
+			Player::setItemCount(%clientId, %idx, %cnt);
 		}
 		else
 		{
