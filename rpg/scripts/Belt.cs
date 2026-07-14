@@ -3320,7 +3320,16 @@ function Belt::EquipArmor(%clientId, %item)
 		Client::sendMessage(%clientId, $MsgRed, "Error: Could not find player object.");
 		return;
 	}
-	
+
+	// VOID CONVERSION 2026-07-14: engine armor equips were gated by SkillCanUse
+	// (itemevents.cs Item::onUse); the belt path must gate identically or the
+	// $SkillRestriction on every converted armor is silently lost.
+	if(!SkillCanUse(%clientId, %item))
+	{
+		Client::sendMessage(%clientId, $MsgRed, "You can't equip this item because you lack the necessary skills.~wC_BuySell.wav");
+		return;
+	}
+
 	// Unequip current armor first (if any)
 	%currentArmor = fetchData(%clientId, "EquippedBeltArmor");
 	if(%currentArmor != "" && %currentArmor != "0" && %currentArmor != %item)

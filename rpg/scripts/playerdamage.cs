@@ -3083,9 +3083,10 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 		%damagedClientPos = GameBase::getPosition(%damagedClient);
 		%shooterClientPos = GameBase::getPosition(%shooterClient);
 
-		// Get currently equipped armor from player data (this is set by UpdateAppearance in rpgfunk.cs)
-		// Uses fetchData instead of GetCurrentlyWearingArmor because armor is stored as a data field
-		%damagedCurrentArmor = fetchData(%damagedClient, "Armor");
+		// Get currently equipped armor (VOID CONVERSION 2026-07-14: via GetWornArmor -
+		// belt EquippedBeltArmor first, engine WornEngineArmor fallback. The old
+		// fetchData("Armor") read now returns the belt carried-armor LIST, not a name.)
+		%damagedCurrentArmor = GetWornArmor(%damagedClient);
 
 		//==============
 		//PROCESS STATS

@@ -2019,6 +2019,17 @@ function LoadCharacter(%clientId)
 			if($LOADCHAR_DEBUG) echo("DEBUG: Armor was empty/'0', normalizing to empty string");
 			%armor = "";
 		}
+		// VOID MIGRATION 2026-07-14: field 48 historically held the WORN engine armor
+		// NAME (a single word, written by the old UpdateAppearance); post-conversion it
+		// holds the belt carried-armor LIST ("name count " pairs). A legacy single-word
+		// value would corrupt belt list parsing - clear it here; the worn state
+		// re-migrates from the spawnStuff "Xxx0" token (GiveThisStuff) on this same
+		// login, which re-gives the armor to the belt and re-equips it.
+		if(%armor != "" && GetWord(%armor, 1) == -1 && isBeltItem(GetWord(%armor, 0)))
+		{
+			echo("[VOID MIGRATE] " @ %name @ ": legacy worn-armor value '" @ %armor @ "' in field 48 cleared (re-migrates via spawnStuff).");
+			%armor = "";
+		}
 		storeData(%clientId, "Armor", %armor);
 		if($LOADCHAR_DEBUG) echo("DEBUG: Armor FINAL = '" @ %armor @ "'");
 		
@@ -4124,6 +4135,19 @@ function clipTrailingNumbers(%str)
 	return StripTrailingDigits(%str);
 }
 
+// VOID CONVERSION 2026-07-14: "what armor is this player wearing?" - belt-first
+// (EquippedBeltArmor, the converted system), falling back to the engine-armor
+// cache (WornEngineArmor, written by UpdateAppearance from mounted X0 items -
+// only un-migrated players still have those). Use this instead of reading the
+// "Armor" funkvar, which now holds the belt CARRIED-armor list, not a name.
+function GetWornArmor(%clientId)
+{
+	%belt = fetchData(%clientId, "EquippedBeltArmor");
+	if(%belt != "" && %belt != "0" && %belt != -1)
+		return %belt;
+	return fetchData(%clientId, "WornEngineArmor");
+}
+
 function UpdateAppearance(%clientId)
 {
 	// Recursion Guard: Prevent infinite loops
@@ -4218,10 +4242,15 @@ function UpdateAppearance(%clientId)
 
 	// Store armor name to player data so armor effects can be looked up (used by playerdamage.cs)
 	// This allows armor special effects (RETRIBUTION, STATIC_DISCHARGE, PHASE_SHIFT) to work
+	// VOID CONVERSION 2026-07-14: re-keyed "Armor" -> "WornEngineArmor". The "Armor" key now
+	// belongs EXCLUSIVELY to the belt's carried-armor list ("name count " pairs, field 48);
+	// writing "" here on every appearance refresh was wiping that list for any player with
+	// no engine body-armor mounted (i.e. every migrated player). Readers that want "what
+	// armor is this player wearing" use GetWornArmor() (belt-first, engine fallback).
 	if(%armor != -1 && %armor != "")
-		storeData(%clientId, "Armor", %armor);
+		storeData(%clientId, "WornEngineArmor", %armor);
 	else
-		storeData(%clientId, "Armor", "");
+		storeData(%clientId, "WornEngineArmor", "");
 	
 	// CRITICAL: Re-validate player object before using it
 	%player = Client::getOwnedObject(%clientId);
@@ -6703,6 +6732,23 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 		{
 			%tmpcntaffects[%cntindex] = %w2;
 		}
+		else if(String::len(%w) > 1 && !isBeltItem(%w) && String::getSubStr(%w, String::len(%w)-1, 1) == "0" && isBeltItem(String::getSubStr(%w, 0, String::len(%w)-1)))
+		{
+			// VOID MIGRATION 2026-07-14: a saved WORN-armor token ("Xxx0 1" - the
+			// Equipped-class twin, itemevents.cs equip swap) whose BASE name is now
+			// belt-registered. Give the base to the belt and remember it for a
+			// re-equip after the loop (equipping inline would SaveCharacter with a
+			// half-restored inventory). Idempotent: post-migration saves never
+			// contain X0 tokens again, and the equip only fires onto an empty slot.
+			%vmBase = String::getSubStr(%w, 0, String::len(%w)-1);
+			if(%w2 != "" && (%w2 * 1) > 0)
+			{
+				Belt::GiveThisStuff(%clientId, %vmBase, %w2, false);
+				echo("[VOID MIGRATE] " @ %name @ ": worn '" @ %w @ "' x" @ %w2 @ " -> belt '" @ %vmBase @ "'");
+				if($BeltItem[%vmBase, "Type"] == "Armor" && %voidEquipArmor == "")
+					%voidEquipArmor = %vmBase;
+			}
+		}
 		else if(isBackpackItem(%w))
 		{
 			// Validate item and count before giving to belt
@@ -6785,6 +6831,16 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 				echo("ERROR: GiveThisStuff - could not find player object for clientId " @ %clientId);
 			}
 		}
+	}
+
+	// VOID MIGRATION 2026-07-14: re-equip the migrated worn armor now that the whole
+	// inventory is restored (deferred from the X0 branch above). Only fires when
+	// nothing is already equipped, so it can never override a player's later choice.
+	if(%voidEquipArmor != "")
+	{
+		%vmCur = fetchData(%clientId, "EquippedBeltArmor");
+		if(%vmCur == "" || %vmCur == "0" || %vmCur == -1)
+			Belt::EquipArmor(%clientId, %voidEquipArmor);
 	}
 
 	// CRITICAL: For enemy bots, use RefreshAllEnemyBot() which does NOT touch team

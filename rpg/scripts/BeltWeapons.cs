@@ -293,3 +293,31 @@ function BeltWeapon::Command(%clientId, %sub, %rest)
 BeltWeapon::Register(TestBeltBlade, "Test Belt Blade", SteelBroadSword, 40, 0, 5.0, 1000, "A conjured blade that lives in your backpack");
 BeltArmor::Register(TestBeltMail, "Test Belt Mail", "rpgscalemail", "7 25 4 100", 10.0, 1000, "Conjured scale mail that lives in your backpack");
 
+//==============================================================================
+// VOID CONVERSION Phase 1 (2026-07-14): register ALL 18 engine armors as belt
+// items, DERIVED from the live armors.cs data ($ArmorList / description /
+// $ArmorSkin / $AccessoryVar / $ItemCost) so there is exactly one source of
+// truth while both systems coexist. The engine ItemData (base + "0" pairs)
+// stay registered this phase; Phase 2 deletes them and this loop gets
+// literalized (descriptions come off the datablocks, which won't exist then).
+//
+// Saved inventories migrate lazily via GiveThisStuff (rpgfunk.cs): base names
+// route to the belt because isBackpackItem() becomes true the moment this
+// runs; worn "Xxx0 1" tokens are handled by the explicit migration branch
+// (give base to belt + re-equip). Skill restrictions carry over because
+// $SkillRestriction is keyed by the same name and Belt::EquipArmor now gates
+// on SkillCanUse (Belt.cs).
+//==============================================================================
+function VoidArmor::RegisterAll()
+{
+	%n = 0;
+	for(%i = 1; $ArmorList[%i] != ""; %i++)
+	{
+		%a = $ArmorList[%i];
+		BeltArmor::Register(%a, %a.description, $ArmorSkin[%a], $AccessoryVar[%a, $SpecialVar], $AccessoryVar[%a, $Weight], $ItemCost[%a], $AccessoryVar[%a, $MiscInfo]);
+		%n++;
+	}
+	echo("[VOID] Registered " @ %n @ " armors as belt items (engine datablocks remain during the transition).");
+}
+VoidArmor::RegisterAll();
+
