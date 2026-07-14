@@ -4398,7 +4398,13 @@ function UpdateAppearance(%clientId)
 		else if(%race == "FemaleHumanRobed" || (String::findSubStr(%personalSkin, "robe") != -1 && %race == "FemaleHuman")) %p = "AdminBootsFemaleRobedArmor";
 		else %p = "AdminBootsArmor";
 	}
-	else if(%armor != -1)
+	// VOID CONVERSION 2026-07-14: also take this branch when %apm is set with NO
+	// engine armor mounted - a belt-equipped robe has %armor == -1 (nothing
+	// mounted) but must still get the Robed model (%race @ "Robed" @ %cw), else
+	// the naked path renders the plate-body "tights" model under the robe skin.
+	// For belt PLATE armor (%apm == "") the naked path below builds the identical
+	// string, so behavior there is unchanged.
+	else if(%armor != -1 || %apm != "")
 	{
 		%p = %race @ %apm @ %cw;
 	}
@@ -6032,7 +6038,12 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 						}
 					}
 				}
-				
+
+				// VOID CONVERSION 2026-07-14: belt-equipped robes aren't mounted, so
+				// the scan above can't see them - check EquippedBeltArmor too.
+				if(!%isRobed && $ArmorPlayerModel[fetchData(%clientId, "EquippedBeltArmor")] == "Robed")
+					%isRobed = true;
+
 				if(%isRobed)
 					Player::setArmor(%clientId, "AdminBootsRobedArmor");
 				else
