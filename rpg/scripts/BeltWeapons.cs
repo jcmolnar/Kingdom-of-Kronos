@@ -363,9 +363,12 @@ function VoidPrice::MirrorAll()
 			continue;
 		if($VSlot::IsSlot[%i])
 			continue;	// per-client display rows manage their own price field
-		if($ItemCost[%item] != "" && $ItemCost[%item] > 0)
+		// GetItemCost() is the LIVE price source getBuyCost uses (the $ItemCost
+		// globals are only sparsely populated - first mirror pass caught 15 items).
+		%cost = GetItemCost(%item);
+		if(%cost != "" && %cost > 0)
 		{
-			%item.price = $ItemCost[%item];
+			%item.price = %cost;
 			%n++;
 		}
 	}
