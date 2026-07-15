@@ -390,7 +390,10 @@ function KronosShop_Close(%clientId, %fromCancelMenu)
 function KShop_QueuedSync(%clientId)
 {
 	%clientId.kshopSyncQueued = "";
+	%t0 = getRealMillis();
 	remoteKShopSync(%clientId);
+	if($VoidPerf)
+		echo("[VOIDPERF] KShop panel push(" @ %clientId @ "): " @ (getRealMillis() - %t0) @ "ms");
 }
 
 // Client requests a refresh after buy/sell/use/drop (counts changed)

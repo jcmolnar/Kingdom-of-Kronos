@@ -55,6 +55,16 @@ extern "C" char* __cdecl c_getRealDayOfWeek(int, char**)
     sprintf(buf, "%d", st.wDayOfWeek);
     return buf;
 }
+// getRealMillis() -> wall-clock milliseconds (GetTickCount). The sim clocks
+// (getSimTime / getIntegerTime) FREEZE for the duration of a frame, so script
+// can't time anything inside one frame with them - this can (perf probes).
+// Wraps at 49.7 days; probes only ever subtract two nearby reads.
+extern "C" char* __cdecl c_getRealMillis(int, char**)
+{
+    static char buf[16];
+    sprintf(buf, "%lu", (unsigned long)GetTickCount());
+    return buf;
+}
 
 // engine ABI: argc in ECX, argv on stack ([ESP+4]); callee cleans argv (ret 4); result in EAX.
 #define HANDLER(NAME, IMPL) __declspec(naked) void NAME(){ \
@@ -67,6 +77,7 @@ extern "C" char* __cdecl c_getRealDayOfWeek(int, char**)
 HANDLER(h_getRealDate,      c_getRealDate)
 HANDLER(h_getRealTime,      c_getRealTime)
 HANDLER(h_getRealDayOfWeek, c_getRealDayOfWeek)
+HANDLER(h_getRealMillis,    c_getRealMillis)
 
 // regCmd(name, handler): the engine's getNumClients StringCallback registration, byte-for-byte.
 //   PUSH handler ; PUSH 0 ; MOV ECX,name ; XOR EDX,EDX ; CALL 0x005f4138  (RET 8 self-cleans)
@@ -92,7 +103,8 @@ extern "C" void __cdecl doRegister()
     regCmd("getRealDate",      (void*)&h_getRealDate);
     regCmd("getRealTime",      (void*)&h_getRealTime);
     regCmd("getRealDayOfWeek", (void*)&h_getRealDayOfWeek);
-    flog("registered getRealDate/getRealTime/getRealDayOfWeek");
+    regCmd("getRealMillis",    (void*)&h_getRealMillis);
+    flog("registered getRealDate/getRealTime/getRealDayOfWeek/getRealMillis");
 }
 
 // Plugin descriptor vtable[0] = our init; loader calls it AFTER the console is ready.

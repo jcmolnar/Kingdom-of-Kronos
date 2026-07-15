@@ -3388,17 +3388,19 @@ function Belt::EquipArmor(%clientId, %item)
 
 	// Refresh player stats. $VoidPerf = 1: time each phase to locate the
 	// reported equip lag spike (RefreshAll vs SaveCharacter vs VSlot::Sync).
-	%t0 = getSimTime();
+	// getRealMillis = wall clock from kronos_datetime.dll - the sim clocks
+	// (getSimTime/getIntegerTime) freeze for the whole frame and read 0 here.
+	%t0 = getRealMillis();
 	RefreshAll(%clientId);
-	%t1 = getSimTime();
+	%t1 = getRealMillis();
 	SaveCharacter(%clientId);
-	%t2 = getSimTime();
+	%t2 = getRealMillis();
 	// VOID Phase 1b: the "(worn)" tag on the stock-GUI armor rows follows the
 	// equip state, which this changed without touching the list.
 	VSlot::Sync(%clientId);
-	%t3 = getSimTime();
+	%t3 = getRealMillis();
 	if($VoidPerf)
-		echo("[VOIDPERF] EquipArmor " @ %item @ ": RefreshAll=" @ (%t1 - %t0) @ "s SaveCharacter=" @ (%t2 - %t1) @ "s VSlotSync=" @ (%t3 - %t2) @ "s");
+		echo("[VOIDPERF] EquipArmor " @ %item @ ": RefreshAll=" @ (%t1 - %t0) @ "ms SaveCharacter=" @ (%t2 - %t1) @ "ms VSlotSync=" @ (%t3 - %t2) @ "ms");
 }
 
 // Unequip armor. %skipRefresh (optional): the swap path inside
@@ -3432,16 +3434,16 @@ function Belt::UnequipArmor(%clientId, %item, %skipRefresh)
 	// Refresh player stats (skipped when the caller does it - see header)
 	if(%skipRefresh != true && %skipRefresh != "true" && %skipRefresh != 1)
 	{
-		%t0 = getSimTime();
+		%t0 = getRealMillis();
 		RefreshAll(%clientId);
-		%t1 = getSimTime();
+		%t1 = getRealMillis();
 		SaveCharacter(%clientId);
-		%t2 = getSimTime();
+		%t2 = getRealMillis();
 		// VOID Phase 1b: refresh the "(worn)" tag on the stock-GUI armor rows.
 		VSlot::Sync(%clientId);
-		%t3 = getSimTime();
+		%t3 = getRealMillis();
 		if($VoidPerf)
-			echo("[VOIDPERF] UnequipArmor " @ %item @ ": RefreshAll=" @ (%t1 - %t0) @ "s SaveCharacter=" @ (%t2 - %t1) @ "s VSlotSync=" @ (%t3 - %t2) @ "s");
+			echo("[VOIDPERF] UnequipArmor " @ %item @ ": RefreshAll=" @ (%t1 - %t0) @ "ms SaveCharacter=" @ (%t2 - %t1) @ "ms VSlotSync=" @ (%t3 - %t2) @ "ms");
 	}
 }
 

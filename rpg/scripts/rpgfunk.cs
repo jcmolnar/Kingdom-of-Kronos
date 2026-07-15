@@ -5960,7 +5960,7 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 
 	%race = fetchData(%clientId, "RACE");
 	//echo("DEBUG RefreshAll: RACE = '" @ %race @ "'");
-	%vperfT0 = getSimTime();	// $VoidPerf probe (equip lag hunt 2026-07-15)
+	%vperfT0 = getRealMillis();	// $VoidPerf probe (equip lag hunt 2026-07-15); wall clock, sim clocks freeze per frame
 	if(String::findSubStr(%race, "Human") != -1)
 	{
 //		echo("DEBUG RefreshAll: Calling RefreshWeight...");
@@ -5970,7 +5970,7 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 		RefreshWeight(%clientId);
 //		echo("DEBUG RefreshAll: RefreshWeight completed");
 	}
-	%vperfT1 = getSimTime();	// $VoidPerf probe: weight done
+	%vperfT1 = getRealMillis();	// $VoidPerf probe: weight done
 
 //	echo("DEBUG RefreshAll: Calling UpdateAppearance...");
 	// CRITICAL: Skip UpdateAppearance for bots - they have their armor set during spawn
@@ -5995,7 +5995,7 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	}
 	// $VoidPerf probe (equip lag hunt 2026-07-15): which RefreshAll phase is slow
 	if($VoidPerf)
-		echo("[VOIDPERF] RefreshAll(" @ %clientId @ "): weight=" @ (%vperfT1 - %vperfT0) @ "s appearance=" @ (getSimTime() - %vperfT1) @ "s");
+		echo("[VOIDPERF] RefreshAll(" @ %clientId @ "): weight=" @ (%vperfT1 - %vperfT0) @ "ms appearance=" @ (getRealMillis() - %vperfT1) @ "ms");
 //	echo("DEBUG RefreshAll: UpdateAppearance completed");
 
 //	echo("DEBUG RefreshAll: Calling refreshHPREGEN...");
