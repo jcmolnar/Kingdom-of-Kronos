@@ -335,6 +335,41 @@ function VoidArmor::RegisterAll()
 }
 VoidArmor::RegisterAll();
 
+//==============================================================================
+// VOID ACCESSORIES pass (2026-07-15): 17 accessories converted to belt, derived
+// from the live Accessory.cs data (description/$AccessoryVar tables) - same
+// one-source-of-truth pattern as VoidArmor::RegisterAll. Engine datablocks
+// (base + "0" pairs) stay registered this phase.
+//
+// - SHIELDS pass their own base datablock as the phantom-mount visual
+//   ($BeltAccessoryVisual -> UpdateAppearance slot 2, the Phase B machinery);
+//   Phase 2 must KEEP the shield base datablocks as visual shells.
+// - COST is passed "" deliberately: accessory prices generate LATER
+//   (GenerateAllShieldCosts, Server.cs post-exec init) and BeltItem::Add
+//   writes $HardcodedItemCost unconditionally - "" falls through to the
+//   generated $ItemCost, a 0 would freeze prices at zero.
+// - EXCLUDED by ruling (stay engine-side): Tent, ScoutVehicle, AdminBoots,
+//   AdminOrb (admin tooling / deployables), OrbOfLight (light-mount visual
+//   needs its own UpdateAppearance branch - future pass).
+//==============================================================================
+function VoidAccessory::RegisterAll()
+{
+	%list = "IronHelmet GoldenHelmet CrystalHelmet DiamondHelmet BlackDiamondHelmet RedDiamondHelmet WhiteDiamondHelmet"
+		@ " CheetaursPaws BootsOfGliding WindWalkers WindPaws"
+		@ " SteelKnightShield CrystalKnightShield DiamondKnightShield BlackDiamondKnightShield RedDiamondKingShield WhiteDiamondKingShield";
+	%n = 0;
+	for(%i = 0; (%a = GetWord(%list, %i)) != -1; %i++)
+	{
+		%vis = "";
+		if($AccessoryVar[%a, $AccessoryType] == $ShieldAccessoryType)
+			%vis = %a;	// shield's own datablock is its phantom-mount visual
+		BeltAccessory::Register(%a, %a.description, $AccessoryVar[%a, $AccessoryType], $AccessoryVar[%a, $SpecialVar], $AccessoryVar[%a, $Weight], "", $AccessoryVar[%a, $MiscInfo], %vis);
+		%n++;
+	}
+	echo("[VOID] Registered " @ %n @ " accessories as belt items (engine datablocks remain during the transition).");
+}
+VoidAccessory::RegisterAll();
+
 
 // VOID Phase 1b 2026-07-14: register the legacy "Equipped"-class X0 armor
 // datablocks LAST so they land above the 200 count-cap (they no longer receive

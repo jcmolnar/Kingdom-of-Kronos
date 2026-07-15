@@ -3413,7 +3413,17 @@ function Belt::EquipAccessory(%clientId, %item)
 		Client::sendMessage(%clientId, $MsgRed, "You don't have that accessory.");
 		return;
 	}
-	
+
+	// VOID ACCESSORIES 2026-07-15: engine accessory equips were gated by
+	// SkillCanUse (itemevents.cs Item::onUse) - the belt path must gate
+	// identically or every converted accessory's $SkillRestriction is lost.
+	// (Same fix Belt::EquipArmor got in Phase 1a.)
+	if(!SkillCanUse(%clientId, %item))
+	{
+		Client::sendMessage(%clientId, $MsgRed, "You can't equip this item because you lack the necessary skills.~wC_BuySell.wav");
+		return;
+	}
+
 	// Get accessory type and check max slots
 	%accessoryType = $AccessoryVar[%item, $AccessoryType];
 	%maxSlots = $maxAccessory[%accessoryType];

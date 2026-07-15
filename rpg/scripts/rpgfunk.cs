@@ -6805,6 +6805,11 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 				echo("[VOID MIGRATE] " @ %name @ ": worn '" @ %w @ "' x" @ %w2 @ " -> belt '" @ %vmBase @ "'");
 				if($BeltItem[%vmBase, "Type"] == "Armor" && %voidEquipArmor == "")
 					%voidEquipArmor = %vmBase;
+				// VOID ACCESSORIES 2026-07-15: worn accessories re-equip too - a
+				// player wears several at once (helmet+boots+shield), so collect
+				// a list; Belt::EquipAccessory enforces $maxAccessory per type.
+				else if($BeltItem[%vmBase, "Type"] == "Accessories")
+					%voidEquipAccs = %voidEquipAccs @ %vmBase @ " ";
 			}
 		}
 		else if(isBackpackItem(%w))
@@ -6908,6 +6913,14 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 		%vmCur = fetchData(%clientId, "EquippedBeltArmor");
 		if(%vmCur == "" || %vmCur == "0" || %vmCur == -1)
 			Belt::EquipArmor(%clientId, %voidEquipArmor);
+	}
+	// VOID ACCESSORIES 2026-07-15: re-equip migrated worn accessories (deferred
+	// list). Belt::EquipAccessory itself enforces the per-type $maxAccessory
+	// slots and refuses politely, so this can't over-equip.
+	if(%voidEquipAccs != "")
+	{
+		for(%vmI = 0; (%vmA = GetWord(%voidEquipAccs, %vmI)) != -1; %vmI++)
+			Belt::EquipAccessory(%clientId, %vmA);
 	}
 
 	// CRITICAL: For enemy bots, use RefreshAllEnemyBot() which does NOT touch team
