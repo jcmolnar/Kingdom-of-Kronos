@@ -3613,6 +3613,45 @@ function Belt::ReapplyEquippedStats(%clientId)
 // fold it onto these in a later cleanup pass.
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+// VOID CARRY CAPS (2026-07-15): distinct-name cap per carried belt category,
+// equal to that category's stock-GUI window size - so owned ALWAYS == visible
+// for vanilla players. Enforced only at the polite refusal points (shop buy
+// BEFORE charging, stock-GUI bank withdraw BEFORE moving); loot pickups, quest
+// rewards, migration and admin gives stay soft so nothing is ever confiscated
+// (grandfathered players just can't ADD new names until back under).
+// Stacking an already-carried name is always free - stacks share one row.
+//------------------------------------------------------------------------------
+function Void::CarryCap(%cat)
+{
+	if(%cat == "Weapons")
+		return $VSlot::Count;	// 8  - weapon window rows (VirtualSlots.cs)
+	if(%cat == "Armor")
+		return $VSlot::ACount;	// 20 - armor window rows
+	return 0;					// 0 = uncapped category (belt menu handles display)
+}
+
+// True when acquiring %item as a NEW name would exceed its category's window.
+function Void::AtCarryCap(%clientId, %item)
+{
+	%reg = $BeltItem[%item, "Item"];
+	if(%reg == "")
+		return false;
+	%cat = $BeltItem[%reg, "Type"];
+	%cap = Void::CarryCap(%cat);
+	if(%cap <= 0)
+		return false;
+	if(Belt::HasThisStuff(%clientId, %reg) > 0)
+		return false;	// stacking an existing name never consumes a row
+	%list = fetchData(%clientId, %cat);
+	if(%list == "" || %list == "0" || %list == -1)
+		return false;
+	%n = 0;
+	for(%i = 0; GetWord(%list, %i) != -1; %i += 2)
+		%n++;
+	return (%n >= %cap);
+}
+
 // Drop invalid/zero-count pairs, normalize spacing, trim trailing space.
 function Belt::CleanPairList(%list)
 {
@@ -3699,6 +3738,14 @@ function Belt::BankWithdraw(%clientId, %item, %amnt)
 	if(Belt::ItemCount(%reg, %bs) < %amnt)
 	{
 		Client::sendMessage(%clientId, $MsgRed, "You don't have that many in storage.");
+		return false;
+	}
+
+	// VOID CARRY CAP 2026-07-15: refuse BEFORE moving anything - a full carry
+	// window means the withdrawn item couldn't be seen in the stock GUI.
+	if(Void::AtCarryCap(%clientId, %reg))
+	{
+		Client::sendMessage(%clientId, $MsgRed, "Your Void backpack is full - you need to make room before withdrawing.");
 		return false;
 	}
 

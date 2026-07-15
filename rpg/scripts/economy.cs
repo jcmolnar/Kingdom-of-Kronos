@@ -264,6 +264,13 @@ function buyItem(%clientId, %item)
 			}
 			else
 			{
+				// VOID CARRY CAP 2026-07-15: refuse BEFORE any coins move - a full
+				// window means the new item couldn't be seen in the stock GUI.
+				if(isBeltItem(%item) && Void::AtCarryCap(%clientId, %item))
+				{
+					Client::sendMessage(%clientId, $MsgRed, "Your Void backpack is full - you need to make room for this item.~wC_BuySell.wav");
+					return 0;
+				}
 				if(checkResources(%player,%item,%cost,%clientId.bulkNum) && !IsDead(%clientId))
 				{
 					// Route belt items to Belt system, others to player inventory
