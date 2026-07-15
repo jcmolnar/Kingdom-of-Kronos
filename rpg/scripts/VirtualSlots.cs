@@ -414,6 +414,23 @@ function VSlot::SyncBank(%clientId)
 			// no shopping bit set -> row absent from the bank screen
 		}
 	}
+
+	// GRANDFATHER OVERFLOW: legacy players banked up to 50 uniques under the
+	// old cap - anything past the 20-row window would be unreachable in the
+	// stock GUI. Overflow LEGACY entries (real datablocks) get the old-style
+	// direct bit-listing; the original regular withdraw branch still handles
+	// those clicks. (Overflow BELT entries stay reachable via the belt menu.)
+	for(%i = $VSlot::SCount * 2; GetWord(%combined, %i) != -1; %i += 2)
+	{
+		%item = GetWord(%combined, %i);
+		if(%item == "" || %item == -1)
+			continue;
+		if($BeltItem[%item, "Item"] == %item)
+			continue;	// belt item: belt menu reaches it
+		if($ShopDebug) echo("[SHOPDBG] overflow direct-list " @ %item @ " from SyncBank");
+		Client::setItemShopping(%clientId, %item);
+		Client::setItemBuying(%clientId, %item);
+	}
 }
 
 //------------------------------------------------------------------------------
