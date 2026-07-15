@@ -3386,12 +3386,19 @@ function Belt::EquipArmor(%clientId, %item)
 	Client::sendMessage(%clientId, $MsgGreen, "You equipped " @ %itemName @ ".");
 	echo("[BELT EQUIP] " @ Client::getName(%clientId) @ " equipped armor: " @ %item);
 
-	// Refresh player stats
+	// Refresh player stats. $VoidPerf = 1: time each phase to locate the
+	// reported equip lag spike (RefreshAll vs SaveCharacter vs VSlot::Sync).
+	%t0 = getSimTime();
 	RefreshAll(%clientId);
+	%t1 = getSimTime();
 	SaveCharacter(%clientId);
+	%t2 = getSimTime();
 	// VOID Phase 1b: the "(worn)" tag on the stock-GUI armor rows follows the
 	// equip state, which this changed without touching the list.
 	VSlot::Sync(%clientId);
+	%t3 = getSimTime();
+	if($VoidPerf)
+		echo("[VOIDPERF] EquipArmor " @ %item @ ": RefreshAll=" @ (%t1 - %t0) @ "s SaveCharacter=" @ (%t2 - %t1) @ "s VSlotSync=" @ (%t3 - %t2) @ "s");
 }
 
 // Unequip armor. %skipRefresh (optional): the swap path inside
@@ -3425,10 +3432,16 @@ function Belt::UnequipArmor(%clientId, %item, %skipRefresh)
 	// Refresh player stats (skipped when the caller does it - see header)
 	if(%skipRefresh != true && %skipRefresh != "true" && %skipRefresh != 1)
 	{
+		%t0 = getSimTime();
 		RefreshAll(%clientId);
+		%t1 = getSimTime();
 		SaveCharacter(%clientId);
+		%t2 = getSimTime();
 		// VOID Phase 1b: refresh the "(worn)" tag on the stock-GUI armor rows.
 		VSlot::Sync(%clientId);
+		%t3 = getSimTime();
+		if($VoidPerf)
+			echo("[VOIDPERF] UnequipArmor " @ %item @ ": RefreshAll=" @ (%t1 - %t0) @ "s SaveCharacter=" @ (%t2 - %t1) @ "s VSlotSync=" @ (%t3 - %t2) @ "s");
 	}
 }
 

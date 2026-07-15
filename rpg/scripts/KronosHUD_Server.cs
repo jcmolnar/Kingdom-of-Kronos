@@ -124,6 +124,13 @@ function KronosShop_PushInv(%clientId)
 		%item = getItemData(%z);
 		if(!%item.showInventory)
 			continue;
+		// VOID 2026-07-15: NEVER render VSlot placeholders or belt-registered
+		// names as engine rows here. Placeholder counts FREEZE for HUD clients
+		// (VSlot::Sync skips them after the KHudOn handshake), so a login-time
+		// armor window ghosted in this panel forever - the "drop doesn't
+		// refresh" row was that frozen proxy, not the live belt row below.
+		if(VSlot::IsSlotItem(%item) || isBeltItem(%item))
+			continue;
 		%cnt = Player::getItemCount(%clientId, %item);
 		if(%cnt < 1)
 			continue;
@@ -535,6 +542,10 @@ function KronosBank_PushInv(%clientId)
 	{
 		%item = getItemData(%z);
 		if(!%item.showInventory)
+			continue;
+		// VOID 2026-07-15: skip VSlot placeholders + belt names - see the
+		// identical guard in KronosShop_PushInv (frozen-proxy ghost rows).
+		if(VSlot::IsSlotItem(%item) || isBeltItem(%item))
 			continue;
 		%cnt = Player::getItemCount(%clientId, %item);
 		if(%cnt < 1)

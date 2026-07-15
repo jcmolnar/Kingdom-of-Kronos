@@ -245,6 +245,10 @@ function remoteDropItem(%clientId,%type)
 						// window) - drop in the item's OWN category, not just Weapons.
 						Belt::DropItem(%clientId, %item, 1, $BeltItem[%item, "Type"]);
 						VSlot::Sync(%clientId);
+						// VOID 2026-07-15: a HUD client that reached this branch was
+						// rendering a stale placeholder row - re-push its panel.
+						if(%clientId.hasKronosHUD)
+							KronosShop_PushInv(%clientId);
 					}
 					return;
 				}
