@@ -3596,6 +3596,131 @@ function Belt::ReapplyEquippedStats(%clientId)
 //===================
 //  Belt Storage at Banker (Backpack menu)
 //===================
+//------------------------------------------------------------------------------
+// VOID BANK (2026-07-14): compact primitives for the STOCK-GUI banker flow
+// (VSlotBank rows, VirtualSlots.cs). Same contract as the belt-menu banker
+// branches in processMenuSellBeltItemFinal: BeltStorage is the single source
+// of truth, the Stored<Type> category is kept in sync (SaveCharacter rebuilds
+// BeltStorage from stored categories), 25 unique-item cap, all-empty clears
+// every stored category. The menu processor keeps its own (verified) code;
+// fold it onto these in a later cleanup pass.
+//------------------------------------------------------------------------------
+
+// Drop invalid/zero-count pairs, normalize spacing, trim trailing space.
+function Belt::CleanPairList(%list)
+{
+	if(%list == "" || %list == "0" || %list == " " || %list == -1)
+		return "";
+	%out = "";
+	for(%i = 0; GetWord(%list, %i) != -1; %i += 2)
+	{
+		%n = GetWord(%list, %i);
+		%c = GetWord(%list, %i + 1);
+		if(%n != "" && %n != -1 && %n != "0" && %c != "" && %c != -1 && %c != "-1" && %c != "0" && (%c * 1) > 0)
+			%out = %out @ %n @ " " @ %c @ " ";
+	}
+	%len = String::len(%out);
+	if(%len > 0 && String::getSubStr(%out, %len - 1, 1) == " ")
+		%out = String::getSubStr(%out, 0, %len - 1);
+	return %out;
+}
+
+// Carried belt item -> banker storage. Returns true on success.
+function Belt::BankDeposit(%clientId, %item, %amnt)
+{
+	%reg = $BeltItem[%item, "Item"];
+	if(%reg == "")
+	{
+		echo("ERROR: Belt::BankDeposit - '" @ %item @ "' not in belt registry (client " @ %clientId @ ")");
+		return false;
+	}
+	if(%amnt == "" || (%amnt * 1) < 1)
+		%amnt = 1;
+	%type = $BeltItem[%reg, "Type"];
+	%have = Belt::HasThisStuff(%clientId, %reg);
+	if(%have < %amnt)
+	{
+		Client::sendMessage(%clientId, $MsgRed, "You don't have that many to deposit.");
+		return false;
+	}
+
+	%bs = Belt::CleanPairList(fetchData(%clientId, "BeltStorage"));
+
+	// 25 unique-item cap (matches the belt-menu banker); only NEW names consume a slot
+	if(Belt::ItemCount(%reg, %bs) <= 0)
+	{
+		%unique = 0;
+		for(%i = 0; GetWord(%bs, %i) != -1; %i += 2)
+			%unique++;
+		if(%unique >= 25)
+		{
+			Client::sendMessage(%clientId, $MsgRed, "Your storage is full - you need to make room to add more to it.");
+			return false;
+		}
+	}
+
+	// auto-unequip AFTER the capacity check passes (never strip gear on a refused deposit)
+	if(%type == "Armor" && fetchData(%clientId, "EquippedBeltArmor") == %reg && %have == %amnt)
+		Belt::UnequipArmor(%clientId, %reg);
+	if(%type == "Weapons" && fetchData(%clientId, "EquippedBeltWeapon") == %reg && %have == %amnt)
+		BeltWeapon::Unequip(%clientId, false);
+
+	Belt::TakeThisStuff(%clientId, %reg, %amnt);
+	storeData(%clientId, "BeltStorage", Belt::CleanPairList(SetStuffString(%bs, %reg, %amnt)));
+	%sc = "Stored" @ %type;
+	storeData(%clientId, %sc, Belt::CleanPairList(SetStuffString(fetchData(%clientId, %sc), %reg, %amnt)));
+
+	RefreshAll(%clientId);
+	SaveCharacter(%clientId);
+	%dn = $BeltItem[%reg, "Name"];
+	if(%dn == "") %dn = %reg;
+	Client::sendMessage(%clientId, $MsgGreen, "Deposited " @ %amnt @ " " @ %dn @ " into storage.");
+	return true;
+}
+
+// Banker storage -> carried belt. Returns true on success.
+function Belt::BankWithdraw(%clientId, %item, %amnt)
+{
+	%reg = $BeltItem[%item, "Item"];
+	if(%reg == "")
+		%reg = %item;	// BeltStorage holds registered names already
+	if(%amnt == "" || (%amnt * 1) < 1)
+		%amnt = 1;
+	%type = $BeltItem[%reg, "Type"];
+
+	%bs = Belt::CleanPairList(fetchData(%clientId, "BeltStorage"));
+	if(Belt::ItemCount(%reg, %bs) < %amnt)
+	{
+		Client::sendMessage(%clientId, $MsgRed, "You don't have that many in storage.");
+		return false;
+	}
+
+	%bs = Belt::CleanPairList(SetStuffString(%bs, %reg, -%amnt));
+	storeData(%clientId, "BeltStorage", %bs);
+	%sc = "Stored" @ %type;
+	storeData(%clientId, %sc, Belt::CleanPairList(SetStuffString(fetchData(%clientId, %sc), %reg, -%amnt)));
+
+	// all-empty => clear every stored category so SaveCharacter can't rebuild
+	// BeltStorage from a stale one (same rule as the menu banker)
+	if(%bs == "")
+	{
+		storeData(%clientId, "StoredQuestItems", "");
+		storeData(%clientId, "StoredKeyItems", "");
+		storeData(%clientId, "StoredConsumables", "");
+		storeData(%clientId, "StoredArmor", "");
+		storeData(%clientId, "StoredAccessories", "");
+		storeData(%clientId, "StoredOther", "");
+	}
+
+	Belt::GiveThisStuff(%clientId, %reg, %amnt, 1);
+	RefreshAll(%clientId);
+	SaveCharacter(%clientId);
+	%dn = $BeltItem[%reg, "Name"];
+	if(%dn == "") %dn = %reg;
+	Client::sendMessage(%clientId, $MsgGreen, "Withdrew " @ %amnt @ " " @ %dn @ " from storage.");
+	return true;
+}
+
 function Belt::Store(%clientId, %bankerId)
 {
 	dbecho($dbechoMode, "Belt::Store(" @ %clientId @ ", " @ %bankerId @ ")");

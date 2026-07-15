@@ -152,6 +152,11 @@ function SetupBank(%clientId, %id)
 		Client::setItemShopping(%clientId, %item);
 		Client::setItemBuying(%clientId, %item);
 	}
+
+	// VOID BANK 2026-07-14: belt storage rows (VSlotBank*) join the same screen -
+	// "buying" one withdraws the mapped belt item (economy.cs dispatch ->
+	// Belt::BankWithdraw). No-op unless $pref::VSlotsEnabled.
+	VSlot::SyncBank(%clientId);
 }
 
 function SetupBlacksmith(%clientId, %id)

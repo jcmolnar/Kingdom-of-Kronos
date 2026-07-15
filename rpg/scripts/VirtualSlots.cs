@@ -323,6 +323,52 @@ function VSlot::Sync(%clientId)
 }
 
 //------------------------------------------------------------------------------
+// VOID BANK: map the client's belt STORAGE (BeltStorage) onto the VSlotBank
+// rows for the banker screen. Called from SetupBank (shopping.cs) - the rows
+// appear only via the SHOPPING/BUYING bitfields (never given inventory counts,
+// so they can't show in the inventory screen). "Buying" a row withdraws
+// (economy.cs dispatch -> Belt::BankWithdraw). Row label carries the stored
+// count since the buy screen has no count column.
+//------------------------------------------------------------------------------
+function VSlot::SyncBank(%clientId)
+{
+	if(!$pref::VSlotsEnabled)
+		return;
+	if(%clientId == "" || %clientId == -1 || isRPGAI(%clientId))
+		return;
+
+	%bs = fetchData(%clientId, "BeltStorage");
+	if(%bs == "0" || %bs == " ")
+		%bs = "";
+
+	for(%i = 0; %i < $VSlot::SCount; %i++)
+	{
+		%idx  = $VSlot::BIndex[%i];
+		%item = GetWord(%bs, %i * 2);
+		%cnt  = GetWord(%bs, %i * 2 + 1);
+
+		if(%item != "" && %item != -1 && $BeltItem[%item, "Item"] == %item && (%cnt * 1) > 0)
+		{
+			$VSlot::Map[%clientId, %idx] = %item;
+			%name = $BeltItem[%item, "Name"];
+			if(%name == "")
+				%name = %item;
+			if(%cnt > 1)
+				%name = %name @ " (" @ %cnt @ ")";
+			VSlot::SetRow(%idx, %name, 0);				// price 0: withdrawing is free
+			vslotPushItem(%clientId, %idx);
+			Client::setItemShopping(%clientId, "VSlotBank" @ %i);
+			Client::setItemBuying(%clientId, "VSlotBank" @ %i);
+		}
+		else
+		{
+			$VSlot::Map[%clientId, %idx] = "";
+			// no shopping bit set -> row absent from the bank screen
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
 // Re-sync every connected, in-game client (mission load / manual refresh).
 //------------------------------------------------------------------------------
 function VSlot::SyncAll()

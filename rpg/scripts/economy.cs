@@ -204,6 +204,17 @@ function buyItem(%clientId, %item)
 				%n = %clientId.bulkNum;
 			else
 				%n = 1;
+			// VOID BANK 2026-07-14: a VSlotBank row proxies a belt item in storage -
+			// "buying" it withdraws via the belt primitives, then refreshes the screen.
+			if(VSlot::IsSlotItem(%item))
+			{
+				%bw = VSlot::MappedItem(%clientId, %item);
+				if(%bw == "" || %bw == -1)
+					Client::sendMessage(%clientId, $MsgWhite, "That storage slot is empty.");
+				else if(Belt::BankWithdraw(%clientId, %bw, %n))
+					SetupBank(%clientId, %clientId.currentBank);	//refresh (re-syncs the rows)
+				return;
+			}
 			%cnt = GetStuffStringCount(fetchData(%clientId, "BankStorage"), %item);
 			if(%cnt >= %n)
 			{
@@ -636,12 +647,22 @@ function remoteSellItem(%clientId, %type)
 			// Phase D: selling a VSlot row sells the belt weapon it proxies. sellItem's
 			// merchant branch is already belt-aware (isBeltItem -> Belt::HasThisStuff /
 			// TakeThisStuff), so redirect to the mapped weapon, then re-sync the rows.
-			// (Bank-deposit of a belt weapon is a separate follow-up - at a bank this
-			// currently reports "you only have 0" until that path is wired.)
 			%bw = VSlot::MappedItem(%clientId, %item);
 			if(%bw == "" || %bw == -1)
 			{
 				Client::sendMessage(%clientId, $MsgWhite, "That backpack slot is empty.");
+				return;
+			}
+			// VOID BANK 2026-07-14: at a banker, "selling" a belt row DEPOSITS it
+			// into storage (Belt::BankDeposit dual-writes BeltStorage/Stored<Type>,
+			// 25-slot cap, auto-unequip); SetupBank re-syncs both row sets.
+			if(%clientId.currentBank != "")
+			{
+				%n = 1;
+				if(%clientId.bulkNum != "")
+					%n = %clientId.bulkNum;
+				if(Belt::BankDeposit(%clientId, %bw, %n))
+					SetupBank(%clientId, %clientId.currentBank);
 				return;
 			}
 			sellItem(%clientId, %bw);
