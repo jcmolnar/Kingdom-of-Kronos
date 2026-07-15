@@ -393,6 +393,19 @@ function updateSpawnStuff(%clientId)
 		// login (found live: "VSlot0 1 VSlotArmor0 101" in a save -> crashes).
 		if($VSlot::IsSlot[%i])
 			continue;
+		// VOID AUDIT 2026-07-15: engine counts for BELT-registered items are
+		// never legitimate (the belt lists are authoritative; every give path
+		// routes them there). Twice now a stray path minted engine copies and
+		// bloated spawnStuff past the ~1024 exec parse limit, corrupting the
+		// character on load. Do not persist them - and shout, so the culprit
+		// path names itself.
+		if(isBeltItem(%checkItem))
+		{
+			%bcount = SafeGetItemCount(%clientId, %checkItem, "updateSpawnStuff-beltaudit");
+			if(%bcount > 0)
+				echo("[VOID AUDIT] " @ Client::getName(%clientId) @ " has ENGINE count " @ %bcount @ " of belt item '" @ %checkItem @ "' at save time - NOT persisted (find what minted it!)");
+			continue;
+		}
 		
 		// CRITICAL: Validate player object exists before calling Player::getItemCount
 		// Player object could become invalid during the loop
@@ -1573,6 +1586,10 @@ function SaveCharacter(%clientId)
 			// VOID 2026-07-14: never save VSlot placeholder rows (display-only counts;
 			// see updateSpawnStuff note).
 			if($VSlot::IsSlot[%i])
+				continue;
+			// VOID AUDIT 2026-07-15: never persist engine counts for belt items
+			// (see updateSpawnStuff note - belt lists are authoritative).
+			if(isBeltItem(%checkItem))
 				continue;
 			
 			// CRITICAL: Re-validate player object before calling SafeGetItemCount
