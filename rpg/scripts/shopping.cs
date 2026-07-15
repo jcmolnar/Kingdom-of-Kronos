@@ -51,13 +51,20 @@ function SetupShop(%clientId, %id)
 	{
 		%a = GetWord(%info, %i);
 
+		// VOID 2026-07-15: shop indexes are positive numbers (they start at 1).
+		// A stray token coerces to 0 under this engine's ==, and items with NO
+		// ShopIndex ("") compare equal to it - which listed every index-less
+		// belt item (all 23 converted armors) at this merchant. Reject junk.
+		if((%a * 1) < 1)
+			continue;
+
 		// First, check all regular ItemData items
-		%max = getNumItems();		
+		%max = getNumItems();
 		for(%z = 0; %z < %max; %z++)
 		{
 			%item = getItemData(%z);
 
-			if($AccessoryVar[%item, $ShopIndex] == %a)
+			if($AccessoryVar[%item, $ShopIndex] != "" && $AccessoryVar[%item, $ShopIndex] == %a)
 			{
 				Client::setItemShopping(%clientId, %item);
 				Client::setItemBuying(%clientId, %item);
@@ -86,7 +93,8 @@ function SetupShop(%clientId, %id)
 				%item = $BeltItem[%itemIndex, "Num", %category];
 				
 				// Check if this belt item has a matching ShopIndex
-				if(%item != "" && %item != -1 && $AccessoryVar[%item, $ShopIndex] == %a)
+				// (VOID 2026-07-15: empty ShopIndex must never match - see the %a guard above)
+				if(%item != "" && %item != -1 && $AccessoryVar[%item, $ShopIndex] != "" && $AccessoryVar[%item, $ShopIndex] == %a)
 				{
 					// Check if this item already has ItemData by searching through all ItemData indices
 					// If it has ItemData, it was already added in the loop above, so skip it
