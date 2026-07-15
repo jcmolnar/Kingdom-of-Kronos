@@ -62,7 +62,11 @@ function MigTest::GiveAll(%clientId)
 		GiveThisStuff(%clientId, %item @ " 1", False);
 		%given++;
 	}
-	echo("[MIGTEST] GiveAll: gave 1 each of " @ %given @ " Accessory-class items to " @ Client::getName(%clientId) @ (%skippedCap ? " (" @ %skippedCap @ " skipped at cap)" : "") @ ".");
+	// (no ternary operator on this engine - build the suffix with an if)
+	%capNote = "";
+	if(%skippedCap > 0)
+		%capNote = " (" @ %skippedCap @ " skipped at cap)";
+	echo("[MIGTEST] GiveAll: gave 1 each of " @ %given @ " Accessory-class items to " @ Client::getName(%clientId) @ %capNote @ ".");
 	echo("[MIGTEST] Now equip one armor and bank a couple of items, then run MigTest::Snapshot(" @ %clientId @ ", \"pre\");");
 }
 
