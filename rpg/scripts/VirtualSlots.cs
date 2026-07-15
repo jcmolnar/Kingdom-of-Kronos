@@ -336,6 +336,10 @@ function VSlot::SyncBank(%clientId)
 		return;
 	if(%clientId == "" || %clientId == -1 || isRPGAI(%clientId))
 		return;
+	// HUD clients manage belt storage through the KronosHUD bank panel - same
+	// rationale as VSlot::Sync (avoid double-showing every stored item).
+	if(%clientId.hasKronosHUD)
+		return;
 
 	%bs = fetchData(%clientId, "BeltStorage");
 	if(%bs == "0" || %bs == " ")
