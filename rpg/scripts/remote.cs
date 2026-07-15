@@ -248,6 +248,25 @@ function remoteDropItem(%clientId,%type)
 					}
 					return;
 				}
+				// VOID 2026-07-15: a BELT-registered name arriving by ENGINE index
+				// (the transition datablocks still exist - e.g. the KronosHUD client
+				// dropping a converted item by its old index) must drop from the
+				// BELT. The engine path below tossed a bag WITHOUT a belt decrement
+				// (engine count is 0 for these) - a live item-dupe mint.
+				if(isBeltItem(%item))
+				{
+					if(Belt::HasThisStuff(%clientId, %item) < 1)
+					{
+						Client::sendMessage(%clientId, $MsgWhite, "You don't have that item.");
+						return;
+					}
+					Belt::DropItem(%clientId, %item, 1, $BeltItem[%item, "Type"]);
+					VSlot::Sync(%clientId);
+					// refresh the HUD inventory panel if this client runs it
+					if(%clientId.hasKronosHUD)
+						KronosShop_PushInv(%clientId);
+					return;
+				}
 				if(%item == Weapon)
 				{
 					%item = Player::getMountedItem(%clientId,$WeaponSlot);
