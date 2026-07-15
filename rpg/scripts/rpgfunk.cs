@@ -6091,8 +6091,13 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 //	echo("===== DEBUG RefreshAll: COMPLETE =====");
 	%vperfT5 = getRealMillis();	// $VoidPerf probe: adminboots done
 
-	// Push stats to ScriptGL KronosHUD
-	KronosHUD_Push(%clientId);
+	// VOIDPERF 2026-07-15: KronosHUD_Push was called here AND at the tail of
+	// Game::refreshClientScore (rpgstats.cs, called above) - a fully redundant
+	// second push. Each push costs 2 full-inventory AddPoints scans (fetchData
+	// MaxHP/MaxMANA are COMPUTED stats), measured ~190ms - so the duplicate
+	// alone was a third of the equip lag spike. refreshClientScore's push
+	// stays; if that tail call is ever removed, restore one here.
+	// KronosHUD_Push(%clientId);
 	// $VoidPerf probe (equip lag hunt 2026-07-15): first run showed ~480ms
 	// UNaccounted between the coarse weight/appearance brackets - this maps
 	// the whole function. entry = the validation/AdminBoots-check preamble.
