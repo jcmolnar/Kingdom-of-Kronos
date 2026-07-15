@@ -155,25 +155,33 @@ function SetupBank(%clientId, %id)
 	%txt = "<f1><jc>COINS: " @ Number::Beautify(fetchData(%clientId, "COINS"), -3);
 	Client::setInventoryText(%clientId, %txt);
 
-	%info = fetchData(%clientId, "BankStorage");
-
-	for(%i = 0; GetWord(%info, %i) != -1; %i+=2)
+	// VOID UNIFIED BANK 2026-07-15: legacy BankStorage items are NO LONGER
+	// bit-listed directly - VSlot::SyncBank maps BOTH belt storage AND legacy
+	// entries onto the VSlotBank rows ("(60) Golden Bastard Sword"), so every
+	// banked thing shows a count-prefixed row and withdraws through the same
+	// dispatch (economy.cs routes by type). Fallbacks keep the old direct
+	// bit-listing when the rows can't serve: VSlots disabled, or a KronosHUD
+	// client (SyncBank skips HUD clients - they use the HUD bank panel, but the
+	// stock screen must still work if they open it).
+	if(!$pref::VSlotsEnabled || %clientId.hasKronosHUD)
 	{
-		%item = GetWord(%info, %i);
+		%info = fetchData(%clientId, "BankStorage");
 
-		// VOID BANK 2026-07-14: skip zero/negative-count leftovers - they drew
-		// ghost rows that answered every click with "You only have 0".
-		if((GetWord(%info, %i + 1) * 1) <= 0)
-			continue;
+		for(%i = 0; GetWord(%info, %i) != -1; %i+=2)
+		{
+			%item = GetWord(%info, %i);
 
-		if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %item @ " (" @ getItemData(%item) @ ") from " @ $ShopDebugCtx);
-		Client::setItemShopping(%clientId, %item);
-		Client::setItemBuying(%clientId, %item);
+			// VOID BANK 2026-07-14: skip zero/negative-count leftovers - they drew
+			// ghost rows that answered every click with "You only have 0".
+			if((GetWord(%info, %i + 1) * 1) <= 0)
+				continue;
+
+			if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %item @ " (" @ getItemData(%item) @ ") from " @ $ShopDebugCtx);
+			Client::setItemShopping(%clientId, %item);
+			Client::setItemBuying(%clientId, %item);
+		}
 	}
 
-	// VOID BANK 2026-07-14: belt storage rows (VSlotBank*) join the same screen -
-	// "buying" one withdraws the mapped belt item (economy.cs dispatch ->
-	// Belt::BankWithdraw). No-op unless $pref::VSlotsEnabled.
 	VSlot::SyncBank(%clientId);
 }
 

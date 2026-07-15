@@ -206,9 +206,43 @@ function buyItem(%clientId, %item)
 			%n = %clientId.bulkNum;
 		%bw = VSlot::MappedItem(%clientId, %item);
 		if(%bw == "" || %bw == -1)
+		{
 			Client::sendMessage(%clientId, $MsgWhite, "That storage slot is empty.");
-		else if(Belt::BankWithdraw(%clientId, %bw, %n))
-			SetupBank(%clientId, %clientId.currentBank);	//refresh (re-syncs the rows)
+			return;
+		}
+		// VOID UNIFIED BANK 2026-07-15: rows proxy BOTH systems - route by WHERE
+		// the item actually lives, not just its registration: a pre-conversion
+		// legacy-banked item (BankStorage) may be belt-registered NOW, and
+		// Belt::BankWithdraw only searches BeltStorage.
+		if(isBeltItem(%bw) && Belt::ItemCount($BeltItem[%bw, "Item"], fetchData(%clientId, "BeltStorage")) >= %n)
+		{
+			if(Belt::BankWithdraw(%clientId, %bw, %n))
+				SetupBank(%clientId, %clientId.currentBank);	//refresh (re-syncs the rows)
+			return;
+		}
+		// LEGACY regular BankStorage entry: old-branch logic, belt-aware give
+		// (a converted item comes back as a BELT copy, never an engine count -
+		// same rule as the regular withdraw fix), carry-cap enforced.
+		%cnt = GetStuffStringCount(fetchData(%clientId, "BankStorage"), %bw);
+		if(%cnt >= %n)
+		{
+			if(isBeltItem(%bw))
+			{
+				if(Void::AtCarryCap(%clientId, %bw))
+				{
+					Client::sendMessage(%clientId, $MsgRed, "Your Void backpack is full - you need to make room before withdrawing.");
+					return;
+				}
+				Belt::GiveThisStuff(%clientId, %bw, %n, 1);
+			}
+			else
+				Player::incItemCount(%clientId, %bw, %n);
+			storeData(%clientId, "BankStorage", SetStuffString(fetchData(%clientId, "BankStorage"), %bw, -%n));
+			SetupBank(%clientId, %clientId.currentBank);	//refresh
+			RefreshAll(%clientId);
+		}
+		else
+			Client::sendMessage(%clientId, $MsgRed, "You only have " @ %cnt @ " of this item.~wC_BuySell.wav");
 		return;
 	}
 
@@ -494,7 +528,20 @@ function sellItem(%clientId, %item)
 			//============================================================
 			//  Player is at a bank, adding to his/her bank storage
 			//============================================================
-			if(CountObjInList(fetchData(%clientId, "BankStorage")) / 2 < 50)
+			// VOID UNIFIED BANK 2026-07-15: with the row window live, the cap is
+			// the COMBINED unique count across BeltStorage + BankStorage (== the
+			// 20-row window); only NEW names consume a slot. HUD clients and
+			// VSlots-off keep the legacy 50 (no window constraint there).
+			%bankCap = 50;
+			%bankUniques = CountObjInList(fetchData(%clientId, "BankStorage")) / 2;
+			if($pref::VSlotsEnabled && !%clientId.hasKronosHUD)
+			{
+				%bankCap = $Belt::StorageCap;
+				%bankUniques = Void::BankUniqueTotal(%clientId);
+			}
+			if(GetStuffStringCount(fetchData(%clientId, "BankStorage"), %item) > 0)
+				%bankUniques = 0;	// stacking an existing name never consumes a slot
+			if(%bankUniques < %bankCap)
 			{
 				if(%clientId.bulkNum != "")
 					%n = %clientId.bulkNum;
@@ -521,7 +568,7 @@ function sellItem(%clientId, %item)
 				return 1;
 			}
 			else
-				Client::sendMessage(%clientId, $MsgRed, "You can only store 50 different types of items.~wC_BuySell.wav");
+				Client::sendMessage(%clientId, $MsgRed, "Your storage is full - you can only store " @ %bankCap @ " different types of items.~wC_BuySell.wav");
 		}
 		else if(%clientId.currentShop != "")
 		{

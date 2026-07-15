@@ -3667,6 +3667,26 @@ function Void::AtCarryCap(%clientId, %item)
 	return (%n >= %cap);
 }
 
+// VOID UNIFIED BANK 2026-07-15: unique item names across BOTH storage lists
+// (BeltStorage + legacy BankStorage) - the shared 20-row window displays them
+// together, so the cap must count them together.
+function Void::BankUniqueTotal(%clientId)
+{
+	%n = 0;
+	%bs = Belt::CleanPairList(fetchData(%clientId, "BeltStorage"));
+	for(%i = 0; GetWord(%bs, %i) != -1; %i += 2)
+		%n++;
+	%lg = fetchData(%clientId, "BankStorage");
+	if(%lg == "" || %lg == "0" || %lg == -1)
+		return %n;
+	for(%i = 0; GetWord(%lg, %i) != -1; %i += 2)
+	{
+		if((GetWord(%lg, %i + 1) * 1) > 0)
+			%n++;
+	}
+	return %n;
+}
+
 // Drop invalid/zero-count pairs, normalize spacing, trim trailing space.
 function Belt::CleanPairList(%list)
 {
@@ -3708,12 +3728,11 @@ function Belt::BankDeposit(%clientId, %item, %amnt)
 	%bs = Belt::CleanPairList(fetchData(%clientId, "BeltStorage"));
 
 	// $Belt::StorageCap unique-item cap (== stock-GUI window size); only NEW names consume a slot
+	// VOID UNIFIED BANK 2026-07-15: counts BOTH lists - legacy BankStorage
+	// entries share the same 20-row window now.
 	if(Belt::ItemCount(%reg, %bs) <= 0)
 	{
-		%unique = 0;
-		for(%i = 0; GetWord(%bs, %i) != -1; %i += 2)
-			%unique++;
-		if(%unique >= $Belt::StorageCap)
+		if(Void::BankUniqueTotal(%clientId) >= $Belt::StorageCap)
 		{
 			Client::sendMessage(%clientId, $MsgRed, "Your storage is full - you need to make room to add more to it.");
 			return false;

@@ -358,28 +358,48 @@ function VSlot::SyncBank(%clientId)
 	if(%clientId.hasKronosHUD)
 		return;
 
+	// VOID UNIFIED BANK 2026-07-15: ONE combined list drives the rows - belt
+	// storage first, then LEGACY regular BankStorage entries (both are
+	// "name count" pair lists). Legacy items no longer get raw shopping bits
+	// (SetupBank); their rows dispatch through the same click path, and the
+	// withdraw routes by type in economy.cs. Combined unique cap == the window
+	// ($Belt::StorageCap), enforced at both deposit paths.
 	%bs = fetchData(%clientId, "BeltStorage");
-	if(%bs == "0" || %bs == " ")
+	if(%bs == "0" || %bs == " " || %bs == -1)
 		%bs = "";
+	%legacy = fetchData(%clientId, "BankStorage");
+	if(%legacy == "0" || %legacy == " " || %legacy == -1)
+		%legacy = "";
+	%combined = %bs;
+	for(%i = 0; GetWord(%legacy, %i) != -1; %i += 2)
+	{
+		if((GetWord(%legacy, %i + 1) * 1) > 0)	// skip zero-count leftovers
+			%combined = %combined @ " " @ GetWord(%legacy, %i) @ " " @ GetWord(%legacy, %i + 1);
+	}
 
 	for(%i = 0; %i < $VSlot::SCount; %i++)
 	{
 		%idx  = $VSlot::BIndex[%i];
-		%item = GetWord(%bs, %i * 2);
-		%cnt  = GetWord(%bs, %i * 2 + 1);
+		%item = GetWord(%combined, %i * 2);
+		%cnt  = GetWord(%combined, %i * 2 + 1);
 
-		if(%item != "" && %item != -1 && $BeltItem[%item, "Item"] == %item && (%cnt * 1) > 0)
+		if(%item != "" && %item != -1 && (%cnt * 1) > 0)
 		{
 			$VSlot::Map[%clientId, %idx] = %item;
 			%name = $BeltItem[%item, "Name"];
 			if(%name == "")
+				%name = %item.description;	// legacy items are real datablocks
+			if(%name == "" || %name == "0" || %name == "False")
 				%name = %item;
 			if(%cnt > 1)
 				%name = "(" @ %cnt @ ") " @ %name;	// count FIRST - long names get cut off at the right edge
-			// heading follows the stored item's category so armor lands under
-			// Armor, weapons under Weapons (was fixed eMiscellany = everything
-			// dumped under Miscellany at the banker)
-			VSlot::SetRow(%idx, %name, 0, VSlot::CategoryHeading($BeltItem[%item, "Type"]));	// price 0: withdrawing is free
+			// heading: belt items by their belt category, legacy datablocks by
+			// their own heading field (groups under the same sections as ever)
+			if($BeltItem[%item, "Item"] == %item)
+				%heading = VSlot::CategoryHeading($BeltItem[%item, "Type"]);
+			else
+				%heading = %item.heading;
+			VSlot::SetRow(%idx, %name, 0, %heading);	// price 0: withdrawing is free
 			vslotPushItem(%clientId, %idx);
 			// NUMERIC index, not the name: the engine name->index map misses the
 			// VSlot placeholders (playerInventory.cpp:513 - the same trap as
