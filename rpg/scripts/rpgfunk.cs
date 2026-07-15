@@ -6089,9 +6089,15 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	// VOID 2026-07-15 (HUD audit #3): re-push an OPEN HUD panel too - RefreshAll
 	// only ever pushed vitals, so belt changes not caused by a panel button
 	// (loot pickups, telekinesis, migration, admin gives) left an open panel
-	// stale. remoteKShopSync self-gates on hasKronosHUD + kshopOpen, and an
-	// open panel is rare, so this cannot reintroduce push spam.
-	remoteKShopSync(%clientId);
+	// stale. Debounced: an armor swap runs RefreshAll twice back-to-back and
+	// each panel push is ~50 remoteEvals, so inline pushes doubled into a
+	// visible server hitch. KShop_QueuedSync self-gates on hasKronosHUD +
+	// kshopOpen, so this is a no-op for vanilla clients and closed panels.
+	if(%clientId.hasKronosHUD && %clientId.kshopOpen != "" && %clientId.kshopSyncQueued == "")
+	{
+		%clientId.kshopSyncQueued = true;
+		schedule("KShop_QueuedSync(" @ %clientId @ ");", 0.2);
+	}
 
 	// WATCHDOG: Clear tracking for this function
 	Watchdog_Exit();

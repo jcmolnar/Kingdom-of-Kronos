@@ -65,6 +65,9 @@ $KronosShop::MaxRows = 48; // per pane
 function KronosShop_Open(%clientId, %mode, %shopName)
 {
 	%clientId.kshopOpen = %mode;
+	// clear a queued-sync flag possibly stranded by a schedule flush
+	// (mission load) - open pushes everything fresh anyway
+	%clientId.kshopSyncQueued = "";
 	remoteEval(%clientId, "KShopOpen", %mode, %shopName);
 	KronosShop_PushInv(%clientId);
 	if(%mode == "shop")
@@ -338,6 +341,11 @@ function remoteKShopBeltDrop(%clientId, %item)
 		$loot[%bag] = Client::getName(%clientId) @ " * " @ %item @ " " @ %clientId.kdropCnt;
 		SaveCharacter(%clientId);
 		%clientId.kdropTime = getSimTime();
+		// VOID 2026-07-15: drop was the ONLY belt action with no server-side
+		// panel push (buy/sell/use all reach RefreshAll) - the client's own
+		// scheduled KShopSync request demonstrably never refreshes, so the
+		// dropped item's row stayed stale until reopen.
+		remoteKShopSync(%clientId);
 		return;
 	}
 
@@ -347,6 +355,8 @@ function remoteKShopBeltDrop(%clientId, %item)
 	%clientId.kdropItem = %item;
 	%clientId.kdropCnt = 1;
 	%clientId.kdropTime = getSimTime();
+	// VOID 2026-07-15: see merge-path note - refresh the open panel.
+	remoteKShopSync(%clientId);
 }
 
 function KronosShop_Close(%clientId, %fromCancelMenu)
@@ -354,6 +364,7 @@ function KronosShop_Close(%clientId, %fromCancelMenu)
 	if(%clientId.kshopOpen == "")
 		return;
 	%clientId.kshopOpen = "";
+	%clientId.kshopSyncQueued = "";
 
 	// same cleanup the stock flow does when leaving the shop gui
 	Client::clearItemShopping(%clientId);
@@ -363,6 +374,16 @@ function KronosShop_Close(%clientId, %fromCancelMenu)
 	remoteEval(%clientId, "KShopClose");
 	if(!%fromCancelMenu)
 		Client::setMenuScoreVis(%clientId, false);
+}
+
+// VOID 2026-07-15: debounced panel re-push scheduled by RefreshAll. An armor
+// swap runs RefreshAll twice in one tick; pushing the full panel (~50
+// remoteEvals) inline each time caused a server lag spike per equip click.
+// One scheduled flush per 0.2s window replaces N inline pushes.
+function KShop_QueuedSync(%clientId)
+{
+	%clientId.kshopSyncQueued = "";
+	remoteKShopSync(%clientId);
 }
 
 // Client requests a refresh after buy/sell/use/drop (counts changed)

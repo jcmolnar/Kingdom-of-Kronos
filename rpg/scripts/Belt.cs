@@ -3362,11 +3362,14 @@ function Belt::EquipArmor(%clientId, %item)
 		return;
 	}
 
-	// Unequip current armor first (if any)
+	// Unequip current armor first (if any). %skipRefresh: this EquipArmor
+	// call ends in its own RefreshAll + SaveCharacter + VSlot::Sync, so the
+	// nested unequip must not run them too - doubling them made every armor
+	// swap a server lag spike (RefreshAll is the watchdog-tracked heavy path).
 	%currentArmor = fetchData(%clientId, "EquippedBeltArmor");
 	if(%currentArmor != "" && %currentArmor != "0" && %currentArmor != %item)
 	{
-		Belt::UnequipArmor(%clientId, %currentArmor);
+		Belt::UnequipArmor(%clientId, %currentArmor, true);
 	}
 	
 	// Store the equipped armor
@@ -3391,8 +3394,10 @@ function Belt::EquipArmor(%clientId, %item)
 	VSlot::Sync(%clientId);
 }
 
-// Unequip armor
-function Belt::UnequipArmor(%clientId, %item)
+// Unequip armor. %skipRefresh (optional): the swap path inside
+// Belt::EquipArmor passes true because its caller runs RefreshAll /
+// SaveCharacter / VSlot::Sync itself right after.
+function Belt::UnequipArmor(%clientId, %item, %skipRefresh)
 {
 	dbecho($dbechoMode, "Belt::UnequipArmor(" @ %clientId @ ", " @ %item @ ")");
 	
@@ -3417,11 +3422,14 @@ function Belt::UnequipArmor(%clientId, %item)
 	Client::sendMessage(%clientId, $MsgYellow, "You unequipped " @ %itemName @ ".");
 	echo("[BELT UNEQUIP] " @ Client::getName(%clientId) @ " unequipped armor: " @ %item);
 
-	// Refresh player stats
-	RefreshAll(%clientId);
-	SaveCharacter(%clientId);
-	// VOID Phase 1b: refresh the "(worn)" tag on the stock-GUI armor rows.
-	VSlot::Sync(%clientId);
+	// Refresh player stats (skipped when the caller does it - see header)
+	if(%skipRefresh != true && %skipRefresh != "true" && %skipRefresh != 1)
+	{
+		RefreshAll(%clientId);
+		SaveCharacter(%clientId);
+		// VOID Phase 1b: refresh the "(worn)" tag on the stock-GUI armor rows.
+		VSlot::Sync(%clientId);
+	}
 }
 
 
