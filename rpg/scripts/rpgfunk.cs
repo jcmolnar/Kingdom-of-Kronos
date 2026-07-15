@@ -387,6 +387,12 @@ function updateSpawnStuff(%clientId)
 		// CRITICAL: Never save flags to spawnStuff - flags are mission objectives, not player inventory
 		if(%checkItem == "Flag" || %checkItem == Flag)
 			continue;
+		// VOID 2026-07-14: never save VSlot placeholder rows - their counts are
+		// per-client DISPLAY state (VirtualSlots.cs Sync), not carried items.
+		// Persisting them fed placeholder names back through Item::giveItem on
+		// login (found live: "VSlot0 1 VSlotArmor0 101" in a save -> crashes).
+		if($VSlot::IsSlot[%i])
+			continue;
 		
 		// CRITICAL: Validate player object exists before calling Player::getItemCount
 		// Player object could become invalid during the loop
@@ -1563,6 +1569,10 @@ function SaveCharacter(%clientId)
 			// If a player disconnects/crashes while carrying a flag, Flag::clientDropped should handle dropping it
 			// But we must prevent flags from being saved to avoid issues on reload
 			if(%checkItem == "Flag" || %checkItem == Flag)
+				continue;
+			// VOID 2026-07-14: never save VSlot placeholder rows (display-only counts;
+			// see updateSpawnStuff note).
+			if($VSlot::IsSlot[%i])
 				continue;
 			
 			// CRITICAL: Re-validate player object before calling SafeGetItemCount
@@ -6856,6 +6866,15 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 				}
 			}
 			//echo("[SPAWN DEBUG] GiveThisStuff(): clientId=" @ %clientId @ ", player=" @ %player @ ", item=" @ %w @ ", count=" @ %w2);
+			// VOID 2026-07-14: discard VSlot placeholder tokens from poisoned saves
+			// (saved before the updateSpawnStuff exclusion existed). Giving a
+			// placeholder count outside VSlot::Sync corrupts the row display and
+			// crashed the server on login.
+			if(VSlot::IsSlotItem(%w))
+			{
+				echo("GiveThisStuff: skipping VSlot placeholder token '" @ %w @ "' x" @ %w2 @ " for " @ %name @ " (display row, not an item)");
+				continue;
+			}
 			// SLOT PURGE 2026-07-13: defensive skip for names that no longer resolve to a
 			// registered ItemData (codebase convention: .description reads False for
 			// non-datablocks, see WhatIs/Belt::WhatIs). Protects old saves that still hold a

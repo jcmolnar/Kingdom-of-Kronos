@@ -226,9 +226,16 @@ function buyItem(%clientId, %item)
 			%cnt = GetStuffStringCount(fetchData(%clientId, "BankStorage"), %item);
 			if(%cnt >= %n)
 			{
-				Player::incItemCount(%clientId, %item, %n);
+				// VOID 2026-07-14: LEGACY-banked items that have since converted to
+				// belt (armor) must come back as BELT copies - incItemCount would
+				// mint engine counts for a datablock nothing manages anymore (found
+				// live: WhiteDiamondPlate x101 engine copies from a bulk withdraw).
+				if(isBeltItem(%item))
+					Belt::GiveThisStuff(%clientId, %item, %n, 1);
+				else
+					Player::incItemCount(%clientId, %item, %n);
 				storeData(%clientId, "BankStorage", SetStuffString(fetchData(%clientId, "BankStorage"), %item, -%n));
-	
+
 				SetupBank(%clientId, %clientId.currentBank);	//refresh
 
 				RefreshAll(%clientId);
