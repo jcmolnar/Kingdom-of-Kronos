@@ -462,6 +462,7 @@ function remoteBuyItem(%clientId, %type)
 		%clientId.lastWaitActionTime = %time;
 
 		%item = getItemData(%type);
+		if($ShopDebug) echo("[SHOPDBG] remoteBuyItem type=" @ %type @ " -> item='" @ %item @ "'");
 		buyItem(%clientId, %item);
 	}
 }

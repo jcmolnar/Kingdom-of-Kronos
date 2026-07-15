@@ -1,6 +1,6 @@
 //----------------------------------------------------------------------------
 
-$ItemFavoritesKey = "KronosRPG_V4";  // Change this if you add new items
+$ItemFavoritesKey = "KronosRPG_V5";  // Change this if you add new items
                          	// and don't want to mess up everyone's
                          	// favorites - just put in something
                          	// that uniquely describes your new stuff.

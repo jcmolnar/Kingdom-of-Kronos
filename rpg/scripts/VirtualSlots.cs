@@ -348,6 +348,7 @@ function VSlot::Sync(%clientId)
 //------------------------------------------------------------------------------
 function VSlot::SyncBank(%clientId)
 {
+	$ShopDebugCtx = "SyncBank";
 	if(!$pref::VSlotsEnabled)
 		return;
 	if(%clientId == "" || %clientId == -1 || isRPGAI(%clientId))
@@ -383,6 +384,7 @@ function VSlot::SyncBank(%clientId)
 			// NUMERIC index, not the name: the engine name->index map misses the
 			// VSlot placeholders (playerInventory.cpp:513 - the same trap as
 			// setItemCount), so setItemShopping("VSlotBankN") silently no-ops.
+			if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %idx @ " (" @ getItemData(%idx) @ ") from " @ $ShopDebugCtx);
 			Client::setItemShopping(%clientId, %idx);
 			Client::setItemBuying(%clientId, %idx);
 		}

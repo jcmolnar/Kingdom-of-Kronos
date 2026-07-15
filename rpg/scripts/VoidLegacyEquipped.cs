@@ -18,6 +18,7 @@
 
 ItemData RatSkinShirt0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Rat Skin Shirt";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -27,6 +28,7 @@ ItemData RatSkinShirt0
 
 ItemData StuddedLeatherSuit0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Studded Leather Suit";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -36,6 +38,7 @@ ItemData StuddedLeatherSuit0
 
 ItemData ToughHideSuit0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Tough Hide Suit";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -45,6 +48,7 @@ ItemData ToughHideSuit0
 
 ItemData IronScaleMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Iron Scale Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -54,6 +58,7 @@ ItemData IronScaleMail0
 
 ItemData SteelScaleMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Steel Scale Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -63,6 +68,7 @@ ItemData SteelScaleMail0
 
 ItemData SteelBrigandineMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Steel Brigandine Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -72,6 +78,7 @@ ItemData SteelBrigandineMail0
 
 ItemData GoldenBrigandineMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Golden Brigandine Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -81,6 +88,7 @@ ItemData GoldenBrigandineMail0
 
 ItemData GoldenChainMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Golden Chain Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -90,6 +98,7 @@ ItemData GoldenChainMail0
 
 ItemData CrystalChainMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Crystal Chain Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -99,6 +108,7 @@ ItemData CrystalChainMail0
 
 ItemData CrystalRingMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Crystal Ring Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -108,6 +118,7 @@ ItemData CrystalRingMail0
 
 ItemData CrystalBandedMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Crystal Banded Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -117,6 +128,7 @@ ItemData CrystalBandedMail0
 
 ItemData CrystalSplintMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Crystal Splint Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -126,6 +138,7 @@ ItemData CrystalSplintMail0
 
 ItemData TungstenSplintMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Tungsten Splint Mail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -135,6 +148,7 @@ ItemData TungstenSplintMail0
 
 ItemData TungstenPlateMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Tungsten Platemail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -144,6 +158,7 @@ ItemData TungstenPlateMail0
 
 ItemData DiamondPlateMail0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Diamond Platemail";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -153,6 +168,7 @@ ItemData DiamondPlateMail0
 
 ItemData DiamondFieldPlate0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Diamond Field Plate";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -162,6 +178,7 @@ ItemData DiamondFieldPlate0
 
 ItemData DiamondFullPlate0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Diamond Full Plate";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -171,6 +188,7 @@ ItemData DiamondFullPlate0
 
 ItemData BlackDiamondFullPlate0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Black Diamond Full Plate";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -180,6 +198,7 @@ ItemData BlackDiamondFullPlate0
 
 ItemData RedDiamondPlate0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Red Diamond Plate";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -190,6 +209,7 @@ ItemData RedDiamondPlate0
 
 ItemData WhiteDiamondPlate0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "White Diamond Plate";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -200,6 +220,7 @@ ItemData WhiteDiamondPlate0
 
 ItemData JudgementRobe0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Judgement Robe";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -210,6 +231,7 @@ ItemData JudgementRobe0
 
 ItemData StormRobe0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Storm Robe";
 	className = "Equipped";
 	shapeFile = "discammo";
@@ -220,6 +242,7 @@ ItemData StormRobe0
 
 ItemData VoidRobe0
 {
+	showInventory = false;	// VOID 2026-07-15: parked above the 128-bit shopping bitfield (indexes 198-220); isItemShoppingOn() reads OOB garbage up there, phantom-rendering these in every merchant BUY pane. Nothing carries X0 counts post-migration, so hide them from all item GUIs.
 	description = "Void Robe";
 	className = "Equipped";
 	shapeFile = "discammo";

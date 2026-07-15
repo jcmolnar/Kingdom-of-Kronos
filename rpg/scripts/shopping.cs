@@ -1,5 +1,6 @@
 function SetupShop(%clientId, %id)
 {
+	$ShopDebugCtx = "SetupShop";
 	dbecho($dbechoMode, "SetupShop(" @ %clientId @ ", " @ %id @ ")");
 
 	ClearCurrentShopVars(%clientId);
@@ -66,6 +67,7 @@ function SetupShop(%clientId, %id)
 
 			if($AccessoryVar[%item, $ShopIndex] != "" && $AccessoryVar[%item, $ShopIndex] == %a)
 			{
+				if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %item @ " (" @ getItemData(%item) @ ") from " @ $ShopDebugCtx);
 				Client::setItemShopping(%clientId, %item);
 				Client::setItemBuying(%clientId, %item);
 
@@ -112,6 +114,7 @@ function SetupShop(%clientId, %id)
 					// Only add belt items that don't have ItemData (to avoid duplicates)
 					if(!%hasItemData)
 					{
+						if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %item @ " (" @ getItemData(%item) @ ") from " @ $ShopDebugCtx);
 						Client::setItemShopping(%clientId, %item);
 						Client::setItemBuying(%clientId, %item);
 
@@ -132,6 +135,7 @@ function SetupShop(%clientId, %id)
 
 function SetupBank(%clientId, %id)
 {
+	$ShopDebugCtx = "SetupBank";
 	dbecho($dbechoMode, "SetupBank(" @ %clientId @ ", " @ %id @ ")");
 
 	ClearCurrentShopVars(%clientId);
@@ -162,6 +166,7 @@ function SetupBank(%clientId, %id)
 		if((GetWord(%info, %i + 1) * 1) <= 0)
 			continue;
 
+		if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %item @ " (" @ getItemData(%item) @ ") from " @ $ShopDebugCtx);
 		Client::setItemShopping(%clientId, %item);
 		Client::setItemBuying(%clientId, %item);
 	}
@@ -174,6 +179,7 @@ function SetupBank(%clientId, %id)
 
 function SetupBlacksmith(%clientId, %id)
 {
+	$ShopDebugCtx = "SetupBlacksmith";
 	dbecho($dbechoMode, "SetupBlacksmith(" @ %clientId @ ", " @ %id @ ")");
 
 	%clientId.currentSmith = %id;
@@ -191,6 +197,7 @@ function SetupBlacksmith(%clientId, %id)
 	{
 		%item = GetWord(%info, %i);
 
+		if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %item @ " (" @ getItemData(%item) @ ") from " @ $ShopDebugCtx);
 		Client::setItemShopping(%clientId, %item);
 		Client::setItemBuying(%clientId, %item);
 	}
@@ -201,6 +208,7 @@ function SetupBlacksmith(%clientId, %id)
 
 function SetupInvSteal(%clientId, %id)
 {
+	$ShopDebugCtx = "SetupInvSteal";
 	dbecho($dbechoMode, "SetupInvSteal(" @ %clientId @ ", " @ %id @ ")");
 
 	ClearCurrentShopVars(%clientId);
@@ -225,6 +233,7 @@ function SetupInvSteal(%clientId, %id)
 
 		if(%itemcount > 0)
 		{
+			if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %item @ " (" @ getItemData(%item) @ ") from " @ $ShopDebugCtx);
 			Client::setItemShopping(%clientId, %item);
 			Client::setItemBuying(%clientId, %item);
 		}
@@ -233,6 +242,7 @@ function SetupInvSteal(%clientId, %id)
 
 function SetupCreatePack(%clientId)
 {
+	$ShopDebugCtx = "SetupCreatePack";
 	dbecho($dbechoMode, "SetupCreatePack(" @ %clientId @ ")");
 
 	Client::clearItemShopping(%clientId);
@@ -246,6 +256,7 @@ function SetupCreatePack(%clientId)
 	{
 		%item = GetWord(%info, %i);
 
+		if($ShopDebug) echo("[SHOPDBG] setItemShopping " @ %item @ " (" @ getItemData(%item) @ ") from " @ $ShopDebugCtx);
 		Client::setItemShopping(%clientId, %item);
 		Client::setItemBuying(%clientId, %item);
 	}
