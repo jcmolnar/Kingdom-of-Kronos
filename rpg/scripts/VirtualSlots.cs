@@ -374,7 +374,7 @@ function VSlot::SyncBank(%clientId)
 			if(%name == "")
 				%name = %item;
 			if(%cnt > 1)
-				%name = %name @ " (" @ %cnt @ ")";
+				%name = "(" @ %cnt @ ") " @ %name;	// count FIRST - long names get cut off at the right edge
 			// heading follows the stored item's category so armor lands under
 			// Armor, weapons under Weapons (was fixed eMiscellany = everything
 			// dumped under Miscellany at the banker)
