@@ -193,6 +193,25 @@ function buyItem(%clientId, %item)
 
 	%player = Client::getOwnedObject(%clientId);
 
+	// VOID BANK 2026-07-14: a VSlotBank row proxies a belt item in storage -
+	// "buying" it withdraws via the belt primitives. MUST sit BEFORE the
+	// isItemShoppingOn gate: that check resolves the item NAME through the
+	// engine name->index map, which misses VSlot placeholders (the
+	// playerInventory.cpp:513 trap), so the gate reads false for these rows
+	// even though their shopping BITS (set by numeric index) are on.
+	if(%clientId.currentBank != "" && VSlot::IsSlotItem(%item))
+	{
+		%n = 1;
+		if(%clientId.bulkNum != "")
+			%n = %clientId.bulkNum;
+		%bw = VSlot::MappedItem(%clientId, %item);
+		if(%bw == "" || %bw == -1)
+			Client::sendMessage(%clientId, $MsgWhite, "That storage slot is empty.");
+		else if(Belt::BankWithdraw(%clientId, %bw, %n))
+			SetupBank(%clientId, %clientId.currentBank);	//refresh (re-syncs the rows)
+		return;
+	}
+
 	if(Client::isItemShoppingOn(%clientId, %item))
 	{
 		if(%clientId.currentBank != "")
@@ -204,17 +223,6 @@ function buyItem(%clientId, %item)
 				%n = %clientId.bulkNum;
 			else
 				%n = 1;
-			// VOID BANK 2026-07-14: a VSlotBank row proxies a belt item in storage -
-			// "buying" it withdraws via the belt primitives, then refreshes the screen.
-			if(VSlot::IsSlotItem(%item))
-			{
-				%bw = VSlot::MappedItem(%clientId, %item);
-				if(%bw == "" || %bw == -1)
-					Client::sendMessage(%clientId, $MsgWhite, "That storage slot is empty.");
-				else if(Belt::BankWithdraw(%clientId, %bw, %n))
-					SetupBank(%clientId, %clientId.currentBank);	//refresh (re-syncs the rows)
-				return;
-			}
 			%cnt = GetStuffStringCount(fetchData(%clientId, "BankStorage"), %item);
 			if(%cnt >= %n)
 			{

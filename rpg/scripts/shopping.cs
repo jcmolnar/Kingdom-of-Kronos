@@ -149,6 +149,11 @@ function SetupBank(%clientId, %id)
 	{
 		%item = GetWord(%info, %i);
 
+		// VOID BANK 2026-07-14: skip zero/negative-count leftovers - they drew
+		// ghost rows that answered every click with "You only have 0".
+		if((GetWord(%info, %i + 1) * 1) <= 0)
+			continue;
+
 		Client::setItemShopping(%clientId, %item);
 		Client::setItemBuying(%clientId, %item);
 	}

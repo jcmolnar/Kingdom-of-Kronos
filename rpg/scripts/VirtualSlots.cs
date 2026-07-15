@@ -361,8 +361,11 @@ function VSlot::SyncBank(%clientId)
 				%name = %name @ " (" @ %cnt @ ")";
 			VSlot::SetRow(%idx, %name, 0);				// price 0: withdrawing is free
 			vslotPushItem(%clientId, %idx);
-			Client::setItemShopping(%clientId, "VSlotBank" @ %i);
-			Client::setItemBuying(%clientId, "VSlotBank" @ %i);
+			// NUMERIC index, not the name: the engine name->index map misses the
+			// VSlot placeholders (playerInventory.cpp:513 - the same trap as
+			// setItemCount), so setItemShopping("VSlotBankN") silently no-ops.
+			Client::setItemShopping(%clientId, %idx);
+			Client::setItemBuying(%clientId, %idx);
 		}
 		else
 		{
