@@ -216,13 +216,29 @@ function VSlot::Init()
 // a shop; the stock inventory list doesn't show price, only the purchase screen
 // does, which never lists VSlots) but is kept in sync for tidiness.
 //------------------------------------------------------------------------------
-function VSlot::SetRow(%idx, %displayName, %price)
+function VSlot::SetRow(%idx, %displayName, %price, %heading)
 {
 	%db = getItemData(%idx);			// datablock name, e.g. "VSlot3"
 	if(%db == "" || %db == -1)
 		return;
 	%db.description = %displayName;		// the row label the stock inventory renders
 	%db.price       = %price;
+	// VOID BANK 2026-07-14: the bank/shop screens GROUP by the heading field -
+	// a fixed heading dumped every stored item under Miscellany. Optional: only
+	// set when the caller passes one (weapon/armor windows keep their declared
+	// headings).
+	if(%heading != "")
+		%db.heading = %heading;
+}
+
+// belt category -> stock-GUI section heading (matches the engine items' headings)
+function VSlot::CategoryHeading(%cat)
+{
+	if(%cat == "Armor")
+		return "aArmor";
+	if(%cat == "Weapons")
+		return "bWeapons";
+	return "eMiscellany";
 }
 
 //------------------------------------------------------------------------------
@@ -359,7 +375,10 @@ function VSlot::SyncBank(%clientId)
 				%name = %item;
 			if(%cnt > 1)
 				%name = %name @ " (" @ %cnt @ ")";
-			VSlot::SetRow(%idx, %name, 0);				// price 0: withdrawing is free
+			// heading follows the stored item's category so armor lands under
+			// Armor, weapons under Weapons (was fixed eMiscellany = everything
+			// dumped under Miscellany at the banker)
+			VSlot::SetRow(%idx, %name, 0, VSlot::CategoryHeading($BeltItem[%item, "Type"]));	// price 0: withdrawing is free
 			vslotPushItem(%clientId, %idx);
 			// NUMERIC index, not the name: the engine name->index map misses the
 			// VSlot placeholders (playerInventory.cpp:513 - the same trap as
