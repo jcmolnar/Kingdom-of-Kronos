@@ -5793,6 +5793,7 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 {
 	// WATCHDOG: Track this function for freeze detection
 	Watchdog_Enter("RefreshAll");
+	%vperfTE = getRealMillis();	// $VoidPerf probe: function entry
 	
 	if($AI_DEBUG_ENABLED) echo("[DOT_OP_DEBUG] RefreshAll: ENTRY - clientId=" @ %clientId @ ", fromSkillUpgrade=" @ %fromSkillUpgrade);
 	dbecho($dbechoMode, "RefreshAll(" @ %clientId @ ", " @ %fromSkillUpgrade @ ")");
@@ -5993,9 +5994,7 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	{
 		if($TOWNBOT_ARMOR_DEBUG) echo("[TOWNBOT ARMOR DEBUG] RefreshAll: SKIPPING UpdateAppearance for bot " @ %clientId);
 	}
-	// $VoidPerf probe (equip lag hunt 2026-07-15): which RefreshAll phase is slow
-	if($VoidPerf)
-		echo("[VOIDPERF] RefreshAll(" @ %clientId @ "): weight=" @ (%vperfT1 - %vperfT0) @ "ms appearance=" @ (getRealMillis() - %vperfT1) @ "ms");
+	%vperfT2 = getRealMillis();	// $VoidPerf probe: appearance done
 //	echo("DEBUG RefreshAll: UpdateAppearance completed");
 
 //	echo("DEBUG RefreshAll: Calling refreshHPREGEN...");
@@ -6005,10 +6004,12 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 //	echo("DEBUG RefreshAll: Calling refreshMANAREGEN...");
 	refreshMANAREGEN(%clientId);
 //	echo("DEBUG RefreshAll: refreshMANAREGEN completed");
+	%vperfT3 = getRealMillis();	// $VoidPerf probe: regen done
 
 //	echo("DEBUG RefreshAll: Calling Game::refreshClientScore...");
 	Game::refreshClientScore(%clientId);
 //	echo("DEBUG RefreshAll: Game::refreshClientScore completed");
+	%vperfT4 = getRealMillis();	// $VoidPerf probe: score done
 
 	// NOTE: Enemy bot team restoration is now handled at the beginning of RefreshAll()
 	// This code is kept for town bots (if any) but enemy bots return early
@@ -6088,9 +6089,15 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	// Enemy bots return early, so this code only runs for players and town bots
 
 //	echo("===== DEBUG RefreshAll: COMPLETE =====");
-	
+	%vperfT5 = getRealMillis();	// $VoidPerf probe: adminboots done
+
 	// Push stats to ScriptGL KronosHUD
 	KronosHUD_Push(%clientId);
+	// $VoidPerf probe (equip lag hunt 2026-07-15): first run showed ~480ms
+	// UNaccounted between the coarse weight/appearance brackets - this maps
+	// the whole function. entry = the validation/AdminBoots-check preamble.
+	if($VoidPerf)
+		echo("[VOIDPERF] RefreshAll(" @ %clientId @ "): entry=" @ (%vperfT0 - %vperfTE) @ "ms weight=" @ (%vperfT1 - %vperfT0) @ "ms appearance=" @ (%vperfT2 - %vperfT1) @ "ms regen=" @ (%vperfT3 - %vperfT2) @ "ms score=" @ (%vperfT4 - %vperfT3) @ "ms adminboots=" @ (%vperfT5 - %vperfT4) @ "ms hudpush=" @ (getRealMillis() - %vperfT5) @ "ms");
 	// VOID 2026-07-15 (HUD audit #3): re-push an OPEN HUD panel too - RefreshAll
 	// only ever pushed vitals, so belt changes not caused by a panel button
 	// (loot pickups, telekinesis, migration, admin gives) left an open panel
