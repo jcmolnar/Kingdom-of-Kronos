@@ -3649,6 +3649,12 @@ function Void::CarryCap(%cat)
 // True when acquiring %item as a NEW name would exceed its category's window.
 function Void::AtCarryCap(%clientId, %item)
 {
+	// KronosHUD clients are EXEMPT: the caps exist purely because the stock
+	// GUI can only show <window> rows - the HUD renders unlimited lists. A HUD
+	// player who later logs in vanilla is simply grandfathered (overflow stays
+	// reachable via the belt menu; can't ADD until back under).
+	if(%clientId.hasKronosHUD)
+		return false;
 	%reg = $BeltItem[%item, "Item"];
 	if(%reg == "")
 		return false;
