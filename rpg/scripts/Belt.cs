@@ -1,5 +1,12 @@
 $BELT_DEBUG = 0; // Toggle verbose belt menu/storage debug echoes (these spammed the console unconditionally on every menu open)
 
+// VOID BANK 2026-07-14: banker storage unique-item cap. MUST equal the stock-GUI
+// storage window size ($VSlot::SCount, VirtualSlots.cs) - a cap above the window
+// stores items players can't see at the banker (was 25 vs a 20-row window).
+// Enforced on NEW names only, so players grandfathered above the cap keep
+// everything and simply can't add until they're back under.
+$Belt::StorageCap = 20;
+
 $Belt::Count["QuestItems"] = 0;
 $Belt::Count["KeyItems"] = 0;
 $Belt::Count["Deployables"] = 0;
@@ -1023,7 +1030,7 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 		if(%cmnt >= %amnt)
 		{
 			// NOTE: auto-unequip of equipped accessories/armor now happens INSIDE the
-			// success branches below, AFTER the 25-slot capacity check passes.
+			// success branches below, AFTER the capacity check ($Belt::StorageCap) passes.
 			// Previously it ran here, so a full storage refused the deposit but the
 			// player's gear had already been silently unequipped.
 
@@ -1061,7 +1068,7 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 						%currentStorageCount++;
 				}
 				
-				if(%currentStorageCount < 25)
+				if(%currentStorageCount < $Belt::StorageCap)	// VOID BANK: cap == stock-GUI window ($Belt::StorageCap)
 				{
 					// Add item directly to BeltStorage (single source of truth)
 					%newBeltStorage = SetStuffString(%beltStorage, %registeredItem, %amnt);
@@ -1153,7 +1160,7 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 				}
 				else
 				{
-					Client::sendMessage(%clientId, $MsgRed, "You can only place 25 different items into backpack storage.~wC_BuySell.wav");
+					Client::sendMessage(%clientId, $MsgRed, "You can only place " @ $Belt::StorageCap @ " different items into backpack storage.~wC_BuySell.wav");
 				}
 			}
 			else
@@ -3601,7 +3608,7 @@ function Belt::ReapplyEquippedStats(%clientId)
 // (VSlotBank rows, VirtualSlots.cs). Same contract as the belt-menu banker
 // branches in processMenuSellBeltItemFinal: BeltStorage is the single source
 // of truth, the Stored<Type> category is kept in sync (SaveCharacter rebuilds
-// BeltStorage from stored categories), 25 unique-item cap, all-empty clears
+// BeltStorage from stored categories), $Belt::StorageCap unique-item cap, all-empty clears
 // every stored category. The menu processor keeps its own (verified) code;
 // fold it onto these in a later cleanup pass.
 //------------------------------------------------------------------------------
@@ -3646,13 +3653,13 @@ function Belt::BankDeposit(%clientId, %item, %amnt)
 
 	%bs = Belt::CleanPairList(fetchData(%clientId, "BeltStorage"));
 
-	// 25 unique-item cap (matches the belt-menu banker); only NEW names consume a slot
+	// $Belt::StorageCap unique-item cap (== stock-GUI window size); only NEW names consume a slot
 	if(Belt::ItemCount(%reg, %bs) <= 0)
 	{
 		%unique = 0;
 		for(%i = 0; GetWord(%bs, %i) != -1; %i += 2)
 			%unique++;
-		if(%unique >= 25)
+		if(%unique >= $Belt::StorageCap)
 		{
 			Client::sendMessage(%clientId, $MsgRed, "Your storage is full - you need to make room to add more to it.");
 			return false;
