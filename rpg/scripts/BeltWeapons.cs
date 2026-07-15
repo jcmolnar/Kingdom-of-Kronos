@@ -354,9 +354,8 @@ VoidArmor::RegisterAll();
 //==============================================================================
 function VoidAccessory::RegisterAll()
 {
-	%list = "IronHelmet GoldenHelmet CrystalHelmet DiamondHelmet BlackDiamondHelmet RedDiamondHelmet WhiteDiamondHelmet"
-		@ " CheetaursPaws BootsOfGliding WindWalkers WindPaws"
-		@ " SteelKnightShield CrystalKnightShield DiamondKnightShield BlackDiamondKnightShield RedDiamondKingShield WhiteDiamondKingShield";
+	// single line: multi-line @-continuation is untrusted on this engine's parser
+	%list = "IronHelmet GoldenHelmet CrystalHelmet DiamondHelmet BlackDiamondHelmet RedDiamondHelmet WhiteDiamondHelmet CheetaursPaws BootsOfGliding WindWalkers WindPaws SteelKnightShield CrystalKnightShield DiamondKnightShield BlackDiamondKnightShield RedDiamondKingShield WhiteDiamondKingShield";
 	%n = 0;
 	for(%i = 0; (%a = GetWord(%list, %i)) != -1; %i++)
 	{
