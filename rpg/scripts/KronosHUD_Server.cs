@@ -100,6 +100,18 @@ function KronosShop_BeltHeading(%cat)
 // all belt/backpack items, merged into one list. Row kind: "d" =
 // ItemData (ref = index, stock buyItem/sellItem/... protocol),
 // "b" = belt item (ref = belt item name, KShopBelt* protocol).
+// VOID 2026-07-15 (HUD audit #2): equipped/worn suffix for a belt row label.
+function KronosShop_WornTag(%clientId, %item)
+{
+	if(fetchData(%clientId, "EquippedBeltArmor") == %item)
+		return " (worn)";
+	if(fetchData(%clientId, "EquippedBeltWeapon") == %item)
+		return " (equipped)";
+	if($BeltItem[%item, "Type"] == "Accessories" && Belt::IsAccessoryEquipped(%clientId, %item))
+		return " (worn)";
+	return "";
+}
+
 function KronosShop_PushInv(%clientId)
 {
 	%sent = 0;
@@ -138,6 +150,9 @@ function KronosShop_PushInv(%clientId)
 					%bname = $BeltItem[%bitem, "Name"];
 					if(%bname == "")
 						%bname = %bitem;
+					// VOID 2026-07-15 (HUD audit #2): equipped marker - without it a
+					// successful equip changes NOTHING visible in the panel
+					%bname = %bname @ KronosShop_WornTag(%clientId, %bitem);
 					remoteEval(%clientId, "KShopInv", %sent, "b", %bitem, %bcnt, %bhead, %bname);
 					%sent++;
 				}
@@ -527,6 +542,9 @@ function KronosBank_PushInv(%clientId)
 					%bname = $BeltItem[%bitem, "Name"];
 					if(%bname == "")
 						%bname = %bitem;
+					// VOID 2026-07-15 (HUD audit #2): equipped marker - without it a
+					// successful equip changes NOTHING visible in the panel
+					%bname = %bname @ KronosShop_WornTag(%clientId, %bitem);
 					remoteEval(%clientId, "KShopInv", %sent, "b", %bitem, %bcnt, %bhead, %bname);
 					%sent++;
 				}

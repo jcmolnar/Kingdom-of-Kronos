@@ -6086,6 +6086,12 @@ function RefreshAll(%clientId, %fromSkillUpgrade)
 	
 	// Push stats to ScriptGL KronosHUD
 	KronosHUD_Push(%clientId);
+	// VOID 2026-07-15 (HUD audit #3): re-push an OPEN HUD panel too - RefreshAll
+	// only ever pushed vitals, so belt changes not caused by a panel button
+	// (loot pickups, telekinesis, migration, admin gives) left an open panel
+	// stale. remoteKShopSync self-gates on hasKronosHUD + kshopOpen, and an
+	// open panel is rare, so this cannot reintroduce push spam.
+	remoteKShopSync(%clientId);
 
 	// WATCHDOG: Clear tracking for this function
 	Watchdog_Exit();

@@ -2859,6 +2859,24 @@ function Belt::UseItem(%clientId, %item, %type)
 		EnergyVial::onUse(%player, %item);
 	else if(%item == "CrystalEnergyVial")
 		CrystalEnergyVial::onUse(%player, %item);
+	// VOID 2026-07-15 (HUD audit #1): "Use" on belt ARMOR / ACCESSORIES toggles
+	// equip - the dispatch existed for vanilla (VSlot::OnUseClick) and the chat
+	// menus, but never here, so the HUD panel's Use button answered "not
+	// consumable" for every converted armor/accessory (read as "panel dead").
+	else if($BeltItem[%item, "Type"] == "Armor")
+	{
+		if(fetchData(%clientId, "EquippedBeltArmor") == %item)
+			Belt::UnequipArmor(%clientId, %item);
+		else
+			Belt::EquipArmor(%clientId, %item);
+	}
+	else if($BeltItem[%item, "Type"] == "Accessories")
+	{
+		if(Belt::IsAccessoryEquipped(%clientId, %item))
+			Belt::UnequipAccessory(%clientId, %item);
+		else
+			Belt::EquipAccessory(%clientId, %item);
+	}
 	else
 	{
 		Client::sendMessage(%clientId, $MsgRed, "Cannot use " @ $BeltItem[%item, "Name"] @ " - this item is not consumable.");
