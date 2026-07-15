@@ -341,3 +341,34 @@ VoidArmor::RegisterAll();
 // counts - see VoidLegacyEquipped.cs header). BeltWeapons.cs is the final exec
 // in Server.cs, and this is its final line, so nothing registers after them.
 exec("VoidLegacyEquipped.cs");
+
+//------------------------------------------------------------------------------
+// VOID 2026-07-15: mirror script-side prices onto the datablock price field so
+// the VANILLA merchant/bank screens show real prices. Kronos datablocks all
+// declare price = 0 and charge via getBuyCost/$ItemCost (script), so this
+// field is DISPLAY-ONLY - FearGuiPurchase renders data->price in the count
+// column (fearGuiInventory.cpp:345). The KronosHUD shop always showed real
+// prices; the stock column showed 0 since forever. Runs LAST (after every
+// ItemData + VoidLegacyEquipped) so it covers the whole table. VSlot rows are
+// skipped - their price is per-client display state set by VSlot::SetRow.
+//------------------------------------------------------------------------------
+function VoidPrice::MirrorAll()
+{
+	%n = 0;
+	%max = getNumItems();
+	for(%i = 0; %i < %max; %i++)
+	{
+		%item = getItemData(%i);
+		if(%item == "" || %item == -1)
+			continue;
+		if($VSlot::IsSlot[%i])
+			continue;	// per-client display rows manage their own price field
+		if($ItemCost[%item] != "" && $ItemCost[%item] > 0)
+		{
+			%item.price = $ItemCost[%item];
+			%n++;
+		}
+	}
+	echo("[VOID] Mirrored " @ %n @ " script prices onto datablock price fields (vanilla shop columns).");
+}
+VoidPrice::MirrorAll();
