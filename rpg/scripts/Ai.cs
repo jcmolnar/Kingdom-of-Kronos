@@ -12700,9 +12700,13 @@ function InitTownBotItemsForBot(%clientId, %botName)
 			{
 				// Add base item to inventory
 				Player::incItemCount(%clientId, %itemName, %itemCount);
-				
+
 				// For armor and accessories, also add the equipped version ("0" suffix) to inventory
-				if($AccessoryVar[%itemName, $AccessoryType] == $BodyAccessoryType || %itemData.className == "Accessory")
+				// VOID 2026-07-15: NOT for belt-converted armor - its X0 datablocks sit at
+				// indexes 198-220 (VoidLegacyEquipped.cs), ABOVE the 200 itemTypeList cap,
+				// where incItemCount is an OOB WRITE that crashed the server on every town
+				// spawn. Bots don't need the count: the mount pass mounts X0 by NAME.
+				if(!isBeltItem(%itemName) && ($AccessoryVar[%itemName, $AccessoryType] == $BodyAccessoryType || %itemData.className == "Accessory"))
 				{
 					%equippedVersion = %itemName @ "0";
 					%equippedData = getItemData(%equippedVersion);
@@ -12778,7 +12782,10 @@ function InitTownBotItemsForBot(%clientId, %botName)
 			return;
 		}
 		%armorCountInInv = Player::getItemCount(%clientId, %equippedArmor);
-		if(%armorCountInInv > 0)
+		// VOID 2026-07-15: belt-converted armor has NO X0 counts (X0s at 198-220 sit
+		// above the 200 cap; the count write there is an OOB server crash, so the
+		// give pass skips it). Mounting is by NAME - treat belt armor as mountable.
+		if(%armorCountInInv > 0 || isBeltItem(%armorName))
 		{
 			// Check if armor is already mounted - if so, verify it's the correct armor
 			%currentArmor = Player::getMountedItem(%clientId, 1);
@@ -12910,9 +12917,11 @@ function InitTownBotItems()
 					{
 						// Add base item to inventory
 						Player::incItemCount(%clientId, %itemName, %itemCount);
-						
+
 						// For armor and accessories, also add the equipped version ("0" suffix) to inventory
-						if($AccessoryVar[%itemName, $AccessoryType] == $BodyAccessoryType || %itemData.className == "Accessory")
+						// VOID 2026-07-15: NOT for belt-converted armor - X0s at 198-220 are above
+						// the 200 cap; incItemCount there = OOB write (server crash on town spawn).
+						if(!isBeltItem(%itemName) && ($AccessoryVar[%itemName, $AccessoryType] == $BodyAccessoryType || %itemData.className == "Accessory"))
 						{
 							%equippedVersion = %itemName @ "0";
 							%equippedData = getItemData(%equippedVersion);
@@ -13059,11 +13068,18 @@ function InitTownBotItems()
 							if(%equippedData != "")
 							{
 								// Check if equipped armor is in inventory (should be added in first pass)
+								// VOID 2026-07-15: belt-converted armor has NO X0 counts (first pass
+								// skips them; X0s at 198-220 are above the 200 cap = OOB writes).
+								// Mounting is by NAME, no count needed - bypass the gate for belt
+								// armor or town bots spawn unarmored.
+								if(!isBeltItem(%itemName))
+								{
 								%armorCountInInv = Player::getItemCount(%clientId, %equippedArmor);
 								if(%armorCountInInv <= 0)
 								{
 									echo("DEBUG: Equipped armor " @ %equippedArmor @ " not in inventory (count: " @ %armorCountInInv @ ") - cannot mount");
 									continue;
+								}
 								}
 								
 								// Check if armor is already mounted - if so, verify it's the correct armor
