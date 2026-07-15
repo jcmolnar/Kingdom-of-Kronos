@@ -461,6 +461,13 @@ function createServer(%mission, %dedicated)
 	GenerateAllWeaponCosts();
 	GenerateAllShieldCosts();
 	GenerateAllArmorCosts();
+	// VOID 2026-07-15: mirror the freshly generated $ItemCost/$HardcodedItemCost
+	// values onto the datablock price fields so VANILLA shop columns show real
+	// prices (function lives in BeltWeapons.cs). MUST run after the
+	// GenerateAll*Costs calls above - at BeltWeapons exec time the cost tables
+	// were still empty (only ~30 literal entries), which is why the exec-time
+	// mirror pass only caught 30 items.
+	VoidPrice::MirrorAll();
 
 	InitObjectives();
 

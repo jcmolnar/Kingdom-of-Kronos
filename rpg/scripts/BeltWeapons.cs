@@ -374,4 +374,6 @@ function VoidPrice::MirrorAll()
 	}
 	echo("[VOID] Mirrored " @ %n @ " script prices onto datablock price fields (vanilla shop columns).");
 }
-VoidPrice::MirrorAll();
+// VOID 2026-07-15: call moved to Server.cs AFTER GenerateAll*Costs() - at exec
+// time here the cost tables are still empty (only ~30 literal entries).
+//VoidPrice::MirrorAll();
