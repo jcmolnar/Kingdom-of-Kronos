@@ -397,6 +397,28 @@ function Item::onCollision(%this,%object)
 			{
 				%newloot = String::getSubStr($loot[%this], String::len(%ownerName)+String::len(%namelist)+2, 99999);
 
+				// VOID CARRY CAP 2026-07-15: refuse the whole pickup (bag stays on
+				// the ground, nothing lost) when any belt item inside is at the
+				// player's carry-window cap - otherwise it lands invisibly past the
+				// stock-GUI window. Bots exempt (no windows). Message throttled -
+				// collisions re-fire while standing on the bag.
+				if(!isRPGAI(%clientId))
+				{
+					%capItem = Void::LootCapBlocker(%clientId, %newloot);
+					if(%capItem != "")
+					{
+						if(getSimTime() - %clientId.voidCapMsgTime > 3)
+						{
+							%clientId.voidCapMsgTime = getSimTime();
+							%capName = $BeltItem[%capItem, "Name"];
+							if(%capName == "")
+								%capName = %capItem;
+							Client::sendMessage(%clientId, $MsgRed, "Your Void backpack is full - you need to make room for the " @ %capName @ ".");
+						}
+						return;
+					}
+				}
+
 				Client::sendMessage(%clientId, 0, %msg);
 				
 				// DEBUG: Log when enemy bots pick up lootbags

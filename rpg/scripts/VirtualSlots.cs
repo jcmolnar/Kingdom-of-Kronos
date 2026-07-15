@@ -254,6 +254,16 @@ function VSlot::Sync(%clientId)
 		return;
 	if(%clientId == "" || %clientId == -1)
 		return;
+	// VOID 2026-07-15: DEBOUNCE - bulk gives (lootbags, telekinesis sweeps,
+	// spawn restore) trigger a Sync per item; each Sync re-pushes 28 rows via
+	// the DLL, which visibly lagged the server on multi-item pickups.
+	// GiveThisStuff (rpgfunk.cs) sets vslotDeferSync around its loop and
+	// flushes ONE Sync at the end.
+	if(%clientId.vslotDeferSync)
+	{
+		%clientId.vslotSyncPending = true;
+		return;
+	}
 	// VSlots are the VANILLA-client native view. HUD clients already see belt
 	// weapons in the KronosHUD belt panel (KronosShop_PushInv lists them as "b"
 	// rows), so also pushing VSlot "d" rows would double-show every weapon. Bots

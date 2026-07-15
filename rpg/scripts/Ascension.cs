@@ -723,11 +723,29 @@ function Ascension::TelekinesisPickup(%clientId, %bag)
 	// Give items to player
 	if(%newloot != "")
 	{
+		// VOID CARRY CAP 2026-07-15: telekinesis inherits the same gate as
+		// walk-over pickups - leave the bag when any belt item inside is at
+		// the player's carry-window cap. Throttled message.
+		%capItem = Void::LootCapBlocker(%clientId, %newloot);
+		if(%capItem != "")
+		{
+			$TelekinesisProcessing[%bag] = "";
+			if(getSimTime() - %clientId.voidCapMsgTime > 3)
+			{
+				%clientId.voidCapMsgTime = getSimTime();
+				%capName = $BeltItem[%capItem, "Name"];
+				if(%capName == "")
+					%capName = %capItem;
+				Client::sendMessage(%clientId, $MsgRed, "Your Void backpack is full - telekinesis left the bag (make room for the " @ %capName @ ").");
+			}
+			return;
+		}
+
 		if(%ownerName == "*" || IsLootOwnerBot(%ownerName))
 			Client::sendMessage(%clientId, 0, "Telekinesis: Collected loot.~loot");
 		else
 			Client::sendMessage(%clientId, 0, "Telekinesis: Recovered your backpack.");
-		
+
 		GiveThisStuff(%clientId, %newloot, true);
 		
 		// Clean up loot data

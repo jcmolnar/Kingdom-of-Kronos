@@ -6404,6 +6404,21 @@ function TakeThisStuff(%clientId, %list, %multiplier)
 // registered item the belt ALREADY holds is stale - field 48 is authoritative.
 // ONLY for the spawn restore: normal gives (lootbag pickups etc) must still
 // stack, and belt buys go through Belt::GiveThisStuff directly anyway.
+// VOID CARRY CAP 2026-07-15: returns the first belt item in a loot list that
+// would exceed its carry window for this client, or "". Pickup paths use it
+// to refuse the WHOLE pickup (bag stays on the ground - nothing is lost, the
+// player makes room and grabs it again). Bots are exempt at the call sites.
+function Void::LootCapBlocker(%clientId, %list)
+{
+	for(%i = 0; GetWord(%list, %i) != -1; %i += 2)
+	{
+		%w = GetWord(%list, %i);
+		if(isBeltItem(%w) && Void::AtCarryCap(%clientId, %w))
+			return %w;
+	}
+	return "";
+}
+
 function VoidMigrate::FilterSpawnStuff(%clientId, %list)
 {
 	%out = "";
@@ -6453,7 +6468,13 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 		%multiplier = 1;
 
 	%cntindex = 0;
-	
+
+	// VOID 2026-07-15: defer VSlot row pushes for the duration of the give
+	// loop - each belt give would otherwise re-push all 28 rows via the DLL
+	// (a multi-item lootbag/telekinesis sweep visibly lagged the server).
+	// Flushed once after the loop, before the RefreshAll section.
+	%clientId.vslotDeferSync = true;
+
 	// CRITICAL: Track if this is spawn equipment for enemy bots (to store in OriginalLootString with percentage format)
 	// The roll will happen on death, not on spawn
 	%isProcessingSpawnEquipment = false;
@@ -6903,6 +6924,15 @@ function GiveThisStuff(%clientId, %list, %echo, %multiplier)
 				echo("ERROR: GiveThisStuff - could not find player object for clientId " @ %clientId);
 			}
 		}
+	}
+
+	// VOID 2026-07-15: flush the deferred VSlot sync - one row push for the
+	// whole give instead of one per item (see the defer set before the loop).
+	%clientId.vslotDeferSync = "";
+	if(%clientId.vslotSyncPending)
+	{
+		%clientId.vslotSyncPending = "";
+		VSlot::Sync(%clientId);
 	}
 
 	// VOID MIGRATION 2026-07-14: re-equip the migrated worn armor now that the whole
