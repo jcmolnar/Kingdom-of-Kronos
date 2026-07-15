@@ -1705,7 +1705,12 @@ function Belt::GetNS(%clientId, %type)
 
 function Belt::GetSellCost(%clientId, %item)
 {
-	%p = $HardcodedItemCost[%item];
+	// VOID 2026-07-15: was $HardcodedItemCost[%item] directly - the converted
+	// accessories register with cost "" (their prices generate LATER via
+	// GenerateAllShieldCosts into $ItemCost), so equipped-shield sales paid 0.
+	// GetItemCost() is the canonical source (Hardcoded first, else $ItemCost) -
+	// the same one every buy path uses.
+	%p = GetItemCost(%item);
 	%cost = round(%p * ($resalePercentage/100));
 
 	%p = round($PlayerSkill[%clientId, $SkillHaggling] / 11) / 100;
