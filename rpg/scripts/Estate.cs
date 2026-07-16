@@ -384,9 +384,15 @@ function Estate::Build(%cl, %type)
 		Client::sendMessage(%cl, $MsgRed, "The realm's builders are overextended right now. Try again later.");
 		return;
 	}
-	if(!GameBase::getLOSInfo(%cl, 3))
+	// LIVE-TEST FIX 2026-07-15: getLOSInfo needs the PLAYER OBJECT (every other
+	// caller passes %player - depbase.cs:73, comchat.cs:2140) and a real reach;
+	// the original (%cl, 3) - client id + 3-unit range - failed on every aim,
+	// so build always answered "Aim at the ground". 50 matches the deploy-style
+	// comchat callers; actual placement stays bounded by the plot-radius check.
+	%player = Client::getOwnedObject(%cl);
+	if(%player == "" || %player == -1 || !GameBase::getLOSInfo(%player, 50))
 	{
-		Client::sendMessage(%cl, $MsgRed, "Aim at the ground where you want to build.");
+		Client::sendMessage(%cl, $MsgRed, "Aim at the ground where you want to build (within 50 units).");
 		return;
 	}
 	if(Vector::dot($los::normal, "0 0 1") <= 0.7)
