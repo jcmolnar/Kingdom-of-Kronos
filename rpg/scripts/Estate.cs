@@ -292,6 +292,13 @@ function Estate::RehydrateAll()
 		if(Estate::SpawnStructure(%k) != -1)
 			%structs++;
 	}
+	// TAB-MENU ZONES: re-register every live estate in the zone tables (zone
+	// slots are runtime; InitZones ran earlier in createServer, RehydrateAll
+	// runs in finishMissionLoad, so these append after the mission's zones).
+	deleteVariables("EstateRt::ZoneSlot*");
+	for(%e = 1; %e <= $Estate::Count; %e++)
+		if($Estate::Owner[%e] != "")
+			Estate::RegisterZone(%e);
 	echo("[ESTATE] Rehydrated " @ $EstateRt::ObjInUse @ " structure(s) across " @ $Estate::Count @ " estate slot(s).");
 }
 
@@ -438,6 +445,7 @@ function Estate::Found(%cl)
 	$Estate::OwnerHouse[%eid] = fetchData(%cl, "MyHouse");
 	$Estate::Mode[%eid]       = "friendly"; // ZONES: turrets hold fire until the owner opts into hostile
 	$Estate::Name[%eid]       = "";         // ZONES: custom grounds name via #estate name
+	Estate::RegisterZone(%eid);             // TAB-MENU ZONES: appears in the zone column
 	$EstateRt::ByOwner[%name] = %eid;
 
 	Estate::RequestSave("found");
@@ -626,6 +634,7 @@ function Estate::Abandon(%cl)
 	for(%k = 1; %k <= $Estate::SCount; %k++)
 		if($Estate::SEstate[%k] == %eid)
 			Estate::FreeStructSlot(%k);
+	Estate::UnregisterZone(%eid);
 
 	%refund = $Estate::Coffer[%eid];
 	%name = $Estate::Owner[%eid];
@@ -956,6 +965,7 @@ function Estate::ReclaimEstate(%eid)
 	for(%k = 1; %k <= $Estate::SCount; %k++)
 		if($Estate::SEstate[%k] == %eid)
 			Estate::FreeStructSlot(%k);
+	Estate::UnregisterZone(%eid);
 	%name = $Estate::Owner[%eid];
 	$Estate::Owner[%eid]      = "";
 	$Estate::CenterPos[%eid]  = "";
@@ -1077,6 +1087,72 @@ function Estate::IsHostile(%eid)
 	return ($Estate::Mode[%eid] == "hostile");
 }
 
+//============================================================================
+// TAB-MENU ZONES 2026-07-15 - each estate is registered as a REAL entry in
+// the mission zone system ($Zone::* / $numZones), so the engine's own 2s
+// sweep (zone.cs DoZoneCheck) drives everything: the scoreboard/KronosHUD
+// zone column shows the estate's name while standing on the plot, and
+// Game::refreshClientScore fires on entry. Type "ESTATE" matches NO special
+// zone logic (no bot spawns, no teleporter reqs, no PROTECTED regen, no
+// engine enter message - our perimeter warning stays the only shout).
+// Safe ONLY because founding enforces ZoneClearance from real zones, so an
+// estate box can never overlap/steal a town/dungeon/FFA flag.
+// Zone slots are RUNTIME (rebuilt on rehydrate; $numZones never shrinks -
+// freed slots are parked as empty boxes far underground).
+//============================================================================
+function Estate::RegisterZone(%eid)
+{
+	if(!$pref::EstatesEnabled)
+		return;
+	if($Estate::Owner[%eid] == "")
+		return;
+	%slot = $EstateRt::ZoneSlot[%eid];
+	if(%slot == "")
+	{
+		// reuse a previously parked estate slot before growing $numZones
+		for(%s = 1; %s <= $numZones; %s++)
+		{
+			if($Zone::Type[%s] == "" && $EstateRt::ZoneSlotParked[%s] == true)
+			{
+				%slot = %s;
+				break;
+			}
+		}
+		if(%slot == "")
+		{
+			$numZones++;
+			%slot = $numZones;
+		}
+		$EstateRt::ZoneSlot[%eid] = %slot;
+		$EstateRt::ZoneSlotParked[%slot] = "";
+	}
+	$Zone::Marker[%slot]   = $Estate::CenterPos[%eid];
+	$Zone::Length[%slot]   = $Estate::Radius[%eid] * 2;
+	$Zone::Width[%slot]    = $Estate::Radius[%eid] * 2;
+	$Zone::Height[%slot]   = 300;
+	$Zone::SHeight[%slot]  = 0;
+	$Zone::Type[%slot]     = "ESTATE";
+	$Zone::Desc[%slot]     = Estate::ZoneName(%eid);
+	$Zone::FolderID[%slot] = "EstateZone" @ %eid;
+}
+
+function Estate::UnregisterZone(%eid)
+{
+	%slot = $EstateRt::ZoneSlot[%eid];
+	if(%slot == "")
+		return;
+	$Zone::Marker[%slot]   = "0 0 -20000"; // park the sweep box far underground
+	$Zone::Length[%slot]   = 0;
+	$Zone::Width[%slot]    = 0;
+	$Zone::Height[%slot]   = 0;
+	$Zone::SHeight[%slot]  = 0;
+	$Zone::Type[%slot]     = "";
+	$Zone::Desc[%slot]     = "";
+	$Zone::FolderID[%slot] = "";
+	$EstateRt::ZoneSlot[%eid] = "";
+	$EstateRt::ZoneSlotParked[%slot] = true;
+}
+
 // Display name for an estate's grounds: the owner's custom name ("Jobo's Hut")
 // or a neutral default built from the owner.
 function Estate::ZoneName(%eid)
@@ -1109,6 +1185,7 @@ function Estate::SetName(%cl, %name)
 		return;
 	}
 	$Estate::Name[%eid] = %name;
+	Estate::RegisterZone(%eid); // refresh $Zone::Desc so the tab menu shows the new name
 	Estate::RequestSave("name");
 	Client::sendMessage(%cl, $MsgGreen, "Your estate is now known as: " @ %name);
 }
