@@ -1984,12 +1984,12 @@ function Player::onKilled(%this)
 			else
 			{
 			%namelist = Client::getName(%clientId) @ ",";
-			if(fetchData(%clientId, "LCK") >= 0)
-			{
-				TossLootbag(%clientId, %tmploot, 5, %namelist, Cap(fetchData(%clientId, "LVL") * 300, 300, 3600), %this);
-			}
-			else
-				TossLootbag(%clientId, %tmploot, 5, %namelist, Cap(fetchData(%clientId, "LVL") * 0.2, 5, "inf"), %this);
+			// DESIGN DECISION (2026-07-12): player death packs stay owner-locked forever.
+			// %t=0 => TossLootbag never schedules the namelist->"*" unlock (and $LootbagPopTime
+			// is -1, so no expiry pop either). Previously LCK>=0 unlocked after LVL*300s
+			// (5-60 min) and LCK<0 after LVL*0.2s (5s+), letting anyone - including
+			// Telekinesis auto-vacuum - take the pack. Luck no longer affects pack protection.
+			TossLootbag(%clientId, %tmploot, 5, %namelist, 0, %this);
 			}
 		}
 	}
