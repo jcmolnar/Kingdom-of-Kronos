@@ -123,6 +123,12 @@ $EstateCfg::UpkeepFreq   = 3600;  // seconds between upkeep ticks (1 hour)
 //   "hostile"        - dungeon: turrets fire on non-members inside range
 $EstateCfg::WarnMult   = 2;   // warn ring = WarnMult * plot radius
 $EstateCfg::ZonePeriod = 3;   // seconds between zone proximity sweeps
+// Founding clearance from MISSION zones (towns/dungeons/FFA arenas): the
+// estate center must be at least this far (XY) from the zone's box edge.
+// Zone Length/Width are FULL extents - the engine halves them
+// (containerBoxFillSet, FearPlugin.cpp:662) - so edge = extent/2. WATER
+// zones are deliberately exempt (huge lakes would over-block).
+$EstateCfg::ZoneClearance = 100;
 $EstateCfg::GraceTicks   = 72;    // insolvent ticks before decay starts (~3 days uptime)
 $EstateCfg::DormantTicks = 168;   // empty + broke ticks before the plot is reclaimed (~7 days uptime)
 
@@ -365,6 +371,33 @@ function Estate::Found(%cl)
 		return;
 	}
 	%center = GameBase::getPosition(%cl);
+
+	// ZONES 2026-07-15: keep estates away from towns, dungeons and FFA arenas -
+	// no plot may be founded within ZoneClearance of any such zone's box edge.
+	// (The PROTECTED check above already blocks founding INSIDE a town; this
+	// blocks camping the doorstep.)
+	for(%z = 1; %z <= $numZones; %z++)
+	{
+		%ztype = $Zone::Type[%z];
+		if(%ztype != "PROTECTED" && %ztype != "DUNGEON" && %ztype != "FREEFORALL")
+			continue;
+		%zc = $Zone::Marker[%z];
+		%dx = GetWord(%center, 0) - GetWord(%zc, 0);
+		if(%dx < 0)
+			%dx = -%dx;
+		%dy = GetWord(%center, 1) - GetWord(%zc, 1);
+		if(%dy < 0)
+			%dy = -%dy;
+		if(%dx <= ($Zone::Length[%z] / 2) + $EstateCfg::ZoneClearance && %dy <= ($Zone::Width[%z] / 2) + $EstateCfg::ZoneClearance)
+		{
+			%zdesc = $Zone::Desc[%z];
+			if(%zdesc == "" || %zdesc == -1)
+				%zdesc = "a " @ %ztype @ " zone";
+			Client::sendMessage(%cl, $MsgRed, "You cannot found an estate this close to " @ %zdesc @ " (must be " @ $EstateCfg::ZoneClearance @ "+ units clear of it).");
+			return;
+		}
+	}
+
 	%gap = $EstateCfg::PlotRadius * $EstateCfg::MinPlotGap;
 	for(%e = 1; %e <= $Estate::Count; %e++)
 	{
