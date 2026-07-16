@@ -60,9 +60,25 @@ $EstateCfg::DB["turret"]    = "DeployableTurret";     // self-powered guardian t
 // holes near its edges (elevator collision doesn't reach the visual edge).
 // Trial alternatives - all STOCK shapes (vanilla-client safe), collision
 // unproven until tested in-game; cull the losers after the A/B:
-$EstateCfg::DB["wall2"]     = "VerticalPanelB";       // panel_vertical - purpose-shaped upright wall panel
+$EstateCfg::DB["wall2"]     = "VerticalPanelB";       // panel_vertical - LIVE-TEST: "electrical dashboard" deco, NOT a wall (cull candidate)
 $EstateCfg::DB["crate"]     = "CargoCrate";           // magcargo - stock solid box (small but bulletproof collision)
 $EstateCfg::DB["barrier"]   = "RForceField";          // ALWAYS-SOLID forcefield - nobody passes, no door logic
+
+// HOUSES 2026-07-15: real building INTERIORS (.dis), spawned whole via the
+// proven Tent primitive (sleep.cs newObject InteriorShape). One house = one
+// object. Every file below lives in a VOL KingdomKronos.mis already mounts
+// (RPGshapes/hosedhut/jhosed/hosedfrt/magetower), so every connecting client
+// already has it - vanilla-safe. MinTier gates the big ones.
+$EstateCfg::DB["hut"]       = "npchut.dis";           // hosedhut.vol - small hut (mission-proven file)
+$EstateCfg::DB["house"]     = "house1.dis";           // RPGshapes.vol - standard house
+$EstateCfg::DB["lhouse"]    = "lhouse.dis";           // RPGshapes.vol - large house
+$EstateCfg::DB["tavern"]    = "tavern.dis";           // RPGshapes.vol - tavern
+$EstateCfg::DB["tower"]     = "magetower.dis";        // magetower.vol - mage tower (mission-proven x3)
+$EstateCfg::DB["keep"]      = "keep.dis";             // hosedfrt.vol - castle keep (mission-proven)
+$EstateCfg::MinTier["lhouse"] = 2;
+$EstateCfg::MinTier["tavern"] = 2;
+$EstateCfg::MinTier["tower"]  = 2;
+$EstateCfg::MinTier["keep"]   = 3;
 $EstateCfg::Cost["wall"]       = 2000;
 $EstateCfg::Cost["platform"]   = 2500;
 $EstateCfg::Cost["forcefield"] = 8000;
@@ -70,6 +86,12 @@ $EstateCfg::Cost["turret"]     = 25000;
 $EstateCfg::Cost["wall2"]      = 2000;
 $EstateCfg::Cost["crate"]      = 1000;
 $EstateCfg::Cost["barrier"]    = 6000;
+$EstateCfg::Cost["hut"]        = 15000;
+$EstateCfg::Cost["house"]      = 40000;
+$EstateCfg::Cost["lhouse"]     = 75000;
+$EstateCfg::Cost["tavern"]     = 75000;
+$EstateCfg::Cost["tower"]      = 100000;
+$EstateCfg::Cost["keep"]       = 250000;
 
 // Coffer upkeep (Phase 2). Charged PER UPKEEP TICK (one tick = UpkeepFreq seconds).
 // Grace/decay windows are measured in TICKS (= hours of server uptime), NOT real
@@ -84,6 +106,12 @@ $EstateCfg::Upkeep["turret"]     = 1000;
 $EstateCfg::Upkeep["wall2"]      = 50;
 $EstateCfg::Upkeep["crate"]      = 25;
 $EstateCfg::Upkeep["barrier"]    = 250;
+$EstateCfg::Upkeep["hut"]        = 150;
+$EstateCfg::Upkeep["house"]      = 400;
+$EstateCfg::Upkeep["lhouse"]     = 700;
+$EstateCfg::Upkeep["tavern"]     = 700;
+$EstateCfg::Upkeep["tower"]      = 900;
+$EstateCfg::Upkeep["keep"]       = 2000;
 $EstateCfg::UpkeepFreq   = 3600;  // seconds between upkeep ticks (1 hour)
 $EstateCfg::GraceTicks   = 72;    // insolvent ticks before decay starts (~3 days uptime)
 $EstateCfg::DormantTicks = 168;   // empty + broke ticks before the plot is reclaimed (~7 days uptime)
@@ -184,9 +212,16 @@ function Estate::SpawnStructure(%k)
 		return -1;
 	}
 
+	// HOUSES 2026-07-15: a DB value ending in ".dis" is an INTERIOR (a real
+	// building) spawned exactly like the Tent camp (sleep.cs:191 newObject
+	// InteriorShape) - one whole house = ONE object against the budget. The
+	// .dis must live in a VOL the mission mounts (client-availability).
+	%isDis = (String::findSubStr(%db, ".dis") != -1);
 	%isTurret = (%type == "turret");
 	if(%isTurret)
 		%obj = newObject("", "Turret", %db, true);
+	else if(%isDis)
+		%obj = newObject("", InteriorShape, %db);
 	else
 		%obj = newObject("", "StaticShape", %db, true);
 	addToSet("MissionCleanup", %obj);
@@ -199,14 +234,17 @@ function Estate::SpawnStructure(%k)
 		GameBase::setTeam(%obj, 1);
 		%obj.Team = $Estate::OwnerHouse[%eid];
 	}
-	else
+	else if(!%isDis)
 		GameBase::setTeam(%obj, Estate::OwnerTeam(%eid));
 
 	GameBase::setPosition(%obj, $Estate::SPos[%k]);
 	GameBase::setRotation(%obj, $Estate::SRot[%k]);
-	GameBase::setMapName(%obj, %db);
-	if(!%isTurret)
-		GameBase::startFadeIn(%obj); // turrets run their own deploy sequence via onAdd
+	if(!%isDis)
+	{
+		GameBase::setMapName(%obj, %db);
+		if(!%isTurret)
+			GameBase::startFadeIn(%obj); // turrets run their own deploy sequence via onAdd
+	}
 
 	$owner[%obj]           = $Estate::Owner[%eid];
 	$EstateOf[%obj]        = %eid;
@@ -371,7 +409,8 @@ function Estate::Build(%cl, %type)
 	}
 	if(%type == "" || $EstateCfg::DB[%type] == "")
 	{
-		Client::sendMessage(%cl, $MsgBeige, "Usage: #estate build <wall|wall2|crate|platform|forcefield|barrier|turret>");
+		Client::sendMessage(%cl, $MsgBeige, "Usage: #estate build <wall|crate|platform|forcefield|barrier|turret>");
+		Client::sendMessage(%cl, $MsgBeige, "   buildings: <hut|house|lhouse|tavern|tower|keep> (higher tiers unlock bigger ones)");
 		return;
 	}
 	if(%type == "turret")
@@ -386,6 +425,12 @@ function Estate::Build(%cl, %type)
 			Client::sendMessage(%cl, $MsgRed, "Turret limit reached (" @ $EstateCfg::MaxTurrets @ " per estate).");
 			return;
 		}
+	}
+	// HOUSES 2026-07-15: generic per-type tier gate (big buildings).
+	if($EstateCfg::MinTier[%type] != "" && $Estate::Tier[%eid] < $EstateCfg::MinTier[%type])
+	{
+		Client::sendMessage(%cl, $MsgRed, "A " @ %type @ " requires estate tier " @ $EstateCfg::MinTier[%type] @ ". Use '#estate upgrade'.");
+		return;
 	}
 	if(Estate::StructCount(%eid) >= Estate::MaxStructs(%eid))
 	{
@@ -772,7 +817,8 @@ function Estate::Help(%cl)
 {
 	Client::sendMessage(%cl, $MsgBeige, "=== Estate commands ===");
 	Client::sendMessage(%cl, $MsgBeige, "#estate found  - claim a plot where you stand (" @ Number::Beautify($EstateCfg::FoundCost, -3) @ " coins)");
-	Client::sendMessage(%cl, $MsgBeige, "#estate build <wall|wall2|crate|platform|forcefield|barrier|turret>  - aim at ground in your plot");
+	Client::sendMessage(%cl, $MsgBeige, "#estate build <wall|crate|platform|forcefield|barrier|turret>  - aim at ground in your plot");
+	Client::sendMessage(%cl, $MsgBeige, "   buildings: <hut|house|lhouse|tavern|tower|keep>  (tier-gated)");
 	Client::sendMessage(%cl, $MsgBeige, "   forcefield = door (opens for you/members); barrier = solid for everyone");
 	Client::sendMessage(%cl, $MsgBeige, "#estate deposit/withdraw <n|all>  - fund the coffer that pays upkeep");
 	Client::sendMessage(%cl, $MsgBeige, "#estate permit/evict <name>  - grant/revoke member access");
