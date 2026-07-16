@@ -7555,10 +7555,11 @@ if(%w1 == "#spawnpointscan")
 		// review #33: %w2 was never assigned in this block (only #auditainumbers/
 		// #spawntelemetry set it), so it read "". The engine's == does a string compare
 		// (strcmp) for non-numeric operands, so `"" == "fix"` is FALSE - meaning
-		// "#spawnpointscan fix" NEVER enabled auto-fix. Parse the 2nd word here directly
-		// and use explicit string equality ($=).
+		// "#spawnpointscan fix" NEVER enabled auto-fix. Parse the 2nd word here directly.
+		// NOTE: this engine has no `$=` operator (it is a syntax error) - use == which
+		// already strcmps non-numeric operands, per above.
 		%autoFix = false;
-		if(GetWord(%message, 1) $= "fix")
+		if(GetWord(%message, 1) == "fix")
 			%autoFix = true;
 		
 		echo("[SPAWNPOINT SCAN] === Starting Spawn Point Scan ===");
