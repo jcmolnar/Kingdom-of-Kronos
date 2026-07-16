@@ -5670,7 +5670,9 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t, %sourceObj)
 	{
 		if($LootbagPopTime != -1)
 		{
-			schedule("Item::Pop(" @ %lootbag @ ");", $LootbagPopTime, %lootbag);
+			// CRITICAL: stamp a pop token so the deferred pop can't hit a recycled ID (item.cs Item::pop)
+			%lootbag.popToken = %lootbag @ "_pop_" @ getSimTime();
+			schedule("Item::Pop(" @ %lootbag @ ", \"" @ %lootbag.popToken @ "\");", $LootbagPopTime, %lootbag);
 			// CRITICAL FIX: Validate client ID exists before using it in scheduled function
 			// The bot/player may be deleted by the time this runs, so check first
 			schedule("%tempClientId = " @ %clientId @ "; %tempLootbag = " @ %lootbag @ "; if(Client::getName(%tempClientId) != \"\" && Client::getName(%tempClientId) != -1) { storeData(%tempClientId, \"lootbaglist\", RemoveFromCommaList(fetchData(%tempClientId, \"lootbaglist\"), %tempLootbag)); }", $LootbagPopTime, %lootbag);
@@ -5738,7 +5740,11 @@ function TossLootbag(%clientId, %loot, %vel, %namelist, %t, %sourceObj)
 		%p = String::findSubStr(%lootbaglist, ",");
 		%w = String::getSubStr(%lootbaglist, 0, %p);
 
-		Item::Pop(%w);
+		// CRITICAL: lootbaglist can hold stale IDs (pickup-time removal fails silently when the
+		// owner is offline, itemevents.cs Item::onCollision). Only pop if the object at this ID
+		// is still THIS player's lootbag; otherwise the ID was recycled - just drop the list entry.
+		if(isObject(%w) && getObjectType(%w) == "Item" && GetWord($loot[%w], 0) == %ownerName)
+			Item::Pop(%w);
 		storeData(%clientId, "lootbaglist", RemoveFromCommaList(%lootbaglist, %w));
 	}
 

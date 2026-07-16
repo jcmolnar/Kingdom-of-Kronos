@@ -707,7 +707,9 @@ function Item::onDrop(%player,%item)
 			{
 				%obj = newObject("","Item",%item,1,false);
 				%obj.delta = %delta;
-	 	 	  	schedule("Item::Pop(" @ %obj @ ");", $ItemPopTime, %obj);
+				// CRITICAL: stamp a pop token so the 30s deferred pop can't hit a recycled ID (item.cs Item::pop)
+				%obj.popToken = %obj @ "_pop_" @ getSimTime();
+	 	 	  	schedule("Item::Pop(" @ %obj @ ", \"" @ %obj.popToken @ "\");", $ItemPopTime, %obj);
 	 	 	 	addToSet("MissionCleanup", %obj);
 
 				if(IsDead(%player)) 
@@ -744,7 +746,9 @@ function Ammo::onDrop(%player,%item)
 		{
 			%obj = newObject("","Item",%item,%delta,false);
 			%obj.delta = %delta;
-	      	schedule("Item::Pop(" @ %obj @ ");", $ItemPopTime, %obj);
+			// CRITICAL: stamp a pop token so the 30s deferred pop can't hit a recycled ID (item.cs Item::pop)
+			%obj.popToken = %obj @ "_pop_" @ getSimTime();
+	      	schedule("Item::Pop(" @ %obj @ ", \"" @ %obj.popToken @ "\");", $ItemPopTime, %obj);
 
       		addToSet("MissionCleanup", %obj);
 			GameBase::throw(%obj,%player,20,false);
