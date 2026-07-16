@@ -54,12 +54,22 @@ $EstateCfg::GlobalObjBudget= 400;     // hard ceiling on total estate objects se
 // spawned through the same primitive DeployBase/DeployPlatform use.
 $EstateCfg::DB["wall"]      = "DepPlatLargeVert";     // vertical platform used as a wall
 $EstateCfg::DB["platform"]  = "DepPlatLargeHorz";     // flat platform / floor
-$EstateCfg::DB["forcefield"]= "StaticDoorForceField"; // owner/grouplist-gated door (staticshape.cs:758)
+$EstateCfg::DB["forcefield"]= "StaticDoorForceField"; // ACCESS DOOR: opens 3s for owner/members (staticshape.cs:758)
 $EstateCfg::DB["turret"]    = "DeployableTurret";     // self-powered guardian turret (Turret.cs); owner-safe via verifyTarget
+// LIVE-TEST 2026-07-15: elevator_9x9 rotated vertical ("wall") has collision
+// holes near its edges (elevator collision doesn't reach the visual edge).
+// Trial alternatives - all STOCK shapes (vanilla-client safe), collision
+// unproven until tested in-game; cull the losers after the A/B:
+$EstateCfg::DB["wall2"]     = "VerticalPanelB";       // panel_vertical - purpose-shaped upright wall panel
+$EstateCfg::DB["crate"]     = "CargoCrate";           // magcargo - stock solid box (small but bulletproof collision)
+$EstateCfg::DB["barrier"]   = "RForceField";          // ALWAYS-SOLID forcefield - nobody passes, no door logic
 $EstateCfg::Cost["wall"]       = 2000;
 $EstateCfg::Cost["platform"]   = 2500;
 $EstateCfg::Cost["forcefield"] = 8000;
 $EstateCfg::Cost["turret"]     = 25000;
+$EstateCfg::Cost["wall2"]      = 2000;
+$EstateCfg::Cost["crate"]      = 1000;
+$EstateCfg::Cost["barrier"]    = 6000;
 
 // Coffer upkeep (Phase 2). Charged PER UPKEEP TICK (one tick = UpkeepFreq seconds).
 // Grace/decay windows are measured in TICKS (= hours of server uptime), NOT real
@@ -71,6 +81,9 @@ $EstateCfg::Upkeep["wall"]       = 50;    // coins/tick
 $EstateCfg::Upkeep["platform"]   = 60;
 $EstateCfg::Upkeep["forcefield"] = 300;
 $EstateCfg::Upkeep["turret"]     = 1000;
+$EstateCfg::Upkeep["wall2"]      = 50;
+$EstateCfg::Upkeep["crate"]      = 25;
+$EstateCfg::Upkeep["barrier"]    = 250;
 $EstateCfg::UpkeepFreq   = 3600;  // seconds between upkeep ticks (1 hour)
 $EstateCfg::GraceTicks   = 72;    // insolvent ticks before decay starts (~3 days uptime)
 $EstateCfg::DormantTicks = 168;   // empty + broke ticks before the plot is reclaimed (~7 days uptime)
@@ -358,7 +371,7 @@ function Estate::Build(%cl, %type)
 	}
 	if(%type == "" || $EstateCfg::DB[%type] == "")
 	{
-		Client::sendMessage(%cl, $MsgBeige, "Usage: #estate build <wall|platform|forcefield|turret>");
+		Client::sendMessage(%cl, $MsgBeige, "Usage: #estate build <wall|wall2|crate|platform|forcefield|barrier|turret>");
 		return;
 	}
 	if(%type == "turret")
@@ -759,7 +772,8 @@ function Estate::Help(%cl)
 {
 	Client::sendMessage(%cl, $MsgBeige, "=== Estate commands ===");
 	Client::sendMessage(%cl, $MsgBeige, "#estate found  - claim a plot where you stand (" @ Number::Beautify($EstateCfg::FoundCost, -3) @ " coins)");
-	Client::sendMessage(%cl, $MsgBeige, "#estate build <wall|platform|forcefield|turret>  - aim at ground in your plot");
+	Client::sendMessage(%cl, $MsgBeige, "#estate build <wall|wall2|crate|platform|forcefield|barrier|turret>  - aim at ground in your plot");
+	Client::sendMessage(%cl, $MsgBeige, "   forcefield = door (opens for you/members); barrier = solid for everyone");
 	Client::sendMessage(%cl, $MsgBeige, "#estate deposit/withdraw <n|all>  - fund the coffer that pays upkeep");
 	Client::sendMessage(%cl, $MsgBeige, "#estate permit/evict <name>  - grant/revoke member access");
 	Client::sendMessage(%cl, $MsgBeige, "#estate upgrade | demolish | abandon | where | info");
