@@ -517,6 +517,19 @@ function remoteSay(%clientId, %team, %message, %senderName)
 				Estate::Evict(%TrueClientId, GetWord(%cropped, 1));
 			else if(%esub == "mode")
 				Estate::SetMode(%TrueClientId, GetWord(%cropped, 1));
+			else if(%esub == "name")
+			{
+				// multi-word: rejoin every word after "name" ("Jobo's Hut")
+				%ename = "";
+				for(%ei = 1; GetWord(%cropped, %ei) != -1; %ei++)
+				{
+					if(%ename == "")
+						%ename = GetWord(%cropped, %ei);
+					else
+						%ename = %ename @ " " @ GetWord(%cropped, %ei);
+				}
+				Estate::SetName(%TrueClientId, %ename);
+			}
 			else if(%esub == "upgrade")
 				Estate::Upgrade(%TrueClientId);
 			else if(%esub == "where")

@@ -309,6 +309,7 @@ function Estate::Save(%echoOff)
 	export("Estate::Members*",   %f, true);
 	export("Estate::OwnerHouse*",%f, true);
 	export("Estate::Mode*",      %f, true);
+	export("Estate::Name*",      %f, true);
 	export("Estate::SCount",     %f, true);
 	export("Estate::SEstate*",   %f, true);
 	export("Estate::SType*",     %f, true);
@@ -403,6 +404,7 @@ function Estate::Found(%cl)
 	$Estate::Members[%eid]    = "";
 	$Estate::OwnerHouse[%eid] = fetchData(%cl, "MyHouse");
 	$Estate::Mode[%eid]       = "friendly"; // ZONES: turrets hold fire until the owner opts into hostile
+	$Estate::Name[%eid]       = "";         // ZONES: custom grounds name via #estate name
 	$EstateRt::ByOwner[%name] = %eid;
 
 	Estate::RequestSave("found");
@@ -604,6 +606,7 @@ function Estate::Abandon(%cl)
 	$Estate::Members[%eid]    = "";
 	$Estate::OwnerHouse[%eid] = "";
 	$Estate::Mode[%eid]       = "";
+	$Estate::Name[%eid]       = "";
 	$EstateRt::ByOwner[%name] = "";
 
 	if(%refund > 0)
@@ -628,6 +631,7 @@ function Estate::Info(%cl)
 		%modeDesc = "HOSTILE (turrets fire on non-members)";
 	else
 		%modeDesc = "friendly (turrets hold fire)";
+	Client::sendMessage(%cl, $MsgBeige, "Grounds: " @ Estate::ZoneName(%eid) @ "  ('#estate name <name>' to rename)");
 	Client::sendMessage(%cl, $MsgBeige, "Plot radius " @ $Estate::Radius[%eid] @ "  |  Coffer " @ Number::Beautify($Estate::Coffer[%eid], -3) @ "  |  Structures " @ Estate::StructCount(%eid) @ "/" @ Estate::MaxStructs(%eid));
 	Client::sendMessage(%cl, $MsgBeige, "Stance: " @ %modeDesc @ "  |  change with '#estate mode <friendly|hostile>'");
 	if(%due > 0)
@@ -841,6 +845,7 @@ function Estate::Help(%cl)
 	Client::sendMessage(%cl, $MsgBeige, "#estate deposit/withdraw <n|all>  - fund the coffer that pays upkeep");
 	Client::sendMessage(%cl, $MsgBeige, "#estate permit/evict <name>  - grant/revoke member access");
 	Client::sendMessage(%cl, $MsgBeige, "#estate mode <friendly|hostile>  - friendly: turrets hold fire; hostile: dungeon rules");
+	Client::sendMessage(%cl, $MsgBeige, "#estate name <name>  - name your grounds (shown to anyone entering)");
 	Client::sendMessage(%cl, $MsgBeige, "#estate upgrade | demolish | abandon | where | info");
 }
 
@@ -929,6 +934,7 @@ function Estate::ReclaimEstate(%eid)
 	$Estate::Members[%eid]    = "";
 	$Estate::OwnerHouse[%eid] = "";
 	$Estate::Mode[%eid]       = "";
+	$Estate::Name[%eid]       = "";
 	$EstateRt::ByOwner[%name] = "";
 }
 
@@ -1038,6 +1044,42 @@ function Estate::IsHostile(%eid)
 	return ($Estate::Mode[%eid] == "hostile");
 }
 
+// Display name for an estate's grounds: the owner's custom name ("Jobo's Hut")
+// or a neutral default built from the owner.
+function Estate::ZoneName(%eid)
+{
+	if($Estate::Name[%eid] != "")
+		return $Estate::Name[%eid];
+	return $Estate::Owner[%eid] @ "'s estate grounds";
+}
+
+// #estate name <name...> - name your grounds; shown to everyone crossing the
+// perimeter and in info/list. Multi-word allowed, 32 chars max.
+function Estate::SetName(%cl, %name)
+{
+	if(isRPGAI(%cl) || Player::isAiControlled(%cl))
+		return;
+	%eid = Estate::OfOwner(Client::getName(%cl));
+	if(%eid == "")
+	{
+		Client::sendMessage(%cl, $MsgRed, "You have no estate. Use '#estate found' first.");
+		return;
+	}
+	if(%name == "" || %name == " ")
+	{
+		Client::sendMessage(%cl, $MsgBeige, "Usage: #estate name <name>  (e.g. #estate name Jobo's Hut). Current: " @ Estate::ZoneName(%eid));
+		return;
+	}
+	if(String::len(%name) > 32)
+	{
+		Client::sendMessage(%cl, $MsgRed, "Estate names are limited to 32 characters.");
+		return;
+	}
+	$Estate::Name[%eid] = %name;
+	Estate::RequestSave("name");
+	Client::sendMessage(%cl, $MsgGreen, "Your estate is now known as: " @ %name);
+}
+
 // #estate mode <friendly|hostile> (aliases: protected, dungeon)
 function Estate::SetMode(%cl, %mode)
 {
@@ -1109,20 +1151,21 @@ function Estate::ZoneLoop(%gen)
 		// leaving the old ring (message only if the estate still exists)
 		%old = %cl.estateZone;
 		if(%old != "" && $Estate::Owner[%old] != "")
-			Client::sendMessage(%cl, $MsgBeige, "You are leaving " @ $Estate::Owner[%old] @ "'s estate grounds.");
+			Client::sendMessage(%cl, $MsgBeige, "You are leaving " @ Estate::ZoneName(%old) @ ".");
 		%cl.estateZone = %in;
 		if(%in == "")
 			continue;
 
 		// entering a new ring - phrase by relation and stance
 		%pname = Client::getName(%cl);
+		%zname = Estate::ZoneName(%in);
 		if(%pname == $Estate::Owner[%in])
-			Client::sendMessage(%cl, $MsgGreen, "You are entering your estate grounds.");
+			Client::sendMessage(%cl, $MsgGreen, "You are entering " @ %zname @ " - welcome home.");
 		else if(IsInCommaList($Estate::Members[%in], %pname))
-			Client::sendMessage(%cl, $MsgGreen, "You are entering " @ $Estate::Owner[%in] @ "'s estate grounds (you have access).");
+			Client::sendMessage(%cl, $MsgGreen, "You are entering " @ %zname @ " (you have access).");
 		else if(Estate::IsHostile(%in))
-			Client::sendMessage(%cl, $MsgRed, "WARNING: You are entering " @ $Estate::Owner[%in] @ "'s estate - HOSTILE ground. Guardian turrets WILL fire.~wError_Message.wav");
+			Client::sendMessage(%cl, $MsgRed, "WARNING: You are entering " @ %zname @ " - HOSTILE ground. Guardian turrets WILL fire.~wError_Message.wav");
 		else
-			Client::sendMessage(%cl, $MsgBeige, "You are entering " @ $Estate::Owner[%in] @ "'s estate grounds (protected - no danger).");
+			Client::sendMessage(%cl, $MsgBeige, "You are entering " @ %zname @ " (protected ground - no danger).");
 	}
 }
