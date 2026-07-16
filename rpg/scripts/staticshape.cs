@@ -767,7 +767,10 @@ function StaticDoorForceField::onCollision(%this, %object)
 	// the real per-player grouplist (fetchData, keyed by the owner's clientId),
 	// matching every other group feature (Admin.cs/comchat.cs/spells.cs/sleep.cs).
 	%ownerCl = NEWgetClientByName(%owner);
-        if(%name == %owner || (%ownerCl != -1 && IsInCommaList(fetchData(%ownerCl, "grouplist"), %name)))
+	// Estate.cs: if this force field belongs to an estate, its permitted members pass too.
+	%eid = $EstateOf[%this];
+	%isEstateMember = (%eid != "" && %eid != 0 && IsInCommaList($Estate::Members[%eid], %name));
+        if(%name == %owner || %isEstateMember || (%ownerCl != -1 && IsInCommaList(fetchData(%ownerCl, "grouplist"), %name)))
 	{
 		echo(%this);
 		if($recreatingfField[%this] == "")

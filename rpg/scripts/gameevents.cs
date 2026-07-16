@@ -22,6 +22,8 @@ function Mission::init()
 	Daily::Init();
 	// Weekly boss (WeeklyBoss.cs) - AFTER Daily::Init (uses its date probe)
 	Weekly::Init();
+	// Estate coffer upkeep loop (Estate.cs) - same rule: start here, not at exec time
+	Estate::Init();
 
 	$BlockOwnerAdminLevel[Server] = 5;
 	for(%i = 1; $ServerQuest[%i] != ""; %i++)

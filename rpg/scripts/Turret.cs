@@ -350,7 +350,17 @@ function Turret::verifyTarget(%this, %target)
 			echo("[TURRET DEBUG] verifyTarget() - Invalid target (no client ID)");
 		return "False"; // Invalid target
 	}
-	
+
+	// Estate.cs: a guardian turret NEVER fires on its estate's owner or permitted
+	// members, regardless of House (a houseless owner must still be safe on their land).
+	%estateId = $EstateOf[%this];
+	if(%estateId != "" && %estateId != 0)
+	{
+		%pName = Client::getName(%Id);
+		if(%pName == $Estate::Owner[%estateId] || IsInCommaList($Estate::Members[%estateId], %pName))
+			return "False";
+	}
+
 	// Get player's house (can be empty string if player has no house)
 	%House = fetchData(%Id, "MyHouse");
 	

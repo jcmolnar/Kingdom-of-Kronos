@@ -496,11 +496,35 @@ function remoteSay(%clientId, %team, %message, %senderName)
 			// player housing/building - Estate.cs; bots have no estates
 			if(Player::isAiControlled(%TrueClientId) || isRPGAI(%TrueClientId))
 				return;
+			// master gate (Estate.cs): unfinished feature, off unless Server.cs enables it
+			if(!$pref::EstatesEnabled)
+			{
+				Client::sendMessage(%TrueClientId, $MsgBeige, "Estates are not available on this server.");
+				return;
+			}
 			%esub = GetWord(%cropped, 0);
 			if(%esub == "found")
 				Estate::Found(%TrueClientId);
 			else if(%esub == "build")
 				Estate::Build(%TrueClientId, GetWord(%cropped, 1));
+			else if(%esub == "deposit")
+				Estate::Deposit(%TrueClientId, GetWord(%cropped, 1));
+			else if(%esub == "withdraw")
+				Estate::Withdraw(%TrueClientId, GetWord(%cropped, 1));
+			else if(%esub == "permit")
+				Estate::Permit(%TrueClientId, GetWord(%cropped, 1));
+			else if(%esub == "evict")
+				Estate::Evict(%TrueClientId, GetWord(%cropped, 1));
+			else if(%esub == "upgrade")
+				Estate::Upgrade(%TrueClientId);
+			else if(%esub == "where")
+				Estate::Where(%TrueClientId);
+			else if(%esub == "help")
+				Estate::Help(%TrueClientId);
+			else if(%esub == "list")
+				Estate::List(%TrueClientId);
+			else if(%esub == "reclaim")
+				Estate::AdminReclaim(%TrueClientId, GetWord(%cropped, 1));
 			else if(%esub == "demolish")
 				Estate::Demolish(%TrueClientId);
 			else if(%esub == "abandon")
