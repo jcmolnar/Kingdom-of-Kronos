@@ -990,6 +990,11 @@ function KronosHUD_Push(%clientId)
 		%zone = Zone::getDesc(fetchData(%clientId, "zone"));
 		if(%zone == "" || %zone == -1)
 			%zone = "Unknown";
+		// ESTATE ZONES 2026-07-15: display-only estate grounds name (same
+		// presentation-layer override as refreshClientScore - the real zone
+		// var is never touched). Maintained by Estate::ZoneLoop.
+		if($pref::EstatesEnabled && %clientId.estateZone != "" && $Estate::Owner[%clientId.estateZone] != "")
+			%zone = Estate::ZoneName(%clientId.estateZone);
 
 		remoteEval(%clientId, "KronosHUD2", %class, %zone);
 	}

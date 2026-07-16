@@ -1037,6 +1037,12 @@ function Game::refreshClientScore(%clientId)
 	%z = Zone::getDesc(fetchData(%clientId, "zone"));
 	if(%z == -1)
 		%z = "unknown";
+	// ESTATE ZONES 2026-07-15: DISPLAY-ONLY estate grounds name in the zone
+	// column. Deliberately does NOT touch the real zone var (several consumers
+	// assume numeric FolderIDs - e.g. the bot cross-zone melee guard); this is
+	// pure presentation. %clientId.estateZone is maintained by Estate::ZoneLoop.
+	if($pref::EstatesEnabled && %clientId.estateZone != "" && $Estate::Owner[%clientId.estateZone] != "")
+		%z = Estate::ZoneName(%clientId.estateZone);
 	//By Carling!
 	%name = client::getname(%clientId);
 	if($zonedis[%name] != "")

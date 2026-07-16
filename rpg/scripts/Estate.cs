@@ -1187,7 +1187,11 @@ function Estate::ZoneLoop(%gen)
 			Client::sendMessage(%cl, $MsgBeige, "You are leaving " @ Estate::ZoneName(%old) @ ".");
 		%cl.estateZone = %in;
 		if(%in == "")
+		{
+			// tab-menu zone text reverts to the real zone (display-only override)
+			Game::refreshClientScore(%cl);
 			continue;
+		}
 
 		// entering a new ring - phrase by relation and stance
 		%pname = Client::getName(%cl);
@@ -1200,5 +1204,8 @@ function Estate::ZoneLoop(%gen)
 			Client::sendMessage(%cl, $MsgRed, "WARNING: You are entering " @ %zname @ " - HOSTILE ground. Guardian turrets WILL fire.~wError_Message.wav");
 		else
 			Client::sendMessage(%cl, $MsgBeige, "You are entering " @ %zname @ " (protected ground - no danger).");
+		// tab-menu zone column shows the grounds name (display-only override
+		// in refreshClientScore/KronosHUD_Push - the real zone var untouched)
+		Game::refreshClientScore(%cl);
 	}
 }
