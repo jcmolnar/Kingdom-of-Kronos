@@ -1,0 +1,12 @@
+//-----------------------------------------------------------------------------
+// RemoteConsole.local.cs.example - template for the telnet rcon secret
+//-----------------------------------------------------------------------------
+// Copy this file to  config/RemoteConsole.local.cs  and set a long random
+// password. The real .local.cs is gitignored so the secret never reaches git.
+//
+// This password gates FULL command execution on the server host. Make it long
+// and random, and keep it in sync with TELNET_PASSWORD in the Node admin app's
+// config.local.js.
+//-----------------------------------------------------------------------------
+
+$TelnetPassword = "CHANGE-ME-to-a-long-random-string";
