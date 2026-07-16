@@ -343,7 +343,12 @@ function createServer(%mission, %dedicated)
 	exec(DailyQuest);
 	exec(WeeklyBoss);
 	exec(Estate);		// player housing/building; needs economy + rpgfunk deploy primitives (already exec'd)
+	// DEV ONLY: Estates are unfinished/untested - master gate defaults OFF in Estate.cs.
+	// The sanitized live Server.cs must NOT set this (or set false). See DEPLOY_CHECKLIST.md.
+	$pref::EstatesEnabled = true;
 	exec(BeltWeapons);	// needs Belt.cs (BeltItem::Add) + weapons.cs (shell tables) already exec'd
+	exec(RemoteAdminHelpers);	// stable entry points for the remote web admin console
+	exec(RemoteConsole);	// arm engine telnet rcon (config/RemoteConsole.cs); needs the .local.cs secret
 	//exec(DebugInit); only need if debugging
 
 	// Sanity check: player-facing coin/exp displays rely on MathPlugin's
