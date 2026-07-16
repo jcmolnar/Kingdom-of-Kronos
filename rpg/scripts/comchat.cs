@@ -10850,7 +10850,13 @@ if(%w1 == "#spawntelemetry")
 						//storage
 						AI::sayLater(%TrueClientId, %closestId, "This is the equipment you have stored here.", True);
 
-						SetupBank(%TrueClientId, %closestId);
+						// VOID 2026-07-15 (HUD audit #4): HUD clients get the ScriptGL
+						// bank panel - SetupBank would pop the stock GuiMode-4 window
+						// over it (setGuiMode is unconditional in SetupBank).
+						if(%TrueClientId.hasKronosHUD)
+							KronosBank_Open(%TrueClientId, %closestId);
+						else
+							SetupBank(%TrueClientId, %closestId);
 
 						$state[%closestId, %TrueClientId] = "";
 					}
