@@ -597,6 +597,11 @@ function remoteSetMusic (%player, %track, %mode)
 
 function onConnectionError(%clientId, %manager, %errorString)
 {
+	// CRITICAL: Skip all GUI logic if the server is shutting down or MainWindow is invalid
+	// (merged 2026-07-12 from live hotfix dated 2026-06-08)
+	if($ServerShuttingDown || nameToID("MainWindow") == -1)
+		return;
+
 	if(%manager == 2048)
 	{
 	}
@@ -615,6 +620,11 @@ function onConnectionError(%clientId, %manager, %errorString)
 
 function onConnection(%message)
 {
+	// CRITICAL: Skip all GUI logic if the server is shutting down or MainWindow is invalid
+	// (merged 2026-07-12 from live hotfix dated 2026-06-08)
+	if($ServerShuttingDown || nameToID("MainWindow") == -1)
+		return;
+
 	echo("Connection ", %message);
 	$dataFinished = false;
 	if(%message == "Accepted")

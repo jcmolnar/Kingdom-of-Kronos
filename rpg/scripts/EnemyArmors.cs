@@ -284,7 +284,11 @@ $spawnIndex[5] = "engineer";
 $spawnIndex[6] = "elder";
 $spawnIndex[8] = "porter";
 $spawnIndex[10] = "manager";
-$spawnIndex[99] = "rankpointer";
+// review #42: index 99 is redefined later in this file as "TitanRoundOne" (Colloseum
+// Rank 6), which silently clobbers this. "rankpointer" is referenced nowhere else, so
+// it was already unreachable - disabled here to remove the silent-overwrite collision.
+// If rankpointer is ever needed, give it a free index (e.g. 7 or 9, which are gaps).
+//$spawnIndex[99] = "rankpointer";
 
 $spawnIndex[11] = "Thug";
 $spawnIndex[12] = "Monk";

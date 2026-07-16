@@ -675,7 +675,7 @@ function Help::showZones(%clientId)
 	
 	// Display DUNGEON zones in red
 	Client::sendMessage(%clientId, $MsgWhite, "DUNGEON:");
-	Client::sendMessage(%clientId, $MsgRed, "Pig Den, Ogre Skybase, Ogre Stronghold, Ghost Town, Minotaur Tomb, Stone Henge, Contaminated Well, Demon Incubus, Admin's Demise, Angels Enigma, Starsiege");
+	Client::sendMessage(%clientId, $MsgRed, "Pig Den, Ogre Skybase, Ogre Stronghold, Ghost Town, Minotaur Tomb, Stone Henge, Contaminated Well, Demon Incubus, Admin's Demise, Angels Enigma, The Void");
 	
 	// Build FREEFORALL zones list (no specific order required, use original order)
 	%freeforallMsg = "";
