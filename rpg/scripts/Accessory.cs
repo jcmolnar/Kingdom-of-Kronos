@@ -241,17 +241,18 @@ function GetAccessoryList(%clientId, %type, %filter)
 
 	%list = "";
 	%max = getNumItems();
+	// VOIDPERF 2026-07-15: this loop is THE hot path of every computed-stat
+	// fetch (fetchData DEF/MDEF/MaxHP/MaxMANA -> AddPoints -> here), measured
+	// ~55ms per call. Script is single-threaded and nothing in the loop body
+	// can despawn the player, so the per-iteration Client::getOwnedObject
+	// re-validation and the SafeGetItemCount wrapper (which re-validates
+	// again internally) were pure overhead - 2 wasted engine calls per item
+	// x ~250 items. %playerObj was validated once above; call the engine
+	// count directly.
 	for(%i = 0; %i < %max; %i++)
 	{
-		// Re-validate player object in loop in case it gets despawned mid-execution
-		%playerObj = Client::getOwnedObject(%clientId);
-		if(%playerObj == "" || %playerObj == -1)
-			break; // Exit loop if player object no longer exists
-		
-		// CRITICAL FIX: Get ItemData FIRST, then check count
-		// Previously passed numeric index %i to SafeGetItemCount (wrong!)
 		%item = getItemData(%i);
-		%count = SafeGetItemCount(%clientId, %item, "GetAccessoryList");
+		%count = Player::getItemCount(%clientId, %item);
 
 		if(%count)
 		{
@@ -410,36 +411,24 @@ function AddPoints(%clientId, %char)
 	// Initialize %list to empty string before calling GetAccessoryList
 	%list = "";
 	%list = GetAccessoryList(%clientId, 4, %char);
+	// VOIDPERF 2026-07-15: per-iteration getOwnedObject re-validation removed
+	// (single-threaded; loop body cannot despawn the player - validated once
+	// at function entry). Same hot path as GetAccessoryList.
 	for(%i = 0; GetWord(%list, %i) != -1; %i++)
 	{
-		// CRITICAL: Re-validate player object before each iteration
-		%playerCheck = Client::getOwnedObject(%clientId);
-		if(%playerCheck == -1 || %playerCheck == "")
-		{
-			// Player object was deleted during loop
-			break;
-		}
-		
 		%w = GetWord(%list, %i);
 		
 		// CRITICAL: GetAccessoryList returns item objects converted to strings (item names)
 		// We need to check if this is a Weapon or Belt to verify it's mounted
 		// For accessories, we can use the string name directly
 		
-		// Try to find the ItemData object for className check (only needed for weapons/belts)
-		%itemObj = -1;
-		%maxItems = getNumItems();
-		for(%j = 0; %j < %maxItems; %j++)
-		{
-			%checkItem = getItemData(%j);
-			// Compare item names - convert ItemData object to string for comparison
-			%checkItemName = %checkItem @ "";
-			if(%checkItemName == %w)
-			{
-				%itemObj = %checkItem;
-				break;
-			}
-		}
+		// review #66: %w is ALREADY the item's registered name; TorqueScript dot-field
+		// access resolves by name (getDataManager()->getDataField), so %w.className gives
+		// the same value with ZERO scanning. The old getNumItems()-bounded loop rescanned
+		// the entire ~240-item table for EVERY equipped item, on every AddPoints
+		// (RefreshAll-driven: equip/spawn/shop/bank/teleport). A non-ItemData name yields
+		// className "" -> falls through to %slot "" exactly like the old not-found case.
+		%itemObj = %w;
 
 		%slot = "";
 		%count = 0;
@@ -527,6 +516,12 @@ function NullItemList(%clientId, %type, %msgcolor, %msg)
 {
 	dbecho($dbechoMode, "NullItemList(" @ %clientId @ ", " @ %type @ ", " @ %msgcolor @ ", " @ %msg @ ")");
 
+	// review #25 (data gap): $ItemList[Lore,*] - the ONLY %type ever passed here
+	// (the 4 teleport spells) - is populated NOWHERE, so this loop never runs and
+	// the intended "you lose your lore items when you teleport" penalty has never
+	// fired. Enabling it (populating $ItemList[Lore,*]) is a GAMEPLAY change - it
+	// would start stripping players' currently-safe lore items - so left as a
+	// design decision. The removal-path defect below is fixed regardless.
 	for(%z = 1; $ItemList[%type, %z] != ""; %z++)
 	{
 		%item = $ItemList[%type, %z];
@@ -536,8 +531,13 @@ function NullItemList(%clientId, %type, %msgcolor, %msg)
 			%amnt = Belt::HasThisStuff(%clientid,%item);
 			if(%amnt > 0)
 			{
-				%item = $BeltItem[%item, "Item"];
-				if(%item == "") %item = %item; // If no registered name, use original
+				// review #25: only remap to the registered name if one exists. The
+				// old code overwrote %item with $BeltItem[%item,"Item"] FIRST, then
+				// "restored" it with a no-op self-assign (%item = %item) - so an item
+				// with no $BeltItem registration became "" and Belt::TakeThisStuff was
+				// called with an empty name. Matches the correct guard in Belt.cs.
+				if($BeltItem[%item, "Item"] != "")
+					%item = $BeltItem[%item, "Item"];
 				%name = $BeltItem[%item, "Name"];
 				if(%name == "") %name = $AccessoryVar[%item, $Name];
 				%newmsg = nsprintf(%msg, %name);
@@ -2165,3 +2165,4 @@ ItemData OrbOfLight0
 
 	heading = "aArmor";
 };
+
