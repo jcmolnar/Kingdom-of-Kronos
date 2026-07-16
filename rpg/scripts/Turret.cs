@@ -351,11 +351,17 @@ function Turret::verifyTarget(%this, %target)
 		return "False"; // Invalid target
 	}
 
-	// Estate.cs: a guardian turret NEVER fires on its estate's owner or permitted
-	// members, regardless of House (a houseless owner must still be safe on their land).
+	// Estate.cs: guardian turret stance (ZONES 2026-07-15). Friendly/protected
+	// estates (the default - $Estate::Mode != "hostile") hold fire on EVERYONE.
+	// Hostile ("dungeon") estates fire on strangers but NEVER on the owner or
+	// permitted members, regardless of House (a houseless owner must still be
+	// safe on their land). Players are warned at 2x plot radius before any of
+	// this matters (Estate::ZoneLoop).
 	%estateId = $EstateOf[%this];
 	if(%estateId != "" && %estateId != 0)
 	{
+		if(!Estate::IsHostile(%estateId))
+			return "False";
 		%pName = Client::getName(%Id);
 		if(%pName == $Estate::Owner[%estateId] || IsInCommaList($Estate::Members[%estateId], %pName))
 			return "False";

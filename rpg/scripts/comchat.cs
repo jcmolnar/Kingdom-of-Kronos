@@ -515,6 +515,8 @@ function remoteSay(%clientId, %team, %message, %senderName)
 				Estate::Permit(%TrueClientId, GetWord(%cropped, 1));
 			else if(%esub == "evict")
 				Estate::Evict(%TrueClientId, GetWord(%cropped, 1));
+			else if(%esub == "mode")
+				Estate::SetMode(%TrueClientId, GetWord(%cropped, 1));
 			else if(%esub == "upgrade")
 				Estate::Upgrade(%TrueClientId);
 			else if(%esub == "where")

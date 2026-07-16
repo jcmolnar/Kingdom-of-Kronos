@@ -113,6 +113,16 @@ $EstateCfg::Upkeep["tavern"]     = 700;
 $EstateCfg::Upkeep["tower"]      = 900;
 $EstateCfg::Upkeep["keep"]       = 2000;
 $EstateCfg::UpkeepFreq   = 3600;  // seconds between upkeep ticks (1 hour)
+
+// ZONES 2026-07-15: warning perimeter + estate stance. The warn ring is
+// WarnMult x plot radius (2x40 = 80 units) - comfortably outside the
+// guardian turret threat envelope (DeployableTurret range 30; even a turret
+// on the plot edge reaches only 40+30=70), so a hostile estate always warns
+// BEFORE anyone is in firing range. Stance ($Estate::Mode, persisted):
+//   "" / "friendly"  - protected ground: turrets NEVER fire on anyone
+//   "hostile"        - dungeon: turrets fire on non-members inside range
+$EstateCfg::WarnMult   = 2;   // warn ring = WarnMult * plot radius
+$EstateCfg::ZonePeriod = 3;   // seconds between zone proximity sweeps
 $EstateCfg::GraceTicks   = 72;    // insolvent ticks before decay starts (~3 days uptime)
 $EstateCfg::DormantTicks = 168;   // empty + broke ticks before the plot is reclaimed (~7 days uptime)
 
@@ -298,6 +308,7 @@ function Estate::Save(%echoOff)
 	export("Estate::EmptyTicks*",%f, true);
 	export("Estate::Members*",   %f, true);
 	export("Estate::OwnerHouse*",%f, true);
+	export("Estate::Mode*",      %f, true);
 	export("Estate::SCount",     %f, true);
 	export("Estate::SEstate*",   %f, true);
 	export("Estate::SType*",     %f, true);
@@ -391,6 +402,7 @@ function Estate::Found(%cl)
 	$Estate::EmptyTicks[%eid] = 0;
 	$Estate::Members[%eid]    = "";
 	$Estate::OwnerHouse[%eid] = fetchData(%cl, "MyHouse");
+	$Estate::Mode[%eid]       = "friendly"; // ZONES: turrets hold fire until the owner opts into hostile
 	$EstateRt::ByOwner[%name] = %eid;
 
 	Estate::RequestSave("found");
@@ -591,6 +603,7 @@ function Estate::Abandon(%cl)
 	$Estate::EmptyTicks[%eid] = "";
 	$Estate::Members[%eid]    = "";
 	$Estate::OwnerHouse[%eid] = "";
+	$Estate::Mode[%eid]       = "";
 	$EstateRt::ByOwner[%name] = "";
 
 	if(%refund > 0)
@@ -611,7 +624,12 @@ function Estate::Info(%cl)
 	}
 	%due = Estate::UpkeepDue(%eid);
 	Client::sendMessage(%cl, $MsgBeige, "=== Your Estate (#" @ %eid @ ")  Tier " @ $Estate::Tier[%eid] @ " ===");
+	if(Estate::IsHostile(%eid))
+		%modeDesc = "HOSTILE (turrets fire on non-members)";
+	else
+		%modeDesc = "friendly (turrets hold fire)";
 	Client::sendMessage(%cl, $MsgBeige, "Plot radius " @ $Estate::Radius[%eid] @ "  |  Coffer " @ Number::Beautify($Estate::Coffer[%eid], -3) @ "  |  Structures " @ Estate::StructCount(%eid) @ "/" @ Estate::MaxStructs(%eid));
+	Client::sendMessage(%cl, $MsgBeige, "Stance: " @ %modeDesc @ "  |  change with '#estate mode <friendly|hostile>'");
 	if(%due > 0)
 	{
 		%hrs = 0;
@@ -822,6 +840,7 @@ function Estate::Help(%cl)
 	Client::sendMessage(%cl, $MsgBeige, "   forcefield = door (opens for you/members); barrier = solid for everyone");
 	Client::sendMessage(%cl, $MsgBeige, "#estate deposit/withdraw <n|all>  - fund the coffer that pays upkeep");
 	Client::sendMessage(%cl, $MsgBeige, "#estate permit/evict <name>  - grant/revoke member access");
+	Client::sendMessage(%cl, $MsgBeige, "#estate mode <friendly|hostile>  - friendly: turrets hold fire; hostile: dungeon rules");
 	Client::sendMessage(%cl, $MsgBeige, "#estate upgrade | demolish | abandon | where | info");
 }
 
@@ -909,6 +928,7 @@ function Estate::ReclaimEstate(%eid)
 	$Estate::EmptyTicks[%eid] = "";
 	$Estate::Members[%eid]    = "";
 	$Estate::OwnerHouse[%eid] = "";
+	$Estate::Mode[%eid]       = "";
 	$EstateRt::ByOwner[%name] = "";
 }
 
@@ -998,6 +1018,7 @@ function Estate::Init()
 		return; // master gate: feature off, no upkeep loop
 	$EstateRt::UpkeepGen++;
 	schedule("Estate::UpkeepLoop(" @ $EstateRt::UpkeepGen @ ");", $EstateCfg::UpkeepFreq);
+	schedule("Estate::ZoneLoop(" @ $EstateRt::UpkeepGen @ ");", $EstateCfg::ZonePeriod);
 }
 function Estate::UpkeepLoop(%gen)
 {
@@ -1005,4 +1026,103 @@ function Estate::UpkeepLoop(%gen)
 		return; // superseded by a newer Init
 	Estate::UpkeepTick();
 	schedule("Estate::UpkeepLoop(" @ %gen @ ");", $EstateCfg::UpkeepFreq);
+}
+
+//============================================================================
+// ZONES 2026-07-15 - warning perimeter sweep + estate stance.
+//============================================================================
+
+// True when the estate's turrets are armed against strangers.
+function Estate::IsHostile(%eid)
+{
+	return ($Estate::Mode[%eid] == "hostile");
+}
+
+// #estate mode <friendly|hostile> (aliases: protected, dungeon)
+function Estate::SetMode(%cl, %mode)
+{
+	if(isRPGAI(%cl) || Player::isAiControlled(%cl))
+		return;
+	%eid = Estate::OfOwner(Client::getName(%cl));
+	if(%eid == "")
+	{
+		Client::sendMessage(%cl, $MsgRed, "You have no estate. Use '#estate found' first.");
+		return;
+	}
+	if(%mode == "protected")
+		%mode = "friendly";
+	if(%mode == "dungeon")
+		%mode = "hostile";
+	if(%mode != "friendly" && %mode != "hostile")
+	{
+		if(Estate::IsHostile(%eid))
+			%cur = "HOSTILE";
+		else
+			%cur = "friendly";
+		Client::sendMessage(%cl, $MsgBeige, "Usage: #estate mode <friendly|hostile>. Your estate is currently " @ %cur @ ".");
+		return;
+	}
+	$Estate::Mode[%eid] = %mode;
+	Estate::RequestSave("mode");
+	if(%mode == "hostile")
+		Client::sendMessage(%cl, $MsgRed, "Your estate is now HOSTILE ground - guardian turrets will fire on non-members in range.");
+	else
+		Client::sendMessage(%cl, $MsgGreen, "Your estate is now friendly/protected ground - guardian turrets hold their fire.");
+}
+
+// Proximity sweep: warn players crossing the WarnMult x radius perimeter of any
+// estate BEFORE they reach turret range. Tracks the ring each client is inside
+// via %cl.estateZone; message on enter/exit only (no per-tick spam). Bots are
+// skipped both as a cost measure and because warnings mean nothing to them.
+function Estate::ZoneLoop(%gen)
+{
+	if(%gen != $EstateRt::UpkeepGen)
+		return; // superseded by a newer Init
+	schedule("Estate::ZoneLoop(" @ %gen @ ");", $EstateCfg::ZonePeriod);
+
+	for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
+	{
+		if(Player::isAiControlled(%cl) || isRPGAI(%cl))
+			continue;
+		if(!fetchData(%cl, "HasLoadedAndSpawned"))
+			continue;
+		%pobj = Client::getOwnedObject(%cl);
+		if(%pobj == "" || %pobj == -1)
+			continue;
+
+		%pos = GameBase::getPosition(%cl);
+		%in = "";
+		for(%e = 1; %e <= $Estate::Count; %e++)
+		{
+			if($Estate::Owner[%e] == "")
+				continue;
+			if(Vector::getDistance(%pos, $Estate::CenterPos[%e]) <= ($Estate::Radius[%e] * $EstateCfg::WarnMult))
+			{
+				%in = %e;
+				break;
+			}
+		}
+
+		if(%in == %cl.estateZone)
+			continue; // no boundary crossed
+
+		// leaving the old ring (message only if the estate still exists)
+		%old = %cl.estateZone;
+		if(%old != "" && $Estate::Owner[%old] != "")
+			Client::sendMessage(%cl, $MsgBeige, "You are leaving " @ $Estate::Owner[%old] @ "'s estate grounds.");
+		%cl.estateZone = %in;
+		if(%in == "")
+			continue;
+
+		// entering a new ring - phrase by relation and stance
+		%pname = Client::getName(%cl);
+		if(%pname == $Estate::Owner[%in])
+			Client::sendMessage(%cl, $MsgGreen, "You are entering your estate grounds.");
+		else if(IsInCommaList($Estate::Members[%in], %pname))
+			Client::sendMessage(%cl, $MsgGreen, "You are entering " @ $Estate::Owner[%in] @ "'s estate grounds (you have access).");
+		else if(Estate::IsHostile(%in))
+			Client::sendMessage(%cl, $MsgRed, "WARNING: You are entering " @ $Estate::Owner[%in] @ "'s estate - HOSTILE ground. Guardian turrets WILL fire.~wError_Message.wav");
+		else
+			Client::sendMessage(%cl, $MsgBeige, "You are entering " @ $Estate::Owner[%in] @ "'s estate grounds (protected - no danger).");
+	}
 }
