@@ -240,6 +240,14 @@ function Estate::SpawnStructure(%k)
 		%obj = newObject("", InteriorShape, %db);
 	else
 		%obj = newObject("", "StaticShape", %db, true);
+	if(%obj == "" || %obj == -1 || !isObject(%obj))
+	{
+		// Engine object pool exhausted (or bad db/file): don't count a ghost in
+		// ObjInUse or feed a junk id to the setup calls below. The registry keeps
+		// the slot, so the structure spawns on a later load when there is room.
+		echo("[ESTATE] WARNING: newObject failed for '" @ %db @ "' (slot " @ %k @ ", type '" @ %type @ "') - not spawned");
+		return -1;
+	}
 	addToSet("MissionCleanup", %obj);
 
 	if(%isTurret)
@@ -281,6 +289,10 @@ function Estate::RehydrateAll()
 	Estate::Load();
 	$EstateRt::ObjInUse = 0;
 	deleteVariables("EstateRt::SObjId*");
+	// Console globals survive mission reloads but object ids do not: drop every
+	// obj->estate binding from the previous load before spawning fresh ones, or
+	// recycled ids hand later turrets/doors a dead estate's stance/members.
+	deleteVariables("EstateOf*");
 	Estate::RebuildIndex();
 
 	%structs = 0;
@@ -560,10 +572,21 @@ function Estate::Build(%cl, %type)
 function Estate::FreeStructSlot(%k)
 {
 	%obj = $EstateRt::SObjId[%k];
-	if(%obj != "" && %obj != -1 && isObject(%obj))
+	if(%obj != "" && %obj != -1)
 	{
-		deleteObject(%obj);
-		$EstateRt::ObjInUse--;
+		if(isObject(%obj))
+		{
+			deleteObject(%obj);
+			$EstateRt::ObjInUse--;
+			// live delete: the id just died and can't have been reused yet
+			$owner[%obj] = "";
+		}
+		// Engine ids recycle: never leave an estate binding on a freed/stale id -
+		// a later turret/door reusing it would inherit this estate's stance and
+		// member list (Turret::verifyTarget + door onCollision key on $EstateOf).
+		// $owner is deliberately NOT cleared on the stale path: a recycled id may
+		// already belong to another system's live object that set its own $owner.
+		$EstateOf[%obj] = "";
 	}
 	$Estate::SEstate[%k]  = "";
 	$Estate::SType[%k]    = "";
