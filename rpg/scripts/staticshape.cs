@@ -783,11 +783,23 @@ function StaticDoorForceField::onCollision(%this, %object)
 			//refreshing $owner in case the new force field has a different ID
 			%backupowner = $owner[%this];
 			$owner[%this] = "";
-			//
+			// ESTATE FIX 2026-07-17: the recreate spawns a NEW object id, so the
+			// estate binding must ride along - otherwise permitted members lock out
+			// after the first open ($EstateOf lost with the deleted id) and the
+			// registry slot map keeps pointing at this dead id forever (demolish/
+			// decay then can't delete the live door and leaks it). Find the flat
+			// slot now; RecreateForceField re-binds and re-points it.
+			%eslot = "";
+			if(%eid != "" && %eid != 0)
+			{
+				for(%k = 1; %k <= $Estate::SCount; %k++)
+					if($EstateRt::SObjId[%k] == %this) { %eslot = %k; break; }
+				$EstateOf[%this] = ""; // ids recycle - never leave a stale binding
+			}
 			deleteObject(%this);
-	
+
 			$recreatingfField[%this] = 1;
-			schedule("RecreateForceField(\"" @ %this @ "\", \"" @ %pos @ "\", \"" @ %rot @ "\", \"" @ %backupowner @ "\");", 3);
+			schedule("RecreateForceField(\"" @ %this @ "\", \"" @ %pos @ "\", \"" @ %rot @ "\", \"" @ %backupowner @ "\", \"" @ %eid @ "\", \"" @ %eslot @ "\");", 3);
 		}
 	}
 	else
@@ -795,14 +807,34 @@ function StaticDoorForceField::onCollision(%this, %object)
 		Client::sendMessage(%clientId,0,"Access denied.~wError_Message.wav");
 	}
 }
-function RecreateForceField(%this, %pos, %rot, %backupowner)
+function RecreateForceField(%this, %pos, %rot, %backupowner, %eid, %eslot)
 {
+	// ESTATE FIX 2026-07-17: %eid/%eslot arrive only for estate doors (empty for
+	// legacy/deployed fields - behavior unchanged for those). If the estate's
+	// registry slot was freed or re-used while the door was open (demolish/decay/
+	// abandon inside the 3s window), do NOT resurrect an orphan - the estate no
+	// longer owns a door here. SObjId[%eslot] == %this is the "slot untouched
+	// since the door opened" invariant.
+	if(%eid != "" && %eid != 0)
+	{
+		if($Estate::SEstate[%eslot] != %eid || $Estate::SType[%eslot] != "forcefield" || $EstateRt::SObjId[%eslot] != %this)
+		{
+			$EstateRt::ObjInUse--; // FreeStructSlot saw a dead id and skipped its decrement
+			$recreatingfField[%this] = "";
+			return;
+		}
+	}
 	%fField = newObject("","StaticShape",StaticDoorForceField,true);
 	$owner[%fField] = %backupowner;
 	addToSet("MissionCleanup", %fField);
 	GameBase::setPosition(%fField, %pos);
 	GameBase::setRotation(%fField, %rot);
 	playSound(ForceFieldOpen,%pos);
+	if(%eid != "" && %eid != 0)
+	{
+		$EstateOf[%fField] = %eid;           // members keep passing after reopen
+		$EstateRt::SObjId[%eslot] = %fField; // demolish/decay finds the CURRENT door
+	}
 	$recreatingfField[%this] = "";
 }
 function StaticDoorForceField::onDestroyed(%this)
