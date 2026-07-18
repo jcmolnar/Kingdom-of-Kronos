@@ -469,7 +469,23 @@ function Daily::Abandon(%clientId)
 	storeData(%clientId, "DailyTheme", "");
 	storeData(%clientId, "DailyProgress", 0);
 	storeData(%clientId, "DailyTargetItem", "");
-	// a live summoned elite is left to its lifetime timeout (EliteTimeout kills it)
+	// review 2026-07-17: despawn a live elite on abandon. It used to be left
+	// roaming until its 600s timeout, and because DailyEliteName is cleared here
+	// the one-live-elite guard no longer saw it - so abandon -> re-accept ->
+	// re-summon stacked orphaned bosses, and killing an abandoned one still
+	// completed a fresh contract. Clear DailyEliteOwner FIRST (so the teardown
+	// kill can't credit anyone), then quiet-kill, mirroring Daily::EliteTimeout.
+	%elite = fetchData(%clientId, "DailyEliteName");
+	if(%elite != "" && %elite != -1)
+	{
+		%eliteId = AI::getClientIdFromName(%elite);
+		if(%eliteId != "" && %eliteId != -1)
+		{
+			storeData(%eliteId, "DailyEliteOwner", "");
+			storeData(%eliteId, "noExperienceFlag", True);
+			Player::Kill(%eliteId);
+		}
+	}
 	storeData(%clientId, "DailyEliteName", "");
 	Client::sendMessage(%clientId, $MsgBeige, "Daily abandoned. You can accept it again today.");
 }
