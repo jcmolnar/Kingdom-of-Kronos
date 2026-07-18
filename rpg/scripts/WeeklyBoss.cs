@@ -125,11 +125,14 @@ function Weekly::Save()
 	// live-session values must not leak into the next boot
 	%bc = $Weekly::BossClient;
 	%bn = $Weekly::BossName;
+	%sm = $Weekly::Summoning;   // in-flight summon flag - never persist it
 	$Weekly::BossClient = "";
 	$Weekly::BossName = "";
+	$Weekly::Summoning = "";
 	export("Weekly::*", "config\\WeeklyBossState.cs", False);
 	$Weekly::BossClient = %bc;
 	$Weekly::BossName = %bn;
+	$Weekly::Summoning = %sm;
 }
 
 //------------------------------------------------------------------------------
@@ -235,6 +238,13 @@ function Weekly::Challenge(%clientId)
 	}
 	if(IsDead(%clientId))
 		return;
+	// review 2026-07-17: jailed players must not escape confinement via the
+	// arena teleport. Refuse BEFORE Weekly::Enter moves them.
+	if(IsJailed(%clientId))
+	{
+		Client::sendMessage(%clientId, $MsgBeige, "You cannot answer the call from jail.");
+		return;
+	}
 
 	// teleport in if needed (the arena has no doors)
 	if(Zone::getDesc(fetchData(%clientId, "zone")) != $Weekly::ArenaZoneDesc)
@@ -243,6 +253,18 @@ function Weekly::Challenge(%clientId)
 			return;
 	}
 
+	// review 2026-07-17: don't spawn a SECOND boss if a summon is already in
+	// flight. $Weekly::BossClient is set only in Weekly::Setup, 4.5s after the
+	// summon, so the old BossClient-only guard let two challenges inside that
+	// window each spawn a tagged boss - double payout plus an uncredited ghost
+	// the watchdog never despawns. $Weekly::Summoning is set synchronously below
+	// and cleared when Setup resolves (success or failure). The challenger has
+	// already been teleported in above, so they still join the fight.
+	if($Weekly::Summoning)
+	{
+		Client::sendMessage(%clientId, $MsgBeige, "The terror is answering the call - ready yourself!");
+		return;
+	}
 	if($Weekly::BossClient != "" && $Weekly::BossClient != -1)
 	{
 		if(AI::getClientIdFromName($Weekly::BossName) != -1)
@@ -264,6 +286,7 @@ function Weekly::Challenge(%clientId)
 
 	$Weekly::BossName = %internalName;
 	$Weekly::SummonTime = getSimTime();   // grace vs the empty-arena sweep (zone data lags a teleport)
+	$Weekly::Summoning = true;            // in flight until Setup resolves (blocks a concurrent double-spawn)
 	// 4.5s: after SpawnAIGetClientId (3.0s) registers the bot - daily elite timing
 	schedule("Weekly::Setup(\"" @ %internalName @ "\", " @ %clientId @ ");", 4.5);
 	messageAll($MsgRed, Client::getName(%clientId) @ " has challenged the Kingdom Terror in the Colloseum! (" @ Weekly::HPPercent() @ "% strength remains)");
@@ -281,6 +304,7 @@ function Weekly::Setup(%internalName, %challenger)
 			$Weekly::BossName = "";
 			$Weekly::BossClient = "";
 		}
+		$Weekly::Summoning = false;   // summon resolved (failed) - allow a retry
 		return;
 	}
 
@@ -329,7 +353,14 @@ function Weekly::Setup(%internalName, %challenger)
 	$SealBattleScaledStats[%aiId, "MDEF"] = %mdef;
 
 	storeData(%aiId, "WeeklyBossTag", $Weekly::Stamp);
+	// review 2026-07-17: the boss reward is the weekly bounty ONLY (paid by
+	// Weekly::OnBossKilled, which runs OUTSIDE the noExperienceFlag gate). Without
+	// this flag the kill also fired the normal pipeline - DistributeExpForKilling
+	// (per-damager kill-exp on a 250k-HP victim) AND Daily::OnKill cull credit
+	// (the boss is an enemybot with no DailyEliteOwner) - a triple reward.
+	storeData(%aiId, "noExperienceFlag", True);
 	$Weekly::BossClient = %aiId;
+	$Weekly::Summoning = false;   // summon resolved (live) - guard hands off to BossClient
 
 	// force it onto the arena floor - if the spawn snapped/fell anywhere else
 	// (terrain under the interior, wall clip), this recovers it
@@ -592,6 +623,7 @@ function Weekly::Init()
 		// live-session fields never survive a boot
 		$Weekly::BossClient = "";
 		$Weekly::BossName = "";
+		$Weekly::Summoning = false;   // no summon can be in flight at boot
 		if($Weekly::LastQuartile == "")
 			$Weekly::LastQuartile = 4;   // 0 is a legal persisted value (below 25%)
 
