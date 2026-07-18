@@ -144,6 +144,15 @@ function Weekly::Rotate()
 	if(%wk == $Weekly::Stamp)
 		return;
 
+	// review 2026-07-17: never roll over mid-fight. A live boss (or an in-flight
+	// summon) still carries the OLD week's tag, HP and contributions; resetting
+	// now would wipe contributions, let CheckLoop's HP checkpoint corrupt the new
+	// pool with the old boss's leftover HP, and make the eventual kill pay nobody
+	// (its WeeklyBossTag != the new Stamp). Defer - CheckLoop reconciles the boss
+	// first and reaches Rotate again once the arena clears (kill or empty despawn).
+	if(($Weekly::BossClient != "" && $Weekly::BossClient != -1) || $Weekly::Summoning)
+		return;
+
 	$Weekly::Stamp = %wk;
 	$Weekly::BossHP = $Weekly::HPBudget;
 	$Weekly::Slain = "";
@@ -635,8 +644,11 @@ function Weekly::Init()
 
 function Weekly::CheckLoop()
 {
-	Weekly::Rotate();   // week rollover (cheap no-op otherwise)
-
+	// review 2026-07-17: reconcile the live boss BEFORE the rollover. This clears
+	// a stale handle so it can't defer the rollover forever, and - when the arena
+	// empties on the rollover tick - lets Despawn run first so Rotate's reset then
+	// authoritatively overwrites the HP checkpoint. The old order (Rotate first)
+	// let the checkpoint stomp the freshly-reset pool with the old boss's HP.
 	if($Weekly::BossClient != "" && $Weekly::BossClient != -1)
 	{
 		if(AI::getClientIdFromName($Weekly::BossName) == -1)
@@ -664,6 +676,8 @@ function Weekly::CheckLoop()
 			}
 		}
 	}
+
+	Weekly::Rotate();   // week rollover (deferred inside Rotate while a boss is live)
 
 	schedule("Weekly::CheckLoop();", $Weekly::CheckPeriod);
 }
