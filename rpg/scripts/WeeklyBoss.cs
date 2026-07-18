@@ -368,6 +368,37 @@ function Weekly::Despawn(%reason)
 }
 
 //------------------------------------------------------------------------------
+// Contribution is keyed by player NAME so it survives disconnect/restart, but the
+// key becomes a console VARIABLE-NAME SUBSCRIPT ($Weekly::Contrib[key]) and Save's
+// export() writes that name verbatim (only VALUES are escaped). A space - or any
+// non-identifier char - in a player's name would emit an unparseable line into
+// config\WeeklyBossState.cs, breaking its exec from that line on and wiping
+// Stamp/Slain/BossHP; the weekly boss then reset to full and became refarmable
+// every restart (a single hit from a space-named player was enough). NameKey
+// sanitizes to an identifier-safe subscript: keep [A-Za-z0-9], map everything
+// else to '_'. findSubStr uppercases both operands, so the membership test still
+// accepts lowercase letters. Space-free names are unchanged (old entries still
+// match); residual key collisions are a negligible bounty-share fairness edge,
+// not the data-loss bug. TopName keeps the raw display name (a quoted value).
+//------------------------------------------------------------------------------
+function Weekly::NameKey(%name)
+{
+	%out = "";
+	%len = String::len(%name);
+	for(%i = 0; %i < %len; %i++)
+	{
+		%ch = String::getSubStr(%name, %i, 1);
+		if(String::findSubStr("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", %ch) != -1)
+			%out = %out @ %ch;
+		else
+			%out = %out @ "_";
+	}
+	if(%out == "")
+		%out = "_";   // all-punctuation name still yields a valid, non-empty key
+	return %out;
+}
+
+//------------------------------------------------------------------------------
 // Damage credit (playerdamage.cs refreshHP hook; %numDmg is NUMERIC hp units,
 // i.e. already x $TribesDamageToNumericDamage - same scale as benchmark MaxHP)
 //------------------------------------------------------------------------------
@@ -379,13 +410,14 @@ function Weekly::OnDamage(%shooter, %numDmg)
 		return;
 
 	%name = Client::getName(%shooter);
-	if($Weekly::Contrib[%name] == "")
-		$Weekly::Contrib[%name] = 0;
-	$Weekly::Contrib[%name] += %numDmg;
+	%key = Weekly::NameKey(%name);
+	if($Weekly::Contrib[%key] == "")
+		$Weekly::Contrib[%key] = 0;
+	$Weekly::Contrib[%key] += %numDmg;
 
-	if($Weekly::Contrib[%name] > $Weekly::TopVal)
+	if($Weekly::Contrib[%key] > $Weekly::TopVal)
 	{
-		$Weekly::TopVal = $Weekly::Contrib[%name];
+		$Weekly::TopVal = $Weekly::Contrib[%key];
 		$Weekly::TopName = %name;
 	}
 
@@ -440,7 +472,7 @@ function Weekly::OnBossKilled(%victim, %killer)
 		if(isRPGAI(%cl) || Player::isAiControlled(%cl))
 			continue;
 		%name = Client::getName(%cl);
-		%c = $Weekly::Contrib[%name];
+		%c = $Weekly::Contrib[Weekly::NameKey(%name)];
 		if(%c == "" || %c <= 0)
 			continue;
 
@@ -520,7 +552,7 @@ function Weekly::Status(%clientId)
 	}
 
 	%name = Client::getName(%clientId);
-	%c = $Weekly::Contrib[%name];
+	%c = $Weekly::Contrib[Weekly::NameKey(%name)];
 	if(%c == "" || %c <= 0)
 		Client::sendMessage(%clientId, 0, "Your contribution: none yet.");
 	else
