@@ -246,6 +246,18 @@ function buyItem(%clientId, %item)
 		return;
 	}
 
+	// VOID GUARD 2026-07-17: reject "Equipped"-class (X0) datablocks before any
+	// count write. remoteBuyItem trusts the CLIENT-supplied item index, and the
+	// Void X0 twins are parked at engine indices ~198-220; a crafted index there
+	// resolves to a real "Equipped" datablock and the buy's incItemCount lands an
+	// OUT-OF-BOUNDS write past the 200-entry count list = server crash. The sole
+	// gate below (isItemShoppingOn) is a 128-bit field that phantom-aliases /
+	// OOB-reads high indices, so it can't be trusted to reject them. X0 twins are
+	// display-only shells and are never a legitimate purchase, so this also can't
+	// regress a real buy.
+	if(%item == "" || %item == -1 || %item.className == Equipped)
+		return;
+
 	if(Client::isItemShoppingOn(%clientId, %item))
 	{
 		if(%clientId.currentBank != "")

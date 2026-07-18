@@ -610,6 +610,20 @@ function Item::onUse(%player,%item)
 
 	%clientId = Player::getClient(%player);
 
+	// VOID GUARD 2026-07-17: a belt-converted item must NEVER run the engine
+	// equip/unequip count dance below - it writes %item@"0" (the "Equipped" X0
+	// twin), which for converted armors sits at an item index >=200 where
+	// setItemCount is an OUT-OF-BOUNDS write = server crash. The town-bot path
+	// (ai.cs) already guards this; the player path never did. Belt items aren't
+	// normally in engine inventory, but a stray leaked count made this reachable.
+	// Hand off to the belt's own toggle, which no-ops safely if it isn't on the
+	// belt (Belt::UseItem checks Belt::HasThisStuff first).
+	if(isBeltItem(%item))
+	{
+		Belt::UseItem(%clientId, %item, $BeltItem[%item, "Type"]);
+		return;
+	}
+
 	if(!IsDead(%clientId))
 	{
 		//this is how you toggle back and forth from equipped to carrying.
