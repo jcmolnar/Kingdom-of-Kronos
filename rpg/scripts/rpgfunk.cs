@@ -1520,6 +1520,11 @@ function SaveCharacter(%clientId)
 	//echo("DEBUG SaveCharacter: Field 46 (StoredOther) = '" @ %storedOtherSave @ "'");
 	$funk::var["[\"" @ %name @ "\", 0, 59]"] = %storedWeaponsSave;	// bank-stored belt weapons
 	$funk::var["[\"" @ %name @ "\", 0, 44]"] = fetchData(%clientId, "Stance");
+	// review 2026-07-17: persist daily-quest state (slot 33) - it lived only in
+	// $ClientData, which LoadCharacter wipes, so relog re-opened the once-per-day
+	// gate (a repeatable turn-in farm) and dropped in-progress dailies. Slot 33 is
+	// virgin and inside the 32-63 offline-award passthrough (no extra copy needed).
+	$funk::var["[\"" @ %name @ "\", 0, 33]"] = Daily::PackState(%clientId);
 	
 	// Combine all damage display preferences into a single string: "displayType:animationStyle:enabledFlag"
 	%damageDisplayType = fetchData(%clientId, "damageDisplayType");
@@ -2314,6 +2319,9 @@ function LoadCharacter(%clientId)
 		//echo("DEBUG: UniqueItems = '' (unused)");
 		storeData(%clientId, "Stance", $funk::var[%name, 0, 44]);
 		//echo("DEBUG: Stance = '" @ $funk::var[%name, 0, 44] @ "'");
+		// review 2026-07-17: restore persisted daily-quest state (slot 33). No-op
+		// for legacy characters (no D1 tag) so their dailies simply start fresh.
+		Daily::UnpackState(%clientId, $funk::var[%name, 0, 33]);
 		
 		// Load damage display preferences from combined string: "displayType:animationStyle:enabledFlag"
 		%damageDisplayString = $funk::var[%name, 0, 47];

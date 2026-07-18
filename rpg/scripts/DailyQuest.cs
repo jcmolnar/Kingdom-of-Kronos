@@ -810,6 +810,58 @@ function Daily::Status(%clientId)
 }
 
 //------------------------------------------------------------------------------
+// Persistence (review 2026-07-17). Daily contract + completion state lived ONLY
+// in $ClientData, which LoadCharacter wipes (deleteVariables "ClientData<id>*"),
+// so a relog/restart re-opened every daily - a repeatable Fetch turn-in farm -
+// and silently dropped in-progress work. All of it is packed into ONE character
+// funk slot (33: a virgin slot, in the 32-63 range the offline-award passthrough
+// already copies). Field values are single tokens (dates, theme words, single-
+// word item names, numbers), so a space delimiter round-trips; "~" holds an
+// empty position; a "D1" version tag makes UnpackState ignore any non-daily slot
+// content (legacy characters simply start fresh). The live elite's runtime bot
+// name is deliberately NOT persisted - the bot is gone after a restart, and the
+// stale-name guard would self-heal anyway; the player just re-summons.
+//------------------------------------------------------------------------------
+function Daily::PackTok(%v)
+{
+	if(%v == "" || %v == -1)
+		return "~";
+	return %v;
+}
+function Daily::UnpackTok(%v)
+{
+	if(%v == "~" || %v == "" || %v == -1)
+		return "";
+	return %v;
+}
+function Daily::PackState(%clientId)
+{
+	return "D1 " @
+	       Daily::PackTok(fetchData(%clientId, "DailyTheme"))       @ " " @
+	       Daily::PackTok(fetchData(%clientId, "DailyDay"))         @ " " @
+	       Daily::PackTok(fetchData(%clientId, "DailyProgress"))    @ " " @
+	       Daily::PackTok(fetchData(%clientId, "DailyTargetItem"))  @ " " @
+	       Daily::PackTok(fetchData(%clientId, "DailyTargetCount")) @ " " @
+	       Daily::PackTok(fetchData(%clientId, "DailyDoneFetch"))   @ " " @
+	       Daily::PackTok(fetchData(%clientId, "DailyDoneCull"))    @ " " @
+	       Daily::PackTok(fetchData(%clientId, "DailyDoneElite"));
+}
+function Daily::UnpackState(%clientId, %s)
+{
+	// only a D1-tagged blob applies; empty/legacy/foreign slot content is ignored
+	if(%s == "" || %s == "0" || %s == -1 || GetWord(%s, 0) != "D1")
+		return;
+	storeData(%clientId, "DailyTheme",       Daily::UnpackTok(GetWord(%s, 1)));
+	storeData(%clientId, "DailyDay",         Daily::UnpackTok(GetWord(%s, 2)));
+	storeData(%clientId, "DailyProgress",    Daily::UnpackTok(GetWord(%s, 3)));
+	storeData(%clientId, "DailyTargetItem",  Daily::UnpackTok(GetWord(%s, 4)));
+	storeData(%clientId, "DailyTargetCount", Daily::UnpackTok(GetWord(%s, 5)));
+	storeData(%clientId, "DailyDoneFetch",   Daily::UnpackTok(GetWord(%s, 6)));
+	storeData(%clientId, "DailyDoneCull",    Daily::UnpackTok(GetWord(%s, 7)));
+	storeData(%clientId, "DailyDoneElite",   Daily::UnpackTok(GetWord(%s, 8)));
+}
+
+//------------------------------------------------------------------------------
 // Init + rotation loop (start from Mission::init ONLY - exec-time schedules are
 // flushed by Server::loadMission, same rule as Game::StartVisibilitySafetyLoop)
 //------------------------------------------------------------------------------
