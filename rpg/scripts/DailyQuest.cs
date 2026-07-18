@@ -483,6 +483,7 @@ function Daily::Abandon(%clientId)
 		{
 			storeData(%eliteId, "DailyEliteOwner", "");
 			storeData(%eliteId, "noExperienceFlag", True);
+			storeData(%eliteId, "noDropLootbagFlag", True);   // torn down, not killed - no loot
 			Player::Kill(%eliteId);
 		}
 	}
@@ -630,6 +631,7 @@ function Daily::SetupElite(%internalName, %owner)
 	if(fetchData(%owner, "DailyTheme") != "Elite" || fetchData(%owner, "DailyEliteName") != %internalName)
 	{
 		storeData(%aiId, "noExperienceFlag", True);
+		storeData(%aiId, "noDropLootbagFlag", True);   // abandoned before setup - no loot
 		Player::Kill(%aiId);
 		return;
 	}
@@ -688,6 +690,7 @@ function Daily::EliteTimeout(%internalName, %owner)
 		return;   // already dead/cleaned up
 	// still alive past its lifetime (unkilled, or contract abandoned): it flees
 	storeData(%aiId, "noExperienceFlag", True);
+	storeData(%aiId, "noDropLootbagFlag", True);   // it flees - no loot
 	Player::Kill(%aiId);
 	if(fetchData(%owner, "DailyEliteName") == %internalName)
 	{

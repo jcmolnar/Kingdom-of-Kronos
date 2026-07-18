@@ -402,6 +402,10 @@ function Weekly::Despawn(%reason)
 
 	storeData(%aiId, "WeeklyBossTag", "");
 	storeData(%aiId, "noExperienceFlag", True);
+	// review 2026-07-17: a quiet checkpoint-despawn (arena empty / seal battle) is
+	// NOT a death - suppress the lootbag, or every despawn litters the sealed
+	// arena with the boss's coins/gear (the drop gate keys on noDropLootbagFlag).
+	storeData(%aiId, "noDropLootbagFlag", True);
 	Player::Kill(%aiId);
 	Weekly::Save();
 	echo("[WEEKLY] boss " @ %name @ " despawned (" @ %reason @ ") at HP " @ $Weekly::BossHP);
