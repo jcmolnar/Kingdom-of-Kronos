@@ -340,6 +340,14 @@ function Estate::Save(%echoOff)
 
 function Estate::Load()
 {
+	// The registry fully defines a mission's estates: clear ALL persisted estate
+	// state first, so a mission with no (or a smaller) registry can never inherit
+	// the previous mission's estates - console globals survive mission reloads,
+	// and the wildcard export would then write those ghosts into the new file.
+	// (The pattern cannot touch $EstateCfg::/$EstateRt:: - different prefix.)
+	deleteVariables("Estate::*");
+	$Estate::Count  = 0;
+	$Estate::SCount = 0;
 	%fbare = $missionName @ "_estates_.cs";
 	if(isFile("temp\\" @ %fbare))
 	{
@@ -364,6 +372,27 @@ function Estate::DoScheduledSave(%tok, %reason)
 		return; // superseded by a later request
 	Estate::Save(true);
 	dbecho($dbechoMode, "[ESTATE] autosave (" @ %reason @ ")");
+}
+
+// Immediate (synchronous) save for player-command mutations. Every #estate command
+// moves coins and/or security state in the same frame it runs, and the player's
+// coin movement persists through the SEPARATE SaveCharacter path - so parking the
+// registry side in a 5s debounce means a restart inside that window rolls the
+// estate back while the coins stay moved: found/build/deposit/upgrade become
+// paid-and-lost, withdraw becomes a free re-withdraw (coffer restored after the
+// payout), and a lost evict silently re-admits the evicted player. Commands are
+// rare and player-paced, so the sync write is affordable ($VoidPerf echoes the
+// cost). The hourly UpkeepTick keeps the debounced RequestSave - losing 5s of
+// upkeep bookkeeping to a crash is harmless.
+function Estate::SaveNow(%reason)
+{
+	$EstateRt::SaveToken++; // supersede any pending debounced save
+	if($VoidPerf)
+		%t0 = getRealMillis();
+	Estate::Save(true);
+	if($VoidPerf)
+		echo("[ESTATE PERF] SaveNow(" @ %reason @ ") took " @ (getRealMillis() - %t0) @ "ms");
+	dbecho($dbechoMode, "[ESTATE] immediate save (" @ %reason @ ")");
 }
 
 //---------------------------------------------------------------- commands
@@ -452,7 +481,7 @@ function Estate::Found(%cl)
 	$Estate::Name[%eid]       = "";         // ZONES: custom grounds name via #estate name
 	$EstateRt::ByOwner[%name] = %eid;
 
-	Estate::RequestSave("found");
+	Estate::SaveNow("found");
 	Client::sendMessage(%cl, $MsgGreen, "Estate founded! Plot radius " @ $Estate::Radius[%eid] @ ". Build inside it with '#estate build <wall|platform|forcefield>' (aim at the ground).");
 }
 
@@ -564,7 +593,7 @@ function Estate::Build(%cl, %type)
 	$Estate::STier[%k]   = 1;
 	Estate::SpawnStructure(%k);
 
-	Estate::RequestSave("build");
+	Estate::SaveNow("build");
 	Client::sendMessage(%cl, $MsgGreen, "Built a " @ %type @ ". (" @ Estate::StructCount(%eid) @ "/" @ Estate::MaxStructs(%eid) @ ")");
 }
 
@@ -632,7 +661,7 @@ function Estate::Demolish(%cl)
 
 	if(%refund > 0)
 		storeData(%cl, "COINS", %refund, "inc");
-	Estate::RequestSave("demolish");
+	Estate::SaveNow("demolish");
 	Client::sendMessage(%cl, $MsgGreen, "Demolished a " @ %type @ ". Refunded " @ Number::Beautify(%refund, -3) @ " coins. (" @ Estate::StructCount(%eid) @ "/" @ Estate::MaxStructs(%eid) @ ")");
 }
 
@@ -667,7 +696,7 @@ function Estate::Abandon(%cl)
 
 	if(%refund > 0)
 		storeData(%cl, "COINS", %refund, "inc");
-	Estate::RequestSave("abandon");
+	Estate::SaveNow("abandon");
 	Client::sendMessage(%cl, $MsgGreen, "Estate abandoned. Coffer balance returned: " @ Number::Beautify(%refund, -3) @ " coins.");
 }
 
@@ -755,7 +784,7 @@ function Estate::Deposit(%cl, %amtStr)
 	// A deposit that restores solvency should lift grace immediately (not wait a tick).
 	if($Estate::GraceTicks[%eid] > 0 && $Estate::Coffer[%eid] >= Estate::UpkeepDue(%eid))
 		$Estate::GraceTicks[%eid] = 0;
-	Estate::RequestSave("deposit");
+	Estate::SaveNow("deposit");
 	Client::sendMessage(%cl, $MsgGreen, "Deposited " @ Number::Beautify(%amt, -3) @ " coins. Coffer: " @ Number::Beautify($Estate::Coffer[%eid], -3) @ ".");
 }
 
@@ -783,7 +812,7 @@ function Estate::Withdraw(%cl, %amtStr)
 		%amt = %bal;
 	$Estate::Coffer[%eid] = $Estate::Coffer[%eid] - %amt;
 	storeData(%cl, "COINS", %amt, "inc");
-	Estate::RequestSave("withdraw");
+	Estate::SaveNow("withdraw");
 	Client::sendMessage(%cl, $MsgGreen, "Withdrew " @ Number::Beautify(%amt, -3) @ " coins. Coffer: " @ Number::Beautify($Estate::Coffer[%eid], -3) @ ".");
 }
 
@@ -816,7 +845,7 @@ function Estate::Permit(%cl, %targetName)
 		return;
 	}
 	$Estate::Members[%eid] = AddToCommaList($Estate::Members[%eid], %targetName);
-	Estate::RequestSave("permit");
+	Estate::SaveNow("permit");
 	Client::sendMessage(%cl, $MsgGreen, "Granted " @ %targetName @ " access to your estate.");
 	Estate::Notify(%targetName, "You have been granted access to " @ $Estate::Owner[%eid] @ "'s estate.");
 }
@@ -837,7 +866,7 @@ function Estate::Evict(%cl, %targetName)
 		return;
 	}
 	$Estate::Members[%eid] = RemoveFromCommaList($Estate::Members[%eid], %targetName);
-	Estate::RequestSave("evict");
+	Estate::SaveNow("evict");
 	Client::sendMessage(%cl, $MsgGreen, "Revoked " @ %targetName @ "'s access.");
 }
 
@@ -866,7 +895,7 @@ function Estate::Upgrade(%cl)
 	storeData(%cl, "COINS", %cost, "dec");
 	$Estate::Tier[%eid] = %tier + 1;
 	Estate::RefreshOwnerHouse(%cl, %eid);
-	Estate::RequestSave("upgrade");
+	Estate::SaveNow("upgrade");
 	%msg = "Estate upgraded to tier " @ $Estate::Tier[%eid] @ "! Structure cap is now " @ Estate::MaxStructs(%eid) @ ".";
 	if($Estate::Tier[%eid] == $EstateCfg::TurretMinTier)
 		%msg = %msg @ " Guardian turrets unlocked - '#estate build turret'.";
@@ -955,7 +984,7 @@ function Estate::AdminReclaim(%cl, %name)
 	}
 	%structs = Estate::StructCount(%eid);
 	Estate::ReclaimEstate(%eid);
-	Estate::RequestSave("admin_reclaim");
+	Estate::SaveNow("admin_reclaim");
 	Client::sendMessage(%cl, $MsgGreen, "Reclaimed " @ %name @ "'s estate (#" @ %eid @ ") - " @ %structs @ " structure(s) removed.");
 }
 
@@ -1132,7 +1161,7 @@ function Estate::SetName(%cl, %name)
 		return;
 	}
 	$Estate::Name[%eid] = %name;
-	Estate::RequestSave("name");
+	Estate::SaveNow("name");
 	Client::sendMessage(%cl, $MsgGreen, "Your estate is now known as: " @ %name);
 }
 
@@ -1161,7 +1190,7 @@ function Estate::SetMode(%cl, %mode)
 		return;
 	}
 	$Estate::Mode[%eid] = %mode;
-	Estate::RequestSave("mode");
+	Estate::SaveNow("mode");
 	if(%mode == "hostile")
 		Client::sendMessage(%cl, $MsgRed, "Your estate is now HOSTILE ground - guardian turrets will fire on non-members in range.");
 	else
