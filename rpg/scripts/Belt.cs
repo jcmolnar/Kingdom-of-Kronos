@@ -954,7 +954,14 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 		return;
 	}
 	%amnt = floor(%amnt); // Ensure %amnt is a number
-	
+	// review 2026-07-17: %opt is client-supplied (menu.cs clientMenuSelect echoes
+	// the code back), so %amnt is untrusted - the same hazard the buy handler was
+	// clamped for (review #16). A negative amount defeats the "%cmnt >= %amnt"
+	// checks below and, in the withdraw branch, SetStuffString(..., -%amnt) ADDS
+	// (-(-5)=+5) = free mint of any registered belt item. Clamp to a positive int.
+	if(%amnt < 1)
+		%amnt = 1;
+
 	if(%option == "back")
 	{
 		%mode = GetWord(%opt, 3);

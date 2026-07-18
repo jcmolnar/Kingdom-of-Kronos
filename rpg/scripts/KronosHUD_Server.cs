@@ -867,7 +867,14 @@ function remoteKBankWithdraw(%clientId, %type, %amt)
 		%n = 1;
 	if(%n > %cnt)
 		%n = %cnt;
-	Player::incItemCount(%clientId, %item, %n);
+	// review 2026-07-17: a legacy-banked item that has since converted to belt must
+	// come back as a BELT copy - incItemCount would mint engine counts of an X0/belt
+	// datablock nothing manages (armors' twins sit at index >=200 = OOB crash bait).
+	// The stock-banker twin (economy.cs) already guards this; mirror it here.
+	if(isBeltItem(%item))
+		Belt::GiveThisStuff(%clientId, %item, %n, 1);
+	else
+		Player::incItemCount(%clientId, %item, %n);
 	storeData(%clientId, "BankStorage", SetStuffString(fetchData(%clientId, "BankStorage"), %item, -%n));
 	RefreshAll(%clientId);
 	KronosBank_PushInv(%clientId);
