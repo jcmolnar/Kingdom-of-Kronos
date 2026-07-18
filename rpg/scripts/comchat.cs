@@ -4451,6 +4451,14 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 					{
 						Belt::GiveThisStuff(%id, %item, %count, true);
 					}
+					else if(%item.className == Equipped)
+					{
+						// review 2026-07-17: X0 "Equipped" display twins sit at engine
+						// index >=200; setItemCount there is an OOB write = crash. They
+						// are never directly giveable (equip the base item instead).
+						Client::sendMessage(%TrueClientId, $MsgRed, "'" @ %item @ "' is an equipped-display shell and cannot be given directly.");
+						return;
+					}
 					else
 					{
 						Player::setItemCount(%id, %item, %count);
@@ -5170,9 +5178,20 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 			%count = GetWord(%cropped, 1);
 	            if(%clientToServerAdminLevel >= 5)
 	            {
-	                  Player::setItemCount(%TrueClientId, GetWord(%cropped, 0), GetWord(%cropped, 1));
+				// review 2026-07-17: route/guard like #item - a bare setItemCount
+				// mints belt engine counts (belt base names) or, for an X0
+				// "Equipped" twin at index >=200, crashes on an OOB write.
+				if(isBeltItem(%item))
+					Belt::GiveThisStuff(%TrueClientId, %item, %count, true);
+				else if(%item.className == Equipped)
+				{
+					Client::sendMessage(%TrueClientId, $MsgRed, "'" @ %item @ "' is an equipped-display shell and cannot be given directly.");
+					return;
+				}
+				else
+					Player::setItemCount(%TrueClientId, %item, %count);
 				RefreshAll(%TrueClientId);
-				if(!%echoOff) Client::sendMessage(%TrueClientId, 0, "Set " @ %TCsenderName @ " (" @ %TrueClientId @ ") " @ GetWord(%cropped, 0) @ " count to " @ GetWord(%cropped, 1));
+				if(!%echoOff) Client::sendMessage(%TrueClientId, 0, "Set " @ %TCsenderName @ " (" @ %TrueClientId @ ") " @ %item @ " count to " @ %count);
 				echo("[ADMIN]: " @ %TCsenderName @ " gave themself " @ %count @ " of " @ %item);
 	            }
 			return;

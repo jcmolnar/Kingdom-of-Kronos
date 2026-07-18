@@ -4877,8 +4877,12 @@ function processMenuBeltWithdraw(%clientId, %option)
 
 function Belt::GetBuyCost(%clientId, %item)
 {
-	// Get base cost from HardcodedItemCost (same source as sell cost)
-	%baseCost = $HardcodedItemCost[%item];
+	// review 2026-07-17: use GetItemCost (Hardcoded first, else $ItemCost) - the
+	// SAME source GetSellCost was fixed to use (694f723) and every stock buy path
+	// uses. Reading $HardcodedItemCost directly meant a belt-only item priced via
+	// $ItemCost (the Generate*Costs pattern) bought for the 100 default but resold
+	// for its real, higher value - a buy-low/sell-high mint. Parity closes it.
+	%baseCost = GetItemCost(%item);
 	if(%baseCost == "" || %baseCost == 0)
 		%baseCost = 100; // Default price if not defined
 	

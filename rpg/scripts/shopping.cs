@@ -79,8 +79,11 @@ function SetupShop(%clientId, %id)
 		
 		// Then, check all belt items (items without ItemData but registered in $BeltItem)
 		// Skip Deployables category since those still use ItemData (like DepBasePack)
-		// Iterate through belt categories: QuestItems, KeyItems, Consumables, Accessories
-		for(%catIndex = 1; %catIndex <= 7; %catIndex++)
+		// review 2026-07-17: iterate ALL belt categories open-ended (was hardcoded
+		// <=7, which silently excluded category 8 "Weapons" - a belt weapon with a
+		// $ShopIndex would never appear at any merchant, unlike every other
+		// category). Matches the open-ended loop KronosShop_PushInv/PushStock use.
+		for(%catIndex = 1; $Belt::Categories[%catIndex] != "" && $Belt::Categories[%catIndex] != -1; %catIndex++)
 		{
 			%category = $Belt::Categories[%catIndex];
 			// Skip Deployables (category index 3) since those still use ItemData

@@ -983,6 +983,12 @@ function SaveCharacter(%clientId)
 	}
 	
 	// Save Accessories directly (like field 15 - empty string when empty, persistence system may remove column)
+	// review 2026-07-17: tripwire - this carried list is exported as ONE line, NOT
+	// chunked like BankStorage. Bounded today by the ~34 registered accessories
+	// (~900 chars worst case), but a save line >~1024 chars corrupts the character.
+	// If accessories are ever added past this, chunk field 49 (see SplitAndSaveBankStorage).
+	if(String::len(%accessories) > 950)
+		echo("[SAVE WARN] " @ %name @ " Accessories (field 49) is " @ String::len(%accessories) @ " chars - approaching the ~1024 save-line corruption limit; field 49 needs chunking.");
 	$funk::var["[\"" @ %name @ "\", 0, 49]"] = %accessories;
 	//echo("DEBUG SaveCharacter: Accessories = '" @ %accessories @ "'");
 	
