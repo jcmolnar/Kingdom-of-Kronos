@@ -1,3 +1,9 @@
+// ECON-FIX 2026-07-18: hard ceiling for currency/progress balances. Stays well
+// below 2^31 (2,147,483,647) where the engine's int32 floor() wraps values
+// negative, and below where %g stringification drift gets dangerous. Read at
+// runtime by storeData only.
+$Kronos::BalanceCap = 2000000000;
+
 // Helper function to determine which data array to use for a client
 // Returns: "player", "townbot", or "enemybot"
 // CRITICAL: Player safeguard FIRST - never misidentify player as bot (causes black screen)
@@ -522,7 +528,16 @@ function storeData(%clientId, %type, %amt, %special)
 			if(%specialWord1 != "" && %specialWord1 == "cap")
 				%newValue = Cap(%newValue, GetWord(%special, 2), GetWord(%special, 3));
 		}
-		
+
+		// ECON-FIX 2026-07-18: clamp currency/progress balances to
+		// [0, $Kronos::BalanceCap] at the single write choke point. Guards every
+		// earn/spend site at once: keeps balances below the engine's int32
+		// floor() wrap (2^31), and stops admin-bypass buys (economy.cs
+		// checkResources skips the affordability check at adminLevel >= 4) from
+		// driving COINS negative. strinc excluded (string append, not numeric).
+		if((%type == "COINS" || %type == "BANK" || %type == "EXP") && %special != "strinc")
+			%newValue = Cap(%newValue, 0, $Kronos::BalanceCap);
+
 		// Store in appropriate array
 		// Pass resolved client type so storeData only resolves type once per call
 		SetDataInArray(%clientId, %type, %newValue, %clientType);

@@ -1765,11 +1765,11 @@ function LoadCharacter(%clientId)
 				break;
 		}
 		storeData(%clientId, "RACE", $funk::var[%name, 0, 1]);
-		storeData(%clientId, "EXP", floor($funk::var[%name, 0, 2]));    // floor on load: clean any legacy fractional EXP
+		storeData(%clientId, "EXP", SafeFloor($funk::var[%name, 0, 2]));    // clean fractional EXP; SafeFloor: plain floor() int32-wraps >=2^31 negative (ECON-FIX 2026-07-18)
 		storeData(%clientId, "campPos", $funk::var[%name, 0, 3]);
-		storeData(%clientId, "COINS", floor($funk::var[%name, 0, 4]));  // floor on load: clean any legacy fractional coins
+		storeData(%clientId, "COINS", SafeFloor($funk::var[%name, 0, 4]));  // clean fractional coins; SafeFloor guards the int32 wrap
 		storeData(%clientId, "isMimic", $funk::var[%name, 0, 5]);
-		storeData(%clientId, "BANK", floor($funk::var[%name, 0, 6]));   // floor on load: clean any legacy fractional bank
+		storeData(%clientId, "BANK", SafeFloor($funk::var[%name, 0, 6]));   // clean fractional bank; SafeFloor guards the int32 wrap
 		storeData(%clientId, "tmpname", $funk::var[%name, 0, 7]);
 		
 		// Load and clean grouplist - remove leading "0" prefix if present (corruption fix)
@@ -5787,9 +5787,28 @@ function ChangeSky(%sky)
 }
 
 
+// ECON-FIX 2026-07-18: the engine's floor() is an int32 cast (console.cpp
+// sprintf "%d") - any value at/past 2^31 wraps to -2147483648. Balances
+// (COINS/BANK/EXP) and top-tier item costs legitimately exceed that. Above the
+// guard threshold the engine's %g stringification (6 sig figs) is already
+// integer-valued, so truncation is a numeric no-op and we return the value
+// untouched instead of wrapping it. Use this instead of floor() for anything
+// coin/EXP-scale.
+function SafeFloor(%n)
+{
+	if(%n >= 2000000000 || %n <= -2000000000)
+		return %n;
+	return floor(%n);
+}
+
 function round(%n)
 {
 //	dbecho($dbechoMode, "round(" @ %n @ ")");
+
+	// ECON-FIX 2026-07-18: guard the int32 floor() wrap (see SafeFloor above).
+	// At this magnitude %g values are integer-valued; rounding is a no-op.
+	if(%n >= 2000000000 || %n <= -2000000000)
+		return %n;
 
 	if(%n < 0)
 	{

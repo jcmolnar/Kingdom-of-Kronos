@@ -12059,7 +12059,7 @@ if(%w1 == "#spawntelemetry")
 						else if($state[%closestId, %TrueClientId] == 4)
 							%cost = $changeHouseCost;
 
-						%c = floor(fetchData(%TrueClientId, "COINS"));
+						%c = SafeFloor(fetchData(%TrueClientId, "COINS"));	// SafeFloor: plain floor() int32-wraps balances >=2^31 negative (ECON-FIX 2026-07-18)
 						if(%c >= %cost)
 						{
 							storeData(%TrueClientId, "COINS", %cost, "dec");

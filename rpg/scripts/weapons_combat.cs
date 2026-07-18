@@ -887,7 +887,7 @@ function GenerateItemCost(%item)
 	%c = (%b6 + %b7 + %b3) / %a;
 	%d = Cap(0.01 * pow(%c, 3.7), 0, "inf");
 	%e = Cap(%d * %cft, 1, "inf");
-	%f = floor(%e + %extracost);
+	%f = SafeFloor(%e + %extracost);	// SafeFloor: plain floor() int32-wraps 1e10-tier costs negative (ECON-FIX 2026-07-18)
 
 	return %f;
 }

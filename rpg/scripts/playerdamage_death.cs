@@ -379,7 +379,7 @@ function Player::onKilled(%this)
 
 		if(fetchData(%clientId, "COINS") > 0)
 		{
-			%coinsDrop = floor(fetchData(%clientId, "COINS"));
+			%coinsDrop = SafeFloor(fetchData(%clientId, "COINS"));	// SafeFloor: plain floor() int32-wraps balances >=2^31 negative (ECON-FIX 2026-07-18)
 			%tmploot = SetStuffString(%tmploot, "COINS", %coinsDrop);
 		}
 		storeData(%clientId, "COINS", 0);

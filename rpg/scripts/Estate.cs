@@ -773,7 +773,7 @@ function Estate::Deposit(%cl, %amtStr)
 	if(%amtStr == "all")
 		%amt = %have;
 	else
-		%amt = floor(%amtStr);
+		%amt = SafeFloor(%amtStr);	// SafeFloor: plain floor() int32-wraps amounts >=2^31 negative (ECON-FIX 2026-07-18)
 	if(%amt <= 0)
 	{
 		Client::sendMessage(%cl, $MsgRed, "Usage: #estate deposit <amount|all> (deposits carried coins into your coffer).");
@@ -807,7 +807,7 @@ function Estate::Withdraw(%cl, %amtStr)
 	if(%amtStr == "all")
 		%amt = %bal;
 	else
-		%amt = floor(%amtStr);
+		%amt = SafeFloor(%amtStr);	// SafeFloor: plain floor() int32-wraps amounts >=2^31 negative (ECON-FIX 2026-07-18)
 	if(%amt <= 0 || %bal <= 0)
 	{
 		Client::sendMessage(%cl, $MsgRed, "Your coffer holds " @ Number::Beautify(%bal, -3) @ " coins. Usage: #estate withdraw <amount|all>.");
