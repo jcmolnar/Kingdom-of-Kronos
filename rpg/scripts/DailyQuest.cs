@@ -402,8 +402,12 @@ function Daily::FetchItemFor(%clientId)
 // themes: "Fetch" | "Cull" | "Elite"
 function Daily::Accept(%clientId, %theme)
 {
-	if($Daily::CurrentDay == "")
-		Daily::Rotate();
+	// review 2026-07-17: refresh the day if it is STALE, not just empty. The 300s
+	// CheckRotateLoop can leave $Daily::CurrentDay on yesterday for a few minutes
+	// past midnight; accepting in that window stamped the contract with the old
+	// day, and the next loop tick then invalidated it (DailyDay != CurrentDay).
+	// Daily::Rotate self-guards (no-op when the day already matches).
+	Daily::Rotate();
 
 	if(%theme == "Elite" && !$Daily::EliteEnabled)
 	{
