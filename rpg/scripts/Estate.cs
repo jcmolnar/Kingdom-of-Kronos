@@ -45,6 +45,11 @@ $EstateCfg::UpgradeCostBase  = 100000;// tier N->N+1 costs UpgradeCostBase * N
 $EstateCfg::MaxTurrets       = 3;     // guardian turrets per estate
 $EstateCfg::TurretMinTier    = 2;     // turrets require estate tier >= this
 $EstateCfg::StructMinSep   = 6;       // min spacing between two structures (units)
+$EstateCfg::MaxMembers     = 16;      // permitted members per estate. Bounds the exported
+                                      // Members string: the console's export() writes each
+                                      // line through 1KB stack buffers (consoleInternal.cpp
+                                      // exportEntries) with NO bounds check - an over-long
+                                      // Members line is a native overflow, so cap well under it
 $EstateCfg::DemolishRefund = 0.25;    // fraction of build cost refunded on demolish
 $EstateCfg::GlobalObjBudget= 400;     // hard ceiling on total estate objects server-wide
                                       // (general object cap is ~1024; patchServerNetcode is
@@ -839,6 +844,26 @@ function Estate::Permit(%cl, %targetName)
 		Client::sendMessage(%cl, $MsgRed, "You are the owner.");
 		return;
 	}
+	// The member list is one comma-separated string: a name containing a comma
+	// would smuggle several member entries through one permit (defeating the
+	// duplicate guard below) and break evict/matching for that entry.
+	if(String::findSubStr(%targetName, ",") != -1)
+	{
+		Client::sendMessage(%cl, $MsgRed, "Member names cannot contain commas.");
+		return;
+	}
+	if(CountObjInCommaList($Estate::Members[%eid]) >= $EstateCfg::MaxMembers)
+	{
+		Client::sendMessage(%cl, $MsgRed, "Member limit reached (" @ $EstateCfg::MaxMembers @ "). Evict someone first.");
+		return;
+	}
+	// Belt+braces on raw length: 400 raw chars -> worst-case ~800 after export
+	// escaping, safely under the engine's 1KB export line buffer.
+	if(String::len($Estate::Members[%eid]) + String::len(%targetName) > 400)
+	{
+		Client::sendMessage(%cl, $MsgRed, "Your member list is full.");
+		return;
+	}
 	if(IsInCommaList($Estate::Members[%eid], %targetName))
 	{
 		Client::sendMessage(%cl, $MsgBeige, %targetName @ " is already a member.");
@@ -989,6 +1014,10 @@ function Estate::AdminReclaim(%cl, %name)
 }
 
 // Remove the NEWEST structure of an estate (highest flat index). Returns its type, or "".
+// NOTE (review 2026-07-17): "newest" is approximate - AllocStructSlot reuses freed low
+// slots, so after demolish->build churn the highest index can be an older structure.
+// DESIGN DECISION: accepted as-is; decay only needs a predictable victim, and a true
+// build-sequence field would cost a persisted column + a registry format bump.
 function Estate::DecayOneStructure(%eid)
 {
 	%target = -1;
