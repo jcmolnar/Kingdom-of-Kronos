@@ -1,0 +1,158 @@
+kronos_virtualitems.dll  —  SERVER-side plugin (Phase C PROBE, READ-ONLY)
+=========================================================================
+
+STATUS: v0 PROBE. This build does NOT modify anything. It is the safe
+first step of the belt-item "virtual slots" feature (make belt items show
+in the VANILLA stock inventory screen). It only proves — at runtime, on a
+real server — that the reverse-engineered T1Vista.exe addresses are
+correct, before any datablock-push code is written.
+
+What it does
+=============
+Registers ONE console command:
+
+    vslotProbe()  -> "Sound Profile|Sound|Damage Skin|...|Item|...|IRC Channel"
+
+It reads the 31 dataNames[] string pointers at the confirmed table address
+0x0060ed44 and returns them. If the returned string starts with
+"Sound Profile" and ends with "IRC Channel", every confirmed address in
+T1VISTA_RE_MAP.md is proven correct at runtime and the plugin's
+engine-memory read path works. Full per-index detail is written to
+kronos_virtualitems.log.
+
+It patches NO engine code, hooks NO sites, posts NO events, writes NO
+engine memory. It CANNOT disconnect players or crash the server.
+
+Install (DEV/LOCAL SERVER ONLY for now)
+=============
+Drop kronos_virtualitems.dll in this Plugins\ folder and add to the
+$dedicated block in Plugins\Scripts\PluginLoader.cs:
+
+    $PluginLoader::kronos_virtualitems = true;  // Phase C probe (read-only)
+
+Restart the server. On load it logs "--- kronos_virtualitems (PROBE)
+loaded ---" and "registered vslotProbe" to kronos_virtualitems.log.
+
+Commands
+=============
+READ-ONLY (safe anywhere):
+    vslotProbe()               -> the 31 datablock-group names (address self-test)
+    vslotDbm()                 -> "sg=.. dbm=.. items=N .."  (N must == getNumItems())
+    vslotPeek(hexAddr [,count]) -> dword dump (SEH-guarded; general RE tool)
+
+WRITE (test on a DEV/LOCAL server FIRST — these POST datablock events):
+    vslotResend(managerId)     -> re-send ALL datablocks to one client (connect
+                                  path). managerId = that client's %clientId.
+    vslotPushItem(managerId, itemIndex)
+                               -> surgical: re-send ONE ItemData slot to a client
+                                  (whatever description script last set on it).
+
+GO/NO-GO PROTOCOL (dev server, one connected vanilla client, its %clientId = C):
+    getItemData(5).description = "TESTXYZ";   // pick an item index you can see
+    vslotPushItem(C, 5);                       // or: vslotResend(C);
+Open that client's inventory: the row shows "TESTXYZ" live, no disconnect = GO.
+Wrong managerId => the event is simply dropped (harmless). Watch
+kronos_virtualitems.log for "event posted OK".
+
+Verify the READ-ONLY foundation first from the server console:
+
+    echo(vslotProbe());
+
+EXPECTED:
+    Sound Profile|Sound|Damage Skin|Armor|Static Shape|Item|Item Image|
+    Moveable|Sensor|Vehicle|Flier|Tank|Hover|Projectile|Bullet|Grenade|
+    Rocket|Laser|Interior Shape|Turret|Explosion|Marker|Debris|Mine|
+    Target Laser|Seeking Missile|Trigger|Car|Lightning|Repair Effect|
+    IRC Channel
+
+Send that output (and kronos_virtualitems.log) back — it confirms the
+foundation and unblocks writing the actual per-client push.
+
+Why a probe first
+=============
+T1Vista.exe is the Borland-compiled, UNSYMBOLIZED live-server exe. The
+push mechanism (DataBlockManager::sendDataToClient / DataBlockEvent +
+postCurrentEvent) is precedented IN THIS EXE (PlayerManager.cpp posts
+per-client events), but the remaining addresses (sg.dbm, sendDataToClient,
+per-client managerId) must be resolved and VERIFIED before a DLL that
+writes to the network can safely run. A wrong address = live-server crash.
+This probe verifies the confirmed addresses with zero risk, on a local
+server, first. See Plugins\Source\kronos_virtualitems\T1VISTA_RE_MAP.md.
+
+Source + build
+=============
+Plugins\Source\kronos_virtualitems\kronos_virtualitems.cpp
+Plugins\Source\kronos_virtualitems\build_kronos_virtualitems.bat  (MSVC x86)
+Plugins\Source\kronos_virtualitems\T1VISTA_RE_MAP.md   (RE notes / address map)
+
+
+===========================================================================
+STATUS 2026-07-11 — ADDRESSES DECOMP-VERIFIED; GO/NO-GO IS THE LAST STEP
+===========================================================================
+The whole T1Vista.exe is now decompiled (T1Vista_RE_Kit\RE\). Every address
+and offset the WRITE commands (vslotResend / vslotPushItem) use was cross-
+checked against the raw decomp of DataBlockManager::sendDataToClient — the
+push asm is a byte-for-byte replica of one iteration of the engine's own
+per-client send loop (see T1VISTA_RE_MAP.md "Address confidence — RESOLVED").
+So there is NO wrong-address crash risk left. A wrong managerId is still just
+a dropped event. The DLL compiles clean with build_kronos_virtualitems.bat.
+
+The only thing left that code can't settle is EMPIRICAL: does a re-pushed
+ItemData's renamed row actually render in the STOCK client's inventory, and
+does the client survive the data->preload on receipt? Run the go/no-go once
+on DEV to find out. It cannot crash the server whatever the result.
+
+GO/NO-GO (dev server, one connected VANILLA client, its %clientId = C):
+    // pick an item index the client can see in their inventory (e.g. 5)
+    getItemData(5).description = "TESTXYZ";   // or .shownName - see below
+    vslotPushItem(C, 5);                       // surgical single-row push
+Open that client's inventory. Watch for:
+  * The row shows "TESTXYZ" live, no disconnect  => GO. Note WHICH assignment
+    (description / shownName / name) actually changed the visible text.
+  * Client disconnects at push => the data->preload failed (usually a hudIcon
+    bitmap the client lacks). Keep hudIcon unchanged; only rename => retry.
+Log lines land in kronos_virtualitems.log ("event posted OK").
+
+===========================================================================
+PHASE D — native inventory view (VirtualSlots.cs) — WIRED, SHIPPED OFF
+===========================================================================
+The full script side is now built and shipped OFF (default $pref::VSlotsEnabled
+false). Everything below is DONE; enabling is a single pref flip + the DLL:
+
+  DONE:
+  - 8 reserved placeholder ItemData VSlot0..VSlot7 declared in VirtualSlots.cs
+    (heading "bWeapons", showInventory=true, NO imageType/shapeFile/hudIcon -
+    inert; item.cpp:148 preload loads no shape, so a shapeless row is safe on
+    receipt, and ShapeView::loadShape falls back to the default shape on select).
+  - VSlot::SetRow trimmed to `description` - CONFIRMED the field the stock
+    inventory renders (TribesSource fearGuiInventory.cpp:323
+    addCell(typeString, description, count) - typeString is the "heading").
+  - VSlot::Sync re-push wired at every belt-weapon list-change chokepoint:
+    Belt::GiveThisStuff / Belt::TakeThisStuff exits (gated on %type=="Weapons"),
+    BeltWeapon::Equip, Game::playerSpawned (scheduled 0.5s post-spawn),
+    Server::onClientDisconnect -> VSlot::Clear. Sync skips HUD clients (they see
+    belt weapons in the KronosHUD panel already) and bots.
+  - Vanilla-client hazards guarded: double-click in the stock inventory sends
+    "sellItem" (GUI.CS InventoryList::onDoubleClick) and the Drop button sends
+    "dropItem" - remoteSellItem and remoteDropItem now block VSlot rows. The Use
+    button sends "useItem" -> remoteUseItem -> VSlot::OnUseClick -> equip (works).
+
+  TO ENABLE (dev server first, then the live set with v0.9):
+  1. Load kronos_virtualitems.dll (already the case if the go/no-go ran):
+     $PluginLoader::kronos_virtualitems = true;  in the $dedicated block.
+  2. Set $pref::VSlotsEnabled = true;  (autoexec / server pref) and restart.
+  3. Boot log must show: [SLOT AUDIT] ~241/256, then
+     "[VSLOT] 8 virtual inventory slots ready ...; DLL ok: sg=.. dbm=.. items=..".
+     If it instead prints "kronos_virtualitems.dll not loaded" the feature
+     self-disables (VSlot::Init probes vslotDbm) - fix step 1 and restart.
+  4. Live test on a VANILLA (non-HUD) client: buy/give a belt weapon, open the
+     inventory - the weapon's name shows as a "bWeapons" row; select it + Use ->
+     it equips; double-click / Drop -> blocked with a message, no sale/drop.
+     Then a second vanilla client with a DIFFERENT belt weapon in the same slot
+     index must see ITS name (per-client push, not the shared block).
+
+PHASE E — per-weapon swing speed: hook site is RE'd (setImageState 0x0041aa40,
+delayTime = ItemImageData+0x60) but NOT installed — it needs a byte-verified
+code patch and a live DEV test. See T1VISTA_RE_MAP.md "PHASE E". Belt weapons
+already inherit their shell's swing speed, so this is a per-weapon nicety, not a
+gap.

@@ -1,0 +1,27 @@
+ForceExitPlugin.dll
+-------------------
+Adds one console function:
+
+forceExit([exitCode]);
+	Immediately terminates the Tribes process via TerminateProcess. Never
+	returns. Optional exit code, defaults to 0.
+
+Purpose: reliable dedicated-server restarts. The mem.dll/hudbot plugin
+loader can leave a background thread alive after quit() (see
+_newStuff.txt V0.12 note), which keeps the process hanging in the
+background so InfiniteSpawn never sees an exit and never relaunches the
+server. TerminateProcess does not wait on any thread, so a stuck DLL
+thread cannot block it.
+
+WARNING: forceExit() skips ALL normal engine shutdown, including the
+script onExit() (ServerPrefs/banlist exports). Save characters, save the
+world, and do those exports BEFORE calling it. Down() in rpgfunk.cs
+(FinalizeShutdownAndExit) handles this ordering - use down()/d() rather
+than calling forceExit() directly.
+
+Enabled in Plugins\Scripts\PluginLoader.cs (dedicated block).
+Registration follows the proven kronos_datetime.dll getPlugin() descriptor
+pattern (the older plugin_open convention is blocked - see PluginLoader.cs
+note on PlayerManagerPlugin).
+Source: Plugins\Source\ForceExitPlugin\ForceExitPlugin.cpp
+Build:  Plugins\Source\ForceExitPlugin\build_ForceExitPlugin.bat

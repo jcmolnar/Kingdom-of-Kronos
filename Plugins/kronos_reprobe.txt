@@ -1,0 +1,60 @@
+kronos_reprobe.dll  —  SERVER-side plugin (dedicated host) — READ-ONLY RE probe
+================================================================================
+
+Purpose
+=============
+Runtime confirmation probe for the T1Vista.exe full-binary static RE map
+(T1Vista_RE_Kit/RE/MASTER_RE_MAP.md). It READS engine memory (SEH-guarded) and
+echoes numeric offsets/addresses so they can be upgraded from [static:unverified]
+to [confirmed:runtime]. It POSTS nothing, WRITES nothing, HOOKS nothing — a wrong
+address returns "<fault>" instead of crashing. Safe to load, but run on a
+DEV/LOCAL server first per RE discipline.
+
+Install
+=============
+1. kronos_reprobe.dll is already in this Plugins\ folder.
+2. Add to Plugins\Scripts\PluginLoader.cs under the if($dedicated){ } block:
+
+       $PluginLoader::kronos_reprobe = true;  // READ-ONLY T1Vista RE confirmation probe
+
+3. Restart the dedicated server (it locks loaded DLLs — stop before redeploying).
+   On load it logs to kronos_reprobe.log and registers 4 console commands.
+
+Commands (type in the server console; also echoed to kronos_reprobe.log)
+=============
+  echo(reGlobals())
+      Resolves the sg-globals field map two ways and cross-checks.
+      PASS: "dbm ... MATCH", "SimMgr ... MATCH", "PM ... MATCH" (sg-relative ==
+      direct global). Confirms sg+0x10=dbm / sg+0x14=SimManager / sg+0x34=PlayerManager.
+
+  echo(reItem(0))     (or any index 0..getNumItems()-1)
+      Dumps ItemData wire fields for datablock item[idx].
+      PASS: name is a real item name; price/imageId sane; hudIcon/typeString are
+      readable strings; showInventory is 0 or 1. Confirms price@+0x104,
+      hudIcon@+0x11c, typeString@+0x120, showInventory@+0x124 — the belt-item fields.
+      Cross-check: name should match  getItemData(idx).itemName (or the shop name).
+
+  echo(reClient(<yourClientId>))     <- THE key test; use your own %clientId (2049-2175)
+      Computes your ClientRep via findClient's index math (index = id-2048,
+      stride 0x1E0, base PM+0x250ec) and asserts rep.id(+0xc) == the id you passed.
+      PASS: "id(+0xc)=<same> == managerId PASS" and name/team correct. That single
+      line confirms the ClientRep layout AND the findClient index math at once.
+      It then dumps the ShapeBase combat block from BOTH +0x94 and +0x98; the one
+      that prints "<PLAUSIBLE ShapeBase>" (valid data ptr + sane energy/damage) is
+      your controlObject — resolving the +0x94-vs-+0x98 question and confirming
+      energy@+0x724 / damageLevel@+0x72c / data@+0x240. (You must be spawned in-game.)
+
+  echo(reFindCall(<yourClientId>))
+      SEH-guarded CALL to findClient@0x0040de80; compares its return to the computed
+      rep. PASS: "MATCH -> address+math CONFIRMED" (confirms the function ADDRESS).
+      (This is the only command that calls engine code; it's a pure lookup and is
+      SEH-wrapped, but it's why you run this on a DEV server first.)
+
+How to read results
+=============
+Every "MATCH"/"PASS"/"<PLAUSIBLE ShapeBase>" upgrades the corresponding map entry
+to [confirmed:runtime]. Any "<fault>"/"FAIL"/"DIFFER" flags an offset to revisit
+(record which, and re-check that field's decomp). Report the four command outputs
+back and they can be folded into MASTER_RE_MAP.md as confirmed.
+
+Source: Plugins\Source\kronos_reprobe\kronos_reprobe.cpp (build_kronos_reprobe.bat).

@@ -39,15 +39,33 @@ it just never hits the precision wall. (A clean source-level fix also exists in
 TribesSource: SimManager::rebaseTime + SimEventQueue::rebaseTime, see
 re/freeze_fix_13.md / re/server_freeze_rundown.md.)
 
-Compatibility note (IMPORTANT for scripts that use getSimTime())
+v2 — MONOTONIC getSimTime() (fixes ALL script timestamp logic at once)
 =============
-The rebase shifts the sim clock BACKWARDS. Any script that stores an absolute getSimTime()
-value and later compares it (e.g. "was this freed in the last N seconds?") will see the delta
-go NEGATIVE right after a rebase, because the stored timestamp is now "in the future". Symptom
-seen in Kronos: AI.cs aborted bot spawns with "[SPAWN DANGER] ID REUSE DETECTED". Fix lives in
-the script side: AI.cs AI::detectSimRebase() detects the backwards jump and shifts every stored
-$ClientIdRecentlyFreed[] timestamp down by the same amount (called at each spawn entry), so the
-deltas stay correct. Any other time-delta logic on getSimTime() needs the same treatment.
+v1's rebase made getSimTime() a saw-tooth (1..3600 hourly), which broke every script that
+stores an absolute timestamp: deltas went NEGATIVE for up to an hour after a rebase (the
+Server::onClientConnect "recently freed -2529.83s ago" warning, AI.cs "[SPAWN DANGER]"),
+and any "until = getSimTime()+cooldown" stored in the last <cooldown> seconds of an hour
+landed ABOVE 3600 — unreachable forever = gates wedged until restart (the 3-day
+"can't cast / stations busy / world-save pump stuck" rot).
+
+v2 fixes this at the source: on its first hook call it RE-REGISTERS the console command
+"getSimTime" (CMDConsole re-registration replaces the entry — verified in TribesSource
+consoleInternal.cpp) with a handler returning engineClock + accumulatedRebaseShift. Scripts
+now see a MONOTONIC clock across rebases; every stored-timestamp compare just works. The
+ENGINE clock/event queue stays bounded exactly as before — the freeze fix is unchanged.
+Console arithmetic is double, so the growing value is precision-safe for years of uptime.
+The log gains "accum=" on each rebase line plus a one-time "getSimTime shadowed" line.
+
+v2.1 — MONOTONIC CLAMP (resetSimTime immunity): the stock console command resetSimTime()
+(called by Server::onMissionLoad "to deal with time imprecision") zeroes the engine clock
+OUTSIDE the plugin's accounting, which made v2's script clock jump backwards by the clock
+value at that moment (seen live: "[SIM REBASE] rebased by 375.5s" + [SPAWN DANGER] aborts,
+because ai.cs detectSimRebase under-corrects). v2.1's handler clamps: any backwards movement
+of the raw clock — whatever the source — is folded into the accumulator, so the script clock
+continues from its high-water mark. Logs "monotonic clamp: raw clock moved back ...s" when
+it happens. Scripts need no changes; resetSimTime stays harmless engine-side.
+AI.cs AI::detectSimRebase() (the v1 per-array workaround) never triggers anymore and is
+harmless to leave in. getIntegerTime() was always integer/monotonic and is untouched.
 
 Layout: sim clock *0x6a841c, timeBase *0x6a8420; SimManager targetTime +0x6c,
 eventQueue +0x70 (size +0, array +0xc); SimEvent.time +0xc. Deep notes:
