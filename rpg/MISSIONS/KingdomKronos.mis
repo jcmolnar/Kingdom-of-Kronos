@@ -173,7 +173,7 @@ instant SimGroup "MissionGroup" {
 		instant SimTerrain "Terrain" {
 			tedFileName = "rpgbutch5.dtf";
 			visibleDistance = "800";
-			hazeDistance = "817.5";
+			hazeDistance = "1500";
 			hazeVerticalMin = "-NAN";
 			hazeVerticalMax = "2.19193e-39";
 			perspectiveDistance = "100";
@@ -5754,7 +5754,7 @@ instant SimGroup "MissionGroup" {
 			instant SimGroup "NAME Uncle Tony";
 			instant SimGroup "ITEMS CLASS Ranger LVL 999 LCK 999 RedDiamondPlate 1 TerminusEst 1";
 			instant SimGroup "RACE MaleHuman";
-			instant SimGroup "SHOP 222 231 232 233 234 235 236 237 238 242 243 244";
+			instant SimGroup "SHOP 222 231 232 233 234 235 236 237 238";
 		};
 		instant SimGroup "tournyquest1" {
 			instant Marker "Yuliple colloseum" {
