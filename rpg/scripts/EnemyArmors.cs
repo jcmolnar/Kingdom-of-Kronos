@@ -2262,12 +2262,12 @@ PlayerData ZombieArmor
 	// animation name, one shot, direction, firstPerson, chaseCam, thirdPerson, signalThread
 	// movement animations:
 	animData[0]  = { "root", none, 1, true, true, true, false, 0 };
-	animData[1]  = { "run", none, 1, true, false, true, false, 3 };
-	animData[2]  = { "runback", none, 1, true, false, true, false, 3 };
-	animData[3]  = { "side left", none, 1, true, false, true, false, 3 };
-	animData[4]  = { "side left", none, -1, true, false, true, false, 3 };
-	animData[5] = { "jump stand", none, 1, true, false, true, false, 3 };
-	animData[6] = { "jump run", none, 1, true, false, true, false, 3 };
+	animData[1]  = { "run", none, 1, true, false, false, false, 3 };
+	animData[2]  = { "runback", none, 1, true, false, false, false, 3 };
+	animData[3]  = { "side left", none, 1, true, false, false, false, 3 };
+	animData[4]  = { "side left", none, -1, true, false, false, false, 3 };
+	animData[5] = { "jump stand", none, 1, true, false, false, false, 3 };
+	animData[6] = { "jump run", none, 1, true, false, false, false, 3 };
 	animData[7] = { "crouch root", none, 1, true, true, true, false, 3 };
 	animData[8] = { "crouch root", none, 1, true, true, true, false, 3 };
 	animData[9] = { "crouch root", none, -1, true, true, true, false, 3 };
