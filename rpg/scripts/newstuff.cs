@@ -590,6 +590,19 @@ $WeaponDelay[SkyRender] = 0.5;
 $WeaponEffect[SkyRender] = "SKY_LAUNCH";
 $WeaponEffectFrequency[SkyRender] = 4;	// launch every Nth hit
 
+// Launch tuning. Impulse is MOMENTUM, not velocity - the engine divides it by
+// the target's mass (SimMovement::applyImpulse, simMovement.cpp:204) and
+// gravity is -9.8 (simTerrain.cpp:120), so:
+//    apex(m)  = (impulse / mass)^2 / 19.6
+//    airtime  = 2 * (impulse / mass) / 9.8
+// Enemy bots are all mass 9.0 (EnemyArmors.cs), so 120 = ~9m apex, ~2.7s air.
+// The old value of 40 was ~1m apex - lower than the bot's own jump (75).
+// Players vary 8.0-19.5 mass, so heavy armor is launched less. That is left
+// as-is: there is no script accessor for a live object's mass.
+$SkyRender::LaunchImpulse = 120;	// ~9m apex on a mass-9 target
+$SkyRender::ImpaleDelay = 2.7;		// MUST track airtime above, or the impale
+					// fires before they land
+
 ItemImageData SkyRenderImage
 {
 	shapeFile  = "trident";

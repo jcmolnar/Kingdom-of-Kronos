@@ -1489,16 +1489,21 @@ function Player::onDamage(%this,%type,%value,%pos,%vec,%mom,%vertPos,%rweapon,%o
 							// teammates, party members, bosses, seal or colloseum bots
 							if(!MythicWeapon::IsProtectedTarget(%shooterClient, %damagedClient))
 							{
-								// Launch skyward (vertical impulse; bash shoves cap at ~5 vertical,
-								// 40 gives a clearly airborne launch without orbiting them)
-								Player::applyImpulse(%this, "0 0 40");
+								// Launch skyward. Impulse is divided by target mass in the
+								// engine, so this is tuned per-mass in newstuff.cs - see
+								// the apex/airtime formulas there before changing it.
+								%launch = $SkyRender::LaunchImpulse;
+								if(%launch == "" || %launch == -1) %launch = 120;
+								Player::applyImpulse(%this, "0 0 " @ %launch);
 								playSound(shockExplosion, %damagedClientPos);
 								Client::sendMessage(%shooterClient, $MsgYellow, "SKY RENDER! " @ Client::getName(%damagedClient) @ " is launched skyward!");
 								Client::sendMessage(%damagedClient, $MsgRed, "SKY RENDER! You are hurled into the sky!");
 
 								// Delayed impale where they come down - pass the player object
 								// id so a respawn/disconnect in the meantime cancels it
-								schedule("SkyRender::Impale(" @ %shooterClient @ ", " @ %damagedClient @ ", " @ %this @ ");", 1.5);
+								%impaleDelay = $SkyRender::ImpaleDelay;
+								if(%impaleDelay == "" || %impaleDelay == -1) %impaleDelay = 2.7;
+								schedule("SkyRender::Impale(" @ %shooterClient @ ", " @ %damagedClient @ ", " @ %this @ ");", %impaleDelay);
 							}
 						}
 					}
