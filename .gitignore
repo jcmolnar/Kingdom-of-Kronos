@@ -17,3 +17,6 @@ config/TaurikAdmins.cs
 config/Admin Attempts Log.txt
 config/Connections Log.txt
 config/Raw Log.txt
+
+# Remote admin console secret (telnet rcon password)
+config/RemoteConsole.local.cs
