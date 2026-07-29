@@ -100,6 +100,31 @@ function remoteKShopStockCount(%server, %n)
 	KronosShop::buildDisp("st");
 }
 
+// Chunked tooltip response. The server splits long WhatIs text to stay below
+// the remoteEval string limit.
+function remoteKShopTipBegin(%server)
+{
+	if(%server != 2048)
+		return;
+	$KS::tipBuild = "";
+}
+
+function remoteKShopTipPart(%server, %text)
+{
+	if(%server != 2048)
+		return;
+	$KS::tipBuild = $KS::tipBuild @ %text;
+}
+
+function remoteKShopTipDone(%server)
+{
+	if(%server != 2048)
+		return;
+	$KS::tipText = KronosHUD::stripTags($KS::tipBuild);
+	$KS::tipFor = $KS::tipRequestKey;
+	$KS::tipReady = true;
+}
+
 // ============================================
 // Display list - sorts rows by heading then name, inserts heading
 // rows, restores the selection (by ItemData index) after a re-push
@@ -244,6 +269,7 @@ function KronosShop::render(%dimensions)
 	$Panel::infoShown = false;
 	$Panel::plW = 0;
 	$Panel::sbStShown = false;
+	$KS::hoverSeen = false;
 
 	if($KS::open == "bank")
 	{
@@ -261,6 +287,13 @@ function KronosShop::render(%dimensions)
 			KronosShop::renderPane("st", $KSL::rx, $KSL::ry, %title);
 		}
 	}
+
+	if(!$KS::hoverSeen)
+	{
+		$KS::hoverKey = "";
+		$KS::tipReady = false;
+	}
+	KronosShop::renderTip(%sw, %sh);
 }
 
 function KronosShop::renderPane(%p, %px, %py, %title)
@@ -316,6 +349,19 @@ function KronosShop::renderPane(%p, %px, %py, %title)
 	if($KM::mouseOn && $KM::mouseY >= %rowY0 && $KM::mouseY < %rowY0 + (%visible * %rowH)
 		&& $KM::mouseX >= %px + %pad && $KM::mouseX < %px + %w - %pad - %scrW)
 		%hovSlot = floor(($KM::mouseY - %rowY0) / %rowH);
+
+	if(%hovSlot >= 0)
+	{
+		%hd = %first + %hovSlot;
+		if(%hd < %total && $KS::dispType[%p, %hd] == "item")
+		{
+			%hr = $KS::dispRef[%p, %hd];
+			if(%p == "inv")
+				KronosShop::hoverTip($KS::invKind[%hr], $KS::invRef[%hr]);
+			else
+				KronosShop::hoverTip($KS::stKind[%hr], $KS::stRef[%hr]);
+		}
+	}
 
 	// ---- rectangles ----
 	glDisable($GL_TEXTURE_2D);
@@ -497,6 +543,84 @@ function KronosShop::renderPane(%p, %px, %py, %title)
 	}
 }
 
+function KronosShop::hoverTip(%kind, %ref)
+{
+	%key = %kind @ "|" @ %ref;
+	$KS::hoverSeen = true;
+	if($KS::hoverKey != %key)
+	{
+		$KS::hoverKey = %key;
+		$KS::hoverAt = getSimTime();
+		$KS::tipReady = false;
+		$KS::tipRequested = false;
+	}
+
+	if(!$KS::tipRequested && getSimTime() - $KS::hoverAt >= 0.35)
+	{
+		$KS::tipRequested = true;
+		$KS::tipRequestKey = %key;
+		remoteEval(2048, KShopTip, %kind, %ref);
+	}
+}
+
+function KronosShop::wrapTip(%text, %maxW, %font)
+{
+	$KST::lineN = 0;
+	glSetFont("Verdana", %font, $GLEX_SMOOTH, 0);
+	%line = "";
+	for(%i = 0; (%word = getWord(%text, %i)) != -1 && $KST::lineN < 12; %i++)
+	{
+		if(%line == "")
+			%try = %word;
+		else
+			%try = %line @ " " @ %word;
+		if(getWord(glGetStringDimensions(%try), 0) > %maxW && %line != "")
+		{
+			$KST::line[$KST::lineN] = %line;
+			$KST::lineN++;
+			%line = %word;
+		}
+		else
+			%line = %try;
+	}
+	if(%line != "" && $KST::lineN < 12)
+	{
+		$KST::line[$KST::lineN] = %line;
+		$KST::lineN++;
+	}
+}
+
+function KronosShop::renderTip(%sw, %sh)
+{
+	if(!$KS::hoverSeen || !$KS::tipReady || $KS::tipFor != $KS::hoverKey)
+		return;
+
+	%font = floor(%sh * 0.012);
+	if(%font < 9) %font = 9;
+	%pad = floor(%font * 0.65);
+	%w = floor(%sw * 0.30);
+	if(%w < 260) %w = 260;
+	if(%w > 520) %w = 520;
+	KronosShop::wrapTip($KS::tipText, %w - (%pad * 2), %font);
+	%lineH = %font + floor(%font * 0.35);
+	%h = ($KST::lineN * %lineH) + (%pad * 2);
+	%x = $KM::mouseX + 18;
+	%y = $KM::mouseY + 18;
+	if(%x + %w > %sw) %x = $KM::mouseX - %w - 18;
+	if(%y + %h > %sh) %y = %sh - %h - 8;
+	if(%x < 8) %x = 8;
+	if(%y < 8) %y = 8;
+
+	glColor4ub(8, 11, 18, 244);
+	glRectangle(%x, %y, %w, %h);
+	glColor4ub(85, 140, 210, 220);
+	glRectangle(%x, %y, %w, 2);
+	glSetFont("Verdana", %font, $GLEX_SMOOTH, 0);
+	glColor4ub(232, 237, 245, 245);
+	for(%i = 0; %i < $KST::lineN; %i++)
+		glDrawString(%x + %pad, %y + %pad + (%i * %lineH), $KST::line[%i]);
+}
+
 // Draws the button chip and records its rect for click hit-testing
 function KronosShop::button(%x, %y, %label, %act, %rowH, %font)
 {
@@ -674,23 +798,6 @@ function KronosShop::doAction(%act)
 // Draw hook - replaces KronosMenu.cs's definition (this file loads
 // last); calls the menu render, the examine overlay, then the shop
 // ============================================
-
-function ScriptGL::playGui::onPostDraw(%dimensions)
-{
-	%dim = KronosMenu::screenDim(%dimensions);
-
-	KronosMenu::render(%dim);
-
-	if($KH::exTime != "" && (GetSimTime() - $KH::exTime) < 10.0)
-		kronos::examine_render(getword(%dim, 0), getword(%dim, 1));
-
-	KronosShop::render(%dim);
-
-	KronosChat::render(getword(%dim, 0), getword(%dim, 1));
-	KronosNPC::render(getword(%dim, 0), getword(%dim, 1));
-	KronosMenu::renderSlider(getword(%dim, 0), getword(%dim, 1));
-	KronosMenu::renderChatGrip(getword(%dim, 0), getword(%dim, 1));
-}
 
 // ============================================
 // Initialize

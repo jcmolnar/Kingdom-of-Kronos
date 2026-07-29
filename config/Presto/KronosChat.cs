@@ -187,7 +187,11 @@ function KronosChat::rewrap(%w, %font)
 // ============================================
 function KronosChat::render(%sw, %sh)
 {
-	if(!$pref::Kronos::chatEnabled)
+	%owns = true;
+	if(isFunction("KronosHUD::ownsSlot"))
+		%owns = KronosHUD::ownsSlot($pref::HudSlot::chat);
+
+	if(!$pref::Kronos::chatEnabled || !%owns)
 	{
 		$Panel::kchatShown = false;
 		$Panel::kchatSzShown = false;
@@ -672,9 +676,13 @@ function KronosChat::lastMsg()
 // ============================================
 function KronosChat::applyVisibility()
 {
-	if($pref::Kronos::chatEnabled)
+	%owns = true;
+	if(isFunction("KronosHUD::ownsSlot"))
+		%owns = KronosHUD::ownsSlot($pref::HudSlot::chat);
+
+	if($pref::Kronos::chatEnabled && %owns)
 		Control::SetVisible(chatDisplayHud, false);
-	else
+	else if(%owns)
 		Control::SetVisible(chatDisplayHud, true);
 }
 
@@ -802,7 +810,11 @@ function KronosChat::bindTalkKey()
 	// So the native plugin SWALLOWS Y (DIK 0x15 = 21) before the engine's action map
 	// and flags us; we poll glPollHotkey() in render() and open the composer. Setting
 	// the hotkey to 0 lets Y fall back to stock chat (when the overlay is disabled).
-	if($pref::Kronos::chatEnabled)
+	%owns = true;
+	if(isFunction("KronosHUD::ownsSlot"))
+		%owns = KronosHUD::ownsSlot($pref::HudSlot::chat);
+
+	if($pref::Kronos::chatEnabled && %owns)
 		glSetTalkKey(21);
 	else
 		glSetTalkKey(0);

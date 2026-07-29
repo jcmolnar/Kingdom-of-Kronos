@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "framework": 2,
+  "id": "kronos",
+  "name": "Kronos",
+  "authoring": "manual",
+  "reference": { "width": 1920, "height": 1080 },
+  "assets": {},
+  "prefs": {},
+  "stockHuds": [
+    { "name": "crosshairHud",   "class": "FearGui::Crosshair",          "visible": true  },
+    { "name": "chatDisplayHud", "class": "FearGui::FearGuiChatDisplay", "visible": false },
+    { "name": "Minimap",        "class": "FearGui::Minimap",            "visible": true  },
+    { "name": "clockHud",       "class": "FearGui::ClockHud",           "visible": true  },
+    { "name": "healthHud",      "class": "FearGui::HealthHud",          "visible": false },
+    { "name": "jetPackHud",     "class": "FearGui::JetHud",             "visible": false },
+    { "name": "weaponHud",      "class": "FearGui::WeaponHud",          "visible": false },
+    { "name": "compassHud",     "class": "FearGui::CompassHud",         "visible": false },
+    { "name": "sensorHUD",      "class": "FearGui::SensorHud",          "visible": false }
+  ],
+  "parts": [
+    {
+      "id": "vitals",
+      "slot": "healthenergy",
+      "handle": "KronosHUD::Vitals",
+      "anchor": "bottom-left",
+      "offset": [29, 95],
+      "size": [350, 78],
+      "elements": [
+        { "type": "script", "at": [0, 0], "from": "KronosHUD::drawVitals",
+          "body": ["KronosHUD::drawVitals(%screen);"] }
+      ]
+    },
+    {
+      "id": "info",
+      "slot": "items",
+      "handle": "KronosHUD::Info",
+      "anchor": "bottom-right",
+      "offset": [55, 95],
+      "size": [300, 78],
+      "elements": [
+        { "type": "script", "at": [0, 0], "from": "KronosHUD::drawInfo",
+          "body": ["KronosHUD::drawInfo(%screen);"] }
+      ]
+    },
+    {
+      "id": "weapon",
+      "slot": "weapon",
+      "handle": "KronosHUD::Weapon",
+      "anchor": "bottom-center",
+      "offset": [0, 6],
+      "size": [420, 34],
+      "elements": [
+        { "type": "script", "at": [0, 0], "from": "KronosHUD::drawWeaponBar",
+          "body": ["KronosHUD::drawWeaponBar(%screen);"] }
+      ]
+    },
+    {
+      "id": "chat",
+      "slot": "chat",
+      "handle": "KronosHUD::Chat",
+      "anchor": "bottom-left",
+      "offset": [29, 281],
+      "size": [653, 173],
+      "elements": [
+        { "type": "script", "at": [0, 0], "from": "KronosChat::render",
+          "body": ["// Rendered by the shared post-draw dispatcher."] }
+      ]
+    }
+  ],
+  "adapters": []
+}

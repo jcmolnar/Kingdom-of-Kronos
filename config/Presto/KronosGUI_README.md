@@ -34,12 +34,12 @@ Lives alongside the scripts it documents (`config/Presto/`). Files:
   (caps ignored). The comchat botType prompts were edited to bracket their options
   (`[ENTER]`, `[FIGHT]`/`[LEAVE]`, `[YES]`/`[NO]`, `[BUY]`, `[SMITH]`, class & per-house
   lists, ...) for 100% clean capture; any un-bracketed prompt still falls back to caps.
-- **KronosHUD.cs** — vhud HUD (HP/MP/XP, Lv/Gold, cast bar, weapon popup, equipped
-  weapon bar, target frame). Loads first; defines `kronos::examine_render` and the
-  `onPreDraw` override that feeds vhud the real canvas size. Vitals bar text is drawn by
-  `kronos::drawBarText` (centered, font auto-shrinks so big RPG numbers stay inside the
-  bar); XP text is near-black for contrast on the gold bar; the vitals panel has no
-  backdrop (bars provide their own dark track).
+- **KronosHUD.cs** — ModernHUD-compatible RPG client bridge (HP/MP/XP, Lv/Gold,
+  cast/recovery bar, weapon popup/bar, target frame, examine popup and the
+  previously external ATKText floating-damage receiver). It is loaded once by
+  `ModernHUD/Framework.cs`, registers the client handshake/remote receivers,
+  publishes `Kronos::*` slot providers, and owns the single ScriptGL post-draw
+  dispatcher used by the other Kronos GUI scripts.
 - **KronosInput.cs** — reusable ScriptGL **text-input field** (keyboard capture).
   ScriptGL is draw-only, so this rides a small NATIVE-BUILD seam: `glTextInput(1)`
   makes the engine forward each keyboard MAKE to `ScriptGL::onChar`/`onKey` and
@@ -54,7 +54,9 @@ Lives alongside the scripts it documents (`config/Presto/`). Files:
   CHARACTER to `onChar` (TorqueScript can't convert an ascii code back to a char).
 - **scriptgl2.cs** — stock Hudbot vhud framework (NOT a Kronos file; don't edit).
 
-Load order (autoexec.cs): scriptgl2 → KronosHUD → KronosInput → KronosMenu → KronosShop → KronosChat → KronosNPC.
+Load order: ModernHUD framework → KronosHUD → KronosInput → KronosMenu →
+KronosShop → KronosChat → KronosNPC. KronosHUD performs the companion loads
+once, so pack swaps and script reloads cannot change the renderer order.
 Server (Dev `rpg/scripts/`, Server.cs): KronosHUD_Server, KronosNPC_Server.
 
 ## Rendering seam
@@ -84,10 +86,10 @@ their on-screen rects each frame; `onMouseLMB` checks **slider → panel drag �
 - TAB-menu panels (KronosMenu): **menu** + **players** drag by their **title bar**;
   **character-info** box drags anywhere. Positions are screen fractions.
 - Shop panes reuse the menu/players positions (drag from either screen moves both).
-- vhud HUD panels (KronosHUD): **kh_vitals** (HP/MP/XP), **kh_info** (Lv/Gold),
-  **kh_wbar** (equipped weapon) — whole panel is the handle; hit-tested via their vhud
-  render rects; on drag we rewrite `$vhud[name,pos]` + bust `$vhud[name,lastdimensions]`.
-  Their SIZE stays proportional (old framework) — only position is movable.
+- Kronos HUD panels: **kh_vitals** (HP/MP/XP), **kh_info** (Lv/Gold),
+  **kh_wbar** (equipped weapon). The ModernHUD-compatible renderer publishes
+  their live rectangles into the legacy `$vhud` cache so the existing TAB-menu
+  drag code and saved percentage positions continue to work.
 - **Chat** (KronosChat.cs): a **custom ScriptGL chat overlay** replaces the stock engine
   chat. Incoming chat is captured via Presto's `eventClientMessage` (from `onClientMessage`)
   and rendered with `glDrawString` at an **adjustable font size + visible line count**,
@@ -146,6 +148,16 @@ $pref::Kronos::chatW              WINDOW width, fraction of screen (default 0.34
 $pref::Kronos::chatH              WINDOW height, fraction of screen (default 0.16)
 $pref::Kronos::chatPosX/chatPosY  overlay position, fractions (default 0.015, 0.58)
 $pref::Kronos::chatBg             dim backdrop behind chat text (default true)
+$pref::Kronos::enabled            master switch for persistent Kronos slot panels
+$pref::Kronos::vitals             HP/MP/XP + level/class/gold panels
+$pref::Kronos::target             RPG target frame
+$pref::Kronos::cast               cast and recovery bar
+$pref::Kronos::weaponPopup        timed weapon-description popup
+$pref::Kronos::examinePopup       timed item-examine popup
+$pref::Kronos::damageText         ATKText floating damage/miss messages
+$pref::Kronos::opacity            Kronos panel/text opacity percentage
+$pref::Kronos::UiScalePct         Options-friendly 50..150 UI scale value
+$pref::Kronos::ChatScale          Options-friendly chat font value
 ```
 
 ## Console helpers (KronosMenu.cs)
@@ -170,8 +182,8 @@ KronosNPC::test()            preview the NPC dialogue window;  KronosNPC::resetP
 ```
 
 ## Gotchas
-- vhud caches per-panel by `lastdimensions`; to move a vhud panel you MUST also set
-  `$vhud[name,lastdimensions]=""` so it recomputes.
+- KronosHUD publishes panel rectangles through `$vhud[name,render,*]` for the
+  existing drag code, but it no longer depends on vhud's draw callback.
 - `Control::getExtent`/`getPosition` return `"w h"` / `"x y"`; `Control::setPosition`
   (Hudbot, default HUDs) takes `(name, x, y)`.
 - Keep this file and the .cs in sync between `C:\Dynamix\Tribes\config\Presto` and the

@@ -1300,23 +1300,6 @@ function KronosMenu::applyChatPos()
 	Control::setPosition("chatDisplayHud", floor($pref::Kronos::chatX * %sw), floor($pref::Kronos::chatY * %sh));
 }
 
-function ScriptGL::playGui::onPostDraw(%dimensions)
-{
-	%dim = KronosMenu::screenDim(%dimensions);
-
-	KronosMenu::render(%dim);
-
-	// Item examine overlay (KronosHUD.cs) - drawn here so it sits at
-	// the menu's info-panel spot and shows whether or not the TAB
-	// menu is currently open
-	if($KH::exTime != "" && (GetSimTime() - $KH::exTime) < 10.0)
-		kronos::examine_render(getword(%dim, 0), getword(%dim, 1));
-
-	KronosChat::render(getword(%dim, 0), getword(%dim, 1));
-	KronosMenu::renderSlider(getword(%dim, 0), getword(%dim, 1));
-	KronosMenu::renderChatGrip(getword(%dim, 0), getword(%dim, 1));
-}
-
 // ============================================
 // Console helpers
 // ============================================
