@@ -105,6 +105,7 @@ Everything before step 5 is fully reversible.
 3. **Verify down:** no `Temp\*.cs` mtimes advancing, no new `console.log` writes.
 4. **★ Back up `Temp\` → `Temp.PREVOID-<stamp>\` (COPY, not move; ~881 KB)** and zip a second copy outside the server directory. This is the only artifact that can undo a bad migration on ~179 real characters.
    **Verify by count, not by memory:** run the census *at drain* (`find Temp -maxdepth 1 -name "*.cs" | wc -l`) and confirm the backup has the identical number. As of 2026-08-08 that is 185 `.cs` = ~179 player saves + 6 state files (`KingdomKronos_worldsave_`, `ServerTime`, `SealValue`, `HouseObjectives`, `watchdog_state`, `serverTempData28000`) — but it drifts as players join, so the recorded number wins. [C3]
+4b. **Back up `config\` → `config.bak-<stamp>\` (copy).** Live state lives here too, not only in `Temp\`: `banlist.cs`, `WeeklyBossState.cs` (weekly boss progress), `ServerPrefs.cs` (rewritten by the server on exit) and `TaurikAdmins.cs` (admin list) — all live-owned and actively written. The package deliberately ships **no** config files, but step 8 *does* write into this folder (`DeployProfile.cs`, `RemoteConsole.cs`, the new secret), so one mis-aimed copy there costs bans, admins and weekly progress. Cheap insurance; also gives rollback a clean `config\` to restore.
 5. **RENAME `rpg\scripts` → `rpg\scripts.bak-<date>`. Do not merge into it.** Live's `Ai.cs` is a 568 KB monolith; dev's `ai.cs` is a 1.1 KB shell loader plus 5 `ai_*.cs` modules (same for rpgfunk/playerdamage/spells/weapons). On a case-insensitive merge the old monoliths can survive alongside the new modules → duplicate definitions, last-exec-wins, undebuggable. A rename makes the deployed folder *provably* the validated artifact.
 6. Copy package `scripts\` → `rpg\scripts\`; verify count + `Server.cs` hash.
 7. Back up `Plugins\` → `Plugins.bak-<date>\`, then install `kronos_virtualitems.dll`, the rebuilt `kronos_datetime.dll`, any hash-differing DLL, and the live `PluginLoader.cs`.
@@ -140,7 +141,7 @@ Open to general population (per your choice). Post the announcement **before** c
 
 ## Rollback
 
-- **Level 1 (before any player login):** stop server → delete `rpg\scripts`, rename `.bak` back → restore `Plugins.bak` → remove `DeployProfile.cs` → restart. `Temp\` untouched.
+- **Level 1 (before any player login):** stop server → delete `rpg\scripts`, rename `.bak` back → restore `Plugins.bak` → restore `config.bak` (or just remove `DeployProfile.cs`/`RemoteConsole*.cs`) → restart. `Temp\` untouched.
 - **Level 2 (after some logins):** Level 1 plus restore **only the affected characters'** saves from `Temp.PREVOID-<stamp>\`; leave never-migrated saves alone.
 - **Level 3 (broad):** Level 1 plus restore the entire `Temp\`. Everything since cutover is lost.
 

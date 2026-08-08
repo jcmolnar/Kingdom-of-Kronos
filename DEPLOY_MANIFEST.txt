@@ -51,6 +51,7 @@ GATES (LIVE_MIGRATION_PLAN.md Phase 2)
 CUTOVER RECORD (fill in on the day)
   drain-time Temp\ .cs count :        (verify backup matches EXACTLY)
   Temp backup path           : Temp.PREVOID-________
+  config backup path         : config.bak-________
   scripts backup path        : rpg\scripts.bak-________
   Plugins backup path        : Plugins.bak-________
   deployed at                :
