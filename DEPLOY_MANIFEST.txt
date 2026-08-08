@@ -1,0 +1,55 @@
+KINGDOM OF KRONOS - LIVE DEPLOY MANIFEST
+========================================
+This file ships INSIDE the live rpg\scripts folder so the running server
+self-documents exactly what it is. Procedure: LIVE_MIGRATION_PLAN.md
+
+RELEASE IDENTITY
+  tag            : live-2026-08-08
+  commit         : (filled at package build - `git rev-parse live-2026-08-08`)
+  branch         : testing
+  packaged by    :
+  packaged at    :
+
+NOTE ON HASHES: older notes in CLAUDE_HANDOFF.md quote short hashes that do NOT
+resolve in this repository. The TAG above is the release identity - cite tags.
+
+PHASE 0 (freeze) - DONE 2026-08-08
+  [x] LIVE_MIGRATION_PLAN.md copied into repo
+  [x] DEPLOY_CHECKLIST.md marked superseded (sections 0-3)
+  [x] Turret.cs reviewed and committed into the release (d9e1f97 at time of
+      writing; see tag) - INCLUDE-AND-GATE, see G3a
+  [x] CLAUDE_HANDOFF.md corrected (phantom hashes)
+  [x] tag created
+
+PACKAGE CONTENTS (filled at package build - G10)
+  scripts\        : ___ top-level .cs   (expected ~175 minus exclusions)
+  Server.cs sha256:
+  excluded        : MigrationTest.cs, ai_safeguards_off.cs, all subdirs
+                    (stale\ analysis\ backup\ ChangeLogs\), all .md docs
+  Plugins\
+    kronos_virtualitems.dll   sha256:            (NEW to live - mandatory)
+    kronos_datetime.dll       sha256:            (rebuilt - has getRealMillis)
+    <other hash-differing DLLs>
+    Scripts\PluginLoader.cs   : live variant (kronos_virtualitems ON,
+                                kronos_reprobe REMOVED)
+  config\
+    DeployProfile.cs          : $Deploy::Profile = "live";
+                                $Deploy::EstatesEnabled = false;  (staged)
+    RemoteConsole.cs          : + freshly generated RemoteConsole.local.cs
+                                secret ON LIVE (never copy dev's)
+
+GATES (LIVE_MIGRATION_PLAN.md Phase 2)
+  [ ] G1  clean cold boot on dev            [ ] G6  48h soak
+  [ ] G2  vanilla stock-client pass         [ ] G7  $VoidPerf baseline
+  [ ] G3  Estates pass                      [ ] G8  * save-migration rehearsal
+  [ ] G3a turret 15s loop cost + estates    [ ] G9  rollback rehearsal
+  [ ] G4  asset scan + mission md5          [ ] G10 package integrity
+  [ ] G5  plugin hash matrix
+
+CUTOVER RECORD (fill in on the day)
+  drain-time Temp\ .cs count :        (verify backup matches EXACTLY)
+  Temp backup path           : Temp.PREVOID-________
+  scripts backup path        : rpg\scripts.bak-________
+  Plugins backup path        : Plugins.bak-________
+  deployed at                :
+  boot log checked by        :

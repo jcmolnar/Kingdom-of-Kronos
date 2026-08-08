@@ -1,5 +1,14 @@
 # Live Server Deploy Checklist (dev V0.8.1 -> live)
 
+> **SUPERSEDED 2026-08-08 — sections 0-3 below are obsolete. Use `LIVE_MIGRATION_PLAN.md`.**
+> Why: dev itself was stripped of the new-model KOKBATCH content on 2026-07-14, so dev IS
+> the sanitized content now and the `sanitized of new weapons\` package is dead (its
+> Server.cs had rotted - missing `VSlot::Init` and `VoidPrice::MirrorAll` -> blank shop
+> prices). The parallel-sanitized-Server.cs pattern is retired in favour of a per-host
+> `config\DeployProfile.cs`, so dev and live run byte-identical scripts. Sections 4-5
+> (restart/verify, rollback) are still directionally right but are superseded in detail by
+> the new plan's gates, `Temp\` backup rule and three-level rollback.
+
 Live server: `C:\Users\Joe\Desktop\Kingdom of Kronos V0.8 BOV Plugins\rpg\scripts`
 
 ## 0. Diff results vs live (2026-07-12)

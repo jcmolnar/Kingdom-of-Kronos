@@ -3,6 +3,17 @@
 Self-contained briefing for a brand-new Claude session/account with NO prior memory.
 Read this whole file before touching anything. It supersedes any stale HANDOFF/notes.
 
+> **CORRECTION 2026-08-08 — do not chase the commit hashes in this file.**
+> Every short hash quoted below (b71f821, 02a3f45, 013793e, 269adca, 505efab, b2ef434,
+> ee6b7ac, e0849c8, 314828e, 07a40c1, d22314c, e9f23f5, 44ce594, 5839014, 10c50bd,
+> a7250ab, eb7c26b, 406e710, bfb663f, aadc957, 9deb93d, cae6acb, …) **does not resolve in
+> this repository** — `HEAD` is `e0d932a` (Jul 29) and `git reflog` shows nothing after it.
+> **The CODE those notes describe is present and committed at HEAD** (verified: Estate
+> zones/clearance/naming, the Void conversion, the HUD and perf fixes) — nothing is lost,
+> only the hashes are wrong. Read the notes as a description of *what the tree contains*,
+> not as a commit trail. From the `live-YYYYMMDD` deploy tag onward, **the tag is the
+> release identity** — cite tags, not hashes. Deploy procedure: `LIVE_MIGRATION_PLAN.md`.
+
 ---
 
 ## 1. What this project is
@@ -319,7 +330,9 @@ Deploy checklist file exists: `DEPLOY_CHECKLIST.md` (repo root).
 
 ## 9. Current tree state (as of this handoff)
 
-- Everything script-side committed through **505efab**. See `git log 269adca..505efab`
+- All the script work described here is present and committed at **`HEAD` = `e0d932a`**,
+  tagged **`live-2026-08-08`** as the deploy candidate (the hashes below don't resolve —
+  see the CORRECTION at the top of this file). Historical arc, for context only:
   for the 2026-07-15 arc: Void HUD fixes → perf hunt → backlog cleanup (Estates,
   remote admin, parked fixes) → Estate live-test fixes & features (LOS, houses,
   zones, naming, clearance, display-only tab name).
