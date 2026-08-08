@@ -260,12 +260,21 @@ function createServer(%mission, %dedicated)
 	// VoidPrice::MirrorAll, which would have shipped blank shop prices - so that
 	// pattern is retired. See LIVE_MIGRATION_PLAN.md.
 	// A missing file is harmless: exec logs not-found and everything defaults to dev.
+	//
+	// ORDER MATTERS (found by actually booting, 2026-08-08): console.log is not
+	// open yet at the very top of this function - the first exec whose banner
+	// reaches the log is Ai.cs, so even "Executing globals.cs." is missing from
+	// the file. Anything echoed before exec(globals) goes to the console WINDOW
+	// only and is invisible to the log gate. So this block sits AFTER globals:
+	// still far ahead of its only consumer ($pref::EstatesEnabled, ~100 lines
+	// below), and now actually verifiable at boot. Profile values also win over
+	// globals.cs defaults this way, which is the behaviour we want.
+	exec(globals);
 	exec(DeployProfile);
 	if($Deploy::Profile == "")
 		$Deploy::Profile = "dev";
 	echo("[DEPLOY] profile = " @ $Deploy::Profile);
 
-	exec(globals);
 	// Load Ai.cs (from base\scripts.vol - we can't override it easily)
 	exec(Ai);
 	exec(rpgfunk);
