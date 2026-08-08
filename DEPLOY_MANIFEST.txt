@@ -26,7 +26,7 @@ PHASE 0 (freeze) - DONE 2026-08-08
 PACKAGE CONTENTS (filled at package build - G10)
   scripts\        : 172 top-level .cs  (174 in dev minus the 2 exclusions below)
                     + this DEPLOY_MANIFEST.txt (the ONLY non-.cs file, on purpose)
-  Server.cs sha256: d0343a9f8e41055bca97b8a4cbe0bd068033338797217b4619521376da8f663d
+  Server.cs sha256: 1abd28bf4d849327895f4e9ff6a8d9f2797bb30a974ad8f75012dd24de222e7d
                     (verified identical to git show live-2026-08-08:rpg/scripts/Server.cs)
   excluded        : MigrationTest.cs, ai_safeguards_off.cs, all subdirs
                     (stale\ analysis\ backup\ ChangeLogs\), all .md docs
@@ -46,8 +46,14 @@ PACKAGE CONTENTS (filled at package build - G10)
     RemoteConsole.cs          : + freshly generated RemoteConsole.local.cs
                                 secret ON LIVE (never copy dev's)
 
+DEV BASELINE (compare live's boot against these)
+  [SLOT AUDIT] ItemData types registered: 221 / 256
+  [VSLOT] windows ready: weapons 8 (2..9), armor 20 (10..29), storage 20 (30..49)
+  Number::Beautify sanity: 123456 -> 123,456
+  syntax errors: NONE
+
 GATES (LIVE_MIGRATION_PLAN.md Phase 2)
-  [ ] G1  clean cold boot on dev            [ ] G6  48h soak
+  [x] G1  clean cold boot on dev  PASS      [ ] G6  48h soak
   [ ] G2  vanilla stock-client pass         [ ] G7  $VoidPerf baseline
   [ ] G3  Estates pass                      [ ] G8  * save-migration rehearsal
   [ ] G3a turret 15s loop cost + estates    [ ] G9  rollback rehearsal
