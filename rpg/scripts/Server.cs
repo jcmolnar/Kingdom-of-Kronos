@@ -251,6 +251,20 @@ function createServer(%mission, %dedicated)
 	else
 		newObject(serverDelegate, FearCSDelegate, true, "IP", $Server::Port, "IPX", 	$Server::Port, "LOOPBACK", $Server::Port);
    
+	// DEPLOY PROFILE 2026-08-08: per-host settings live in config\DeployProfile.cs
+	// (gitignored, one small file per machine - the same exec-from-config pattern
+	// RemoteConsole.cs already uses below). This exists so the SCRIPT TREE STAYS
+	// BYTE-IDENTICAL between dev and live: every deploy is a straight folder
+	// replace with nothing to remember. The old hand-maintained "sanitized"
+	// Server.cs rotted exactly that way - it silently lost VSlot::Init and
+	// VoidPrice::MirrorAll, which would have shipped blank shop prices - so that
+	// pattern is retired. See LIVE_MIGRATION_PLAN.md.
+	// A missing file is harmless: exec logs not-found and everything defaults to dev.
+	exec(DeployProfile);
+	if($Deploy::Profile == "")
+		$Deploy::Profile = "dev";
+	echo("[DEPLOY] profile = " @ $Deploy::Profile);
+
 	exec(globals);
 	// Load Ai.cs (from base\scripts.vol - we can't override it easily)
 	exec(Ai);
@@ -343,9 +357,14 @@ function createServer(%mission, %dedicated)
 	exec(DailyQuest);
 	exec(WeeklyBoss);
 	exec(Estate);		// player housing/building; needs economy + rpgfunk deploy primitives (already exec'd)
-	// DEV ONLY: Estates are unfinished/untested - master gate defaults OFF in Estate.cs.
-	// The sanitized live Server.cs must NOT set this (or set false). See DEPLOY_CHECKLIST.md.
-	$pref::EstatesEnabled = true;
+	// Estates master gate. Defaults ON; a host stages it OFF with no script
+	// difference by setting $Deploy::EstatesEnabled = false in its own
+	// config\DeployProfile.cs - recommended for a live server's FIRST boot after
+	// a deploy so housing and a player-inventory migration don't land in the same
+	// hour. Flipping it on later is a one-line edit + restart, no redeploy.
+	if($Deploy::EstatesEnabled == "")
+		$Deploy::EstatesEnabled = true;
+	$pref::EstatesEnabled = $Deploy::EstatesEnabled;
 	exec(BeltWeapons);	// needs Belt.cs (BeltItem::Add) + weapons.cs (shell tables) already exec'd
 	exec(RemoteAdminHelpers);	// stable entry points for the remote web admin console
 	exec(RemoteConsole);	// arm engine telnet rcon (config/RemoteConsole.cs); needs the .local.cs secret

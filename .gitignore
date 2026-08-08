@@ -20,3 +20,7 @@ config/Raw Log.txt
 
 # Remote admin console secret (telnet rcon password)
 config/RemoteConsole.local.cs
+
+# Per-host deploy settings (dev vs live). Each machine keeps its own so it can
+# never travel in a deploy and clobber the live server's. See LIVE_MIGRATION_PLAN.md
+config/DeployProfile.cs
