@@ -122,7 +122,9 @@ TurretData TempleIndoorTurret
 	speedModifier = 1.0;
 	range = 50;
 	visibleToSensor = true;
-	dopplerVelocity = 2;
+	// Indoor turrets must retain stationary targets; Doppler filtering allowed
+	// players to disappear from targeting simply by stopping.
+	dopplerVelocity = 0;
 	castLOS = true;
 	supression = false;
 	supressable = false;
@@ -154,7 +156,8 @@ TurretData IndoorTurret
 	speedModifier = 1.0;
 	range = 25;
 	visibleToSensor = true;
-	dopplerVelocity = 2;
+	// See TempleIndoorTurret: movement must not be required for detection.
+	dopplerVelocity = 0;
 	castLOS = true;
 	supression = false;
 	supressable = false;
@@ -405,7 +408,7 @@ function Turret::verifyTarget(%this, %target)
 
 // Ensure all turrets in the mission are on team 1 (enemy of team 0 players)
 // This function should be called after mission load to fix any turrets that were initialized with wrong team
-function EnsureAllTurretsOnTeam1()
+function EnsureAllTurretsOnTeam1(%quiet)
 {
 	%missionGroup = nameToID("MissionGroup");
 	if(%missionGroup == -1)
@@ -414,60 +417,98 @@ function EnsureAllTurretsOnTeam1()
 		return;
 	}
 	
-	%turretCount = 0;
-	%fixedCount = 0;
+	$TurretMaintenanceCount = 0;
+	$TurretMaintenanceFixed = 0;
+	Turret::MaintainGroup(%missionGroup, %quiet);
 	
-	// Recursively search for all turrets
-	%objCount = Group::objectCount(%missionGroup);
+	if(!%quiet && $TurretMaintenanceCount > 0)
+		echo("[TURRET FIX] Checked " @ $TurretMaintenanceCount @ " turret(s), fixed " @ $TurretMaintenanceFixed @ " turret(s) to team 1");
+
+	if(!%quiet)
+		Turret::StartMaintenanceLoop();
+}
+
+function Turret::MaintainGroup(%group, %quiet)
+{
+	%objCount = Group::objectCount(%group);
 	for(%i = 0; %i < %objCount; %i++)
 	{
-		%obj = Group::getObject(%missionGroup, %i);
+		%obj = Group::getObject(%group, %i);
 		if(%obj == -1 || %obj == "")
 			continue;
-		
-		%dataName = GameBase::getDataName(%obj);
-		
-		// Check if this is a turret
-		if(String::findSubStr(%dataName, "Turret") != -1)
-		{
-			%turretCount++;
-			%currentTeam = GameBase::getTeam(%obj);
-			if(%currentTeam != 1)
-			{
-				GameBase::setTeam(%obj, 1);
-				%fixedCount++;
-				echo("[TURRET FIX] Fixed turret " @ %obj @ " (" @ %dataName @ ") - was team " @ %currentTeam @ ", set to team 1");
-			}
-		}
-		
-		// Also check sub-groups recursively
+
 		if(getObjectType(%obj) == "SimGroup")
 		{
-			%subObjCount = Group::objectCount(%obj);
-			for(%j = 0; %j < %subObjCount; %j++)
-			{
-				%subObj = Group::getObject(%obj, %j);
-				if(%subObj == -1 || %subObj == "")
-					continue;
-				
-				%subDataName = GameBase::getDataName(%subObj);
-				if(String::findSubStr(%subDataName, "Turret") != -1)
-				{
-					%turretCount++;
-					%subCurrentTeam = GameBase::getTeam(%subObj);
-					if(%subCurrentTeam != 1)
-					{
-						GameBase::setTeam(%subObj, 1);
-						%fixedCount++;
-						echo("[TURRET FIX] Fixed turret " @ %subObj @ " (" @ %subDataName @ ") - was team " @ %subCurrentTeam @ ", set to team 1");
-					}
-				}
-			}
+			Turret::MaintainGroup(%obj, %quiet);
+			continue;
 		}
+
+		%dataName = GameBase::getDataName(%obj);
+		if(String::findSubStr(%dataName, "Turret") == -1)
+			continue;
+
+		$TurretMaintenanceCount++;
+		%currentTeam = GameBase::getTeam(%obj);
+		if(%currentTeam != 1)
+		{
+			GameBase::setTeam(%obj, 1);
+			$TurretMaintenanceFixed++;
+			if(!%quiet)
+				echo("[TURRET FIX] Fixed turret " @ %obj @ " (" @ %dataName @ ") - was team " @ %currentTeam @ ", set to team 1");
+		}
+
+		Turret::MaintainRuntimeState(%obj, %dataName);
 	}
-	
-	if(%turretCount > 0)
-		echo("[TURRET FIX] Checked " @ %turretCount @ " turret(s), fixed " @ %fixedCount @ " turret(s) to team 1");
+}
+
+function Turret::MaintainRuntimeState(%turret, %dataName)
+{
+	if(%turret == "" || %turret == -1 || GameBase::getDamageState(%turret) != "Enabled")
+		return;
+
+	// Deployable turrets are self-powered and use their own recharge rate.
+	if(%dataName == "DeployableTurret")
+	{
+		GameBase::setRechargeRate(%turret, 5);
+		if(!GameBase::isActive(%turret))
+			GameBase::setActive(%turret, true);
+		return;
+	}
+
+	// Camera turrets have no weapon or gun-energy state to maintain.
+	if(%dataName == "CameraTurret")
+		return;
+
+	if(GameBase::isPowered(%turret))
+	{
+		if(%dataName == "RocketTurret")
+			GameBase::setRechargeRate(%turret, 14);
+		else
+			GameBase::setRechargeRate(%turret, 10);
+
+		if(!GameBase::isActive(%turret))
+			GameBase::setActive(%turret, true);
+	}
+}
+
+function Turret::StartMaintenanceLoop()
+{
+	if($TurretMaintenanceToken == "" || $TurretMaintenanceToken == -1)
+		$TurretMaintenanceToken = 0;
+
+	$TurretMaintenanceToken++;
+	%token = $TurretMaintenanceToken;
+	schedule("Turret::MaintenanceTick(" @ %token @ ");", 15);
+}
+
+function Turret::MaintenanceTick(%token)
+{
+	// Tribes 1 has no schedule cancellation. Only the newest loop may continue.
+	if(%token != $TurretMaintenanceToken)
+		return;
+
+	EnsureAllTurretsOnTeam1(true);
+	schedule("Turret::MaintenanceTick(" @ %token @ ");", 15);
 }
 //**
 
