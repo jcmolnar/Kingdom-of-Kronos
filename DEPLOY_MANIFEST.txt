@@ -5,7 +5,7 @@ self-documents exactly what it is. Procedure: LIVE_MIGRATION_PLAN.md
 
 RELEASE IDENTITY
   tag            : live-2026-08-08
-  commit         : (filled at package build - `git rev-parse live-2026-08-08`)
+  commit         : 27f7c42a5970e7c3f9dd7f71f8798bc24e14a8d1
   branch         : testing
   packaged by    :
   packaged at    :
