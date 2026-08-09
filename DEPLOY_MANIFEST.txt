@@ -15,6 +15,9 @@ RELEASE IDENTITY
 NOTE ON HASHES: older notes in CLAUDE_HANDOFF.md quote short hashes that do NOT
 resolve in this repository. The TAG above is the release identity - cite tags.
 
+RE-FROZEN 2026-08-08 (bank ledger): chunked int32-safe balances replace the
+  BANK clamp. G1 re-run PASS on this tree. Package rebuilt, tag re-pointed.
+
 PHASE 0 (freeze) - DONE 2026-08-08
   [x] LIVE_MIGRATION_PLAN.md copied into repo
   [x] DEPLOY_CHECKLIST.md marked superseded (sections 0-3)
@@ -24,9 +27,9 @@ PHASE 0 (freeze) - DONE 2026-08-08
   [x] tag created
 
 PACKAGE CONTENTS (filled at package build - G10)
-  scripts\        : 172 top-level .cs  (174 in dev minus the 2 exclusions below)
+  scripts\        : 173 top-level .cs  (175 in dev minus the 2 exclusions below)
                     + this DEPLOY_MANIFEST.txt (the ONLY non-.cs file, on purpose)
-  Server.cs sha256: 1abd28bf4d849327895f4e9ff6a8d9f2797bb30a974ad8f75012dd24de222e7d
+  Server.cs sha256: afa480c6e00c5fd3c05dbd174a9aa71c5bb6bf04abf36a71d6965b361202d84f
                     (verified identical to git show live-2026-08-08:rpg/scripts/Server.cs)
   excluded        : MigrationTest.cs, ai_safeguards_off.cs, all subdirs
                     (stale\ analysis\ backup\ ChangeLogs\), all .md docs
