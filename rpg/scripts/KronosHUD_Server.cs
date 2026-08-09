@@ -885,7 +885,11 @@ function remoteKBankWithdraw(%clientId, %type, %amt)
 // Coin balances (carried + banked) for the pane headers.
 function KronosBank_PushCoins(%clientId)
 {
-	remoteEval(%clientId, "KBankCoins", Number::Beautify(fetchData(%clientId, "COINS"), -3), Bank::Format(%clientId));
+	// Pack the two bank fields into one quoted RPC argument. Some clients only
+	// delivered the first of three balance arguments, displaying 223,275 for a
+	// 223,275,xxx,xxx bank and then reusing that truncated value on withdraw.
+	%bankParts = Bank::RawChunks(%clientId) @ " " @ Bank::RawRemainder(%clientId);
+	remoteEval(%clientId, "KBankCoins", fetchData(%clientId, "COINS"), %bankParts);
 }
 
 // Deposit coins into the bank. %amt is OPTIONAL: HUD clients with the amount UI
@@ -926,9 +930,31 @@ function remoteKBankCoinsWithdraw(%clientId, %amt)
 	if(!Bank::CanAfford(%clientId, 1))
 		return;
 	%n = %amt;
-	if(%n == "" || %n <= 0)
+	if(%n == "all" || %n == "" || %n <= 0)
 		%n = "all";
 	%moved = Bank::WithdrawToCoins(%clientId, %n);
+	if(%moved <= 0)
+		return;
+	Client::sendMessage(%clientId, $MsgWhite, "Withdrew " @ Number::Beautify(%moved, -3) @ " coins.~wbuysellsound.wav");
+	RefreshAll(%clientId);
+	KronosBank_PushCoins(%clientId);
+}
+
+// Dedicated HUD "withdraw all" endpoint. It deliberately accepts no amount,
+// so remote argument truncation or stale client display state cannot turn the
+// bank's leading chunk count into the withdrawal amount.
+function remoteKBWAll(%clientId)
+{
+	if(!%clientId.hasKronosHUD)
+		return;
+	if(%clientId.currentBank == "")
+		return;
+	if(!KronosShop_ActGate(%clientId))
+		return;
+	if(!Bank::CanAfford(%clientId, 1))
+		return;
+
+	%moved = Bank::WithdrawToCoins(%clientId, "all");
 	if(%moved <= 0)
 		return;
 	Client::sendMessage(%clientId, $MsgWhite, "Withdrew " @ Number::Beautify(%moved, -3) @ " coins.~wbuysellsound.wav");
