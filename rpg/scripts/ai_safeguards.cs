@@ -1154,6 +1154,10 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	storeData(%clientId, "ignoreGlobal", "");
 	storeData(%clientId, "campPos", "");
 	storeData(%clientId, "BANK", "");
+	storeData(%clientId, "BANK_CHUNKS", "");
+	storeData(%clientId, "BANK_FORMAT", "");
+	storeData(%clientId, "BANK_LEGACY_BACKUP", "");
+	storeData(%clientId, "BANK_NEEDS_FILE_BACKUP", "");
 	storeData(%clientId, "isMimic", "");
 	storeData(%clientId, "grouplist", "");
 	storeData(%clientId, "partyOwned", "");
@@ -1266,6 +1270,10 @@ function ClearAllBotData(%clientId, %preserveBotInfoAiName)
 	$ClientData[%clientId, "ignoreGlobal"] = "";
 	$ClientData[%clientId, "campPos"] = "";
 	$ClientData[%clientId, "BANK"] = "";
+	$ClientData[%clientId, "BANK_CHUNKS"] = "";
+	$ClientData[%clientId, "BANK_FORMAT"] = "";
+	$ClientData[%clientId, "BANK_LEGACY_BACKUP"] = "";
+	$ClientData[%clientId, "BANK_NEEDS_FILE_BACKUP"] = "";
 	$ClientData[%clientId, "isMimic"] = "";
 	$ClientData[%clientId, "grouplist"] = "";
 	$ClientData[%clientId, "partyOwned"] = "";

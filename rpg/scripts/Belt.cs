@@ -1010,7 +1010,7 @@ function processMenuSellBeltItemFinal(%clientId, %opt)
 			}
 
 			%cost = Belt::GetSellCost(%clientId, %item) * %amnt;
-			Client::sendMessage(%clientId, $MsgWhite, "You sold " @ %amnt @ " " @ %item @ " for " @ Number::Beautify(%cost, -3) @ " coins.");
+			Client::sendMessage(%clientId, $MsgWhite, "You sold " @ %amnt @ " " @ %item @ " for " @ Bank::FormatAmount(%cost) @ " coins.");
 			UseSkill(%clientId, $SkillHaggling, true, true);
 			storeData(%clientId, "COINS", %cost, "inc");
 			Belt::TakeThisStuff(%clientId, %item, %amnt);
@@ -5328,21 +5328,20 @@ function processMenuBuyBeltItemConsumable(%clientId, %opt)
 	if(%action == "buy")
 	{
 		%cost = Belt::GetBuyCost(%clientId, %item) * %qty;
-		%coins = fetchData(%clientId, "COINS");
-		
-		if(%coins >= %cost)
+		if(Bank::CanPay(%clientId, %cost))
 		{
 			// review #20: pay via positive "dec", not "inc" of a negative amount -
 			// storeData treats a literal -1 as "unassigned" and zeroes it, so a
 			// heavily-discounted cost-1 item was previously free.
-			storeData(%clientId, "COINS", %cost, "dec");
+			if(!Bank::Pay(%clientId, %cost))
+				return;
 			Belt::GiveThisStuff(%clientId, %item, %qty, true);
 			
 			%name = $BeltItem[%item, "Name"];
 			if(%name == "")
 				%name = %item;
 			
-			Client::sendMessage(%clientId, $MsgGreen, "You purchased " @ %qty @ " " @ %name @ " for $" @ %cost @ ".~wbuysellsound.wav");
+			Client::sendMessage(%clientId, $MsgGreen, "You purchased " @ %qty @ " " @ %name @ " for $" @ Bank::FormatAmount(%cost) @ ".~wbuysellsound.wav");
 			
 			RefreshAll(%clientId);
 			SaveCharacter(%clientId);
@@ -5450,9 +5449,7 @@ function processMenuBuyBeltItem(%clientId, %opt)
 	if(%action == "buy")
 	{
 		%cost = Belt::GetBuyCost(%clientId, %item) * %amount;
-		%coins = fetchData(%clientId, "COINS");
-		
-		if(%coins < %cost)
+		if(!Bank::CanPay(%clientId, %cost))
 		{
 			Client::sendMessage(%clientId, $MsgRed, "You cannot afford this purchase.~wC_BuySell.wav");
 			MenuBuyBeltItem(%clientId, %item, %fromPage);
@@ -5460,7 +5457,8 @@ function processMenuBuyBeltItem(%clientId, %opt)
 		}
 		
 		// Deduct coins
-		storeData(%clientId, "COINS", %cost, "dec");
+		if(!Bank::Pay(%clientId, %cost))
+			return;
 		
 		// Give item to belt storage
 		Belt::GiveThisStuff(%clientId, %item, %amount);

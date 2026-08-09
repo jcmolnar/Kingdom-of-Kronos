@@ -11,7 +11,7 @@ function SetupBankDefault(%clientId, %bankerId)
 	%msg = "<jc><f2>To Deposit/Withdraw 'bulk' Coins or Items, please enter your desired 'bulk' number now!\n\n'Bulk' numbers must be greater than 0 and less than 1,000,000,000";
 	bottomprint(%clientId, %msg, 10);
 	
-	%header = "Banker Menu (M:$" @ numFormat(fetchData(%clientId, "COINS")) @ " B:$" @ numFormat(fetchData(%clientId, "BANK")) @ ")";
+	%header = "Banker Menu (M:$" @ numFormat(fetchData(%clientId, "COINS")) @ " B:$" @ Bank::Format(%clientId) @ ")";
 	Client::buildMenu(%clientId, %header, "Banker", true);
 	
 	Client::addMenuItem(%clientId, "1Deposit Coins", "deposit");
@@ -111,15 +111,18 @@ function processMenuBankerCoins(%clientId, %opt)
 		if(%mode == "deposit")
 			%amount = fetchData(%clientId, "COINS");
 		else
-			%amount = fetchData(%clientId, "BANK");
+			%amount = "all";
 	}
 	else
 	{
 		%amount = %opt;
 	}
 	
-	%c = floor(%amount);
-	if(%c <= 0)
+	if(%amount == "all")
+		%c = "all";
+	else
+		%c = SafeFloor(%amount);
+	if(%c != "all" && %c <= 0)
 	{
 		Client::sendMessage(%clientId, $MsgRed, "Invalid amount.");
 	}
@@ -127,12 +130,11 @@ function processMenuBankerCoins(%clientId, %opt)
 	{
 		if(%mode == "deposit")
 		{
-			if(%c <= fetchData(%clientId, "COINS"))
+			%moved = Bank::DepositFromCoins(%clientId, %c);
+			if(%moved > 0)
 			{
-				storeData(%clientId, "BANK", %c, "inc");
-				storeData(%clientId, "COINS", %c, "dec");
 				RefreshAll(%clientId);
-				AI::sayLater(%clientId, %bankerId, "You have given me " @ Number::Beautify(%c, -3) @ " coins. You are now carrying " @ Number::Beautify(fetchData(%clientId, "COINS"), -3) @ " coins.", True);
+				AI::sayLater(%clientId, %bankerId, "You have given me " @ Number::Beautify(%moved, -3) @ " coins. You are now carrying " @ Number::Beautify(fetchData(%clientId, "COINS"), -3) @ " coins.", True);
 				playSound(SoundMoney1, GameBase::getPosition(%bankerId));
 			}
 			else
@@ -140,12 +142,11 @@ function processMenuBankerCoins(%clientId, %opt)
 		}
 		else // withdraw
 		{
-			if(%c <= fetchData(%clientId, "BANK"))
+			%moved = Bank::WithdrawToCoins(%clientId, %c);
+			if(%moved > 0)
 			{
-				storeData(%clientId, "COINS", %c, "inc");
-				storeData(%clientId, "BANK", %c, "dec");
 				RefreshAll(%clientId);
-				AI::sayLater(%clientId, %bankerId, "I have given you " @ Number::Beautify(%c, -3) @ " coins. I now have " @ Number::Beautify(fetchData(%clientId, "BANK"), -3) @ " of yours.", True);
+				AI::sayLater(%clientId, %bankerId, "I have given you " @ Number::Beautify(%moved, -3) @ " coins. I now have " @ Bank::Format(%clientId) @ " of yours.", True);
 				playSound(SoundMoney1, GameBase::getPosition(%clientId));
 			}
 			else

@@ -194,7 +194,7 @@ function RecursiveWorld(%seconds)
 					%checkItem = getItemData(%z);
 
 					%p = GetItemCost(%checkItem);
-					%q = GetItemCost(%checkItem) * ($resalePercentage/100);
+					%q = Bank::ScalePercent(%p, $resalePercentage);
 
 					%b = $MerchantCounterB[%aiName, %checkItem];
 					%s = $MerchantCounterS[%aiName, %checkItem];
@@ -202,11 +202,12 @@ function RecursiveWorld(%seconds)
 					%constantB = 100;
 					%constantS = 75;
 
-					%x = round( %p - (%p * (%b/%constantB)) );
-					%y = round( %q - (%q * (%s/%constantS)) );
+					%x = Bank::ScaleRatio(%p, %constantB - %b, %constantB);
+					%y = Bank::ScaleRatio(%q, %constantS - %s, %constantS);
 
 					if(%x < 1) %x = 1;
-					if(%y >= %p) %y = %p-1;
+					if(Bank::CompareAmounts(%y, %p) >= 0)
+						%y = Bank::SubtractSmall(%p, 1);
 
 					$NewItemBuyCost[%aiName, %checkItem] = %x;
 					$NewItemSellCost[%aiName, %checkItem] = %y;
@@ -427,7 +428,7 @@ function HouseEarnings()
 				%expReward = 0; // Set to 0 so normal message doesn't show
 			}
 			
-			storeData(%cl, "BANK", %reward, "inc");
+			Bank::Credit(%cl, %reward);
 			if(%shouldGiveExp)
 				storeData(%cl, "EXP", %expReward, "inc");
 			storeData(%cl, "RankPoints", %rpreward, "inc");

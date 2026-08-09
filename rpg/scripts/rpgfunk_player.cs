@@ -1230,7 +1230,7 @@ function HasThisStuff(%clientId, %list, %multiplier)
 
 		if(%w == "COINS")
 		{
-			if(fetchData(%clientId, "COINS") >= %w2)
+			if(Bank::CanPay(%clientId, %w2))
 				%flag = True;
 			else
 				return False;
@@ -1308,8 +1308,8 @@ function TakeThisStuff(%clientId, %list, %multiplier)
 
 		if(%w == "COINS")
 		{
-			if(fetchData(%clientId, "COINS") >= %w2)
-				storeData(%clientId, "COINS", %w2, "dec");
+			if(Bank::CanPay(%clientId, %w2))
+				Bank::Pay(%clientId, %w2);
 			else
 				return False;
 		}

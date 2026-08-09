@@ -239,12 +239,13 @@ function remoteKShopBeltBuy(%clientId, %item)
 		return;
 
 	%cost = Belt::GetBuyCost(%clientId, %item);
-	if(fetchData(%clientId, "COINS") < %cost)
+	if(!Bank::CanPay(%clientId, %cost))
 	{
 		Client::sendMessage(%clientId, $MsgRed, "You cannot afford this purchase.~wC_BuySell.wav");
 		return;
 	}
-	storeData(%clientId, "COINS", %cost, "dec");
+	if(!Bank::Pay(%clientId, %cost))
+		return;
 	Belt::GiveThisStuff(%clientId, %item, 1);
 	%name = $BeltItem[%item, "Name"];
 	if(%name == "")
@@ -283,7 +284,7 @@ function remoteKShopBeltSell(%clientId, %item)
 	%name = $BeltItem[%item, "Name"];
 	if(%name == "")
 		%name = %item;
-	Client::sendMessage(%clientId, $MsgWhite, "You sold 1 " @ %name @ " for " @ Number::Beautify(%cost, -3) @ " coins.");
+	Client::sendMessage(%clientId, $MsgWhite, "You sold 1 " @ %name @ " for " @ Bank::FormatAmount(%cost) @ " coins.");
 	UseSkill(%clientId, $SkillHaggling, true, true);
 	storeData(%clientId, "COINS", %cost, "inc");
 	Belt::TakeThisStuff(%clientId, %item, 1);
@@ -884,7 +885,7 @@ function remoteKBankWithdraw(%clientId, %type, %amt)
 // Coin balances (carried + banked) for the pane headers.
 function KronosBank_PushCoins(%clientId)
 {
-	remoteEval(%clientId, "KBankCoins", fetchData(%clientId, "COINS"), fetchData(%clientId, "BANK"));
+	remoteEval(%clientId, "KBankCoins", Number::Beautify(fetchData(%clientId, "COINS"), -3), Bank::Format(%clientId));
 }
 
 // Deposit coins into the bank. %amt is OPTIONAL: HUD clients with the amount UI
@@ -904,9 +905,10 @@ function remoteKBankCoinsDeposit(%clientId, %amt)
 	%n = %amt;
 	if(%n == "" || %n <= 0 || %n > %coins)
 		%n = %coins;
-	storeData(%clientId, "BANK", %n, "inc");
-	storeData(%clientId, "COINS", -%n, "inc");
-	Client::sendMessage(%clientId, $MsgWhite, "Deposited " @ Number::Beautify(%n, -3) @ " coins.~wbuysellsound.wav");
+	%moved = Bank::DepositFromCoins(%clientId, %n);
+	if(%moved <= 0)
+		return;
+	Client::sendMessage(%clientId, $MsgWhite, "Deposited " @ Number::Beautify(%moved, -3) @ " coins.~wbuysellsound.wav");
 	RefreshAll(%clientId);
 	KronosBank_PushCoins(%clientId);
 }
@@ -921,15 +923,15 @@ function remoteKBankCoinsWithdraw(%clientId, %amt)
 		return;
 	if(!KronosShop_ActGate(%clientId))
 		return;
-	%bank = fetchData(%clientId, "BANK");
-	if(%bank <= 0)
+	if(!Bank::CanAfford(%clientId, 1))
 		return;
 	%n = %amt;
-	if(%n == "" || %n <= 0 || %n > %bank)
-		%n = %bank;
-	storeData(%clientId, "COINS", %n, "inc");
-	storeData(%clientId, "BANK", -%n, "inc");
-	Client::sendMessage(%clientId, $MsgWhite, "Withdrew " @ Number::Beautify(%n, -3) @ " coins.~wbuysellsound.wav");
+	if(%n == "" || %n <= 0)
+		%n = "all";
+	%moved = Bank::WithdrawToCoins(%clientId, %n);
+	if(%moved <= 0)
+		return;
+	Client::sendMessage(%clientId, $MsgWhite, "Withdrew " @ Number::Beautify(%moved, -3) @ " coins.~wbuysellsound.wav");
 	RefreshAll(%clientId);
 	KronosBank_PushCoins(%clientId);
 }
@@ -1073,7 +1075,7 @@ function KronosMenu_SendOwnInfo(%clientId)
 	%expNeed = GetExp(GetLevel(%exp, %clientId) + 1, %clientId) - %exp;
 
 	%coins = fetchData(%clientId, "COINS");
-	%bank = fetchData(%clientId, "BANK");
+	%bank = Bank::Format(%clientId);
 
 	// KHud_FixDec builds the "N.d" string by hand - round(x*10)/10 stringifies
 	// with binary-float noise (weight showed 12 decimals on the TAB menu)
@@ -1084,7 +1086,7 @@ function KronosMenu_SendOwnInfo(%clientId)
 	remoteEval(%clientId, "setInfoLine", 2, "ATK " @ fetchData(%clientId, "ATK") @ "   DEF " @ fetchData(%clientId, "DEF") @ "   MDEF " @ fetchData(%clientId, "MDEF") @ "   LCK " @ fetchData(%clientId, "LCK"));
 	remoteEval(%clientId, "setInfoLine", 3, "HP " @ fetchData(%clientId, "HP") @ "/" @ fetchData(%clientId, "MaxHP") @ "   MP " @ fetchData(%clientId, "MANA") @ "/" @ fetchData(%clientId, "MaxMANA"));
 	remoteEval(%clientId, "setInfoLine", 4, "EXP " @ Number::Beautify(%exp, -3) @ "   (Need " @ Number::Beautify(%expNeed, -3) @ ")");
-	remoteEval(%clientId, "setInfoLine", 5, "Coins " @ Number::Beautify(%coins, -3) @ "   Bank " @ Number::Beautify(%bank, -3) @ "   Total " @ Number::Beautify(%coins + %bank, -3));
+	remoteEval(%clientId, "setInfoLine", 5, "Coins " @ Number::Beautify(%coins, -3) @ "   Bank " @ %bank @ "   Total " @ Bank::FormatText(Bank::TotalWithCoinsText(%clientId)));
 	remoteEval(%clientId, "setInfoLine", 6, "Weight " @ %weight @ " / " @ %maxWeight);
 }
 

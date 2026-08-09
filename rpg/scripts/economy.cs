@@ -22,7 +22,8 @@ function ShowCoinsDisplay(%clientId, %token)
 	{
 		// Display current coins at bottom of screen
 		%coins = fetchData(%clientId, "COINS");
-		%msg = "<f1>Coins: <f2>" @ Number::Beautify(%coins, -3);
+		%msg = "<f1>Coins: <f2>" @ Number::Beautify(%coins, -3) @
+			"  <f1>Bank: <f2>" @ Bank::Format(%clientId);
 		bottomprint(%clientId, %msg, -1);
 
 		// Schedule next update in 1 second (same token keeps this chain valid)
@@ -65,23 +66,19 @@ function getBuyCost(%clientId, %item)
 		%cost = %baseCost;
 
 	// Calculate maximum possible discounts for minimum floor
-	%maxHagglingPercent = 0.5;  // 50% max from 1000 haggling skill
-	%maxTournyRank = 10;  // Assuming max TournyRank is 10
-	%maxTournyRankPercent = 0.03 * %maxTournyRank;  // 30% max
-	// Calculate minimum cost after applying maximum discounts multiplicatively
-	%minCost = round(%baseCost * (1.0 - %maxHagglingPercent) * (1.0 - %maxTournyRankPercent));
+	// Maximum discounts are 50% haggling then 30% tournament rank: 35% total.
+	%minCost = Bank::ScalePercent(%baseCost, 35);
 	
 	// Apply haggling reduction multiplicatively (first)
-	%hagglingPercent = round($PlayerSkill[%clientId, $SkillHaggling] / 50) / 100;
-	%hagglingPercent = Cap(%hagglingPercent, 0.0, 0.5);
-	%cost = round(%cost * (1.0 - %hagglingPercent));
+	%hagglingPoints = Cap(round($PlayerSkill[%clientId, $SkillHaggling] / 50), 0, 50);
+	%cost = Bank::ScalePercent(%cost, 100 - %hagglingPoints);
 	
 	// Apply TournyRank reduction multiplicatively (second, on already-reduced cost)
-	%tournyRankPercent = 0.03 * fetchData(%clientId, "TournyRank");
-	%cost = round(%cost * (1.0 - %tournyRankPercent));
+	%tournyPoints = Cap(3 * fetchData(%clientId, "TournyRank"), 0, 100);
+	%cost = Bank::ScalePercent(%cost, 100 - %tournyPoints);
 	
 	// Ensure cost never goes below the minimum (result after maximum discounts)
-	if(%cost < %minCost)
+	if(Bank::CompareAmounts(%cost, %minCost) < 0)
 		%cost = %minCost;
 
 	return %cost;
@@ -99,16 +96,15 @@ function getSellCost(%clientId, %item)
 	if(%aiName != "" && %aiName != -1 && %aiName != "0" && $NewItemSellCost[%aiName, %item] != "")
 		%cost = $NewItemSellCost[%aiName, %item];
 	else
-		%cost = round(%p * ($resalePercentage/100));
+		%cost = Bank::ScalePercent(%p, $resalePercentage);
 
 	// Apply haggling bonus multiplicatively (first)
-	%hagglingPercent = round($PlayerSkill[%clientId, $SkillHaggling] / 14) / 100;
-	%hagglingPercent = Cap(%hagglingPercent, 0.0, 0.5);
-	%cost = round(%cost * (1.0 + %hagglingPercent));
+	%hagglingPoints = Cap(round($PlayerSkill[%clientId, $SkillHaggling] / 14), 0, 50);
+	%cost = Bank::ScalePercent(%cost, 100 + %hagglingPoints);
 	
 	// Apply TournyRank bonus multiplicatively (second, on already-increased cost)
-	%tournyRankPercent = 0.03 * fetchData(%clientId, "TournyRank");
-	%cost = round(%cost * (1.0 + %tournyRankPercent));
+	%tournyPoints = 3 * fetchData(%clientId, "TournyRank");
+	%cost = Bank::ScalePercent(%cost, 100 + %tournyPoints);
 
 	return %cost;
 }
@@ -161,7 +157,14 @@ function BuySell(%player, %item, %delta, %buyORsell)
 	}
 
 	UseSkill(%clientId, $SkillHaggling, True, True);
-	storeData(%clientId, "COINS", %cost, "inc");
+	if(%buyORsell == BUY)
+	{
+		%charge = -%cost;
+		if(Bank::CanPay(%clientId, %charge))
+			Bank::Pay(%clientId, %charge);
+	}
+	else if(%buyORsell == SELL)
+		storeData(%clientId, "COINS", %cost, "inc");
 
 	%txt = "<f1><jc>COINS: " @ Number::Beautify(fetchData(%clientId, "COINS"), -3);
 	Client::setInventoryText(%clientId, %txt);
@@ -298,7 +301,7 @@ function buyItem(%clientId, %item)
 			%cost = getBuyCost(%clientId, %item);
 			if($LastClickItemB[%clientId, %item] != %item)
 			{
-				Client::sendMessage(%clientId, $MsgWhite, "The " @ %item.description @ " will cost you " @ Number::Beautify(%cost, -3) @ " coins.");
+				Client::sendMessage(%clientId, $MsgWhite, "The " @ %item.description @ " will cost you " @ Bank::FormatAmount(%cost) @ " coins.");
 				%msg = WhatIs(%item);
 				KronosExamineInfo(%clientId, %msg, floor(String::len(%msg) / 20));
 
@@ -597,7 +600,7 @@ function sellItem(%clientId, %item)
 					%sellName = $BeltItem[%item, "Name"];
 				else
 					%sellName = %nitem.description;
-				Client::sendMessage(%clientId, $MsgWhite, "This merchant will give you " @ Number::Beautify(%cost, -3) @ " coins for the " @ %sellName @ ".");
+				Client::sendMessage(%clientId, $MsgWhite, "This merchant will give you " @ Bank::FormatAmount(%cost) @ " coins for the " @ %sellName @ ".");
 				%msg = WhatIs(%item);
 				KronosExamineInfo(%clientId, %msg, floor(String::len(%msg) / 20));
 
@@ -762,7 +765,8 @@ function checkResources(%player, %item, %cost, %delta, %noMessage)
 
 	%clientId = Player::getClient(%player);
 
-	if(%cost * %delta > fetchData(%clientId, "COINS") && %clientId.adminLevel < 4)
+	%totalCost = %cost * %delta;
+	if(!Bank::CanPay(%clientId, %totalCost) && %clientId.adminLevel < 4)
 	{
 		if(%noMessage == "")
 			Client::sendMessage(%clientId, $MsgRed, "You cannot afford the " @ %item.description @ ".~wC_BuySell.wav");
@@ -782,7 +786,7 @@ function CompleteSmith(%clientId, %cost, %sc, %tempsmith, %multiplier)
 	if(Client::getName(%clientId) == "" || Client::getName(%clientId) == -1)
 		return;
 
-	if(fetchData(%clientId, "COINS") < %cost)
+	if(!Bank::CanPay(%clientId, %cost))
 		return;
 
 	// DUPE FIX: #smith deposits the ingredients into BankStorage and this
@@ -799,7 +803,8 @@ function CompleteSmith(%clientId, %cost, %sc, %tempsmith, %multiplier)
 		}
 	}
 
-	storeData(%clientId, "COINS", %cost, "dec");
+	if(!Bank::Pay(%clientId, %cost))
+		return;
 	playSound(SoundMoney1, GameBase::getPosition(%clientId));
 	GiveThisStuff(%clientId, $SmithComboResult[%sc], True, %multiplier);
 
@@ -832,7 +837,7 @@ function BlackSmithClick(%clientId, %item, %delta)
 			{
 				%cost = GetSmithComboCost(%clientId, %sc);
 
-				Client::sendMessage(%clientId, $MsgWhite, "It will cost you " @ Number::Beautify(%cost, -3) @ " coins to smith these items.~wcanSmith.wav");
+				Client::sendMessage(%clientId, $MsgWhite, "It will cost you " @ Bank::FormatAmount(%cost) @ " coins to smith these items.~wcanSmith.wav");
 				Client::sendMessage(%clientId, $MsgBeige, "(type #smith to accept the cost and start smithing)");
 
 				return 0;

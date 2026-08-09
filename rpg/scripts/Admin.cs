@@ -652,12 +652,11 @@ function processMenuOptions(%clientId, %option)
 		%a[%tmp++] = "Remort Lvl: " @ %levelToRemort @ "\n";
 
 		%coins = fetchData(%clientId, "COINS");
-		%bank = fetchData(%clientId, "BANK");
-		%total = %coins + %bank;
+		%bank = Bank::Format(%clientId);
 		// Comma-format large numbers for readability (e.g. 1,000,000)
 		%coinsFormatted = Number::Beautify(%coins, -3);
-		%bankFormatted = Number::Beautify(%bank, -3);
-		%totalFormatted = Number::Beautify(%total, -3);
+		%bankFormatted = %bank;
+		%totalFormatted = Bank::FormatText(Bank::TotalWithCoinsText(%clientId));
 		%a[%tmp++] = "Coins: " @ %coinsFormatted @ " Bank: " @ %bankFormatted @ " Total: " @ %totalFormatted @ "\n";
 		
 		%currentWeight = fetchData(%clientId, "Weight");

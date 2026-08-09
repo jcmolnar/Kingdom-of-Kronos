@@ -318,6 +318,7 @@ function createServer(%mission, %dedicated)
 	exec(mana);
 	exec(hp);
 	exec(rpgstats);
+	exec(BankLedger);     // chunked int32-safe bank balances; must precede Banking/economy
 	exec(playerdamage);
 	exec(playerspawn);
 	exec(itemevents);

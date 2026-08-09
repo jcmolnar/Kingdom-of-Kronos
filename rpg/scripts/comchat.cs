@@ -2339,7 +2339,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 
 					if(HasThisStuff(%TrueClientId, %tempsmith, %amt) && !IsDead(%TrueClientId))
 					{
-						if(%cost <= fetchData(%TrueClientId, "COINS"))
+						if(Bank::CanPay(%TrueClientId, %cost))
 						{
 							AI::sayLater(%TrueClientId, %TrueClientId.currentSmith, "Let me see what I can do...", True);
 	
@@ -2384,9 +2384,9 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 									%cost = (fetchData(%TrueClientId, "EXP") - fetchData(%id, "EXP")) * 2;	// review #30: POSITIVE cost (was *-1). A negative cost made "BANK >= %cost" always true (bypassing the coin gate) and "inc" of a negative drove BANK negative; now paired with "dec" below.
 								else
 									%cost = 0;
-								if (fetchData(%TrueClientId, "BANK") >= %cost )
+								if (Bank::CanAfford(%TrueClientId, %cost))
 								{
-									storeData(%TrueClientId, "BANK", %cost, "dec");	// review #30: deduct the positive cost
+									Bank::Debit(%TrueClientId, %cost);
 									%lospos = -3521 @ " " @ 1201 @ " " @ 1508;
 									%retval = GameBase::setPosition(%TrueClientId, %lospos);
 									setHP(%TrueClientId, fetchData(%TrueClientId, "MaxHP"));
@@ -2419,7 +2419,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 										Client::sendMessage(%TrueClientId, $MsgWhite, "Hmmm... I guess there are people standing in the way of the teleport destinations.  Try again later.");
 								}
 								else
-									Client::sendMessage(%TrueClientId, 0, "You do not have the " @ Number::Beautify(%cost, -3) @ " coins needed to challenge this player.");
+									Client::sendMessage(%TrueClientId, 0, "You do not have the " @ Bank::FormatAmount(%cost) @ " coins needed to challenge this player.");
 							}
 							else
 								Client::sendMessage(%TrueClientId, 0, "Opponent must be at least level 40.");
@@ -6015,9 +6015,9 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 						Client::sendMessage(%TrueClientId, 0, "Could not process command: Target admin clearance level too high.");
 					else if(%id != -1)
 	                        {
-						storeData(%id, "BANK", %c2, "inc");
-	                              RefreshAll(%id);
-	                              if(!%echoOff) Client::sendMessage(%TrueClientId, 0, "Setting " @ %c1 @ " (" @ %id @ ") BANK to " @ fetchData(%id, "BANK") @ ".");
+						Bank::Credit(%id, %c2);
+						      RefreshAll(%id);
+						      if(!%echoOff) Client::sendMessage(%TrueClientId, 0, "Setting " @ %c1 @ " (" @ %id @ ") BANK to " @ Bank::Format(%id) @ ".");
 						echo("[ADMIN]: " @ %TCsenderName @ " added " @ %c2 @ " banked coins to " @ %c1);
 	                        }
 	                        else
@@ -6331,7 +6331,7 @@ client::sendmessage(%TrueClientId,$MsgBeige,"You fail to whack! (You must have 5
 					if(floor(%id.adminLevel) >= floor(%clientToServerAdminLevel) && Client::getName(%id) != %senderName)
 						Client::sendMessage(%TrueClientId, 0, "Could not process command: Target admin clearance level too high.");
 					else if(%id != -1)
-	                              Client::sendMessage(%TrueClientId, 0, %cropped @ " (" @ %id @ ") BANK is " @ fetchData(%id, "BANK") @ ".");
+	                              Client::sendMessage(%TrueClientId, 0, %cropped @ " (" @ %id @ ") BANK is " @ Bank::Format(%id) @ ".");
 	                        else
 	                              Client::sendMessage(%TrueClientId, 0, "Invalid player name.");
 	                  }
@@ -10870,13 +10870,13 @@ if(%w1 == "#spawntelemetry")
 					if(String::ICompare(%cropped, %trigger[2]) == 0 || String::findSubStr(%cropped, %trigger[2]) != -1 || String::findSubStr(%message, %trigger[2]) != -1)
 					{
 						//deposit question
-						AI::sayLater(%TrueClientId, %closestId, "How much do you want me to hold?  You are carrying " @ fetchData(%TrueClientId, "COINS") @ " coins and I have " @ fetchData(%TrueClientId, "BANK") @ " of yours. (AMOUNT/ALL)", True);
+						AI::sayLater(%TrueClientId, %closestId, "How much do you want me to hold?  You are carrying " @ fetchData(%TrueClientId, "COINS") @ " coins and I have " @ Bank::Format(%TrueClientId) @ " of yours. (AMOUNT/ALL)", True);
 						$state[%closestId, %TrueClientId] = 2;
 					}
 					if(String::ICompare(%cropped, %trigger[3]) == 0 || String::findSubStr(%cropped, %trigger[3]) != -1 || String::findSubStr(%message, %trigger[3]) != -1)
 					{
 						//withdraw question
-						AI::sayLater(%TrueClientId, %closestId, "How much do you want to take out?  You are carrying " @ fetchData(%TrueClientId, "COINS") @ " coins and I have " @ fetchData(%TrueClientId, "BANK") @ " of yours. (AMOUNT/ALL)", True);
+						AI::sayLater(%TrueClientId, %closestId, "How much do you want to take out?  You are carrying " @ fetchData(%TrueClientId, "COINS") @ " coins and I have " @ Bank::Format(%TrueClientId) @ " of yours. (AMOUNT/ALL)", True);
 						$state[%closestId, %TrueClientId] = 3;
 					}
 					if(String::ICompare(%cropped, %trigger[4]) == 0 || String::findSubStr(%cropped, %trigger[4]) != -1 || String::findSubStr(%message, %trigger[4]) != -1)
@@ -10920,10 +10920,9 @@ if(%w1 == "#spawntelemetry")
 					}
 					else if(%c <= fetchData(%TrueClientId, "COINS"))
 					{
-						storeData(%TrueClientId, "BANK", %c, "inc");
-						storeData(%TrueClientId, "COINS", %c, "dec");
+						Bank::DepositFromCoins(%TrueClientId, %c);
 						RefreshAll(%TrueClientId);
-						AI::sayLater(%TrueClientId, %closestId, "You have given me " @ Number::Beautify(%c, -3) @ " coins.  You are now carrying " @ Number::Beautify(fetchData(%TrueClientId, "COINS"), -3) @ " coins and I have " @ Number::Beautify(fetchData(%TrueClientId, "BANK"), -3) @ " of yours.  Have a nice day.", True);
+						AI::sayLater(%TrueClientId, %closestId, "You have given me " @ Number::Beautify(%c, -3) @ " coins.  You are now carrying " @ Number::Beautify(fetchData(%TrueClientId, "COINS"), -3) @ " coins and I have " @ Bank::Format(%TrueClientId) @ " of yours.  Have a nice day.", True);
 
 						playSound(SoundMoney1, GameBase::getPosition(%closestId));
 					}
@@ -10937,25 +10936,25 @@ if(%w1 == "#spawntelemetry")
 				{
 					//withdraw
 					if(%cropped == "all")
-						%cropped = fetchData(%TrueClientId, "BANK");
-
-					%c = floor(%cropped);
-					if(%c <= 0)
+						%c = "all";
+					else
+						%c = SafeFloor(%cropped);
+					if(%c != "all" && %c <= 0)
 					{
 						AI::sayLater(%TrueClientId, %closestId, "Invalid request.  Your transaction has been cancelled.~wError_Message.wav", True);
 					}
-					else if(%c <= fetchData(%TrueClientId, "BANK"))
-					{
-						storeData(%TrueClientId, "COINS", %c, "inc");
-						storeData(%TrueClientId, "BANK", %c, "dec");
-						RefreshAll(%TrueClientId);
-						AI::sayLater(%TrueClientId, %closestId, "I have given you " @ Number::Beautify(%c, -3) @ " coins.  You are now carrying " @ Number::Beautify(fetchData(%TrueClientId, "COINS"), -3) @ " coins and I have " @ Number::Beautify(fetchData(%TrueClientId, "BANK"), -3) @ " of yours.  Have a nice day.", True);
-
-						playSound(SoundMoney1, GameBase::getPosition(%TrueClientId));
-					}
 					else
 					{
-						AI::sayLater(%TrueClientId, %closestId, "I'm sorry but you don't have that many coins in my bank.  Your transaction has been cancelled.", True);
+						%moved = Bank::WithdrawToCoins(%TrueClientId, %c);
+						if(%moved > 0)
+						{
+							RefreshAll(%TrueClientId);
+							AI::sayLater(%TrueClientId, %closestId, "I have given you " @ Number::Beautify(%moved, -3) @ " coins.  You are now carrying " @ Number::Beautify(fetchData(%TrueClientId, "COINS"), -3) @ " coins and I have " @ Bank::Format(%TrueClientId) @ " of yours.  Have a nice day.", True);
+
+							playSound(SoundMoney1, GameBase::getPosition(%TrueClientId));
+						}
+						else
+							AI::sayLater(%TrueClientId, %closestId, "I'm sorry but you don't have that many coins in my bank, or you cannot carry any more.  Your transaction has been cancelled.", True);
 					}
 					$state[%closestId, %TrueClientId] = "";
 				}
@@ -11332,7 +11331,7 @@ if(%w1 == "#spawntelemetry")
 							{
 								AI::sayLater(%TrueClientId, %closestId, $BotInfo[%aiName, SAY, 2], True);
 								if(NEWgetClientByName($BotInfo[%aiName, BOT] @ 0) == -1)
-									%n = AI::helper($BotInfo[%aiName, BOT], $BotInfo[%aiName, BOT] @ 0, "TempSpawn " @ $BotInfo[%aiName, POS] @ " " @ 1, default);
+									%n = AI::helper($BotInfo[%aiName, BOT], $BotInfo[%aiName, BOT] @ 0, "TempSpawn " @ $BotInfo[%aiName, POS] @ " " @ 1, "");
 								$state[%closestId, %TrueClientId] = "";
 								// Per-quest reload override (ticks of 2s each); default 90 (=180s) if unset
 								%questReloadTime = $QuestReloadTime[$BotInfo[%aiName, BOT]];
@@ -12349,7 +12348,7 @@ function ParseBlockData(%bd, %victimId, %killerId)
 		%var[14] = GetWord(%vrot, 1);
 		%var[15] = GetWord(%vrot, 2);
 		%var[16] = fetchData(%victimId, "COINS");
-		%var[17] = fetchData(%victimId, "BANK");
+		%var[17] = Bank::GetText(%victimId);
 		%var[18] = GetWord(%vvel, 0);
 		%var[19] = GetWord(%vvel, 1);
 		%var[20] = GetWord(%vvel, 2);
@@ -12376,7 +12375,7 @@ function ParseBlockData(%bd, %victimId, %killerId)
 		%var[34] = GetWord(%krot, 1);
 		%var[35] = GetWord(%krot, 2);
 		%var[36] = fetchData(%killerId, "COINS");
-		%var[37] = fetchData(%killerId, "BANK");
+		%var[37] = Bank::GetText(%killerId);
 		%var[38] = GetWord(%kvel, 0);
 		%var[39] = GetWord(%kvel, 1);
 		%var[40] = GetWord(%kvel, 2);
@@ -12398,5 +12397,3 @@ function messageonlyadmins(%color, %message)
 		}
 	}
 }
-
-

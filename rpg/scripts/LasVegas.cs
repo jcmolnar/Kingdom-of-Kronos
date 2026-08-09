@@ -238,7 +238,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 							%winnings = floor(%amt * 2.5);
 							storeData(%TrueClientId, "COINS", %winnings, "inc");
 							%newBal = fetchData(%TrueClientId, "COINS");
-							AI::sayLater(%TrueClientId,%closestId,"BLACKJACK! You win " @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+							AI::sayLater(%TrueClientId,%closestId,"BLACKJACK! You win " @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 							$state[%closestId,%TrueClientId] = "";
 							SaveCharacter(%TrueClientId);
 							return true;
@@ -320,7 +320,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 						%winnings = floor(%amt * 1.4);
 						storeData(%TrueClientId, "COINS", %winnings, "inc");
 						%newBal = fetchData(%TrueClientId, "COINS");
-						AI::sayLater(%TrueClientId,%closestId,"It was " @ %second @ "! WIN! +" @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+						AI::sayLater(%TrueClientId,%closestId,"It was " @ %second @ "! WIN! +" @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 					}
 					else
 					{
@@ -345,7 +345,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 						%winnings = floor(%amt * 1.8);
 						storeData(%TrueClientId, "COINS", %winnings, "inc");
 						%newBal = fetchData(%TrueClientId, "COINS");
-						AI::sayLater(%TrueClientId,%closestId,"WIN! +" @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+						AI::sayLater(%TrueClientId,%closestId,"WIN! +" @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 					}
 					else
 					{
@@ -364,7 +364,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 					%winnings = $StreakCurrent[%TrueClientId];
 					storeData(%TrueClientId, "COINS", %winnings, "inc");
 					%newBal = fetchData(%TrueClientId, "COINS");
-					AI::sayLater(%TrueClientId,%closestId,"Cashed out! You win " @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+					AI::sayLater(%TrueClientId,%closestId,"Cashed out! You win " @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 					$state[%closestId,%TrueClientId] = "";
 					SaveCharacter(%TrueClientId);
 				}
@@ -464,7 +464,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 						%winnings = floor(%amt * %mult);
 						storeData(%TrueClientId, "COINS", %winnings, "inc");
 						%newBal = fetchData(%TrueClientId, "COINS");
-						AI::sayLater(%TrueClientId,%closestId,"The wheel lands on... " @ %prize @ "! You win " @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+						AI::sayLater(%TrueClientId,%closestId,"The wheel lands on... " @ %prize @ "! You win " @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 					}
 					else
 					{
@@ -626,7 +626,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 			{
 				storeData(%TrueClientId, "COINS", %winnings, "inc");
 				%newBal = fetchData(%TrueClientId, "COINS");
-				AI::sayLater(%TrueClientId,%closestId,"JACKPOT! " @ %lineCount @ " line(s)! You win " @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+						AI::sayLater(%TrueClientId,%closestId,"JACKPOT! " @ %lineCount @ " line(s)! You win " @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 			}
 			else
 			{
@@ -725,7 +725,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 						%winnings = floor(%amt * 1.9);
 						storeData(%TrueClientId, "COINS", %winnings, "inc");
 						%newBal = fetchData(%TrueClientId, "COINS");
-						AI::sayLater(%TrueClientId,%closestId,%result @ "! WIN! +" @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+						AI::sayLater(%TrueClientId,%closestId,%result @ "! WIN! +" @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 					}
 					else
 					{
@@ -759,7 +759,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 						%winnings = floor(%amt * 1.8);
 						storeData(%TrueClientId, "COINS", %winnings, "inc");
 						%newBal = fetchData(%TrueClientId, "COINS");
-						AI::sayLater(%TrueClientId,%closestId,%pChoice @ " beats " @ %hChoice @ "! +" @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+						AI::sayLater(%TrueClientId,%closestId,%pChoice @ " beats " @ %hChoice @ "! +" @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 					}
 					else if(%tie)
 					{
@@ -789,7 +789,7 @@ function LasVegas_HandleBotDialogue(%botType, %TrueClientId, %closestId, %aiName
 						%winnings = %amt * 3;
 						storeData(%TrueClientId, "COINS", %winnings, "inc");
 						%newBal = fetchData(%TrueClientId, "COINS");
-						AI::sayLater(%TrueClientId,%closestId,"CORRECT! You win " @ Number::Beautify(%winnings - %amt, -3) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
+						AI::sayLater(%TrueClientId,%closestId,"CORRECT! You win " @ Bank::FormatAmount(%winnings - %amt) @ " coins! (Balance: " @ Number::Beautify(%newBal, -3) @ ")",true);
 						$state[%closestId,%TrueClientId] = "";
 						SaveCharacter(%TrueClientId);
 					}

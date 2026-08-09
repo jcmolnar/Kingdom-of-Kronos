@@ -99,7 +99,7 @@ $HardcodedItemCost[HeavenlyAntiMagicBelt] = 200000000;
 
 $HardcodedItemCost[Tent] = 4000;
 $HardcodedItemCost[ScoutVehicle] = 500000;
-$HardcodedItemCost[AdminOrb] = 99999999999999;
+$HardcodedItemCost[AdminOrb] = "99999999999999";
 $HardcodedItemCost[OrbOfLight] = 10000;
 //boots
 $HardcodedItemCost[CheetaursPaws] = 1500;
@@ -2165,4 +2165,3 @@ ItemData OrbOfLight0
 
 	heading = "aArmor";
 };
-

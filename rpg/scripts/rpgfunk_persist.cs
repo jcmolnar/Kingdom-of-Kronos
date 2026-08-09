@@ -357,7 +357,13 @@ function SaveCharacter(%clientId)
 	$funk::var["[\"" @ %name @ "\", 0, 3]"] = fetchData(%clientId, "campPos");
 	$funk::var["[\"" @ %name @ "\", 0, 4]"] = fetchData(%clientId, "COINS");
 	$funk::var["[\"" @ %name @ "\", 0, 5]"] = fetchData(%clientId, "isMimic");
-	$funk::var["[\"" @ %name @ "\", 0, 6]"] = fetchData(%clientId, "BANK");
+	// BANK-FMT 1: field 6 is the sub-million remainder; 64 stores whole
+	// million-coin chunks, 65 is the format, and 66 retains the original
+	// legacy text for rollback. Never reconstruct the full balance numerically.
+	$funk::var["[\"" @ %name @ "\", 0, 6]"] = Bank::RawRemainder(%clientId);
+	$funk::var["[\"" @ %name @ "\", 0, 64]"] = Bank::RawChunks(%clientId);
+	$funk::var["[\"" @ %name @ "\", 0, 65]"] = $Bank::SaveFormat;
+	$funk::var["[\"" @ %name @ "\", 0, 66]"] = GetDataFromArray(%clientId, "BANK_LEGACY_BACKUP");
 	$funk::var["[\"" @ %name @ "\", 0, 7]"] = Client::getName(%clientId);
 	$funk::var["[\"" @ %name @ "\", 0, 8]"] = fetchData(%clientId, "grouplist");
 	$funk::var["[\"" @ %name @ "\", 0, 9]"] = fetchData(%clientId, "defaultTalk");
@@ -1274,9 +1280,52 @@ function SaveCharacter(%clientId)
 	}
 	
 
-	File::delete("temp\\" @ %name @ ".cs");
+	%savePath = "temp\\" @ %name @ ".cs";
+	if(GetDataFromArray(%clientId, "BANK_NEEDS_FILE_BACKUP"))
+	{
+		%stagingPath = "temp\\" @ %name @ ".bankfmt1.new";
+		%backupPath = "temp\\" @ %name @ ".bankfmt0.bak";
+		File::delete(%stagingPath);
+		if(isFile(%stagingPath))
+		{
+			echo("ERROR: Bank migration staging file could not be cleared for " @ %name @ ". Original save retained.");
+			ClearFunkVar(%name);
+			return False;
+		}
 
-	export("funk::var[\"" @ %name @ "\",*", "temp\\" @ %name @ ".cs", false);
+		export("funk::var[\"" @ %name @ "\",*", %stagingPath, false);
+		if(!isFile(%stagingPath))
+		{
+			echo("ERROR: Bank migration staging export failed for " @ %name @ ". Original save retained.");
+			ClearFunkVar(%name);
+			return False;
+		}
+
+		if(!isFile(%backupPath) && !File::copy(%savePath, %backupPath))
+		{
+			echo("ERROR: Bank migration backup failed for " @ %name @ ". Original save retained.");
+			File::delete(%stagingPath);
+			ClearFunkVar(%name);
+			return False;
+		}
+
+		if(!File::copy(%stagingPath, %savePath))
+		{
+			echo("ERROR: Bank migration replacement failed for " @ %name @ ". Backup retained at " @ %backupPath @ ".");
+			File::delete(%stagingPath);
+			ClearFunkVar(%name);
+			return False;
+		}
+
+		File::delete(%stagingPath);
+		SetDataInArray(%clientId, "BANK_NEEDS_FILE_BACKUP", "", GetClientDataType(%clientId));
+		echo("[BANK-MIGRATE] Save replaced for " @ %name @ "; original retained at " @ %backupPath @ ".");
+	}
+	else
+	{
+		File::delete(%savePath);
+		export("funk::var[\"" @ %name @ "\",*", %savePath, false);
+	}
 	ClearFunkVar(%name);
 	echo("Save for " @ %name @ " (" @ %clientId @ ") complete.");
 
@@ -1401,7 +1450,11 @@ function LoadCharacter(%clientId)
 		storeData(%clientId, "campPos", $funk::var[%name, 0, 3]);
 		storeData(%clientId, "COINS", SafeFloor($funk::var[%name, 0, 4]));  // clean fractional coins; SafeFloor guards the int32 wrap
 		storeData(%clientId, "isMimic", $funk::var[%name, 0, 5]);
-		storeData(%clientId, "BANK", SafeFloor($funk::var[%name, 0, 6]));   // clean fractional bank; SafeFloor guards the int32 wrap
+		// Migrate legacy field-6 balances before storeData can apply the int32
+		// guard. New saves load the already-split remainder/chunks directly.
+		Bank::Load(%clientId, $funk::var[%name, 0, 6],
+			$funk::var[%name, 0, 64], $funk::var[%name, 0, 65],
+			$funk::var[%name, 0, 66]);
 		storeData(%clientId, "tmpname", $funk::var[%name, 0, 7]);
 		
 		// Load and clean grouplist - remove leading "0" prefix if present (corruption fix)
@@ -2199,7 +2252,9 @@ function LoadCharacter(%clientId)
 		//echo("DEBUG: EXP = 0");
 		storeData(%clientId, "campPos", "");
 		//echo("DEBUG: campPos = ''");
-		storeData(%clientId, "BANK", $initbankcoins);
+		Bank::SetLegacy(%clientId, $initbankcoins);
+		SetDataInArray(%clientId, "BANK_LEGACY_BACKUP", "", GetClientDataType(%clientId));
+		SetDataInArray(%clientId, "BANK_NEEDS_FILE_BACKUP", "", GetClientDataType(%clientId));
 		//echo("DEBUG: BANK = " @ $initbankcoins);
 		storeData(%clientId, "grouplist", "");
 		//echo("DEBUG: grouplist = ''");
@@ -2372,7 +2427,7 @@ function OnOrOfflineGive(%name, %award)
 			// categories, stored belt, BankStorage overflow (60-63), stance, damage
 			// prefs, Ascension talents, dual-wield off-hand, and AutoSkill config.
 			$funk::var["[\"" @ %name @ "\", 0, 29]"] = $funk::var[%name, 0, 29];
-			for(%f = 32; %f <= 63; %f++)
+			for(%f = 32; %f <= 66; %f++)
 				$funk::var["[\"" @ %name @ "\", 0, " @ %f @ "]"] = $funk::var[%name, 0, %f];
 
 			// review #13: apply the offline award onto the FULL BankStorage. The old

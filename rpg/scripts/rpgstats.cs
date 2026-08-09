@@ -177,6 +177,8 @@ function EndStoreDataClientTypeOverride(%clientId)
 function fetchData(%clientId, %type)
 {
 	dbecho($dbechoMode, "fetchData(" @ %clientId @ ", " @ %type @ ")");
+	if(%type == "BANK")
+		return Bank::GetText(%clientId);
 
 	if(%type == "LVL")
 	{
@@ -485,6 +487,16 @@ function storeData(%clientId, %type, %amt, %special)
 		%special = %tempSpecial;
 	
 	dbecho($dbechoMode, "storeData(" @ %clientId @ ", " @ %type @ ", " @ %amt @ ", " @ %special @ ")");
+	if(%type == "BANK")
+	{
+		Bank::StoreCompat(%clientId, %amt, %special);
+		return;
+	}
+	if(%type == "COINS" && %special == "inc" && %amt > 0)
+	{
+		Bank::CreditCoins(%clientId, %amt);
+		return;
+	}
 
 	if(%type == "HP")
 	{
@@ -716,7 +728,9 @@ function processMenupickclass(%clientId, %opt)
 
 	//######### set a few start-up variables ########
 	storeData(%clientId, "COINS", GetRoll($initcoins[fetchData(%clientId, "GROUP")]));
-	storeData(%clientId, "BANK", 0);           // Initialize bank coins to 0
+	Bank::SetParts(%clientId, 0, 0);            // Initialize chunked bank coins to 0
+	SetDataInArray(%clientId, "BANK_LEGACY_BACKUP", "", GetClientDataType(%clientId));
+	SetDataInArray(%clientId, "BANK_NEEDS_FILE_BACKUP", "", GetClientDataType(%clientId));
 	storeData(%clientId, "BankStorage", "");   // Initialize bank item storage to empty
 
 	//add $autoStartupSP for each skill
