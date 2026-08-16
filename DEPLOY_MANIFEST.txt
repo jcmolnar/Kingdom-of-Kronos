@@ -32,8 +32,11 @@ PHASE 0 (freeze) - DONE 2026-08-08
   [x] tag created
 
 PACKAGE CONTENTS (filled at package build - G10)
-  scripts\        : 173 top-level .cs  (175 in dev minus the 2 exclusions below)
+  scripts\        : 174 top-level .cs  (176 in dev minus the 2 exclusions below)
                     + this DEPLOY_MANIFEST.txt (the ONLY non-.cs file, on purpose)
+                    NB the 2026-08-08 build said 173: its filter was case-
+                    sensitive and dropped GUI.CS. Live HAS GUI.CS - shipping
+                    it keeps parity; that package was never deployed.
   Server.cs sha256: afa480c6e00c5fd3c05dbd174a9aa71c5bb6bf04abf36a71d6965b361202d84f
                     (verified identical to git show live-2026-08-08:rpg/scripts/Server.cs)
   excluded        : MigrationTest.cs, ai_safeguards_off.cs, all subdirs
