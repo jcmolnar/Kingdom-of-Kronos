@@ -4,19 +4,24 @@ This file ships INSIDE the live rpg\scripts folder so the running server
 self-documents exactly what it is. Procedure: LIVE_MIGRATION_PLAN.md
 
 RELEASE IDENTITY
-  tag            : live-2026-08-08          <- THE release identity
-  commit         : resolve at package build: git rev-parse live-2026-08-08
+  tag            : live-2026-08-16          <- THE release identity
+  commit         : resolve at package build: git rev-parse live-2026-08-16
                    (deliberately not hardcoded - writing it here would create
                     a commit after the tag it names)
   branch         : testing
   packaged by    : Claude (Phase 0/1 + G4/G5/G10)
-  packaged at    : 2026-08-08  ->  _deploy_live-2026-08-08\
+  packaged at    : 2026-08-16  ->  _deploy_live-2026-08-16\
 
 NOTE ON HASHES: older notes in CLAUDE_HANDOFF.md quote short hashes that do NOT
 resolve in this repository. The TAG above is the release identity - cite tags.
 
 RE-FROZEN 2026-08-08 (bank ledger): chunked int32-safe balances replace the
   BANK clamp. G1 re-run PASS on this tree. Package rebuilt, tag re-pointed.
+
+RE-FROZEN 2026-08-16 (bank UX, 3ffc472): withdraw/purchase/autodeposit
+  messaging + typed amounts (coinNum chat path; PushCoins word-2 withdraw
+  max for the 1.40 amount modal). In-game verified on 1.30 vanilla and
+  1.40 HUD clients by Joe. New tag live-2026-08-16; gates re-run below.
 
 PHASE 0 (freeze) - DONE 2026-08-08
   [x] LIVE_MIGRATION_PLAN.md copied into repo
