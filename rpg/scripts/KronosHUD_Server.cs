@@ -373,6 +373,7 @@ function KronosShop_Close(%clientId, %fromCancelMenu)
 		return;
 	%clientId.kshopOpen = "";
 	%clientId.kshopSyncQueued = "";
+	%clientId.coinNum = "";
 
 	// same cleanup the stock flow does when leaving the shop gui
 	Client::clearItemShopping(%clientId);
@@ -524,7 +525,14 @@ function KronosBank_Open(%clientId, %bankerId)
 
 	%clientId.currentBank = %bankerId;
 	%clientId.bulkNum = "";
+	%clientId.coinNum = "";
 	%clientId.kshopOpen = "bank";
+
+	if(!%clientId.bankAmountTipSent)
+	{
+		%clientId.bankAmountTipSent = true;
+		Client::sendMessage(%clientId, $MsgWhite, "Bank tip: say a number in chat, then Dep $ / W/D $ moves exactly that amount. No number = all.");
+	}
 
 	remoteEval(%clientId, "KShopOpen", "bank", "Bank Storage");
 	KronosBank_PushInv(%clientId);
@@ -888,8 +896,32 @@ function KronosBank_PushCoins(%clientId)
 	// Pack the two bank fields into one quoted RPC argument. Some clients only
 	// delivered the first of three balance arguments, displaying 223,275 for a
 	// 223,275,xxx,xxx bank and then reusing that truncated value on withdraw.
-	%bankParts = Bank::RawChunks(%clientId) @ " " @ Bank::RawRemainder(%clientId);
-	remoteEval(%clientId, "KBankCoins", fetchData(%clientId, "COINS"), %bankParts);
+	// Word 2 is the exact withdraw max for the client's amount modal:
+	// min(bank total, wallet headroom). Built with chunk arithmetic and
+	// PartsText/GetText string assembly so no value above the %g-safe range is
+	// ever numerically stringified - the client must never compute this itself.
+	%coins = fetchData(%clientId, "COINS");
+	%coinChunks = floor(%coins / $Bank::ChunkBase);
+	%coinRem = %coins - (%coinChunks * $Bank::ChunkBase);
+	%hrChunks = ($Kronos::BalanceCap / $Bank::ChunkBase) - %coinChunks;
+	%hrRem = 0 - %coinRem;
+	if(%hrRem < 0)
+	{
+		%hrChunks--;
+		%hrRem += $Bank::ChunkBase;
+	}
+	if(%hrChunks < 0)
+	{
+		%hrChunks = 0;
+		%hrRem = 0;
+	}
+	if(Bank::CompareParts(Bank::RawChunks(%clientId), Bank::RawRemainder(%clientId),
+		%hrChunks, %hrRem) >= 0)
+		%wdMax = Bank::PartsText(%hrChunks, %hrRem);
+	else
+		%wdMax = Bank::GetText(%clientId);
+	%bankParts = Bank::RawChunks(%clientId) @ " " @ Bank::RawRemainder(%clientId) @ " " @ %wdMax;
+	remoteEval(%clientId, "KBankCoins", %coins, %bankParts);
 }
 
 // Deposit coins into the bank. %amt is OPTIONAL: HUD clients with the amount UI
@@ -907,6 +939,13 @@ function remoteKBankCoinsDeposit(%clientId, %amt)
 	if(%coins <= 0)
 		return;
 	%n = %amt;
+	if(%n == "" || %n <= 0)
+	{
+		// Typed-amount support: a number said in chat with the bank open is
+		// held in coinNum (comchat.cs) - each click consumes it once.
+		%n = %clientId.coinNum;
+		%clientId.coinNum = "";
+	}
 	if(%n == "" || %n <= 0 || %n > %coins)
 		%n = %coins;
 	%moved = Bank::DepositFromCoins(%clientId, %n);
@@ -928,21 +967,37 @@ function remoteKBankCoinsWithdraw(%clientId, %amt)
 	if(!KronosShop_ActGate(%clientId))
 		return;
 	if(!Bank::CanAfford(%clientId, 1))
+	{
+		Client::sendMessage(%clientId, $MsgWhite, "You don't have any coins in the bank.");
 		return;
+	}
 	%n = %amt;
 	if(%n == "all" || %n == "" || %n <= 0)
 		%n = "all";
 	%moved = Bank::WithdrawToCoins(%clientId, %n);
 	if(%moved <= 0)
+	{
+		// Same three-way distinction as the vanilla banker (Banking.cs): a full
+		// wallet is not an empty bank.
+		%headroom = $Kronos::BalanceCap - fetchData(%clientId, "COINS");
+		if(%headroom <= 0)
+			Client::sendMessage(%clientId, $MsgWhite, "You cannot carry any more coins - purchases draw from your bank automatically.");
+		else if(%n != "all" && %n > %headroom)
+			Client::sendMessage(%clientId, $MsgWhite, "You can only carry " @ Number::Beautify(%headroom, -3) @ " more coins.");
+		else
+			Client::sendMessage(%clientId, $MsgWhite, "You don't have that many coins in the bank.");
 		return;
+	}
 	Client::sendMessage(%clientId, $MsgWhite, "Withdrew " @ Number::Beautify(%moved, -3) @ " coins.~wbuysellsound.wav");
 	RefreshAll(%clientId);
 	KronosBank_PushCoins(%clientId);
 }
 
-// Dedicated HUD "withdraw all" endpoint. It deliberately accepts no amount,
+// Dedicated HUD coin-withdraw endpoint. It deliberately accepts no RPC amount,
 // so remote argument truncation or stale client display state cannot turn the
-// bank's leading chunk count into the withdrawal amount.
+// bank's leading chunk count into the withdrawal amount. A specific amount is
+// instead taken from coinNum - a number the player said in chat with the bank
+// open (comchat.cs) - and consumed once per click. No typed amount = all.
 function remoteKBWAll(%clientId)
 {
 	if(!%clientId.hasKronosHUD)
@@ -951,12 +1006,32 @@ function remoteKBWAll(%clientId)
 		return;
 	if(!KronosShop_ActGate(%clientId))
 		return;
-	if(!Bank::CanAfford(%clientId, 1))
-		return;
 
-	%moved = Bank::WithdrawToCoins(%clientId, "all");
-	if(%moved <= 0)
+	%n = %clientId.coinNum;
+	%clientId.coinNum = "";
+	if(%n == "" || %n <= 0)
+		%n = "all";
+
+	if(!Bank::CanAfford(%clientId, 1))
+	{
+		Client::sendMessage(%clientId, $MsgWhite, "You don't have any coins in the bank.");
 		return;
+	}
+
+	%moved = Bank::WithdrawToCoins(%clientId, %n);
+	if(%moved <= 0)
+	{
+		// Same three-way distinction as the vanilla banker (Banking.cs): a full
+		// wallet is not an empty bank.
+		%headroom = $Kronos::BalanceCap - fetchData(%clientId, "COINS");
+		if(%headroom <= 0)
+			Client::sendMessage(%clientId, $MsgWhite, "You cannot carry any more coins - purchases draw from your bank automatically.");
+		else if(%n != "all" && %n > %headroom)
+			Client::sendMessage(%clientId, $MsgWhite, "You can only carry " @ Number::Beautify(%headroom, -3) @ " more coins.");
+		else
+			Client::sendMessage(%clientId, $MsgWhite, "You don't have that many coins in the bank.");
+		return;
+	}
 	Client::sendMessage(%clientId, $MsgWhite, "Withdrew " @ Number::Beautify(%moved, -3) @ " coins.~wbuysellsound.wav");
 	RefreshAll(%clientId);
 	KronosBank_PushCoins(%clientId);

@@ -416,6 +416,9 @@ function Bank::Pay(%clientId, %amount)
 	if(!Bank::Debit(%clientId, %bankCharge))
 		return false;
 	storeData(%clientId, "COINS", 0);
+	// The carried-coins fast path above says nothing extra; only tell the
+	// player when the price reached past their wallet into the bank.
+	Client::sendMessage(%clientId, $MsgWhite, "Your carried coins didn't cover that - " @ Bank::FormatAmount(%bankCharge) @ " coins were paid from your bank. (Bank: " @ Bank::Format(%clientId) @ ")");
 	return true;
 }
 
@@ -451,6 +454,30 @@ function Bank::CreditCoins(%clientId, %amount)
 	}
 	%overflow = Bank::PartsText(%chunks, %remainder);
 	%credited = Bank::Credit(%clientId, %overflow);
+	// Income past the carry cap lands here silently otherwise; players read a
+	// full wallet as lost income. Short per-client throttle (kill streaks at
+	// cap fire this on every coin drop), with throttled amounts ACCUMULATED in
+	// chunk parts so every banked coin is reported by a later message rather
+	// than skipped.
+	if(%credited)
+	{
+		%oParts = Bank::SplitAmount(%overflow);
+		%clientId.ovfMsgChunks += GetWord(%oParts, 0);
+		%clientId.ovfMsgRem += GetWord(%oParts, 1);
+		if(%clientId.ovfMsgRem >= $Bank::ChunkBase)
+		{
+			%clientId.ovfMsgChunks++;
+			%clientId.ovfMsgRem -= $Bank::ChunkBase;
+		}
+		if(getSimTime() - %clientId.bankOverflowMsgTime > 3)
+		{
+			%clientId.bankOverflowMsgTime = getSimTime();
+			%txt = Bank::FormatText(Bank::PartsText(%clientId.ovfMsgChunks, %clientId.ovfMsgRem));
+			%clientId.ovfMsgChunks = "";
+			%clientId.ovfMsgRem = "";
+			Client::sendMessage(%clientId, $MsgWhite, "Your pockets are full - " @ %txt @ " coins were deposited into your bank. (Bank: " @ Bank::Format(%clientId) @ ")");
+		}
+	}
 	return %credited;
 }
 

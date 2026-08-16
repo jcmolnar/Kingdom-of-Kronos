@@ -150,7 +150,19 @@ function processMenuBankerCoins(%clientId, %opt)
 				playSound(SoundMoney1, GameBase::getPosition(%clientId));
 			}
 			else
-				AI::sayLater(%clientId, %bankerId, "You don't have that many coins in the bank.", True);
+			{
+				// Bank::WithdrawToCoins returns 0 for three reasons; only one of
+				// them means the bank is short. Carried coins are hard-capped at
+				// $Kronos::BalanceCap (engine int32), so tell the player which
+				// limit they actually hit.
+				%headroom = $Kronos::BalanceCap - fetchData(%clientId, "COINS");
+				if(%headroom <= 0)
+					AI::sayLater(%clientId, %bankerId, "You cannot carry any more coins. Your money is safe with me - purchases draw from your bank automatically.", True);
+				else if(%c != "all" && %c > %headroom)
+					AI::sayLater(%clientId, %bankerId, "You can only carry " @ Number::Beautify(%headroom, -3) @ " more coins. Ask for that much or less.", True);
+				else
+					AI::sayLater(%clientId, %bankerId, "You don't have that many coins in the bank.", True);
+			}
 		}
 	}
 	

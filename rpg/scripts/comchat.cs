@@ -209,6 +209,11 @@ function remoteSay(%clientId, %team, %message, %senderName)
 	{
 		if(%clientId.currentShop != "" || %clientId.currentBank != "" || %clientId.currentBeltBank != "" || %clientId.currentBeltSell != "")
 		{
+			// HUD bank coin amounts: keep the raw value BEFORE the item-bulk
+			// clamps below cut it to 100. The next "W/D $"/"Dep $" click
+			// consumes it (KronosHUD_Server.cs); never sent over an RPC arg.
+			if(%clientId.currentBank != "" && %message >= 1)
+				%TrueClientId.coinNum = SafeFloor(%message);
 			if(%message < 1)
 				%message = 1;
 			// Belt selling allows up to 500, other menus allow up to 100
