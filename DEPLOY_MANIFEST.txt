@@ -63,13 +63,16 @@ DEV BASELINE (compare live's boot against these)
   Number::Beautify sanity: 123456 -> 123,456
   syntax errors: NONE
 
-GATES (LIVE_MIGRATION_PLAN.md Phase 2)
-  [x] G1  clean cold boot on dev  PASS      [ ] G6  48h soak
-  [ ] G2  vanilla stock-client pass         [ ] G7  $VoidPerf baseline
-  [ ] G3  Estates pass                      [ ] G8  * save-migration rehearsal
-  [ ] G3a turret 15s loop cost + estates    [ ] G9  rollback rehearsal
-  [x] G4  asset scan + mission md5          [x] G10 package integrity
-  [x] G5  plugin hash matrix
+GATES (LIVE_MIGRATION_PLAN.md Phase 2) - re-run 2026-08-16 on tag live-2026-08-16
+  [x] G1  clean cold boot on dev  PASS      [ ] G6  48h soak (waived by Joe - go)
+  [x] G2  in-game passes by Joe (1.30       [ ] G7  $VoidPerf baseline (post-cutover)
+          vanilla + 1.40 HUD, bank flows)   [x] G8  * save-migration rehearsal PASS
+  [ ] G3  Estates pass (ships staged OFF)       2026-08-16: Jarn 223,269,474,707 /
+  [ ] G3a turret 15s loop cost + estates        OneAngryGnome 131,584,708,136 /
+  [x] G4  asset scan + mission md5              Jobo - exact, idempotent relog,
+  [x] G5  plugin hash matrix                    zero [VOID AUDIT], .bak retained
+  [x] G10 package integrity                 [ ] G9  rollback rehearsal (mechanism
+                                                staged: bankfmt0.bak + PREVOID)
 
 CUTOVER RECORD (fill in on the day)
   drain-time Temp\ .cs count :        (verify backup matches EXACTLY)
