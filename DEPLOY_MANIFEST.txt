@@ -74,11 +74,18 @@ GATES (LIVE_MIGRATION_PLAN.md Phase 2) - re-run 2026-08-16 on tag live-2026-08-1
   [x] G10 package integrity                 [ ] G9  rollback rehearsal (mechanism
                                                 staged: bankfmt0.bak + PREVOID)
 
-CUTOVER RECORD (fill in on the day)
-  drain-time Temp\ .cs count :        (verify backup matches EXACTLY)
-  Temp backup path           : Temp.PREVOID-________
-  config backup path         : config.bak-________
-  scripts backup path        : rpg\scripts.bak-________
-  Plugins backup path        : Plugins.bak-________
-  deployed at                :
-  boot log checked by        :
+CUTOVER RECORD - EXECUTED 2026-08-16 ~01:40-01:55
+  drain-time Temp\ .cs count : 186 (backup verified EXACTLY 186)
+  Temp backup path           : Temp.PREVOID-20260816  (+ offsite zip in
+                               Desktop\CURRENT HOSTING BACKUPS - PUT DATE\)
+  config backup path         : config.bak-20260816
+  scripts backup path        : rpg\scripts.bak-20260816  (160 top-level .cs)
+  Plugins backup path        : Plugins.bak-20260816
+  deployed at                : 2026-08-16 01:44 first boot (passworded, no
+                               wrapper) - check-boot PASS, profile=live,
+                               slot audit 221/256 == dev; Phase 5 admin
+                               smoke PASS by Joe; reopened under
+                               InfiniteSpawn ~01:55
+  boot log checked by        : tools\check-boot.ps1 (Claude) + Joe in-game
+  rollback commitment point  : forward-fix only after ~2026-08-17 evening
+                               (restoring PREVOID past that costs progress)
