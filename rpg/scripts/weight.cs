@@ -48,6 +48,26 @@ function GetWeight(%clientId)
 		}
 	}
 
+	// VOID BUGFIX 2026-08-18: CheetaursPaws/BootsOfGliding/WindWalkers/WindPaws
+	// became BELT accessories in the Void pass (BeltWeapons.cs
+	// VoidAccessory::RegisterAll), so they no longer exist as an "X0"
+	// Equipped-class datablock in the engine inventory - the loop above never
+	// sees them and $GetWeight::ArmorMod stayed empty -> RefreshWeight never
+	// swapped to the speed/glide/jetpack armor. Belt::ApplyAccessoryStats only
+	// handles stat indices 3/4/5/6/7/10/11, not 8, so read the type-8 mod
+	// straight off the equipped-belt-accessory list here. AdminBoots stays
+	// engine-side and is still caught by the loop above.
+	%equippedAcc = fetchData(%clientId, "EquippedBeltAccessories");
+	if(%equippedAcc != "" && %equippedAcc != "0")
+	{
+		for(%i = 0; (%acc = GetWord(%equippedAcc, %i)) != -1; %i++)
+		{
+			%specialvar = $AccessoryVar[%acc, $SpecialVar];
+			if(GetWord(%specialvar, 0) == 8)
+				$GetWeight::ArmorMod = GetWord(%specialvar, 1);
+		}
+	}
+
 	//add up backpack weight
 	%total += Belt::GetWeight(%clientid);
 

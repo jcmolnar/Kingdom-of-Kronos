@@ -3513,7 +3513,12 @@ function Belt::EquipAccessory(%clientId, %item)
 	
 	Client::sendMessage(%clientId, $MsgGreen, "You equipped " @ %itemName @ ".");
 	echo("[BELT EQUIP] " @ Client::getName(%clientId) @ " equipped accessory: " @ %item);
-	
+
+	// VOID BUGFIX 2026-08-18: boots (type-8 SpecialVar) drive the armor swap via
+	// GetWeight's $GetWeight::ArmorMod, which is 1s-cached - drop the cache so
+	// the RefreshAll below sees the new equip state (weight.cs).
+	storeData(%clientId, "tmpWeight", "");
+
 	// Refresh player stats
 	RefreshAll(%clientId);
 	SaveCharacter(%clientId);
@@ -3563,7 +3568,11 @@ function Belt::UnequipAccessory(%clientId, %item)
 	
 	Client::sendMessage(%clientId, $MsgYellow, "You unequipped " @ %itemName @ ".");
 	echo("[BELT UNEQUIP] " @ Client::getName(%clientId) @ " unequipped accessory: " @ %item);
-	
+
+	// VOID BUGFIX 2026-08-18: see Belt::EquipAccessory - drop the GetWeight
+	// cache so the boots armor mod is recomputed without the unequipped item.
+	storeData(%clientId, "tmpWeight", "");
+
 	// Refresh player stats
 	RefreshAll(%clientId);
 	SaveCharacter(%clientId);
