@@ -60,7 +60,17 @@ function KronosExamineInfo(%client, %text, %dur)
 // the mouse cursor (stock score controls are off-screen on HUD
 // clients); closing the score screen closes the shop.
 
-$KronosShop::MaxRows = 48; // per pane
+// BUGFIX 2026-08-18: was 48. Engine rows push first, then belt categories in
+// $Belt::Categories order (Quest, Key, Deployables, Consumables, Armor,
+// Accessories, Other, Weapons) - a stocked endgame character hits 48 partway
+// through Accessories, so boots/shields (and every belt weapon) silently
+// vanished from the HUD inventory/bank panes while the stock TAB backpack
+// showed them. The client (Presto/KronosShop.cs) has no row arrays cap and
+// scrolls over whatever count arrives - only cost is remoteEval count on open.
+// Engine constraint (netEventManager.cpp): the guaranteed-event queue is
+// unbounded, flow-controlled by a 126-event unacked window - nothing drops.
+// The count is also sent to the client for its "x/N Items" title.
+$KronosShop::MaxRows = 200; // per pane
 
 function KronosShop_Open(%clientId, %mode, %shopName)
 {
@@ -85,8 +95,36 @@ function KronosShop_Open(%clientId, %mode, %shopName)
 // key (like ItemData headings "aArmor"/"bWeapons"), so belt rows
 // interleave with standard rows under merged category headers.
 // Belt Armor deliberately maps to "aArmor" to merge with ItemData armor.
-function KronosShop_BeltHeading(%cat)
+// 2026-08-18: accessory sub-typing. Worn-gear accessories (helmets, shields,
+// boots) list under Armor; rings/necklaces/belts/orbs stay under Accessories.
+// Applies to both belt "Accessories" rows and engine Accessory/Equipped rows
+// (whose datablock heading is "eMiscellany" for the unequipped twin - which is
+// why AdminBoots/AdminOrb showed under "Miscellany"). Orbs are typed Shield
+// in $AccessoryVar but are ruled accessories, so they're matched by name.
+function KronosShop_AccHeading(%item)
 {
+	if(String::findSubStr(%item, "Orb") != -1)
+		return "eAccessories";
+	%t = $AccessoryVar[%item, $AccessoryType];
+	if(%t == $ShieldAccessoryType || %t == $HeadAccessoryType || %t == $BootsAccessoryType)
+		return "aArmor";
+	return "eAccessories";
+}
+
+// Heading for an engine ItemData row - the datablock heading, except
+// accessories get re-bucketed by KronosShop_AccHeading.
+function KronosShop_ItemHeading(%item)
+{
+	if(%item.className == "Accessory" || %item.className == "Equipped")
+		if($AccessoryVar[%item, $AccessoryType] != "")
+			return KronosShop_AccHeading(%item);
+	return %item.heading;
+}
+
+function KronosShop_BeltHeading(%cat, %item)
+{
+	if(%cat == "Accessories" && %item != "")
+		return KronosShop_AccHeading(%item);
 	if(%cat == "Armor")        return "aArmor";
 	if(%cat == "Weapons")      return "bWeapons";	// merge with ItemData weapons
 	if(%cat == "Consumables")  return "cConsumables";
@@ -135,7 +173,7 @@ function KronosShop_PushInv(%clientId)
 		if(%cnt < 1)
 			continue;
 		// description last - it may contain spaces
-		remoteEval(%clientId, "KShopInv", %sent, "d", %z, %cnt, %item.heading, %item.description);
+		remoteEval(%clientId, "KShopInv", %sent, "d", %z, %cnt, KronosShop_ItemHeading(%item), %item.description);
 		%sent++;
 	}
 
@@ -144,7 +182,6 @@ function KronosShop_PushInv(%clientId)
 	for(%c = 1; $Belt::Categories[%c] != ""; %c++)
 	{
 		%cat = $Belt::Categories[%c];
-		%bhead = KronosShop_BeltHeading(%cat);
 		%list = fetchData(%clientId, %cat);
 		%more = true;
 		for(%w = 0; %more && %sent < $KronosShop::MaxRows; %w += 2)
@@ -163,14 +200,14 @@ function KronosShop_PushInv(%clientId)
 					// VOID 2026-07-15 (HUD audit #2): equipped marker - without it a
 					// successful equip changes NOTHING visible in the panel
 					%bname = %bname @ KronosShop_WornTag(%clientId, %bitem);
-					remoteEval(%clientId, "KShopInv", %sent, "b", %bitem, %bcnt, %bhead, %bname);
+					remoteEval(%clientId, "KShopInv", %sent, "b", %bitem, %bcnt, KronosShop_BeltHeading(%cat, %bitem), %bname);
 					%sent++;
 				}
 			}
 		}
 	}
 
-	remoteEval(%clientId, "KShopInvCount", %sent);
+	remoteEval(%clientId, "KShopInvCount", %sent, $KronosShop::MaxRows);
 }
 
 // Shop stock - the ItemData list captured by SetupShop (matches the
@@ -183,7 +220,7 @@ function KronosShop_PushStock(%clientId)
 	{
 		%z = %clientId.kshopIdx[%i];
 		%item = getItemData(%z);
-		remoteEval(%clientId, "KShopStock", %sent, "d", %z, getBuyCost(%clientId, %item), %item.heading, %item.description);
+		remoteEval(%clientId, "KShopStock", %sent, "d", %z, getBuyCost(%clientId, %item), KronosShop_ItemHeading(%item), %item.description);
 		%sent++;
 	}
 
@@ -193,7 +230,7 @@ function KronosShop_PushStock(%clientId)
 		%bname = $BeltItem[%bitem, "Name"];
 		if(%bname == "")
 			%bname = %bitem;
-		%bhead = KronosShop_BeltHeading($BeltItem[%bitem, "Type"]);
+		%bhead = KronosShop_BeltHeading($BeltItem[%bitem, "Type"], %bitem);
 		remoteEval(%clientId, "KShopStock", %sent, "b", %bitem, Belt::GetBuyCost(%clientId, %bitem), %bhead, %bname);
 		%sent++;
 	}
@@ -562,7 +599,7 @@ function KronosBank_PushInv(%clientId)
 		%cnt = Player::getItemCount(%clientId, %item);
 		if(%cnt < 1)
 			continue;
-		remoteEval(%clientId, "KShopInv", %sent, "d", %z, %cnt, %item.heading, %item.description);
+		remoteEval(%clientId, "KShopInv", %sent, "d", %z, %cnt, KronosShop_ItemHeading(%item), %item.description);
 		%sent++;
 	}
 
@@ -570,7 +607,6 @@ function KronosBank_PushInv(%clientId)
 	for(%c = 1; $Belt::Categories[%c] != ""; %c++)
 	{
 		%cat = $Belt::Categories[%c];
-		%bhead = KronosShop_BeltHeading(%cat);
 		%list = fetchData(%clientId, %cat);
 		%more = true;
 		for(%w = 0; %more && %sent < $KronosShop::MaxRows; %w += 2)
@@ -589,14 +625,14 @@ function KronosBank_PushInv(%clientId)
 					// VOID 2026-07-15 (HUD audit #2): equipped marker - without it a
 					// successful equip changes NOTHING visible in the panel
 					%bname = %bname @ KronosShop_WornTag(%clientId, %bitem);
-					remoteEval(%clientId, "KShopInv", %sent, "b", %bitem, %bcnt, %bhead, %bname);
+					remoteEval(%clientId, "KShopInv", %sent, "b", %bitem, %bcnt, KronosShop_BeltHeading(%cat, %bitem), %bname);
 					%sent++;
 				}
 			}
 		}
 	}
 
-	remoteEval(%clientId, "KShopInvCount", %sent);
+	remoteEval(%clientId, "KShopInvCount", %sent, $KronosShop::MaxRows);
 }
 
 // RIGHT pane: items in bank storage. The "price" field carries the stored
@@ -613,7 +649,7 @@ function KronosBank_PushStorage(%clientId)
 		%cnt = GetStuffStringCount(fetchData(%clientId, "BankStorage"), %item);
 		if(%cnt < 1)
 			continue;
-		remoteEval(%clientId, "KShopStock", %sent, "d", %z, %cnt, %item.heading, %item.description);
+		remoteEval(%clientId, "KShopStock", %sent, "d", %z, %cnt, KronosShop_ItemHeading(%item), %item.description);
 		%sent++;
 	}
 
@@ -633,7 +669,7 @@ function KronosBank_PushStorage(%clientId)
 				%bname = $BeltItem[%bitem, "Name"];
 				if(%bname == "")
 					%bname = %bitem;
-				%bhead = KronosShop_BeltHeading($BeltItem[%bitem, "Type"]);
+				%bhead = KronosShop_BeltHeading($BeltItem[%bitem, "Type"], %bitem);
 				remoteEval(%clientId, "KShopStock", %sent, "b", %bitem, %bcnt, %bhead, %bname);
 				%sent++;
 			}
