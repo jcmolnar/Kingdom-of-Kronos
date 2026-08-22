@@ -433,17 +433,20 @@ function Bank::CreditCoins(%clientId, %amount)
 
 	%coins = fetchData(%clientId, "COINS");
 	%headroom = $Kronos::BalanceCap - %coins;
-	if(%chunks == 0 && %remainder <= %headroom)
+	%headroomChunks = floor(%headroom / $Bank::ChunkBase);
+	%headroomRemainder = %headroom - (%headroomChunks * $Bank::ChunkBase);
+	// Compare the whole award, not only its sub-million remainder. Otherwise
+	// every >=1M bot drop is mistaken for overflow and fills the wallet to cap.
+	if(Bank::CompareParts(%chunks, %remainder, %headroomChunks, %headroomRemainder) <= 0)
 	{
-		SetDataInArray(%clientId, "COINS", %coins + %remainder, GetClientDataType(%clientId));
+		%walletCredit = (%chunks * $Bank::ChunkBase) + %remainder;
+		SetDataInArray(%clientId, "COINS", %coins + %walletCredit, GetClientDataType(%clientId));
 		return true;
 	}
 
 	if(%headroom > 0)
 	{
 		SetDataInArray(%clientId, "COINS", $Kronos::BalanceCap, GetClientDataType(%clientId));
-		%headroomChunks = floor(%headroom / $Bank::ChunkBase);
-		%headroomRemainder = %headroom - (%headroomChunks * $Bank::ChunkBase);
 		%chunks -= %headroomChunks;
 		%remainder -= %headroomRemainder;
 		if(%remainder < 0)
