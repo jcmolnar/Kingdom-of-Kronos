@@ -27,3 +27,7 @@ config/DeployProfile.cs
 
 # Built deploy packages (artifacts - rebuild from the tag)
 _deploy_*/
+
+# Player PII: names + home IPs, written at runtime by Admin.cs.
+# Its twin Raw Log.txt was already ignored; this one was missed.
+config/Exploit Log.txt
