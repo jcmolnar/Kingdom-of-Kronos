@@ -667,7 +667,10 @@ function DuelFight()
 	{
 		Jail(%challengerId, 600, 1);
 		Client::sendMessage(%challengerId, 1, "You have been jailed for 10 minutes for running from the duel!");
-		if(fetchData(%challengerId, "MyHouse") != "" && fetchData(%opponentId, "MyHouse") != "" && fetchData(%challengerId, "MyHouse") != fetchData(%opponentId, "MyHouse"))
+		// HOUSE-ZERO FIX 2026-08-22: GetHouseOf, not raw `fetchData(...) != ""` - a cleared
+		// house stores as the string "0" and "0" == "" is FALSE, so a house-less duelist
+		// passed this test and traded real rank points with a genuine house member.
+		if(GetHouseOf(%challengerId) != "" && GetHouseOf(%opponentId) != "" && GetHouseOf(%challengerId) != GetHouseOf(%opponentId))
 		{
 			storeData(%opponentId, "RankPoints", 1, "inc");
 			storeData(%challengerId, "RankPoints", -2, "inc");
@@ -683,7 +686,10 @@ function DuelFight()
 	{
 		Jail(%opponentId, 600, 1);
 		Client::sendMessage(%opponentId, 1, "You have been jailed for 10 minutes for running from the duel!");
-		if(fetchData(%challengerId, "MyHouse") != "" && fetchData(%opponentId, "MyHouse") != "" && fetchData(%challengerId, "MyHouse") != fetchData(%opponentId, "MyHouse"))
+		// HOUSE-ZERO FIX 2026-08-22: GetHouseOf, not raw `fetchData(...) != ""` - a cleared
+		// house stores as the string "0" and "0" == "" is FALSE, so a house-less duelist
+		// passed this test and traded real rank points with a genuine house member.
+		if(GetHouseOf(%challengerId) != "" && GetHouseOf(%opponentId) != "" && GetHouseOf(%challengerId) != GetHouseOf(%opponentId))
 		{
 			storeData(%challengerId, "RankPoints", 1, "inc");
 			storeData(%opponentId, "RankPoints", -2, "inc");

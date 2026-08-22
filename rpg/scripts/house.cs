@@ -159,8 +159,51 @@ function GetClientHouse(%clientId)
 	// Treat invalid values as empty
 	if(%house == "0" || %house == "House0" || %house == "house0")
 		return "";
-	
+
 	return %house;
+}
+
+// HOUSE-ZERO FIX 2026-08-22: the house name of %clientId, or "" if they are not in
+// a real house. Use this for every membership test - NEVER compare
+// fetchData(id,"MyHouse") against "" directly.
+//
+// Why: storeData(id, key, "") stores the STRING "0", not empty (rpgstats.cs, see the
+// $DataIsString table), and the engine's comparator makes "0" == "" FALSE
+// (darkstar/console/code/eval.cpp compare() falls to strcmp; isFloat("") is false).
+// A raw `== ""` test therefore reads a CLEARED house as "in a house", which inverted
+// four separate guards at once: objective capture, the level-60 exp block, the rank
+// exp bonus, and HouseEarnings payouts.
+//
+// This validates POSITIVELY against $HouseName[] rather than blacklisting the known
+// bad spellings ("0"/"House0"/"house0"/-1/"None"), so any future corrupt value fails
+// closed - denying house perks rather than granting them. Unlike GetClientHouse()
+// this deliberately does NOT special-case AI, so callers keep their existing bot
+// semantics.
+function GetHouseOf(%clientId)
+{
+	%h = fetchData(%clientId, "MyHouse");
+	if(GetHouseNumber(%h) == "")
+		return "";
+	return %h;
+}
+
+// HOUSE-GATE 2026-08-22: True if %clientId is barred from gaining experience by the
+// house requirement (no house, at or past $houseRequiredLevel). Single source of truth
+// for the rule - enforced in storeData's EXP chokepoint, and consulted by reward
+// screens (dailies, weekly boss) so they report what was actually granted instead of
+// promising exp the chokepoint then denies.
+//
+// Bots are never blocked: they have no house by definition and gating them would
+// silently change bot progression.
+function IsExpHouseBlocked(%clientId)
+{
+	if(isRPGAI(%clientId) || Player::isAiControlled(%clientId))
+		return False;
+
+	if(GetHouseOf(%clientId) != "")
+		return False;
+
+	return fetchData(%clientId, "LVL") >= $houseRequiredLevel;
 }
 
 // House data file paths

@@ -766,6 +766,15 @@ function Daily::GrantReward(%clientId, %theme)
 		%r = 0;
 	%coins = floor($Daily::CoinBase * (1 + (%r * $Daily::CoinPerRemort)) * $Daily::RewardMult);
 
+	// HOUSE-GATE 2026-08-22: storeData's EXP chokepoint denies gains for a house-less
+	// character at $houseRequiredLevel+. The daily still COMPLETES and still pays coins
+	// (Joe's call 2026-08-22) - only the exp is withheld. Zero it here as well so the
+	// reward line and the audit echo report what was actually granted instead of
+	// promising exp the chokepoint silently dropped.
+	%expBlocked = IsExpHouseBlocked(%clientId);
+	if(%expBlocked)
+		%exp = 0;
+
 	storeData(%clientId, "EXP", %exp, "inc");
 	storeData(%clientId, "COINS", %coins, "inc");
 	storeData(%clientId, "DailyDone" @ %theme, $Daily::CurrentDay);
@@ -776,7 +785,10 @@ function Daily::GrantReward(%clientId, %theme)
 
 	// always-on audit line (item/exp/coin grants are restore-from-console data)
 	echo("[DAILY REWARD] " @ Client::getName(%clientId) @ " (" @ %clientId @ ") completed " @ %theme @ " day " @ $Daily::CurrentDay @ ": +" @ %exp @ " exp, +" @ %coins @ " coins");
-	Client::sendMessage(%clientId, $MsgGreen, "Daily complete! Reward: " @ Number::Beautify(%exp, -3) @ " exp and " @ Number::Beautify(%coins, -3) @ " coins.");
+	if(%expBlocked)
+		Client::sendMessage(%clientId, $MsgGreen, "Daily complete! Reward: " @ Number::Beautify(%coins, -3) @ " coins. No experience - you must join a house to continue growing stronger.~house");
+	else
+		Client::sendMessage(%clientId, $MsgGreen, "Daily complete! Reward: " @ Number::Beautify(%exp, -3) @ " exp and " @ Number::Beautify(%coins, -3) @ " coins.");
 }
 
 //------------------------------------------------------------------------------

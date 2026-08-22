@@ -367,14 +367,28 @@ function TowerSwitch::onCollision(%this, %object)
 
    %playerClient = Player::getClient(%object);
 
-   if(fetchData(%playerClient, "MyHouse") == "")
+   // HOUSE-ZERO FIX 2026-08-22: GetHouseOf, not a raw `fetchData(...) == ""`. A
+   // cleared house stores as the string "0" and "0" == "" is FALSE, so this guard
+   // let house-less players capture control points - and then credited the capture
+   // to a phantom house keyed "0", whose $BaseControl climbed to 103 and drove
+   // HouseEarnings payouts to ~11x the intended maximum.
+   %playerTeam = GetHouseOf(%playerClient);
+   if(%playerTeam == "")
 	return;
 
    if(Player::isDead(%object))
       return;
 
-   %playerTeam = fetchData(%playerClient, "MyHouse");
    %oldTeam = %this.team;  // Use lowercase .team property (house name)
+
+   // HOUSE-ZERO FIX 2026-08-22: a switch captured while the bug was live still carries
+   // .team "0". Normalize any non-house owner to neutral BEFORE the checks below, so we
+   // neither decrement the phantom $BaseControl["0"] (driving it negative) nor announce
+   // "captured <objective> from 0!". Self-heals on the first capture after this ships.
+   if(GetHouseNumber(%oldTeam) == "")
+      %oldTeam = "";
+   %this.team = %oldTeam;
+
    if(%oldTeam == %playerTeam)
       return;
 
@@ -459,8 +473,8 @@ function TowerSwitch::onCollision(%this, %object)
    // "captured ... from <oldHouse>".
    if(%oldTeam == "")
    {
-      MessageAllExcept(%playerClient, 0, %touchClientName @ " claimed " @ %this.objectiveName @ " for " @ fetchData(%playerClient, "MyHouse") @ "!");
-      Client::sendMessage(%playerClient, 0, "You claimed " @ %this.objectiveName @ " for " @ fetchData(%playerClient, "MyHouse") @ "!");
+      MessageAllExcept(%playerClient, 0, %touchClientName @ " claimed " @ %this.objectiveName @ " for " @ %playerTeam @ "!");
+      Client::sendMessage(%playerClient, 0, "You claimed " @ %this.objectiveName @ " for " @ %playerTeam @ "!");
  	}
    else
    {
@@ -480,9 +494,9 @@ function TowerSwitch::onCollision(%this, %object)
    if(%this.objectiveLine)
    {
       TeamMessages(1, %playerTeam, "Your team has taken an objective.~wCapturedTower.wav");
-		TeamMessages(0, %playerTeam, fetchData(%playerClient, "MyHouse") @ " has taken an objective.");
+		TeamMessages(0, %playerTeam, %playerTeam @ " has taken an objective.");
 		if(%oldTeam != -1)
-	      TeamMessages(1, %oldTeam, fetchData(%playerClient, "MyHouse") @ " has taken your objective.~wLostTower.wav");
+	      TeamMessages(1, %oldTeam, %playerTeam @ " has taken your objective.~wLostTower.wav");
       ObjectiveMission::ObjectiveChanged(%this);
    }
    %lastTeam = %this.team;
@@ -778,9 +792,37 @@ function Flag::onCollision(%this, %object)
    if(Player::isAIControlled(%object))
    	return;
    
-   %playerClient = Player::getClient(%object);   
+   %playerClient = Player::getClient(%object);
    %name = Item::getItemData(%this);
-   %playerTeam = fetchData(%playerClient, "MyHouse");
+
+   // HOUSE-ZERO FIX 2026-08-22: this handler had NO house check at all - the only one of
+   // the three objective entry points that didn't (TowerSwitch guarded, FlagStand guarded
+   // implicitly by %playerTeam == %standTeam). A house-less player could therefore walk up
+   // to an artifact held by a house and take it: the steal branch below decrements that
+   // house's $FlagCommand and broadcasts the theft. They can never convey it - FlagStand
+   // requires a matching house - so the artifact was simply removed from play until they
+   // dropped it or died. Pure denial with no upside, and free to repeat on all four.
+   //
+   // Blocked outright rather than "may pick up but not steal", because carrying an
+   // artifact you can never score has no legitimate use.
+   //
+   // This also closes a second, subtler hole: an UNCLAIMED artifact has .team "" (the
+   // mission file sets no team on the flag items), and a house-less player's house was
+   // also "" - so `%flagTeam == %playerTeam` matched and they were treated as the
+   // artifact's OWNER, letting them "return" a dropped artifact to its spawn. That branch
+   // was dead until review #48 dropped its `&& %skip == 5` clause and made it reachable.
+   %playerTeam = GetHouseOf(%playerClient);
+   if(%playerTeam == "")
+   {
+      // Throttled: collision fires repeatedly while the player stands on the artifact.
+      if(getSimTime() - $FlagDenyWarned[%playerClient] > 10)
+      {
+         $FlagDenyWarned[%playerClient] = getSimTime();
+         Client::sendMessage(%playerClient, $MsgRed, "You must belong to a house to handle " @ %this.objectiveName @ ".~house");
+      }
+      return;
+   }
+
    %flagTeam = %this.team;
    %playerClient = Player::getClient(%object);
    %touchClientName = Client::getName(%playerClient);
@@ -969,7 +1011,7 @@ function FlagStand::onCollision(%this, %object)
    //echo("FlagStand collision ", %object);
    %playerClient = Player::getClient(%object);
    %standTeam = %this.team;
-   %playerTeam = fetchData(%playerClient, "MyHouse");
+   %playerTeam = GetHouseOf(%playerClient);  // HOUSE-ZERO FIX 2026-08-22: never key $FlagCommand by a corrupt house value
 
    if(%standTeam == -1 || getObjectType(%object) != "Player" || %object.carryFlag == ""
          || %playerTeam != %standTeam || %this.flag != "" || GameBase::getTeam(%object.carryFlag) != -1)
@@ -1003,7 +1045,7 @@ function FlagStand::onCollision(%this, %object)
    Client::sendMessage(%playerClient, 0, "You conveyed " @ %flag.objectiveName @ " to " @ %playerTeam @ ".");
 for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
 {
-	if(fetchData(%cl, "MyHouse") == %playerTeam)
+	if(GetHouseOf(%cl) == %playerTeam)
 		Client::sendMessage(%cl, $MsgBeige, "Your House holds " @ %flag.objectiveName @ ".~wflagcapture.wav");
 	else
 		Client::sendMessage(%cl, $MsgBeige, %playerTeam @ " holds " @ %flag.objectiveName @ ".");

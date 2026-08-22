@@ -34,6 +34,22 @@ if($maxWHISPERdistVec == "") $maxWHISPERdistVec = 5;
 if($joinHouseCost == "") $joinHouseCost = 2500;
 if($changeHouseCost == "") $changeHouseCost = 5000000;
 if($joinHouseRankPoints == "") $joinHouseRankPoints = 4;
+// HOUSE-GATE 2026-08-22: level at which a house-less character stops gaining ANY
+// experience. Was hardcoded 60 in one place (the kill-exp path only); now single-
+// sourced and enforced at the storeData EXP chokepoint. Soft wall by design - it
+// denies exp, it does not force or prompt a house join.
+if($houseRequiredLevel == "") $houseRequiredLevel = 60;
+
+// HOUSE-ZERO FIX 2026-08-22: keys whose value is a STRING, not a number.
+// storeData() consults this before defaulting a blank amount to 0 - without it,
+// storeData(id, %type, "") stores the string "0" instead of clearing the field, and
+// every downstream `== ""` test silently inverts (see rpgstats.cs storeData and
+// GetHouseOf in house.cs). Only add a key that is genuinely string-valued AND is
+// cleared by passing "" - a numeric key listed here would start storing "" where
+// callers expect 0.
+// Value is 1, not True: storeData tests this with `!= ""` rather than as a bare
+// boolean, because evalFloat() on the string "True" goes through atof() and yields 0.
+$DataIsString["MyHouse"] = 1;
 
 if($spawnMultiplier == "") $spawnMultiplier = "1.0";
 if($allowDuplicateIPs == "") $allowDuplicateIPs = True;

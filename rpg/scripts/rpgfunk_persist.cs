@@ -1648,15 +1648,30 @@ function LoadCharacter(%clientId)
 		storeData(%clientId, "MyHouse", %houseName);
 		//echo("DEBUG: MyHouse FINAL = '" @ %houseName @ "' (from houseNum " @ %houseNum @ ")");
 		
-		// CRITICAL: Double-check after storing - if somehow "House0" got through, clear it
-		// This handles edge cases where the house might be set elsewhere
+		// CRITICAL: Double-check after storing - if a corrupt house value got through, clear it.
+		// HOUSE-ZERO FIX 2026-08-22. This self-heal never healed anything; three defects:
+		//   1. Order was inverted - it cleared MyHouse and THEN called
+		//      BootFromCurrentHouse, which re-reads MyHouse, found it already blank, and
+		//      took its `else return -1` path doing none of its work.
+		//   2. Even with the order corrected the Boot call is a guaranteed no-op here:
+		//      BootFromCurrentHouse itself normalizes "0"/"House0"/"house0" to "" and then
+		//      tests `if(%h != "")`. It treats a corrupt value as "no house" BY DESIGN, so
+		//      there is no house to boot from. The old comment's promise ("will also reset
+		//      rank points and unequip items") was never reachable through that call - and
+		//      RankPoints is reloaded from the save file on the very next line anyway,
+		//      which would have overwritten any reset.
+		//   3. The clear did not clear: storeData(..., "") stored the string "0" (see
+		//      storeData in rpgstats.cs), so this block detected "0", rewrote "0", and hit
+		//      the identical state on every single login.
+		// Detection is now POSITIVE (anything GetHouseNumber rejects), so "None", -1 and
+		// any future spelling are caught, not just the three blacklisted strings.
+		// DELIBERATE: RankPoints are NOT reset. Joe's call 2026-08-22 - players keep the
+		// rank points they accrued while the bug was live. Do not "fix" this back.
 		%loadedHouse = fetchData(%clientId, "MyHouse");
-		if(%loadedHouse == "House0" || %loadedHouse == "0" || %loadedHouse == "house0")
+		if(%loadedHouse != "" && GetHouseNumber(%loadedHouse) == "")
 		{
-			//echo("DEBUG: LoadCharacter - Player " @ %name @ " had invalid house '" @ %loadedHouse @ "' after load, clearing house assignment");
+			echo("[HOUSE-FIX] LoadCharacter: " @ %name @ " (" @ %clientId @ ") had invalid house '" @ %loadedHouse @ "' - cleared (rank points kept).");
 			storeData(%clientId, "MyHouse", "");
-			// Boot them from the invalid house (this will also reset rank points and unequip items)
-			BootFromCurrentHouse(%clientId);
 		}
 		
 		storeData(%clientId, "RankPoints", $funk::var[%name, 0, 31]);

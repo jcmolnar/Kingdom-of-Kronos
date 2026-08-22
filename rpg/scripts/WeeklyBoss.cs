@@ -546,11 +546,21 @@ function Weekly::OnBossKilled(%victim, %killer)
 			%coins = floor(%coins * (1 + $Weekly::KillshotBonusMult));
 		}
 
+		// HOUSE-GATE 2026-08-22: storeData's EXP chokepoint denies gains for a house-less
+		// character at $houseRequiredLevel+. Coins are still paid; zero the exp here too
+		// so the bounty line and the audit echo report what was actually granted.
+		%expBlocked = IsExpHouseBlocked(%cl);
+		if(%expBlocked)
+			%exp = 0;
+
 		storeData(%cl, "EXP", %exp, "inc");
 		storeData(%cl, "COINS", %coins, "inc");
 		Game::refreshClientScore(%cl);
 		echo("[WEEKLY REWARD] " @ %name @ " (" @ %cl @ "): +" @ %exp @ " exp, +" @ %coins @ " coins (contrib " @ %c @ ")");
-		Client::sendMessage(%cl, $MsgGreen, "Weekly bounty! " @ Number::Beautify(%exp, -3) @ " exp and " @ Number::Beautify(%coins, -3) @ " coins.");
+		if(%expBlocked)
+			Client::sendMessage(%cl, $MsgGreen, "Weekly bounty! " @ Number::Beautify(%coins, -3) @ " coins. No experience - you must join a house to continue growing stronger.~house");
+		else
+			Client::sendMessage(%cl, $MsgGreen, "Weekly bounty! " @ Number::Beautify(%exp, -3) @ " exp and " @ Number::Beautify(%coins, -3) @ " coins.");
 	}
 
 	Weekly::Save();

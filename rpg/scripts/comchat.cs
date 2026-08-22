@@ -827,10 +827,14 @@ function remoteSay(%clientId, %team, %message, %senderName)
 		{
 			if(SkillCanUse(%TrueClientId, "#house"))
 			{
-				if(fetchData(%TrueClientId, "MyHouse") != "")
+				// HOUSE-ZERO FIX 2026-08-22: GetHouseOf, not a raw `fetchData(...) != ""`.
+				// A cleared house stores as the string "0" and "0" == "" is FALSE, so
+				// house-less players shared a private "house" channel keyed "0".
+				%senderHouse = GetHouseOf(%TrueClientId);
+				if(%senderHouse != "")
 				{
 					for(%cl = Client::getFirst(); %cl != -1; %cl = Client::getNext(%cl))
-						if(!%cl.muted[%TrueClientId] && %cl != %TrueClientId && fetchData(%TrueClientId, "MyHouse") == fetchData(%cl, "MyHouse"))
+						if(!%cl.muted[%TrueClientId] && %cl != %TrueClientId && %senderHouse == GetHouseOf(%cl))
 							Client::sendMessage(%cl, $MsgGreen, "[HOUSE] " @ %TCsenderName @ " \"" @ %cropped @ "\"");
 					Client::sendMessage(%TrueClientId, $MsgGreen, "[HOUSE] \"" @ %cropped @ "\"");
 					UseSkill(%TrueClientId, $SkillSpeech, True, True);

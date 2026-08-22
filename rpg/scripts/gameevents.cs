@@ -365,7 +365,11 @@ function HouseEarnings()
 		if(isRPGAI(%cl) || Player::isAiControlled(%cl))
 			continue;
 		
-		%house = fetchData(%cl, "MyHouse");
+		// HOUSE-ZERO FIX 2026-08-22: GetHouseOf, not a raw `fetchData(...) == ""`. A
+		// cleared house stores as the string "0" and "0" == "" is FALSE, so house-less
+		// players passed this test and drew a full house payout keyed to a phantom
+		// house "0" - coins, exp, rank points and skill credits, every cycle.
+		%house = GetHouseOf(%cl);
 		if(%house != "")
 		{
 			%baseCount = $BaseControl[%house];
@@ -386,7 +390,18 @@ function HouseEarnings()
 				%controlShare = %houseObjectives / %totalObjectives;
 			else
 				%controlShare = 0;
-			
+
+			// HOUSE-ZERO FIX 2026-08-22 (defence in depth): clamp the share to 1.0.
+			// %totalObjectives sums ONLY the four real houses, so any house whose key
+			// is not one of those four contributes to its own %houseObjectives while
+			// adding nothing to the denominator - the share then exceeds 1.0 and every
+			// reward below, all of which are `floor(max * %shareMultiplier)`, scales
+			// past its intended maximum without limit. That is exactly what happened:
+			// the phantom house "0" reached $BaseControl 103 against 7 real objectives,
+			// a 14.7 share and an ~11x payout. GetHouseOf above closes the key desync;
+			// this makes an over-100% share unpayable no matter how one arises.
+			%controlShare = Cap(%controlShare, 0, 1.0);
+
 			// REWARD SYSTEM BASED ON RELATIVE CONTROL:
 			// - 100% control = 100% of maximum reward
 			// - 50% control = 50% of maximum reward  

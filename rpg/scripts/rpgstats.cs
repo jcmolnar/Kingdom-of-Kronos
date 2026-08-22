@@ -475,11 +475,24 @@ function storeData(%clientId, %type, %amt, %special)
 	// expression evaluating to -1) and silently zeroed it. Only a missing arg
 	// (which concatenates to the empty string) should default to 0; a real -1
 	// stringifies to "-1", which "== \"\"" (-1 == 0) correctly rejects.
-	if(%tempAmt == "")
+	// HOUSE-ZERO FIX 2026-08-22: string-valued keys must keep an explicit "" rather
+	// than defaulting to 0. Tribes script cannot distinguish a MISSING argument from
+	// an explicitly-passed "" - both concatenate to "" - so the numeric default below
+	// silently turned every storeData(id, "MyHouse", "") into the STRING "0". Because
+	// the engine's comparator makes "0" == "" FALSE (compare() in
+	// darkstar/console/code/eval.cpp falls through to strcmp; isFloat("") is false),
+	// every `MyHouse == ""` test then read a CLEARED house as "in a house" - which is
+	// how house-less players captured objectives, skipped the level-60 exp block, and
+	// drew HouseEarnings payouts. Numeric keys keep the 0 default, unchanged.
+	// Add a key to $DataIsString only if it is genuinely string-valued AND is cleared
+	// by passing "" (see globals.cs).
+	if(%tempAmt == "" && $DataIsString[%type] != "")
+		%amt = "";
+	else if(%tempAmt == "")
 		%amt = 0;
 	else
 		%amt = %tempAmt;
-	
+
 	%tempSpecial = %special @ "";  // If unassigned, becomes empty string; if assigned, stays same
 	if(%tempSpecial == "" || %tempSpecial == -1)
 		%special = "";
@@ -549,6 +562,33 @@ function storeData(%clientId, %type, %amt, %special)
 		// driving COINS negative. strinc excluded (string append, not numeric).
 		if((%type == "COINS" || %type == "BANK" || %type == "EXP") && %special != "strinc")
 			%newValue = Cap(%newValue, 0, $Kronos::BalanceCap);
+
+		// HOUSE-GATE 2026-08-22: the level-60 "must join a house" rule is enforced HERE,
+		// at the single EXP write chokepoint - not in DistributeExpForKilling, where it
+		// used to live alone. That placement only ever covered KILL exp, so daily quests
+		// (whose reward is a % of the current level's cost, so it self-scales forever),
+		// the weekly boss, invasions, arena events and the generic quest-reward parser
+		// all fed house-less characters past the cap unchecked. That is how a house-less
+		// character reached remort 4 while the rule was nominally in force.
+		//
+		// STRICTLY gains: %special must be exactly "inc" AND %amt > 0.
+		//   - LoadCharacter, the over-cap level-lower and the character resets all write
+		//     EXP with a PLAIN SET; gating those would blank a character's exp on login.
+		//   - Losses ("dec", or a negative inc) must still apply - this denies growth,
+		//     it does not shield players from penalties.
+		// Soft wall by design: exp is denied, nothing forces or prompts a house join.
+		if(%type == "EXP" && %special == "inc" && %amt > 0 && IsExpHouseBlocked(%clientId))
+		{
+			%newValue = %currentValue;  // gain denied; stored value unchanged
+
+			// Throttled: the chokepoint sees every exp source, so an unthrottled notice
+			// would spam during normal play.
+			if(getSimTime() - $HouseGateWarned[%clientId] > 15)
+			{
+				$HouseGateWarned[%clientId] = getSimTime();
+				Client::sendMessage(%clientId, 0, "You have gained no experience! You must join a house to continue growing stronger!~house");
+			}
+		}
 
 		// Store in appropriate array
 		// Pass resolved client type so storeData only resolves type once per call
@@ -956,12 +996,24 @@ function DistributeExpForKilling(%damagedClient)
 			}
 
 			//rank point bonus
-			if(fetchData(%listClientId, "MyHouse") != "")
+			// HOUSE-ZERO FIX 2026-08-22: GetHouseOf, not a raw `fetchData(...) == ""`.
+			// A cleared house is stored as the string "0", and "0" == "" is FALSE in the
+			// engine - so these two tests were BOTH taking the "in a house" branch for
+			// house-less players: they got the rank exp bonus AND skipped the level-60
+			// block, which is how a house-less character reached remort 4.
+			%listHouse = GetHouseOf(%listClientId);
+			if(%listHouse != "")
 			{
 				%ph = Cap(GetRankBonus(%listClientId), 1.00, 3.00);
 				%value = %value * %ph;
 			}
-			if(fetchData(%listClientId, "MyHouse") == "" && fetchData(%listClientId, "LVL") >= 60)
+			// HOUSE-GATE 2026-08-22: single-sourced via IsExpHouseBlocked (was a hardcoded
+			// `MyHouse == "" && LVL >= 60` here). Kept as a local zero rather than leaving
+			// it to storeData's chokepoint so the "you gained N experience!" line below
+			// reports 0 instead of promising exp the chokepoint would then deny. Because
+			// %value lands at 0, storeData sees %amt == 0 and stays silent - the notice
+			// below is the only one the player gets, so there is no double message.
+			if(IsExpHouseBlocked(%listClientId))
 			{
 				%value = 0;
 				Client::sendMessage(%listClientId, 0, "You have gained no experience! You must join a house to continue growing stronger!~house");
